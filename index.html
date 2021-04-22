@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>nnirror</title>
+    <script src="node_modules/codemirror/lib/codemirror.js"></script>
+    <link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
+    <link rel="stylesheet" href="node_modules/codemirror/theme/mbo.css">
+    <script src="node_modules/codemirror/mode/javascript/javascript.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="facet.js"></script>
+    <style media="screen">
+      html {
+        height: 1000px;
+      }
+      .CodeMirror {
+        height: 98vh;
+        font-size: 2em;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="text/javascript">
+      var cm = CodeMirror(document.body, {
+        // could somehow "load" scripts with this value function, or use a button UI to pull in old files
+        value: `comb time [1 1 2 3 5 8 13 21 34 55 100 200 300 400 500].recurse(0.9).dup(5).recurse(0.5);
+comb feed [0 0.5 0 [1 0.5 0]].walk(0.5, 1);
+comb send [sine(100)].offset(1);
+comb gain [0 0.5 0 1];
+
+a1 struct [sine(300)].dup(2).jam(0.25, 10);
+h1 struct [sine(50)].dup(40).jam(0.25, 10);
+k1 struct [sine(25)].dup(30).jam(0.25, 10);
+
+s1 struct [sine(30)].dup(5).jam(0.25, 10);
+verb send [0 0.1 0.2 0.3 0.5 0.7 0.7 [0.5 0.25 0 1] 0.7 0.8 0.5 0.4 0.2].recurse(0.7);
+verb time [sine(100)].recurse(0.5).walk(0.25, 10).gain(1000).offset(5000);
+
+global bpm [90];
+
+k1 struct [0];
+s1 struct [0];
+h1 struct [0];
+a1 struct [0];
+
+k1 struct [0 1 0 [0 1 0] 0 1 1 [0 1 1 [1 1 1]]].jam(0.5, 1);
+h1 struct [sine(66)].scale(0.5, 1).dup(12).sticky(0.9).reduce(16);
+a1 struct [sine(100)].scale(0.5, 1).dup(100).sticky(0.9).reduce(512);
+s1 struct [sine(30)].dup(10).jam(0.25, 10);
+`,
+        mode:  "javascript",
+        theme: "mbo",
+        lineWrapping: true
+      });
+      function getFirstLineOfBlock(initial_line) {
+        // true if line above is empty or the line number gets to 0
+        let above_line_is_empty = false;
+        let current_line_number = initial_line;
+        let first_line;
+        while ( above_line_is_empty == false && current_line_number >= 0 ) {
+          // check previous line for conditions that would indicate first line
+          // of block; otherwise continue decrementing line number
+          if ( (current_line_number ) == 0 ) {
+            first_line = 0;
+            break;
+          }
+          let line_above = cm.getLine(current_line_number - 1);
+          if ( line_above.trim() == '' ) {
+            above_line_is_empty = true;
+            first_line = current_line_number;
+          }
+          current_line_number--;
+        }
+        return first_line;
+      }
+      function getLastLineOfBlock(initial_line) {
+        // true if line below is empty or the line number gets to cm.lineCount()
+        let below_line_is_empty = false;
+        let current_line_number = initial_line;
+        let last_line;
+        while ( below_line_is_empty == false ) {
+          if ( (current_line_number + 1) == cm.lineCount() ) {
+            last_line = current_line_number;
+            break;
+          }
+          // check below line for conditions that would indicate last line
+          // of block; otherwise continue incrementing line number
+          let line_below = cm.getLine(current_line_number + 1);
+          if ( line_below.trim() == '' ) {
+            below_line_is_empty = true;
+            last_line = current_line_number;
+          }
+          current_line_number++;
+        }
+        return last_line;
+      }
+      $(document).keydown(function(e) {
+      // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
+      if ( e.ctrlKey && e.keyCode == 13 ) {
+        // select the entire block surrounding the cursor pos, based on if
+        // newlines exist above and below
+        let cursor = cm.getCursor();
+        let line = cursor.line;
+        let first_line_of_block = getFirstLineOfBlock(line);
+        let last_line_of_block = getLastLineOfBlock(line);
+        // highlight the text that will run for 100ms
+        cm.setSelection({line: first_line_of_block, ch: 0 }, {line: last_line_of_block, ch: 10000 });
+        // de-highlight, set back to initial cursor position
+        // BUG: it does not seem to be setting the horizontal cursor pos correctly??
+        let code = cm.getSelection();
+        let facet_data = facetParse(code);
+        facets = facetInit();
+        setTimeout(function(){ cm.setCursor({line: line, ch: cursor.ch }); }, 100);
+
+
+        $.post('http://127.0.0.1:1123', facet_data);
+        // TODO: also post to http://127.0.0.1:1123/time, and when that response resolves back as 200 would cause WHEN logic to run. plus rerun another request to /time so it's constantly in sync
+
+        /*
+          set of data points to modulate:
+            drum patterns: k1,d2,s1,s2,h1,h2,a1,a2
+            drum operations: filter, reso, repeat, sample, prob, gain
+            pattern operations: mod (jam vals), walk (jam structs), palindrome, dup, reduce, concat, rev
+            single-number operations: rand
+            midi note patterns: m1, m2, filter, gain
+            cc patterns: cc{0-127}
+            fx patterns, which can be applied to any drum or midi: crush, reverb, fm, comb
+            time operations: every n, sometimes
+            phasor speed operations: speed(notevalues)
+            delta select for any non-structure parameter.
+
+        */
+      }
+      });
+    </script>
+  </body>
+</html>
