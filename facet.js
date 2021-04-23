@@ -166,22 +166,30 @@ function facetParse(user_input) {
   // parse user input into individual operations on data.
   // run those operations, scale and flatten the resulting array,
   // and send that data into Max so it can go in a buffer wavetable
-  user_input = removeTabsAndNewlines(user_input);
-  // TODO: here, parse the "every" text if it exists.
-  commands = getCommands(user_input);
-  Object.values(commands).forEach(command => {
-    destination = getDestination(command);
-    property = getProperty(command);
-    statement = getStatement(command, destination);
-    datum = getDatum(statement);
-    ops_string = parseStringOfOperations(statement);
-    operations = parseOperations(ops_string);
-    datum = runOperations(operations, datum);
-    max_sub_steps = getMaximumSubSteps(datum) - 1;
-    flat_sequence = flattenSequence(datum, max_sub_steps);
-    sequence_msg = convertFlatSequenceToMessage(flat_sequence);
-    facets[property][destination] = sequence_msg;
-  });
+  try {
+    user_input = removeTabsAndNewlines(user_input);
+    // TODO: here, parse the "every" text if it exists.
+    commands = getCommands(user_input);
+    Object.values(commands).forEach(command => {
+      destination = getDestination(command);
+      property = getProperty(command);
+      statement = getStatement(command, destination);
+      datum = getDatum(statement);
+      ops_string = parseStringOfOperations(statement);
+      operations = parseOperations(ops_string);
+      datum = runOperations(operations, datum);
+      max_sub_steps = getMaximumSubSteps(datum) - 1;
+      flat_sequence = flattenSequence(datum, max_sub_steps);
+      sequence_msg = convertFlatSequenceToMessage(flat_sequence);
+      facets[property][destination] = sequence_msg;
+    });
+  } catch (e) {
+    $.notify(e, {
+      allow_dismiss: true,
+      delay: 2000,
+      newest_on_top: true
+    });
+  }
   return facets;
 }
 
@@ -231,13 +239,18 @@ function getMaximumSubSteps(sequence) {
 // BEGIN single-number operations
 // sequence is not needed as an argument for these in the actual code since it's added implicitly
 // in the runOperations functions
-function rand(min, max, int_mode = 0) {
+function random(min, max, int_mode = 0) {
   // returns number within range
   let num = Math.random() * (Number(max) - Number(min) + 1) + Number(min);
   if ( int_mode != 0 ) {
     num = Math.trunc(num);
   }
   return num;
+}
+
+function choose(list) {
+  let shuffled = shuffle(list);
+  return shuffled[0];
 }
 // END single-number operations
 
@@ -375,6 +388,93 @@ function offset(sequence, amt) {
     }
   }
   return offset_sequence;
+}
+
+function pong(sequence, min, max) {
+  min = Number(min);
+  max = Number(max);
+  let range = [min, max];
+  let sorted_range = range.sort(function(a,b) { return a - b;});
+  min = sorted_range[0];
+  max = sorted_range[1];
+  if ( min == max ) {
+    throw `Cannot run pong with equal min and max: ${min}`;
+  }
+  let pong_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      pong_sequence[key] = pong(step, min, max);
+    }
+    else {
+      let new_step = step;
+      let step_is_outside_range = ((step < min) || (step > max));
+      while (step_is_outside_range) {
+        if ( new_step < min )  {
+          new_step = max - Math.abs(new_step - min);
+        }
+        else if ( new_step > max ) {
+          new_step = min + Math.abs(new_step - max);
+        }
+        step_is_outside_range = ((new_step < min) || (new_step > max));
+      }
+      pong_sequence[key] = new_step;
+    }
+  }
+  return pong_sequence;
+}
+
+function fracture(sequence, max_chunk_size) {
+  let fracture_sequence = [];
+  max_chunk_size = Number(max_chunk_size);
+  let new_positions = [];
+  let next_chunk = [];
+  let i = 0;
+  while (i < sequence.length) {
+    let chunk_size = Math.ceil(Math.random() * max_chunk_size);
+    let temparray = sequence.slice(i, i + chunk_size);
+    i += chunk_size;
+    fracture_sequence.push(temparray);
+  }
+  fracture_sequence = shuffle(fracture_sequence).flat();
+  return fracture_sequence;
+}
+
+function map(sequence) {
+  // kinda hacky but parses any number of arguments into an array by removing the "sequence"
+  // from the set of all arguments when the function runs
+  let new_values = Array.prototype.slice.call(arguments);
+  delete new_values[0];
+  new_values = new_values.filter(function(el) { return el; });
+  let mapped_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      mapped_sequence[key] = map(step, new_values);
+    }
+    else {
+      mapped_sequence[key] = new_values.reduce((a, b) => {
+        return Math.abs(b - step) < Math.abs(a - step) ? b : a;
+      });
+
+    }
+  }
+  return mapped_sequence;
+}
+
+function unique(sequence) {
+   return Array.from(new Set(sequence));
+}
+
+function abs(sequence) {
+  let abs_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      abs_sequence[key] = abs(step, amt);
+    }
+    else {
+      abs_sequence[key] = Math.abs(step);
+    }
+  }
+  return abs_sequence;
 }
 
 function gt(sequence, amt) {
@@ -585,6 +685,81 @@ function sticky(sequence, amt) {
   return sticky_sequence;
 }
 
+function clip(sequence, min, max) {
+  let clipped_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      clipped_sequence[key] = clip(step, Number(min), Number(max));
+    }
+    else {
+      if ( step < min ) {
+        clipped_sequence[key] = Number(min);
+      }
+      else if ( step > max ) {
+        clipped_sequence[key] = Number(max);
+      }
+      else {
+        clipped_sequence[key] = step;
+      }
+    }
+  }
+  return clipped_sequence;
+}
+
+function saturate(sequence, gain) {
+  gain = Number(gain);
+  let saturated_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      saturated_sequence[key] = saturate(step, gain);
+    }
+    else {
+      saturated_sequence[key] = Math.tanh(step * gain);
+    }
+  }
+  return saturated_sequence;
+}
+
+// WINDOW operations
+function applyWindow(signal, func) {
+  var i, n=signal.length, args=[0,n]
+
+  // pass rest of args
+  for(i=2; i<arguments.length; i++) {
+    args[i] = arguments[i]
+  }
+
+  for(i=n-1; i>=0; i--) {
+    args[0] = i
+    signal[i] *= func.apply(null,args)
+  }
+  return signal;
+}
+
+function fade(sequence) {
+  return applyWindow(sequence, hamming);
+}
+
+function flattop(sequence) {
+  return applyWindow(sequence, flatTopInner);
+}
+
+function hamming (i,N) {
+  return 0.54 - 0.46 * Math.cos(6.283185307179586*i/(N-1))
+}
+
+function flatTopInner (i,N) {
+  var a0 = 1,
+      a1 = 1.93,
+      a2 = 1.29,
+      a3 = 0.388,
+      a4 = 0.028,
+      f = 6.283185307179586*i/(N-1)
+
+  return a0 - a1*Math.cos(f) +a2*Math.cos(2*f) - a3*Math.cos(3*f) + a4 * Math.cos(4*f)
+}
+// END WINDOW operations. shimmed from https://github.com/scijs/window-function
+
 // END pattern operations
 
 // BEGIN pattern generators. NO sequence argument
@@ -641,6 +816,21 @@ function noise(length) {
     noise_sequence[i] = Math.random();
   }
   return noise_sequence;
+}
+
+function ramp(from, to, size) {
+  let ramp_sequence = [];
+  from = Number(from);
+  to = Number(to);
+  let amount_to_add = (Math.abs(to - from) / size);
+  if ( to < from ) {
+    amount_to_add *= -1;
+  }
+  for (var i = 0; i < size; i++) {
+    ramp_sequence[i] = from;
+    from += amount_to_add;
+  }
+  return ramp_sequence;
 }
 
 // END pattern generators

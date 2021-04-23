@@ -6,9 +6,11 @@
     <script src="node_modules/codemirror/lib/codemirror.js"></script>
     <link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="node_modules/codemirror/theme/mbo.css">
+    <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <script src="node_modules/codemirror/mode/javascript/javascript.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="facet.js"></script>
+    <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <style media="screen">
       html {
         height: 1000px;
@@ -19,6 +21,7 @@
       }
     </style>
   </head>
+  <span id="error_msg"></span>
   <body>
     <script type="text/javascript">
       var cm = CodeMirror(document.body, {
@@ -47,7 +50,17 @@ k1 struct [0 1 0 [0 1 0] 0 1 1 [0 1 1 [1 1 1]]].jam(0.5, 1);
 h1 struct [sine(66)].scale(0.5, 1).dup(12).sticky(0.9).reduce(16);
 a1 struct [sine(100)].scale(0.5, 1).dup(100).sticky(0.9).reduce(512);
 s1 struct [sine(30)].dup(10).jam(0.25, 10);
-`,
+
+
+comb time [sine(50)].pong(0.1,0.25).palindrome().gain(random(0,1000,0));
+comb feed [sine(500)].pong(0.1,0.25).palindrome().gain(random(0,1,0));
+comb send [sine(160)].pong(0.1,0.25).palindrome().gain(random(0,1,0));
+comb gain [sine(500)].pong(0.1,0.25).palindrome().gain(random(0,1,0));
+global tempo [sine(500)].pong(0.1,0.25).palindrome().gain(random(0,100,0));
+s1 struct [sine(16)].pong(0,0.25).gain(random(0,1,0));
+k1 struct [sine(4)].pong(0.1,0.75).gain(random(0,1,0));
+h1 struct [sine(256)].pong(0.5,0.66).gain(random(0,1,0));
+a1 struct [sine(1000)].pong(0,1).gain(random(0,1,0));`,
         mode:  "javascript",
         theme: "mbo",
         lineWrapping: true
@@ -94,9 +107,8 @@ s1 struct [sine(30)].dup(10).jam(0.25, 10);
         }
         return last_line;
       }
-      $(document).keydown(function(e) {
-      // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
-      if ( e.ctrlKey && e.keyCode == 13 ) {
+
+      function runFacet() {
         // select the entire block surrounding the cursor pos, based on if
         // newlines exist above and below
         let cursor = cm.getCursor();
@@ -130,6 +142,12 @@ s1 struct [sine(30)].dup(10).jam(0.25, 10);
             delta select for any non-structure parameter.
 
         */
+      }
+
+      $(document).keydown(function(e) {
+      // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
+      if ( e.ctrlKey && e.keyCode == 13 ) {
+        runFacet();
       }
       });
     </script>
