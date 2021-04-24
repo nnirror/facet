@@ -249,6 +249,7 @@ function random(min, max, int_mode = 0) {
 }
 
 function choose(list) {
+  // TODO make this not an array?
   let shuffled = shuffle(list);
   return shuffled[0];
 }

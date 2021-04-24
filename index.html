@@ -11,6 +11,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="facet.js"></script>
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
+    <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
     <style media="screen">
       html {
         height: 1000px;
@@ -21,46 +22,39 @@
       }
     </style>
   </head>
-  <span id="error_msg"></span>
   <body>
     <script type="text/javascript">
-      var cm = CodeMirror(document.body, {
-        // could somehow "load" scripts with this value function, or use a button UI to pull in old files
-        value: `comb time [1 1 2 3 5 8 13 21 34 55 100 200 300 400 500].recurse(0.9).dup(5).recurse(0.5);
-comb feed [0 0.5 0 [1 0.5 0]].walk(0.5, 1);
-comb send [sine(100)].offset(1);
-comb gain [0 0.5 0 1];
+    var cm = CodeMirror(document.body, {
+      // could somehow "load" scripts with this value function, or use a button UI to pull in old files
+      value: `k1 struct [0 1 0 1 0 1].palindrome().dup(6).reduce(12);
+a1 struct [0 1 2 1 0 1];
+s1 struct [0 1 0 1 0 1];
+h1 struct [noise(32)].saturate(8).fracture(8).sticky(0.5);
+h1 speed [1];
+k1 speed [1];
+a1 speed [1];
+global gain [1];
 
-a1 struct [sine(300)].dup(2).jam(0.25, 10);
-h1 struct [sine(50)].dup(40).jam(0.25, 10);
-k1 struct [sine(25)].dup(30).jam(0.25, 10);
+every(3) a1 speed [noise(1)];
+global gain [sine(100)].fracture(12).scale(0,1).sticky(0.1).gt(0.7);
+global bpm [160];
+k1 speed [noise(1)].gain(5);
+s1 speed [noise(1)];
+h1 speed [noise(1)];
+every(5) s1 speed [9];
+global bpm [240];
+h1 speed [3];
+k1 speed [1.5];
+a1 speed [6];
+k1 struct [sine(16)].palindrome().dup(3).reduce(12).pong(0.25, 0.5).scale(0,1);
+comb send [noise(64)].recurse(0.2).fracture(3);
+comb feed [sine(100)];
+comb time [noise(16)].gain(1000);
+comb gain [1];
+verb send [0];
+verb time [sine(100)];
 
-s1 struct [sine(30)].dup(5).jam(0.25, 10);
-verb send [0 0.1 0.2 0.3 0.5 0.7 0.7 [0.5 0.25 0 1] 0.7 0.8 0.5 0.4 0.2].recurse(0.7);
-verb time [sine(100)].recurse(0.5).walk(0.25, 10).gain(1000).offset(5000);
-
-global bpm [90];
-
-k1 struct [0];
-s1 struct [0];
-h1 struct [0];
-a1 struct [0];
-
-k1 struct [0 1 0 [0 1 0] 0 1 1 [0 1 1 [1 1 1]]].jam(0.5, 1);
-h1 struct [sine(66)].scale(0.5, 1).dup(12).sticky(0.9).reduce(16);
-a1 struct [sine(100)].scale(0.5, 1).dup(100).sticky(0.9).reduce(512);
-s1 struct [sine(30)].dup(10).jam(0.25, 10);
-
-
-comb time [sine(50)].pong(0.1,0.25).palindrome().gain(random(0,1000,0));
-comb feed [sine(500)].pong(0.1,0.25).palindrome().gain(random(0,1,0));
-comb send [sine(160)].pong(0.1,0.25).palindrome().gain(random(0,1,0));
-comb gain [sine(500)].pong(0.1,0.25).palindrome().gain(random(0,1,0));
-global tempo [sine(500)].pong(0.1,0.25).palindrome().gain(random(0,100,0));
-s1 struct [sine(16)].pong(0,0.25).gain(random(0,1,0));
-k1 struct [sine(4)].pong(0.1,0.75).gain(random(0,1,0));
-h1 struct [sine(256)].pong(0.5,0.66).gain(random(0,1,0));
-a1 struct [sine(1000)].pong(0,1).gain(random(0,1,0));`,
+mute();`,
         mode:  "javascript",
         theme: "mbo",
         lineWrapping: true
@@ -108,7 +102,21 @@ a1 struct [sine(1000)].pong(0,1).gain(random(0,1,0));`,
         return last_line;
       }
 
-      function runFacet() {
+      function isGlobalCommand(code) {
+        if ( code == 'mute();' ) {
+          return true;
+        }
+        return false;
+      }
+
+      $(document).keydown(function(e) {
+        // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
+        if ( e.ctrlKey && e.keyCode == 13 ) {
+          parseCode();
+        }
+      });
+
+      function parseCode() {
         // select the entire block surrounding the cursor pos, based on if
         // newlines exist above and below
         let cursor = cm.getCursor();
@@ -118,38 +126,148 @@ a1 struct [sine(1000)].pong(0,1).gain(random(0,1,0));`,
         // highlight the text that will run for 100ms
         cm.setSelection({line: first_line_of_block, ch: 0 }, {line: last_line_of_block, ch: 10000 });
         // de-highlight, set back to initial cursor position
-        // BUG: it does not seem to be setting the horizontal cursor pos correctly??
-        let code = cm.getSelection();
-        let facet_data = facetParse(code);
-        facets = facetInit();
         setTimeout(function(){ cm.setCursor({line: line, ch: cursor.ch }); }, 100);
+        let code = cm.getSelection();
+        runFacet(code);
+      }
 
+      function runFacet(code) {
+        let facet_data = {};
+        if ( !isGlobalCommand(code) && !isEveryNStatement(code) ) {
+          // for global commands like mute(), simply run those functions which reinitialize all data to 0
+          facet_data = facetParse(code);
+        }
+        else {
+          if ( isEveryNStatement(code) ) {
+            if ( isClearEveryNStatement(code) ) {
+              undoEveryNStatement(code);
+            }
+            else {
+              every_n_hooks = {};
+              parseEveryNStatement(code);
+            }
+          }
+          else {
+            // global commands are eval'd as-is. so e.g. the command "mute();"
+            // would run the mute() function which will send a value of global[mute]: 0
+            // to every facet_param in Max, basically unsetting all buffers.
+            facet_data = eval(code);
+          }
+        }
 
         $.post('http://127.0.0.1:1123', facet_data);
-        // TODO: also post to http://127.0.0.1:1123/time, and when that response resolves back as 200 would cause WHEN logic to run. plus rerun another request to /time so it's constantly in sync
-
-        /*
-          set of data points to modulate:
-            drum patterns: k1,d2,s1,s2,h1,h2,a1,a2
-            drum operations: filter, reso, repeat, sample, prob, gain
-            pattern operations: mod (jam vals), walk (jam structs), palindrome, dup, reduce, concat, rev
-            single-number operations: rand
-            midi note patterns: m1, m2, filter, gain
-            cc patterns: cc{0-127}
-            fx patterns, which can be applied to any drum or midi: crush, reverb, fm, comb
-            time operations: every n, sometimes
-            phasor speed operations: speed(notevalues)
-            delta select for any non-structure parameter.
-
-        */
+        // re-initialize the facets object after it has been parsed
+        facets = facetInit();
       }
 
-      $(document).keydown(function(e) {
-      // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
-      if ( e.ctrlKey && e.keyCode == 13 ) {
-        runFacet();
+      function mute() {
+        return {global: { mute: 0 }};
       }
+
+      // begin EVERY
+      function isEveryNStatement(code) {
+        return /every\([a-zA-Z0-9, .()]*\)/gm.test(code);
+      }
+
+      function isClearEveryNStatement(code) {
+        return /clearevery\([0-9]*\)/gm.test(code);
+      }
+
+      function undoEveryNStatement(code) {
+        let every_n_matches = code.match(/clearevery\([0-9]*\)/gm);
+        let every_n_split = code.split(/clearevery\([0-9]*\)/gm);
+        if ( every_n_matches ) {
+          for (const [key, every] of Object.entries(every_n_matches)) {
+            let n = Number(every.replace('(', '').replace(')', '').replace('clearevery', ''));
+            // if no args, clears all hooks
+            if ( n == 0 ) {
+              every_n_hooks = {};
+            }
+            // if the command is for clearevery(5), this will delete the hook that runs every 5
+            delete every_n_hooks[Number(n)];
+          }
+        }
+      }
+
+      function parseEveryNStatement(code) {
+        let every_n_matches = code.match(/every\([a-zA-Z0-9, .()]*\)/gm);
+        let every_n_split = code.split(/every\([a-zA-Z0-9, .()]*\)/gm);
+        if ( every_n_matches ) {
+          for (const [key, every] of Object.entries(every_n_matches)) {
+            let n = Number(every.replace('(', '').replace(')', '').replace('every', ''));
+            // this is a good approach to nested logic -- consider this for parsing in the actual commands too
+            if ( isNaN(n) ) {
+              try {
+                n = every.replace('every(', '').slice(0, -1);
+                n = eval(n);
+              } catch (e) {
+                $.notify(`Could not parse every(n) statement.`, {
+                  allow_dismiss: true,
+                  delay: 500,
+                  newest_on_top: true
+                });
+              }
+            }
+            // if the command is for every(5), this will take whatever code ran after the every(5),
+            // UNTIL the next every N (if it exists), and set that in the every_n_hooks obj
+            every_n_hooks[n] = every_n_split[Number(key)+1];
+          }
+        }
+      }
+
+      function getHooksToRunEveryN() {
+        let hooks_to_run = '';
+        if  ( every_n_hooks ) {
+          for (const [key, code] of Object.entries(every_n_hooks)) {
+            if ( num_cycles % key == 0 ) {
+              // it's time to rerun the code at this hook for every n bars
+              hooks_to_run += code.trim();
+            }
+          }
+          return hooks_to_run;
+        }
+        else {
+          return false;
+        }
+      }
+      // end EVERY
+
+      // begin OSC
+      let num_cycles = 0;
+      let every_n_hooks = {};
+      const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
+
+      connectToMaxOscServer();
+
+      osc.on('/eoc', message => {
+        if ( message.args[0] == 'bang' ) {
+          num_cycles++;
+          hooks_code = getHooksToRunEveryN();
+          if ( hooks_code ) {
+            runFacet(hooks_code);
+          }
+        }
       });
+
+      function connectToMaxOscServer() {
+        let interval = setInterval( () => {
+          osc.open();
+          setTimeout( () => {
+            if ( osc.status() == 1 ) {
+              // connected!
+              clearInterval(interval);
+            }
+            else {
+              $.notify(`Could not connect to OSC server in Max.`, {
+                allow_dismiss: true,
+                delay: 500,
+                newest_on_top: true
+              });
+            }
+          }, 1000);
+        }, 3000);
+      }
+      // end OSC
     </script>
   </body>
 </html>

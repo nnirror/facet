@@ -1,30 +1,19 @@
 const path = require('path');
 const Max = require('max-api');
 const bodyParser = require('body-parser');
-const express = require('express')
+const express = require('express');
 const app = express();
-var cors = require('cors')
+var cors = require('cors');
+const OSC = require('osc-js');
+
+const osc = new OSC({
+  discardLateMessages: false, /* ignores messages which timetags lie in the past */
+  plugin: new OSC.WebsocketServerPlugin() /* used plugin for network communication */
+});
+osc.open();
+
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors())
-
-const sleep = (ms) => {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-let total_cycles_occurred = 0;
-
-async function checkForNewCycle(cycles_occurred_at_post_time, res) {
-  // check for new cycle every 100ms. sends HTTP response to the
-  // browser in sync with when the global phasor resets to 0
-  if (total_cycles_occurred == cycles_occurred_at_post_time) {
-    await sleep(100);
-    await checkForNewCycle(cycles_occurred_at_post_time, res);
-  }
-  else {
-    res.send('bang');
-    res.sendStatus(200);
-  }
-}
+app.use(cors());
 
 app.post('/', function (req, res) {
   Max.outlet(req.body);
@@ -32,11 +21,8 @@ app.post('/', function (req, res) {
 });
 
 Max.addHandler('bang', () => {
-	total_cycles_occurred++;
-});
-
-app.post('/time', function(req, res) {
-  checkForNewCycle(total_cycles_occurred, res);
+  const message = new OSC.Message('/eoc', 'bang');
+  osc.send(message);
 });
 
 app.listen(1123);
