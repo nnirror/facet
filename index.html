@@ -192,14 +192,17 @@ mute();`,
       function parseEveryNStatement(code) {
         let every_n_matches = code.match(/every\([a-zA-Z0-9, .()]*\)/gm);
         let every_n_split = code.split(/every\([a-zA-Z0-9, .()]*\)/gm);
+        let prob = 1;
         if ( every_n_matches ) {
           for (const [key, every] of Object.entries(every_n_matches)) {
             let n = Number(every.replace('(', '').replace(')', '').replace('every', ''));
-            // this is a good approach to nested logic -- consider this for parsing in the actual commands too
             if ( isNaN(n) ) {
               try {
-                n = every.replace('every(', '').slice(0, -1);
-                n = eval(n);
+                n = every.replace('every(', '').replace(' ', '').slice(0, -1);
+                let n_split = n.split(',');
+                // get probability coefficient
+                prob = Number(n_split[1]);
+                n = eval(n_split[0]);
               } catch (e) {
                 $.notify(`Could not parse every(n) statement.`, {
                   allow_dismiss: true,
@@ -210,7 +213,13 @@ mute();`,
             }
             // if the command is for every(5), this will take whatever code ran after the every(5),
             // UNTIL the next every N (if it exists), and set that in the every_n_hooks obj
-            every_n_hooks[n] = every_n_split[Number(key)+1];
+            if ( !every_n_hooks[n] ) {
+              every_n_hooks[n] = [];
+            }
+            every_n_hooks[n].push({
+              code: every_n_split[Number(key)+1],
+              prob: prob
+            });
           }
         }
       }
@@ -218,10 +227,15 @@ mute();`,
       function getHooksToRunEveryN() {
         let hooks_to_run = '';
         if  ( every_n_hooks ) {
-          for (const [key, code] of Object.entries(every_n_hooks)) {
+          for (const [key, everys] of Object.entries(every_n_hooks)) {
             if ( num_cycles % key == 0 ) {
-              // it's time to rerun the code at this hook for every n bars
-              hooks_to_run += code.trim();
+              for (var i = 0; i < everys.length; i++) {
+                // it's time to rerun the code at this hook for every n bars
+                let code = everys[i];
+                if ( Math.random() < code.prob ) {
+                  hooks_to_run += code.code.trim();
+                }
+              }
             }
           }
           return hooks_to_run;
@@ -256,6 +270,11 @@ mute();`,
             if ( osc.status() == 1 ) {
               // connected!
               clearInterval(interval);
+              $.notify(`Connected to OSC server!`, {
+                allow_dismiss: true,
+                delay: 500,
+                newest_on_top: true
+              });
             }
             else {
               $.notify(`Could not connect to OSC server in Max.`, {

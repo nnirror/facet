@@ -5,40 +5,34 @@ function replaceAll(string, search, replace) {
 }
 
 function getDatum(value) {
-  let datum, eval_datum;
-  if ( value.indexOf("].") == -1 ) {
-    datum = value.substring(
-        value.indexOf("[") ,
-        value.lastIndexOf("]") + 1
-    );
+  let datum_regex = /\[.*]/;
+  let datum;
+  if ( value.match(datum_regex) ) {
+    datum = value.match(datum_regex)[0];
   }
   else {
-    datum = value.substring(
-        value.indexOf("[") ,
-        value.indexOf("].") + 1
-    );
+    throw `Could not parse datum: ${value}`;
   }
-  datum = datum.trim();
-  datum = replaceAll(datum, ' ', ',');
-  datum = replaceAll(datum, ',,', ',');
-  datum = replaceAll(datum, ' ]', ']');
-  datum = replaceAll(datum, ' [', '[');
-  try {
-    // first try parsing the input string as JSON.
-    // hard-coded syntax e.g. [0 1 [0 2 4] 1]
+  if ( codeIsFunction(datum) ) {
+    datum = eval(datum);
+  }
+  else {
+    datum = datum.trim();
+    datum = replaceAll(datum, ' ', ',');
+    datum = replaceAll(datum, ',,', ',');
+    datum = replaceAll(datum, ' ]', ']');
+    datum = replaceAll(datum, ' [', '[');
     datum = JSON.parse(datum);
-    return datum;
-  } catch (e) {
-    // if that fails, try removing the array braces and eval-ing the code
-    // (in case it contains other function calls)
-    try {
-      datum = datum.substring(1, datum.length - 1);
-      datum = eval(datum);
-      return datum;
-    } catch (er) {
-      throw `Could not parse datum: ${datum}`;
-    }
   }
+  return datum;
+}
+
+function codeIsFunction(code) {
+  let function_regex = /.*\(.*\)/;
+  if ( code.match(function_regex) ) {
+    return true;
+  }
+  return false;
 }
 
 function removeTabsAndNewlines(user_input) {
@@ -48,12 +42,12 @@ function removeTabsAndNewlines(user_input) {
 
 function getDestination(code) {
   // TODO check for valid destinations
-  return code.split(' ')[1];
+  return code.split(' ')[0];
 }
 
 function getProperty(code) {
   // TODO check for valid properties
-  return code.split(' ')[0];
+  return code.split(' ')[1];
 }
 
 function getStatement(code, property) {
@@ -99,7 +93,7 @@ function parseOperations(value) {
         d.indexOf("(") + 1,
         d.lastIndexOf(")"),
     );
-    if ( !args.includes('(') && !args.includes('(') ) {
+    if ( !args.includes('(') && !args.includes(')') ) {
       operations.push({
         'op': op,
         'args': args
@@ -142,7 +136,34 @@ function getCommands(user_input) {
   return user_input.trim().split(';').filter(Boolean);
 }
 
+function createMultConnections(operations, destination, property) {
+  let m = {};
+  for (const [key, op] of Object.entries(operations)) {
+    if ( op.op == 'mult' ) {
+      let args = op.args;
+      args = args.replaceAll('\'', '').replaceAll('"', '');
+      let mult_destinaton = args.split(' ')[0];
+      let mult_property = args.split(' ')[1];
+      m[mult_destinaton] = {
+        from_destination: destination,
+        from_property: property,
+        to_destination: mult_destinaton,
+        to_property: mult_property
+      }
+    }
+  }
+  return m;
+}
+
+function handleMultConnections(facets, mults) {
+  for (const [key, mult] of Object.entries(mults)) {
+    facets[mult.to_destination][mult.to_property] = facets[mult.from_destination][mult.from_property];
+  }
+  return facets;
+}
+
 function facetInit() {
+  // TODO: build this object based on destinations in the code, rather than preset. more flexible that way
   return {
     k1: {},
     k2: {},
@@ -154,6 +175,8 @@ function facetInit() {
     a2: {},
     comb: {},
     verb: {},
+    midi: {},
+    filter: {},
     global: {}
   };
 }
@@ -162,26 +185,26 @@ let facets = facetInit();
 
 function facetParse(user_input) {
   let commands = [], destination, property, statement, datum, ops_string,
-  operations = [], max_sub_steps, flat_sequence, sequence_msg;
+  operations = [], max_sub_steps, flat_sequence, sequence_msg, mults = {};
   // parse user input into individual operations on data.
   // run those operations, scale and flatten the resulting array,
   // and send that data into Max so it can go in a buffer wavetable
   try {
     user_input = removeTabsAndNewlines(user_input);
-    // TODO: here, parse the "every" text if it exists.
     commands = getCommands(user_input);
     Object.values(commands).forEach(command => {
       destination = getDestination(command);
       property = getProperty(command);
-      statement = getStatement(command, destination);
+      statement = getStatement(command, property);
       datum = getDatum(statement);
       ops_string = parseStringOfOperations(statement);
       operations = parseOperations(ops_string);
+      mults = createMultConnections(operations, destination, property);
       datum = runOperations(operations, datum);
       max_sub_steps = getMaximumSubSteps(datum) - 1;
       flat_sequence = flattenSequence(datum, max_sub_steps);
-      sequence_msg = convertFlatSequenceToMessage(flat_sequence);
-      facets[property][destination] = sequence_msg;
+      facets[destination][property] = convertFlatSequenceToMessage(flat_sequence);
+      facets = handleMultConnections(facets, mults);
     });
   } catch (e) {
     $.notify(e, {
@@ -234,6 +257,12 @@ function getMaximumSubSteps(sequence) {
     0;
 }
 
+function removeSequenceFromArguments(arguments) {
+  let new_values = Array.prototype.slice.call(arguments);
+  delete new_values[0];
+  return new_values.filter(function(el) { return el; });
+}
+
 // BEGIN  all modulators
 
 // BEGIN single-number operations
@@ -246,6 +275,13 @@ function random(min, max, int_mode = 0) {
     num = Math.trunc(num);
   }
   return num;
+}
+
+function mult(sequence) {
+  // there is  additional logic for actually multing the resulting flattened array
+  // for a given destination / property. when mult() comes up in the code, simply
+  // return the pattern as-is for now.
+  return sequence;
 }
 
 function choose(list) {
@@ -268,6 +304,15 @@ function rev(sequence) {
     }
   }
   return reversed_sequence;
+}
+
+// TODO append not working right
+function append(sequence1, sequence2) {
+  return sequence1.concat(sequence2);
+}
+
+function truncate(sequence, length) {
+  return sequence.slice(0, Number(length));
 }
 
 function palindrome(sequence) {
@@ -378,6 +423,25 @@ function recurse(sequence, prob) {
   return recursive_sequence;
 }
 
+function prob(sequence, amt) {
+  amt = Number(amt);
+  let prob_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      prob_sequence[key] = prob_sequence(step, amt);
+    }
+    else {
+      if ( Math.random() < amt ) {
+        prob_sequence[key] = step;
+      }
+      else {
+        prob_sequence[key] = 0;
+      }
+    }
+  }
+  return prob_sequence;
+}
+
 function offset(sequence, amt) {
   let offset_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
@@ -441,11 +505,9 @@ function fracture(sequence, max_chunk_size) {
 }
 
 function map(sequence) {
-  // kinda hacky but parses any number of arguments into an array by removing the "sequence"
+  // parses ANY number of arguments into an array by removing the "sequence"
   // from the set of all arguments when the function runs
-  let new_values = Array.prototype.slice.call(arguments);
-  delete new_values[0];
-  new_values = new_values.filter(function(el) { return el; });
+  let new_values = removeSequenceFromArguments(arguments);
   let mapped_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -721,6 +783,21 @@ function saturate(sequence, gain) {
   return saturated_sequence;
 }
 
+function invert(sequence) {
+  let inverted_sequence = [];
+  let min = Math.min.apply(Math, sequence);
+  let max = Math.max.apply(Math, sequence);
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      inverted_sequence[key] = invert(step);
+    }
+    else {
+      inverted_sequence[key] = min + (max - step);
+    }
+  }
+  return inverted_sequence;
+}
+
 // WINDOW operations
 function applyWindow(signal, func) {
   var i, n=signal.length, args=[0,n]
@@ -764,29 +841,52 @@ function flatTopInner (i,N) {
 // END pattern operations
 
 // BEGIN pattern generators. NO sequence argument
-function sine(length) {
+function sine(periods, length) {
   let sine_sequence = [];
-  for (var i = 0; i < length; i++) {
-    let num_scaled = (Math.PI * 2) * (i / length);
-    sine_sequence[i] = Number(Math.sin(num_scaled).toFixed(4));
+  periods = Number(periods);
+  length = Number(length);
+  for (var a = 0; a < periods; a++) {
+    for (var i = 0; i < length; i++) {
+      let num_scaled = (Math.PI * 2) * (i / length);
+      sine_sequence[(a * length) + i] = Number(Math.sin(num_scaled).toFixed(4));
+    }
   }
   return sine_sequence;
 }
 
-function tri(length) {
+function tri(periods, length) {
   let tri_sequence = [];
-  for (var i = 0; i <= (Number(length) - 1); i++) {
-    let num_scaled = i / (Number(length) - 1);
+  periods = Number(periods);
+  length = Number(length);
+  // create a ramp from 0 to 1
+  for (var i = 0; i <= (length - 1); i++) {
+    let num_scaled = i / (length - 1);
     tri_sequence[i] = Number(num_scaled.toFixed(4));
   }
-  return reduce(palindrome(tri_sequence), length);
+  // palindrome the ramp to create a triangle, then reduce it to the specified length
+  let tri = reduce(palindrome(tri_sequence), length);
+  // now copy that triangle for n periods
+  tri_sequence = [];
+  for (var a = 0; a < periods; a++) {
+    for (var i = 0; i <= (length - 1); i++) {
+      tri_sequence[(a * length) + i] = tri[i];
+    }
+  }
+  return tri_sequence;
 }
 
-function square(length) {
+function square(periods, length) {
   let square_sequence = [];
-  for (var i = 0; i <= (Number(length) - 1); i++) {
-    let num_scaled = i % 2;
-    square_sequence[i] = Number(num_scaled.toFixed(4));
+  periods = Number(periods);
+  length = Number(length);
+  for (var a = 0; a < periods; a++) {
+    for (var i = 0; i < length; i++) {
+      let num_scaled = 0;
+      if ( i / length > 0.5 ) {
+        num_scaled = 1;
+      }
+      square_sequence[(a * length) + i] = Number(Math.sin(num_scaled).toFixed(4));
+    }
   }
   return square_sequence;
 }
@@ -835,13 +935,3 @@ function ramp(from, to, size) {
 }
 
 // END pattern generators
-
-/*
-TODO:
-1. receiving user input, parsing that into the array data structure. this also requires building functions for concatenation, reverse, etc
-2. array modifiers, both destructive and non-destructive
-3. sending data into max
-4. time modifiers, where at the beginning of every sequence it can run "every / sometimes" type stuff
-5. waveform files that can be loaded into the array. also lfnoise, probability mods, etc
-
-*/
