@@ -5,7 +5,7 @@ function replaceAll(string, search, replace) {
 }
 
 function getDatum(value) {
-  let datum_regex = /\[.*]/;
+  let datum_regex = /\[.*?]/;
   let datum;
   if ( value.match(datum_regex) ) {
     datum = value.match(datum_regex)[0];
@@ -51,16 +51,21 @@ function getProperty(code) {
 }
 
 function getStatement(code, property) {
-  return code.split(property)[1];
+  let statement_regex = /\[.*]*/;
+  return code.match(statement_regex)[0];
 }
 
 function parseStringOfOperations(value) {
   // everything after the period following the datum.
   // basically all the operations in string form. if no operations, returns empty string
-  return value.substring(
-      value.indexOf("].") + 2,
-      value.length
-  );
+  let post_datum_regex = /.*]\s*./;
+  let bobo = value.split(post_datum_regex);
+  if ( typeof value.split(post_datum_regex)[1] != 'undefined' ) {
+    return value.split(post_datum_regex)[1];
+  }
+  else {
+    return '';
+  }
 }
 
 function splitArguments(str) {
@@ -80,7 +85,6 @@ function splitArguments(str) {
 
 function parseOperations(value) {
   let operations = [];
-
   let split_ops = splitArguments(value);
 
   // get ops_string
@@ -102,9 +106,10 @@ function parseOperations(value) {
     else {
       try {
         args = eval(args);
+        args = `[${args.toString()}]`;
         operations.push({
           'op': op,
-          'args': args.toFixed(4)
+          'args': args
         });
       } catch (er) {
         throw `Could not parse argument: ${args}`;
@@ -120,12 +125,15 @@ function runOperations(operations, datum) {
     if ( typeof fn === 'function' ) {
       let args = [];
       args.push(datum);
-
-      let args_split = op.args.replace(' ', '').split(',');
-      for (var i = 0; i < args_split.length; i++) {
-        args.push(args_split[i]);
+      try {
+        args.push(JSON.parse(op.args));
+      } catch (e) {
+        let args_split = op.args.replaceAll(' ', '').split(',');
+        for (var i = 0; i < args_split.length; i++) {
+          args.push(args_split[i]);
+        }
       }
-        datum = fn.apply(null, args);
+      datum = fn.apply(null, args);
     }
   }
   // if the array exceeds 1024 values, re-scale it to 1024.
@@ -157,28 +165,23 @@ function createMultConnections(operations, destination, property) {
 
 function handleMultConnections(facets, mults) {
   for (const [key, mult] of Object.entries(mults)) {
+    if ( !facets[mult.to_destination] ) {
+      facets[mult.to_destination] = {};
+    }
     facets[mult.to_destination][mult.to_property] = facets[mult.from_destination][mult.from_property];
   }
   return facets;
 }
 
+function initFacetDestination(facets, destination) {
+  if ( !facets[destination] ) {
+    facets[destination] = {};
+  }
+  return facets;
+}
+
 function facetInit() {
-  // TODO: build this object based on destinations in the code, rather than preset. more flexible that way
-  return {
-    k1: {},
-    k2: {},
-    s1: {},
-    s2: {},
-    h1: {},
-    h2: {},
-    a1: {},
-    a2: {},
-    comb: {},
-    verb: {},
-    midi: {},
-    filter: {},
-    global: {}
-  };
+  return {};
 }
 
 let facets = facetInit();
@@ -203,6 +206,7 @@ function facetParse(user_input) {
       datum = runOperations(operations, datum);
       max_sub_steps = getMaximumSubSteps(datum) - 1;
       flat_sequence = flattenSequence(datum, max_sub_steps);
+      initFacetDestination(facets, destination);
       facets[destination][property] = convertFlatSequenceToMessage(flat_sequence);
       facets = handleMultConnections(facets, mults);
     });
@@ -256,13 +260,6 @@ function getMaximumSubSteps(sequence) {
     1 + Math.max(...sequence.map(getMaximumSubSteps)) :
     0;
 }
-
-function removeSequenceFromArguments(arguments) {
-  let new_values = Array.prototype.slice.call(arguments);
-  delete new_values[0];
-  return new_values.filter(function(el) { return el; });
-}
-
 // BEGIN  all modulators
 
 // BEGIN single-number operations
@@ -285,7 +282,6 @@ function mult(sequence) {
 }
 
 function choose(list) {
-  // TODO make this not an array?
   let shuffled = shuffle(list);
   return shuffled[0];
 }
@@ -306,7 +302,6 @@ function rev(sequence) {
   return reversed_sequence;
 }
 
-// TODO append not working right
 function append(sequence1, sequence2) {
   return sequence1.concat(sequence2);
 }
@@ -321,6 +316,46 @@ function palindrome(sequence) {
 
 function dup(sequence, num) {
   return Array.from({length: num}).flatMap(a => sequence);
+}
+
+function am(sequence1, sequence2) {
+  // BUG: i don't know why i have to set this to sequence1[0] when using functions instead of hard-coded array sructures
+  if ( Array.isArray(sequence1[0]) )  {
+    sequence1 = sequence1[0];
+  }
+
+  if ( sequence1.length > sequence2.length ) {
+    sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
+  }
+  else if ( sequence2.length > sequence1.length ) {
+    sequence2 = reduce(sequence2, sequence1.length);
+  }
+  // now both arrays have the same number of keys, multiply seq1 key by same seq2
+  // TODO now what about inner arrays. probably multiply every value?
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( isNaN(sequence2[key]) ) {
+      sequence1[key] = 0;
+    }
+    else {
+      sequence1[key] = step * sequence2[key];
+    }
+  }
+  return sequence1;
+}
+
+function scaleTheArray(arrayToScale, nTimes) {
+    for (var idx = 0, i = 0, len = arrayToScale.length * nTimes; i < len; i++) {
+      var elem = arrayToScale[idx];
+
+      /* Insert the element into (idx + 1) */
+      arrayToScale.splice(idx + 1, 0, elem);
+
+      /* Add idx for the next elements */
+      if ((i + 1) % nTimes === 0) {
+        idx += nTimes + 1;
+      }
+    }
+    return arrayToScale;
 }
 
 function jam(sequence, prob, amt) {
@@ -428,7 +463,7 @@ function prob(sequence, amt) {
   let prob_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
-      prob_sequence[key] = prob_sequence(step, amt);
+      prob_sequence[key] = prob(step, amt);
     }
     else {
       if ( Math.random() < amt ) {
@@ -504,10 +539,9 @@ function fracture(sequence, max_chunk_size) {
   return fracture_sequence;
 }
 
-function map(sequence) {
+function map(sequence, new_values) {
   // parses ANY number of arguments into an array by removing the "sequence"
   // from the set of all arguments when the function runs
-  let new_values = removeSequenceFromArguments(arguments);
   let mapped_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -517,7 +551,6 @@ function map(sequence) {
       mapped_sequence[key] = new_values.reduce((a, b) => {
         return Math.abs(b - step) < Math.abs(a - step) ? b : a;
       });
-
     }
   }
   return mapped_sequence;
@@ -619,11 +652,12 @@ function gain(sequence, amt) {
 }
 
 function reduce(sequence, new_size) {
+  new_size = Number(new_size);
   let reduced_sequence = [];
   if ( new_size > sequence.length ) {
     return sequence;
   }
-  let modulo = Math.ceil(sequence.length / new_size);
+  let modulo = Math.round(sequence.length / new_size);
   for (const [key, step] of Object.entries(sequence)) {
     // not recursive - only runs at global level so that the new size
     //  actually is what is entered
@@ -906,7 +940,7 @@ function drunk(length, intensity) {
     if ( d > 1 ) {
       d = d - 1;
     }
-    drunk_sequence[i] = d;
+    drunk_sequence[i] = d.toFixed(4);
   }
   return drunk_sequence;
 }
