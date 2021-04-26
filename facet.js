@@ -59,7 +59,6 @@ function parseStringOfOperations(value) {
   // everything after the period following the datum.
   // basically all the operations in string form. if no operations, returns empty string
   let post_datum_regex = /.*]\s*./;
-  let bobo = value.split(post_datum_regex);
   if ( typeof value.split(post_datum_regex)[1] != 'undefined' ) {
     return value.split(post_datum_regex)[1];
   }
