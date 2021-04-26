@@ -26,33 +26,30 @@
     <script type="text/javascript">
     var cm = CodeMirror(document.body, {
       // could somehow "load" scripts with this value function, or use a button UI to pull in old files
-      value: `k1 struct [0 1 0 1 0 1].palindrome().dup(6).reduce(12);
-a1 struct [0 1 2 1 0 1];
-s1 struct [0 1 0 1 0 1];
-h1 struct [noise(32)].saturate(8).fracture(8).sticky(0.5);
-h1 speed [1];
-k1 speed [1];
-a1 speed [1];
-global gain [1];
+      value: `every(1) k1 struct [sine(random(200,5,1),random(4,8,1))]
+  .am(sine(random(1,10,0),100)).prob(random(0.125,0.25,0));
+s1 struct [sine(random(2,10,1),random(1,4,1))].am(sine(random(1,20,0),100))
+  .fracture(4).map([0,0.5,1]).prob(0.1).sticky(0.75);
+h1 struct [sine(random(2,100,1),random(1,4,1))].am(sine(random(1,30,0),100))
+  .fracture(4).map([0,0.5,1]).prob(random(0.1,0.6,0)).sticky(0.5);
+a1 struct [sine(random(40,80,1),random(1,4,1))].am(sine(random(1,40,0),100))
+  .fracture(4).map([0,0.5,1]).prob(0.125);
+comb send [sine(100,4)].am(tri(10,50)).scale(0,0.5);
+comb feed [drunk(64, 0.5)];
+comb time [sine(1,100)].scale(0,1).gain(random(0,10,0)).sticky(0.8)
+  .fracture(random(1,8,1));
+verb send [sine(12,60)].am(sine(random(10,20,0),100)).scale(0,0.2);
+verb time [ramp(0,1,256)].am(sine(6,60)).scale(0.33,1).sticky(0.7);
+verb warp [ramp(50,2000,256)].am(sine(6,60));
+verb feed [drunk(128, 0.3)].scale(0,1);
+filter cutoff [sine(random(1,12,1),100)].scale(0,1).gain(3000).pong(1000,1500);
+global bpm [24].dup(1).append(32).append(40).append(48);
+k1 samp [tri(4,16)];
+s1 samp [drunk(64,0.25)];
+a1 samp [drunk(32,2)].scale(0.2,1);
+h1 samp [drunk(128,0.25)];
 
-every(3) a1 speed [noise(1)];
-global gain [sine(100)].fracture(12).scale(0,1).sticky(0.1).gt(0.7);
-global bpm [160];
-k1 speed [noise(1)].gain(5);
-s1 speed [noise(1)];
-h1 speed [noise(1)];
-every(5) s1 speed [9];
-global bpm [240];
-h1 speed [3];
-k1 speed [1.5];
-a1 speed [6];
-k1 struct [sine(16)].palindrome().dup(3).reduce(12).pong(0.25, 0.5).scale(0,1);
-comb send [noise(64)].recurse(0.2).fracture(3);
-comb feed [sine(100)];
-comb time [noise(16)].gain(1000);
-comb gain [1];
-verb send [0];
-verb time [sine(100)];
+clearevery();
 
 mute();`,
         mode:  "javascript",
@@ -270,7 +267,7 @@ mute();`,
             if ( osc.status() == 1 ) {
               // connected!
               clearInterval(interval);
-              $.notify(`Connected to OSC server!`, {
+              $.notify(`Connected to OSC server.`, {
                 allow_dismiss: true,
                 delay: 500,
                 newest_on_top: true

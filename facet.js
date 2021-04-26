@@ -5,7 +5,7 @@ function replaceAll(string, search, replace) {
 }
 
 function getDatum(value) {
-  let datum_regex = /\[.*?]/;
+  let datum_regex = /\[.*]\s*/;
   let datum;
   if ( value.match(datum_regex) ) {
     datum = value.match(datum_regex)[0];
@@ -18,10 +18,10 @@ function getDatum(value) {
   }
   else {
     datum = datum.trim();
-    datum = replaceAll(datum, ' ', ',');
-    datum = replaceAll(datum, ',,', ',');
     datum = replaceAll(datum, ' ]', ']');
+    datum = replaceAll(datum, ' ', ',');
     datum = replaceAll(datum, ' [', '[');
+    datum = replaceAll(datum, ',,', ',');
     datum = JSON.parse(datum);
   }
   return datum;
@@ -332,11 +332,16 @@ function am(sequence1, sequence2) {
   // now both arrays have the same number of keys, multiply seq1 key by same seq2
   // TODO now what about inner arrays. probably multiply every value?
   for (const [key, step] of Object.entries(sequence1)) {
-    if ( isNaN(sequence2[key]) ) {
-      sequence1[key] = 0;
+    if ( Array.isArray(step) ) {
+      sequence1[key] = am(step, sequence2);
     }
     else {
-      sequence1[key] = step * sequence2[key];
+      if ( isNaN(sequence2[key]) ) {
+        sequence1[key] = 0;
+      }
+      else {
+        sequence1[key] = step * sequence2[key];
+      }
     }
   }
   return sequence1;
@@ -355,6 +360,26 @@ function scaleTheArray(arrayToScale, nTimes) {
       }
     }
     return arrayToScale;
+}
+
+function quantize(sequence, resolution) {
+  resolution = parseInt(Number(resolution));
+  let quantized_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      quantized_sequence[key] = quantize(step, resolution);
+    }
+    else {
+      if ( key % resolution == 0 ) {
+        // only pass nonzero steps if the modulo of their key is 0
+        quantized_sequence[key] = step;
+      }
+      else {
+        quantized_sequence[key] = 0;
+      }
+    }
+  }
+  return quantized_sequence;
 }
 
 function jam(sequence, prob, amt) {
