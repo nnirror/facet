@@ -5,10 +5,16 @@ function replaceAll(string, search, replace) {
 }
 
 function getDatum(value) {
-  let datum_regex = /\[.*]\s*/;
+  let datum_regex = /\[.*][\.;]/;
   let datum;
-  if ( value.match(datum_regex) ) {
-    datum = value.match(datum_regex)[0];
+
+  let hard_coded_syntax_match = value.match(datum_regex);
+  let generator_synax_split = value.split(datum_regex);
+  if ( hard_coded_syntax_match ) {
+    datum = hard_coded_syntax_match[0].slice(0,-1);
+  }
+  else if ( generator_synax_split ) {
+    datum = generator_synax_split[0];
   }
   else {
     throw `Could not parse datum: ${value}`;
@@ -28,7 +34,7 @@ function getDatum(value) {
 }
 
 function codeIsFunction(code) {
-  let function_regex = /.*\(.*\)/;
+  let function_regex = /.*\(.*\)]/;
   if ( code.match(function_regex) ) {
     return true;
   }
@@ -37,6 +43,7 @@ function codeIsFunction(code) {
 
 function removeTabsAndNewlines(user_input) {
   // remove tabs, newlines, and multiple spaces
+  user_input = user_input.replace(/\s\s+/g, '');
   return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
 }
 
@@ -58,9 +65,10 @@ function getStatement(code, property) {
 function parseStringOfOperations(value) {
   // everything after the period following the datum.
   // basically all the operations in string form. if no operations, returns empty string
-  let post_datum_regex = /.*]\s*./;
-  if ( typeof value.split(post_datum_regex)[1] != 'undefined' ) {
-    return value.split(post_datum_regex)[1];
+  let post_datum_regex = /]\s*\..*[^;]/;
+  let ops = value.match(post_datum_regex);
+  if ( ops ) {
+    return ops[0].slice(2);
   }
   else {
     return '';
@@ -284,6 +292,11 @@ function choose(list) {
   let shuffled = shuffle(list);
   return shuffled[0];
 }
+
+function data(list) {
+  // user can supply an aribtrary array of data to certain functions like am()
+  return list;
+}
 // END single-number operations
 
 // BEGIN pattern operations
@@ -316,6 +329,32 @@ function palindrome(sequence) {
 function dup(sequence, num) {
   return Array.from({length: num}).flatMap(a => sequence);
 }
+
+function smooth(sequence) {
+  let smoothed_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    let k = Number(key);
+    if ( Array.isArray(step) ) {
+      smoothed_sequence[k] = smooth(step);
+    }
+    else {
+      if ( k > 0 && ( (k + 1) < sequence.length ) ) {
+        // all other steps
+        smoothed_sequence[k] = (smoothed_sequence[k-1] + sequence[k+1]) / 2;
+      }
+      else if ( k +1 ==  sequence.length ) {
+        // last step loops around to average with first
+        smoothed_sequence[k] = (smoothed_sequence[k-1] + sequence[0]) / 2;
+      }
+      else {
+        // first step is static
+        smoothed_sequence[k] = step;
+      }
+    }
+  }
+  return smoothed_sequence;
+}
+
 
 function am(sequence1, sequence2) {
   // BUG: i don't know why i have to set this to sequence1[0] when using functions instead of hard-coded array sructures
@@ -380,6 +419,31 @@ function quantize(sequence, resolution) {
     }
   }
   return quantized_sequence;
+}
+
+function interlace(sequence1, sequence2) {
+     let interlaced_sequence = [];
+    // BUG: i don't know why i have to set this to sequence1[0] when using functions instead of hard-coded array sructures
+    if ( Array.isArray(sequence1[0]) )  {
+      sequence1 = sequence1[0];
+    }
+
+    if ( sequence1.length > sequence2.length ) {
+      sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
+    }
+    else if ( sequence2.length > sequence1.length ) {
+      sequence2 = reduce(sequence2, sequence1.length);
+    }
+    for (const [key, step] of Object.entries(sequence1)) {
+      interlaced_sequence.push(sequence1[key]);
+      if ( isNaN(sequence2[key]) ) {
+        interlaced_sequence.push(0)
+      }
+      else {
+        interlaced_sequence.push(sequence2[key]);
+      }
+    }
+    return interlaced_sequence;
 }
 
 function jam(sequence, prob, amt) {
@@ -720,14 +784,62 @@ function round(sequence) {
   return rounded_sequence;
 }
 
-function move(sequence, direction) {
+function sort(sequence) {
+  let sorted_sequence = [];
+
+  sorted_sequence = sequence.sort(function(a, b) {
+    return a - b;
+  });
+  for (const [key, step] of Object.entries(sorted_sequence)) {
+    if ( Array.isArray(step) ) {
+      sorted_sequence[key] = sort(step);
+    }
+  }
+  return sorted_sequence;
+}
+
+function warp(sequence, exp) {
+  // BUG: why sequence[0]
+  let warped_sequence = [];
+  let original_sequence = sequence[0];
+  let number_of_steps = original_sequence.length;
+  exp = Number(exp);
+  let maximum = Math.pow(original_sequence.length, exp);
+  for (var i = 0; i < number_of_steps; i++) {
+    // calculate the key for this step based on the sequence length raised to an exponential power
+    let warped_key = parseInt(Math.pow(Number(i), exp));
+    let warped_relative_pos = (warped_key / maximum).toFixed(4);
+    let original_seqence_pos = parseInt(warped_relative_pos * number_of_steps);
+    warped_sequence[i] = original_sequence[original_seqence_pos];
+  }
+  return warped_sequence;
+}
+
+function shift(sequence, amt) {
   let moved_sequence = [];
+  amt = Number(amt);
+  // wrap the phase shift amount between -1 and 1
+  if (amt < -1 || amt > 1 ) {
+    let new_amt = amt;
+    let amt_is_outside_range = ((amt < -1) || (amt > 1));
+    while (amt_is_outside_range) {
+      if ( new_amt < -1 )  {
+        new_amt = 1 - Math.abs(new_amt - -1);
+      }
+      else if ( new_amt > 1 ) {
+        new_amt = -1 + Math.abs(new_amt - 1);
+      }
+      amt_is_outside_range = ((new_amt < -1) || (new_amt > 1));
+    }
+    amt = new_amt;
+  }
+
   // moving left require the keys to become bigger, but the argument makes more sense
   // when moving left is negative, hence the * - 1 here.
-  direction *= -1;
+  direction = -1 * (amt * sequence.length);
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
-      moved_sequence[key] = move(step, direction);
+      moved_sequence[key] = shift(step, direction);
     }
     else {
       let new_key = Math.round(Number(key) + Number(direction));
@@ -912,6 +1024,15 @@ function sine(periods, length) {
   return sine_sequence;
 }
 
+function cosine(periods, length) {
+  // apply a 0.25 phase shift to a sine
+  let cosine_sequence = [];
+  periods = Number(periods);
+  length = Number(length);
+  let sine_sequence = sine(periods, length);
+  return invert(shift(sine_sequence, 0.25));
+}
+
 function tri(periods, length) {
   let tri_sequence = [];
   periods = Number(periods);
@@ -959,10 +1080,10 @@ function drunk(length, intensity) {
     }
     d += amount_to_add;
     if ( d < 0 ) {
-      d = 1 + d;
+      d = 0;
     }
     if ( d > 1 ) {
-      d = d - 1;
+      d = 1;
     }
     drunk_sequence[i] = d.toFixed(4);
   }

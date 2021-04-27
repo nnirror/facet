@@ -135,21 +135,24 @@ mute();`,
           facet_data = facetParse(code);
         }
         else {
-          if ( isEveryNStatement(code) ) {
-            if ( isClearEveryNStatement(code) ) {
-              undoEveryNStatement(code);
+          commands = getCommands(code);
+          Object.values(commands).forEach(command => {
+            if ( isEveryNStatement(command) ) {
+              if ( isClearEveryNStatement(command) ) {
+                undoEveryNStatement(command);
+              }
+              else {
+                every_n_hooks = {};
+                parseEveryNStatement(command);
+              }
             }
             else {
-              every_n_hooks = {};
-              parseEveryNStatement(code);
+              // global commands are eval'd as-is. so e.g. the command "mute();"
+              // would run the mute() function which will send a value of global[mute]: 0
+              // to every facet_param in Max, basically unsetting all buffers.
+              facet_data = eval(command);
             }
-          }
-          else {
-            // global commands are eval'd as-is. so e.g. the command "mute();"
-            // would run the mute() function which will send a value of global[mute]: 0
-            // to every facet_param in Max, basically unsetting all buffers.
-            facet_data = eval(code);
-          }
+          });
         }
 
         $.post('http://127.0.0.1:1123', facet_data);
@@ -158,6 +161,8 @@ mute();`,
       }
 
       function mute() {
+        // mute clears the every_n_hooks object too
+        undoEveryNStatement('clearevery()');
         return {global: { mute: 0 }};
       }
 
