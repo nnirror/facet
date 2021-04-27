@@ -105,6 +105,7 @@ function parseOperations(value) {
         d.lastIndexOf(")"),
     );
     if ( !args.includes('(') && !args.includes(')') ) {
+      // simple, hard-coded argument - no need to eval any code or parse anything
       operations.push({
         'op': op,
         'args': args
@@ -112,14 +113,47 @@ function parseOperations(value) {
     }
     else {
       try {
+        // attempt to eval the code. this should work if the argument
+        // is a single, non-chained operation, e.g. shift(random(0,random(0,1,0),0))
         args = eval(args);
-        args = `[${args.toString()}]`;
+        // flatten the eval'ed args back into the "args" structure
+        if ( typeof args == 'number' ) {
+          args = `[${args.toString()}]`;
+        }
+        else {
+          args = JSON.stringify(args);
+        }
         operations.push({
           'op': op,
           'args': args
         });
       } catch (er) {
-        throw `Could not parse argument: ${args}`;
+        try {
+          // attempt to recursively parse the args, as if it were its own datum
+          // and series of operations. insert a '[' at the beginning, and a ']'
+          // after the first instance of ').' basically creates the structure needed to
+          // parse: [generator(2,3,3.5)].foo(1,2);
+          args = args.replace(').', ')].');
+          args = '[' + args;
+          let datum_from_args = getDatum(args);
+          let processed_code_fom_args = processCode(args, datum_from_args);
+          if ( typeof processed_code_fom_args == 'number' ) {
+            processed_code_fom_args = `[${c.toString()}]`;
+          }
+          else {
+            // bug: sequence[0] again
+            for (var i = 0; i < processed_code_fom_args[0].length; i++) {
+              processed_code_fom_args[0][i] = processed_code_fom_args[0][i].toFixed(4);
+            }
+            processed_code_fom_args = JSON.stringify(processed_code_fom_args[0]);
+          }
+          operations.push({
+            'op': op,
+            'args': processed_code_fom_args
+          });
+        } catch (e) {
+          throw `Could not parse argument: ${args}`;
+        }
       }
     }
   }
@@ -193,6 +227,14 @@ function facetInit() {
 
 let facets = facetInit();
 
+function processCode(statement, datum) {
+  let ops_string, operations = [];
+  ops_string = parseStringOfOperations(statement);
+  operations = parseOperations(ops_string);
+  datum = runOperations(operations, datum);
+  return datum;
+}
+
 function facetParse(user_input) {
   let commands = [], destination, property, statement, datum, ops_string,
   operations = [], max_sub_steps, flat_sequence, sequence_msg, mults = {};
@@ -207,10 +249,7 @@ function facetParse(user_input) {
       property = getProperty(command);
       statement = getStatement(command, property);
       datum = getDatum(statement);
-      ops_string = parseStringOfOperations(statement);
-      operations = parseOperations(ops_string);
-      mults = createMultConnections(operations, destination, property);
-      datum = runOperations(operations, datum);
+      datum = processCode(statement, datum);
       max_sub_steps = getMaximumSubSteps(datum) - 1;
       flat_sequence = flattenSequence(datum, max_sub_steps);
       initFacetDestination(facets, destination);
