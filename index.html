@@ -27,30 +27,11 @@
     <script type="text/javascript">
     var cm = CodeMirror(document.body, {
       // could somehow "load" scripts with this value function, or use a button UI to pull in old files
-      value: `every(1) k1 struct [sine(random(200,5,1),random(4,8,1))]
-  .am(sine(random(1,10,0),100)).prob(random(0.125,0.25,0));
-s1 struct [sine(random(2,10,1),random(1,4,1))].am(sine(random(1,20,0),100))
-  .fracture(4).map([0,0.5,1]).prob(0.1).sticky(0.75);
-h1 struct [sine(random(2,100,1),random(1,4,1))].am(sine(random(1,30,0),100))
-  .fracture(4).map([0,0.5,1]).prob(random(0.1,0.6,0)).sticky(0.5);
-a1 struct [sine(random(40,80,1),random(1,4,1))].am(sine(random(1,40,0),100))
-  .fracture(4).map([0,0.5,1]).prob(0.125);
-comb send [sine(100,4)].am(tri(10,50)).scale(0,0.5);
-comb feed [drunk(64, 0.5)];
-comb time [sine(1,100)].scale(0,1).gain(random(0,10,0)).sticky(0.8)
-  .fracture(random(1,8,1));
-verb send [sine(12,60)].am(sine(random(10,20,0),100)).scale(0,0.2);
-verb time [ramp(0,1,256)].am(sine(6,60)).scale(0.33,1).sticky(0.7);
-verb warp [ramp(50,2000,256)].am(sine(6,60));
-verb feed [drunk(128, 0.3)].scale(0,1);
-filter cutoff [sine(random(1,12,1),100)].scale(0,1).gain(3000).pong(1000,1500);
-global bpm [24].dup(1).append(32).append(40).append(48);
-k1 samp [tri(4,16)];
-s1 samp [drunk(64,0.25)];
-a1 samp [drunk(32,2)].scale(0.2,1);
-h1 samp [drunk(128,0.25)];
-
-clearevery();
+      value: `k1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0));
+s1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0)).rev();
+h1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0));
+a1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0)).rev();
+global bpm [drunk(16,0.1)].gain(120).offset(30);
 
 mute();`,
         mode:  "javascript",

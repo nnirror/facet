@@ -116,23 +116,24 @@ function parseOperations(value) {
         let multi_function_args = args.split(multiple_functions_regex);
         let multiple_arguments_regex = /,(?![^()]*(?:\([^()]*\))?\))/;
         let multi_args = args.split(multiple_arguments_regex);
+        let args_array = [];
         if ( multi_function_args.length > 1 ) {
           // case: multiple functions as arguments
-          args = multi_function_args;
+          args_array = multi_function_args;
         }
         else if ( multi_args.length > 1 ) {
           // case: multiple arguments, at least one function as argument
-          args = multi_args;
+          args_array = multi_args;
         }
         else {
-          // case: function as only argument, just init the args array to that
-          args = [args];
+          // case: function as only argument, just initialize the args array to that
+          args_array = [args];
         }
 
         // however many arguments are now split into an array. loop through
         // them, eval them, and create a csv string of the evaled arguments
         let args_str = '';
-        for (const [y, r] of Object.entries(args)) {
+        for (const [y, r] of Object.entries(args_array)) {
           // prevent any straggling trailing parens
           let valid_parsed_arg = r.replace('),',')');
           let evaled_arg = eval(valid_parsed_arg);
@@ -146,31 +147,45 @@ function parseOperations(value) {
         });
       } catch (er) {
         try {
-          // case: in the case of functions like am(), which can take a generator as input,
+          // case: with functions like am() or interlace(), which can take a generator as input,
           // it's also possible for an argument to be an entirely self-contained
-          // statement, e.g. [generator].operator1(operator2,number).operator3()
+          // statement, e.g:
+          // [sine(1,100)]
+          // *** here's what I mean ****
+          // .am(sine(4,10).gain(random(0,1,0)));
+          // **** end example ****
           // in that case, rerun the processCode() function (  recursively :D   )
           // insert a '[' at the beginning, and a ']' after the first instance of ').'
           // basically creates the structure needed to parse: [generator(2,3,3.5)].foo(1,2);
-          args = args.replace(').', ')].');
-          args = '[' + args;
-          let datum_from_args = getDatum(args);
-          let processed_code_fom_args = processCode(args, datum_from_args);
-          if ( typeof processed_code_fom_args == 'number' ) {
-            processed_code_fom_args = `[${c.toString()}]`;
+          let datum_from_args, processed_code_fom_args;
+          let arg_has_operations = /\).*\./;
+          if ( args.match(arg_has_operations) ) {
+            // case: there are multiple chained operations in the argument
+            args = args.replace(').', ')].');
+            args = '[' + args;
+            datum_from_args = getDatum(args);
+            processed_code_fom_args = processCode(args, datum_from_args);
+            if ( typeof processed_code_fom_args == 'number' ) {
+              processed_code_fom_args = `[${c.toString()}]`;
+            }
+            else {
+              for (var i = 0; i < processed_code_fom_args.length; i++) {
+                processed_code_fom_args[i] = processed_code_fom_args[i].toFixed(4);
+              }
+              processed_code_fom_args = JSON.stringify(processed_code_fom_args);
+            }
           }
           else {
-            for (var i = 0; i < processed_code_fom_args.length; i++) {
-              processed_code_fom_args[i] = processed_code_fom_args[i].toFixed(4);
-            }
-            processed_code_fom_args = JSON.stringify(processed_code_fom_args);
+            // case: the initial operation is the only argument
+            args = '[' + args + ']';
+            processed_code_fom_args = JSON.stringify(getDatum(args));
           }
           operations.push({
             'op': op,
             'args': processed_code_fom_args
           });
         } catch (e) {
-          // "Please everybody, if we haven't done what we could have done, we've tried" -- The Beatles Play the Residents and the Residents Play the Beatles
+          // "Please everybody, if we haven't done what we could have done, we've tried"
           throw `Could not parse argument: ${args}`;
         }
       }
@@ -332,9 +347,9 @@ function getMaximumSubSteps(sequence) {
 // in the runOperations functions
 function random(min, max, int_mode = 0) {
   // returns number within range
-  let num = Math.random() * (Number(max) - Number(min) + 1) + Number(min);
+  let num = Math.random() * (Number(max) - Number(min)) + Number(min);
   if ( int_mode != 0 ) {
-    num = Math.trunc(num);
+    num = Math.round(num);
   }
   return num;
 }
@@ -453,6 +468,46 @@ function scaleTheArray(arrayToScale, nTimes) {
     return arrayToScale;
 }
 
+function flipBelow(sequence, min) {
+  min = Number(min);
+  let flipped_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      flipped_sequence[key] = flipBelow(step, min);
+    }
+    else {
+      if ( step < min ) {
+        let amount_below = Math.abs(Number(min) - Number(step));
+        flipped_sequence[key] = min + amount_below;
+      }
+      else {
+        flipped_sequence[key] = step;
+      }
+    }
+  }
+  return flipped_sequence;
+}
+
+function flipAbove(sequence, maximum) {
+  maximum = Number(maximum);
+  let flipped_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      flipped_sequence[key] = flipAbove(step, maximum);
+    }
+    else {
+      if ( step > maximum ) {
+        let amount_above = Math.abs(Number(step) - Number(maximum));
+        flipped_sequence[key] = maximum - amount_above;
+      }
+      else {
+        flipped_sequence[key] = step;
+      }
+    }
+  }
+  return flipped_sequence;
+}
+
 function quantize(sequence, resolution) {
   resolution = parseInt(Number(resolution));
   let quantized_sequence = [];
@@ -475,19 +530,27 @@ function quantize(sequence, resolution) {
 
 function interlace(sequence1, sequence2) {
     let interlaced_sequence = [];
+    let interlace_every;
+    let big_sequence = sequence1, small_sequence = sequence2;
     if ( sequence1.length > sequence2.length ) {
-      sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
+      interlace_every = parseInt(sequence1.length / sequence2.length);
+      big_sequence = sequence1;
+      small_sequence = sequence2;
     }
     else if ( sequence2.length > sequence1.length ) {
-      sequence2 = reduce(sequence2, sequence1.length);
+      interlace_every = parseInt(sequence2.length / sequence1.length);
+      big_sequence = sequence2;
+      small_sequence = sequence1;
     }
-    for (const [key, step] of Object.entries(sequence1)) {
-      interlaced_sequence.push(sequence1[key]);
-      if ( isNaN(sequence2[key]) ) {
-        interlaced_sequence.push(0)
-      }
-      else {
-        interlaced_sequence.push(sequence2[key]);
+    for (const [key, step] of Object.entries(big_sequence)) {
+      interlaced_sequence.push(big_sequence[key]);
+      if ( key % interlace_every == 0 ) {
+        if ( isNaN(small_sequence[key]) ) {
+          interlaced_sequence.push(0)
+        }
+        else {
+          interlaced_sequence.push(small_sequence[key]);
+        }
       }
     }
     return interlaced_sequence;
@@ -613,6 +676,7 @@ function prob(sequence, amt) {
 }
 
 function offset(sequence, amt) {
+  amt = Number(amt);
   let offset_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -907,6 +971,7 @@ function subset(sequence, percentage) {
 }
 
 function range(sequence, new_min, new_max) {
+  // this is a horizontal range - returns a range of the buffer
   min = parseInt(Number(new_min) * sequence.length);
   max = parseInt(Number(new_max) * sequence.length);
   let range_sequence = [];

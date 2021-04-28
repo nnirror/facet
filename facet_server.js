@@ -7,8 +7,8 @@ var cors = require('cors');
 const OSC = require('osc-js');
 
 const osc = new OSC({
-  discardLateMessages: false, /* ignores messages which timetags lie in the past */
-  plugin: new OSC.WebsocketServerPlugin() /* used plugin for network communication */
+  discardLateMessages: false,
+  plugin: new OSC.WebsocketServerPlugin()
 });
 osc.open();
 
