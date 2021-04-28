@@ -20,7 +20,7 @@ function getDatum(value) {
     throw `Could not parse datum: ${value}`;
   }
   if ( codeIsFunction(datum) ) {
-    datum = eval(datum);
+    datum = eval(datum)[0];
   }
   else {
     datum = datum.trim();
@@ -48,12 +48,10 @@ function removeTabsAndNewlines(user_input) {
 }
 
 function getDestination(code) {
-  // TODO check for valid destinations
   return code.split(' ')[0];
 }
 
 function getProperty(code) {
-  // TODO check for valid properties
   return code.split(' ')[1];
 }
 
@@ -92,20 +90,18 @@ function splitArguments(str) {
 
 function parseOperations(value) {
   let operations = [];
+  // split the string of operations into an array, loop through
   let split_ops = splitArguments(value);
-
-  // get ops_string
-  // translate ops string into an object. split on period, loop through
   for (const [k, d] of Object.entries(split_ops)) {
     let op = d.split('(')[0];
     let args = d.substring(
-        // everything after the period following the datum. basically all the operations
-        // in string form
+        // args is everything from the first to the last parenthesis
         d.indexOf("(") + 1,
         d.lastIndexOf(")"),
     );
     if ( !args.includes('(') && !args.includes(')') ) {
-      // simple, hard-coded argument - no need to eval any code or parse anything
+      // if there are no functions aka parenthesis in the middle of the string,
+      // no need to eval any code -- simply push the pre-existing value into args
       operations.push({
         'op': op,
         'args': args
@@ -113,26 +109,49 @@ function parseOperations(value) {
     }
     else {
       try {
-        // attempt to eval the code. this should work if the argument
-        // is a single, non-chained operation, e.g. shift(random(0,random(0,1,0),0))
-        args = eval(args);
-        // flatten the eval'ed args back into the "args" structure
-        if ( typeof args == 'number' ) {
-          args = `[${args.toString()}]`;
+        // there is a function somewhere in the argument, so now we'll
+        // attempt to eval the code, accounting for a few ways it could be structured
+        let split_args = [];
+        let multiple_functions_regex = /(?<=\)\,)/;
+        let multi_function_args = args.split(multiple_functions_regex);
+        let multiple_arguments_regex = /,(?![^()]*(?:\([^()]*\))?\))/;
+        let multi_args = args.split(multiple_arguments_regex);
+        if ( multi_function_args.length > 1 ) {
+          // case: multiple functions as arguments
+          args = multi_function_args;
+        }
+        else if ( multi_args.length > 1 ) {
+          // case: multiple arguments, at least one function as argument
+          args = multi_args;
         }
         else {
-          args = JSON.stringify(args);
+          // case: function as only argument, just init the args array to that
+          args = [args];
         }
+
+        // however many arguments are now split into an array. loop through
+        // them, eval them, and create a csv string of the evaled arguments
+        let args_str = '';
+        for (const [y, r] of Object.entries(args)) {
+          // prevent any straggling trailing parens
+          let valid_parsed_arg = r.replace('),',')');
+          let evaled_arg = eval(valid_parsed_arg);
+          args_str += `${evaled_arg.toFixed(4)},`;
+        }
+        // remove last comma
+        args_str = args_str.slice(0,-1);
         operations.push({
           'op': op,
-          'args': args
+          'args': args_str
         });
       } catch (er) {
         try {
-          // attempt to recursively parse the args, as if it were its own datum
-          // and series of operations. insert a '[' at the beginning, and a ']'
-          // after the first instance of ').' basically creates the structure needed to
-          // parse: [generator(2,3,3.5)].foo(1,2);
+          // case: in the case of functions like am(), which can take a generator as input,
+          // it's also possible for an argument to be an entirely self-contained
+          // statement, e.g. [generator].operator1(operator2,number).operator3()
+          // in that case, rerun the processCode() function (  recursively :D   )
+          // insert a '[' at the beginning, and a ']' after the first instance of ').'
+          // basically creates the structure needed to parse: [generator(2,3,3.5)].foo(1,2);
           args = args.replace(').', ')].');
           args = '[' + args;
           let datum_from_args = getDatum(args);
@@ -141,17 +160,17 @@ function parseOperations(value) {
             processed_code_fom_args = `[${c.toString()}]`;
           }
           else {
-            // bug: sequence[0] again
-            for (var i = 0; i < processed_code_fom_args[0].length; i++) {
-              processed_code_fom_args[0][i] = processed_code_fom_args[0][i].toFixed(4);
+            for (var i = 0; i < processed_code_fom_args.length; i++) {
+              processed_code_fom_args[i] = processed_code_fom_args[i].toFixed(4);
             }
-            processed_code_fom_args = JSON.stringify(processed_code_fom_args[0]);
+            processed_code_fom_args = JSON.stringify(processed_code_fom_args);
           }
           operations.push({
             'op': op,
             'args': processed_code_fom_args
           });
         } catch (e) {
+          // "Please everybody, if we haven't done what we could have done, we've tried" -- The Beatles Play the Residents and the Residents Play the Beatles
           throw `Could not parse argument: ${args}`;
         }
       }
@@ -396,11 +415,6 @@ function smooth(sequence) {
 
 
 function am(sequence1, sequence2) {
-  // BUG: i don't know why i have to set this to sequence1[0] when using functions instead of hard-coded array sructures
-  if ( Array.isArray(sequence1[0]) )  {
-    sequence1 = sequence1[0];
-  }
-
   if ( sequence1.length > sequence2.length ) {
     sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
   }
@@ -408,7 +422,6 @@ function am(sequence1, sequence2) {
     sequence2 = reduce(sequence2, sequence1.length);
   }
   // now both arrays have the same number of keys, multiply seq1 key by same seq2
-  // TODO now what about inner arrays. probably multiply every value?
   for (const [key, step] of Object.entries(sequence1)) {
     if ( Array.isArray(step) ) {
       sequence1[key] = am(step, sequence2);
@@ -461,12 +474,7 @@ function quantize(sequence, resolution) {
 }
 
 function interlace(sequence1, sequence2) {
-     let interlaced_sequence = [];
-    // BUG: i don't know why i have to set this to sequence1[0] when using functions instead of hard-coded array sructures
-    if ( Array.isArray(sequence1[0]) )  {
-      sequence1 = sequence1[0];
-    }
-
+    let interlaced_sequence = [];
     if ( sequence1.length > sequence2.length ) {
       sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
     }
@@ -648,6 +656,35 @@ function pong(sequence, min, max) {
     }
   }
   return pong_sequence;
+}
+
+function fft(sequence) {
+  let fft_sequence = [];
+  let next_power_of_2 = nextPowerOf2(sequence.length);
+  let power2_sequence = new Array(next_power_of_2);
+  for (var i = 0; i < power2_sequence.length; i++) {
+    if ( sequence[i] ) {
+      power2_sequence[i] = sequence[i];
+    }
+    else {
+      power2_sequence[i] = 0;
+    }
+  }
+  let f = new FFT(next_power_of_2);
+  f.realTransform(fft_sequence, power2_sequence);
+  return fft_sequence;
+}
+
+function nextPowerOf2(n) {
+    var count = 0;
+    if ( n && ! ( n & ( n - 1 ))) {
+      return n;
+    }
+    while ( n != 0) {
+      n >>= 1;
+      count += 1;
+    }
+    return 1 << count;
 }
 
 function fracture(sequence, max_chunk_size) {
@@ -838,9 +875,8 @@ function sort(sequence) {
 }
 
 function warp(sequence, exp) {
-  // BUG: why sequence[0]
   let warped_sequence = [];
-  let original_sequence = sequence[0];
+  let original_sequence = sequence;
   let number_of_steps = original_sequence.length;
   exp = Number(exp);
   let maximum = Math.pow(original_sequence.length, exp);
@@ -852,6 +888,39 @@ function warp(sequence, exp) {
     warped_sequence[i] = original_sequence[original_seqence_pos];
   }
   return warped_sequence;
+}
+
+function subset(sequence, percentage) {
+  percentage = Number(percentage);
+  let subset_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      subset_sequence[key] = subset(step, percentage);
+    }
+    else {
+      if ( Math.random() < percentage ) {
+        subset_sequence.push(step);
+      }
+    }
+  }
+  return subset_sequence;
+}
+
+function range(sequence, new_min, new_max) {
+  min = parseInt(Number(new_min) * sequence.length);
+  max = parseInt(Number(new_max) * sequence.length);
+  let range_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      range_sequence[key] = range(step, Number(new_min), Number(new_max));
+    }
+    else {
+      if ( Number(key) >= min && Number(key) <= max ) {
+        range_sequence.push(step);
+      }
+    }
+  }
+  return range_sequence;
 }
 
 function shift(sequence, amt) {

@@ -12,6 +12,7 @@
     <script src="facet.js"></script>
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
+    <script type="text/javascript" src="fft.js"></script>
     <style media="screen">
       html {
         height: 1000px;
@@ -130,6 +131,8 @@ mute();`,
 
       function runFacet(code) {
         let facet_data = {};
+
+        // NEXT TODO: needs to be redone.
         if ( !isGlobalCommand(code) && !isEveryNStatement(code) ) {
           // for global commands like mute(), simply run those functions which reinitialize all data to 0
           facet_data = facetParse(code);
@@ -142,6 +145,7 @@ mute();`,
                 undoEveryNStatement(command);
               }
               else {
+                // why did this get reinitialized?
                 every_n_hooks = {};
                 parseEveryNStatement(command);
               }
