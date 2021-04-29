@@ -18,15 +18,31 @@
         height: 1000px;
       }
       .CodeMirror {
-        height: 98vh;
+        height: 95vh;
         font-size: 2em;
+      }
+      #status, #notifications {
+        height: 5vh;
+        padding-top: 1.5vh;
+        padding-left: 0.5em;
+        font-size: 1.667vh;
+        display: inline-block;
+        vertical-align: middle;
+      }
+      #status {
+        width: 10%;
+      }
+      #notifications {
+        width: 89.75%;
+      }
+      .error {
+        background-color: rgba(204, 0, 0, 0.5);
       }
     </style>
   </head>
   <body>
     <script type="text/javascript">
     var cm = CodeMirror(document.body, {
-      // could somehow "load" scripts with this value function, or use a button UI to pull in old files
       value: `k1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0));
 s1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0)).rev();
 h1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0));
@@ -59,6 +75,7 @@ mute();`,
         }
         return first_line;
       }
+
       function getLastLineOfBlock(initial_line) {
         // true if line below is empty or the line number gets to cm.lineCount()
         let below_line_is_empty = false;
@@ -91,6 +108,7 @@ mute();`,
       $(document).keydown(function(e) {
         // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
         if ( e.ctrlKey && e.keyCode == 13 ) {
+          clearNotifications();
           parseCode();
         }
       });
@@ -153,11 +171,11 @@ mute();`,
 
       // begin EVERY
       function isEveryNStatement(code) {
-        return /every\([a-zA-Z0-9, .()]*\)/gm.test(code);
+        return /^every\([a-zA-Z0-9, .()]*\)/gm.test(code);
       }
 
       function isClearEveryNStatement(code) {
-        return /clearevery\([0-9]*\)/gm.test(code);
+        return /^clearevery\([0-9]*\)/gm.test(code);
       }
 
       function undoEveryNStatement(code) {
@@ -251,29 +269,63 @@ mute();`,
       });
 
       function connectToMaxOscServer() {
+        let connected = false;
+        let connection_status_change = false;
+        let message = '';
         let interval = setInterval( () => {
           osc.open();
           setTimeout( () => {
             if ( osc.status() == 1 ) {
               // connected!
-              clearInterval(interval);
-              $.notify(`Connected to OSC server.`, {
-                allow_dismiss: true,
-                delay: 500,
-                newest_on_top: true
-              });
+              if ( connected == false ) {
+                connection_status_change = true;
+              }
+              else {
+                connection_status_change = false;
+              }
+              connected = true;
+              setStatus(`connected`);
             }
             else {
-              $.notify(`Could not connect to OSC server in Max.`, {
-                allow_dismiss: true,
-                delay: 500,
-                newest_on_top: true
-              });
+              if ( connected == true ) {
+                connection_status_change = true;
+              }
+              else {
+                connection_status_change = false;
+              }
+              connected = false;
+              setStatus(`disconnected`);
             }
           }, 1000);
         }, 3000);
       }
+
+      function setStatus(status) {
+        let colored_span = '';
+        if ( status == 'connected' ) {
+          colored_span = `status: <span style="color:green;"">${status}</span>`;
+        }
+        else if ( status == 'disconnected' ) {
+          colored_span = `status: <span style="color:red;"">${status}</span>`;
+        }
+        $('#status').html(colored_span);
+      }
+
+      function clearNotifications() {
+        $('#notifications').html('');
+        $('#notifications').removeClass('error');
+      }
+
+      function notification(msg) {
+        $('#notifications').html(msg);
+        $('#notifications').addClass('error');
+        setTimeout(function () {
+          $('#notifications').removeClass('error');
+        }, 500);
+      }
       // end OSC
     </script>
+    <div id="status">status: initializing...</div>
+    <div id="notifications"></div>
   </body>
 </html>

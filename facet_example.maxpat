@@ -85,7 +85,7 @@
 					"numinlets" : 1,
 					"numoutlets" : 0,
 					"patching_rect" : [ 426.999999999999886, 442.89990234375, 286.0, 114.0 ],
-					"text" : "Another modulation example\n\nLFO on filter cutoff, either once, twice, or six times per cycle. Moves between 500 and 2000.\n\nfilter cutoff [sine(choose([1,2,3,6]),1000)].scale(0,1).gain(1500).offset(500);"
+					"text" : "Another modulation example\n\nLFO on filter cutoff, either once, twice, or six times per cycle. Moves between 500 and 2000.\n\nfilter cutoff [sine(choose([1,2,3,6]),1000)].gain(1500).offset(500);"
 				}
 
 			}

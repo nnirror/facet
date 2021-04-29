@@ -216,6 +216,7 @@ function runOperations(operations, datum) {
 }
 
 function getCommands(user_input) {
+  user_input = removeTabsAndNewlines(user_input);
   return user_input.trim().split(';').filter(Boolean);
 }
 
@@ -291,11 +292,7 @@ function facetParse(user_input) {
       facets = handleMultConnections(facets, mults);
     });
   } catch (e) {
-    $.notify(e, {
-      allow_dismiss: true,
-      delay: 2000,
-      newest_on_top: true
-    });
+    notification(e);
   }
   return facets;
 }
@@ -374,7 +371,7 @@ function data(list) {
 
 // BEGIN pattern operations
 // sequence is always first argument, any additional arguments are after
-function rev(sequence) {
+function reverse(sequence) {
   let reversed_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -401,6 +398,27 @@ function palindrome(sequence) {
 
 function dup(sequence, num) {
   return Array.from({length: num}).flatMap(a => sequence);
+}
+
+function echo(sequence, num) {
+  num = Math.round(Math.abs(Number(num)));
+  let echo_sequence = dup(sequence, num);
+  let amplitude = 1;
+  let count = 1;
+  for (const [key, step] of Object.entries(echo_sequence)) {
+    if ( count >= sequence.length ) {
+      amplitude *= 0.666;
+      count = 0;
+    }
+    if ( Array.isArray(step) ) {
+      echo_sequence[key] = echo(step, num);
+    }
+    else {
+      echo_sequence[key] = amplitude * step;
+    }
+    count++;
+  }
+  return echo_sequence;
 }
 
 function smooth(sequence) {
@@ -926,7 +944,6 @@ function round(sequence) {
 
 function sort(sequence) {
   let sorted_sequence = [];
-
   sorted_sequence = sequence.sort(function(a, b) {
     return a - b;
   });
@@ -938,20 +955,56 @@ function sort(sequence) {
   return sorted_sequence;
 }
 
-function warp(sequence, exp) {
-  let warped_sequence = [];
+function pow(sequence, expo) {
+  let pow_sequence = [];
   let original_sequence = sequence;
   let number_of_steps = original_sequence.length;
-  exp = Number(exp);
-  let maximum = Math.pow(original_sequence.length, exp);
-  for (var i = 0; i < number_of_steps; i++) {
-    // calculate the key for this step based on the sequence length raised to an exponential power
-    let warped_key = parseInt(Math.pow(Number(i), exp));
-    let warped_relative_pos = (warped_key / maximum).toFixed(4);
-    let original_seqence_pos = parseInt(warped_relative_pos * number_of_steps);
-    warped_sequence[i] = original_sequence[original_seqence_pos];
+  expo = Number(expo);
+  let maximum = Math.pow(original_sequence.length, expo);
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      pow_sequence[key] = pow(step, expo);
+    }
+    else {
+      // calculate the key for this step based on the sequence length raised to an exponential power
+      let warped_key = parseInt(Math.pow(Number(key), expo));
+      let warped_relative_pos = (warped_key / maximum).toFixed(4);
+      let original_seqence_pos = parseInt(warped_relative_pos * number_of_steps);
+      pow_sequence[key] = original_sequence[original_seqence_pos];
+    }
   }
-  return warped_sequence;
+  return pow_sequence;
+}
+
+function log(sequence) {
+  let log_sequence = [];
+  let number_of_steps = sequence.length;
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      log_sequence[key] = log(step);
+    }
+    else {
+      let scaled_key = key / number_of_steps;
+      let warped_key = parseInt(logslider(scaled_key, number_of_steps)) - 1;
+      log_sequence[key] = sequence[warped_key];
+    }
+  }
+  return log_sequence;
+}
+
+// position value 0-1, sequence length is the array length
+function logslider(position, sequence_length) {
+  sequence_length = Number(sequence_length);
+  // position will be between 0 and 100
+  let minp = 0;
+  let maxp = 1;
+
+  var minv = Math.log(1);
+  var maxv = Math.log(sequence_length);
+
+  // calculate adjustment factor
+  var scale = (maxv-minv) / (maxp-minp);
+  return Math.exp(minv + scale*(position-minp));
 }
 
 function subset(sequence, percentage) {
@@ -1091,6 +1144,29 @@ function sticky(sequence, amt) {
   return sticky_sequence;
 }
 
+function sahevery(sequence, num) {
+  num = Math.round(Math.abs(Number(num)));
+  let count = 0;
+  let sah_sequence = [];
+  let prev_step;
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      sah_sequence[key] = sahevery(step, num);
+    }
+    else {
+      if ( count % num == 0 || key == 0 ) {
+        sah_sequence[key] = step;
+        prev_step = step;
+      }
+      else {
+        sah_sequence[key] = prev_step;
+      }
+    }
+    count++;
+  }
+  return sah_sequence;
+}
+
 function clip(sequence, min, max) {
   let clipped_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
@@ -1194,7 +1270,8 @@ function sine(periods, length) {
       sine_sequence[(a * length) + i] = Number(Math.sin(num_scaled).toFixed(4));
     }
   }
-  return sine_sequence;
+  // scale sine from 0 to 1 and make the first sample be 0
+  return shift(scale(sine_sequence,0,1), 0.25);
 }
 
 function cosine(periods, length) {
@@ -1261,6 +1338,12 @@ function drunk(length, intensity) {
     drunk_sequence[i] = d.toFixed(4);
   }
   return drunk_sequence;
+}
+
+function phasor(periods, length) {
+  periods = Number(periods);
+  length = Number(length);
+  return dup(ramp(0,1,length), periods);
 }
 
 function noise(length) {
