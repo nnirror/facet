@@ -272,7 +272,7 @@ function processCode(statement, datum) {
 
 function facetParse(user_input) {
   let commands = [], destination, property, statement, datum, ops_string,
-  operations = [], max_sub_steps, flat_sequence, sequence_msg, mults = {};
+  operations = [], max_sub_steps, flat_sequence, sequence_msg, mults = {}, current_command;
   // parse user input into individual operations on data.
   // run those operations, scale and flatten the resulting array,
   // and send that data into Max so it can go in a buffer wavetable
@@ -280,6 +280,7 @@ function facetParse(user_input) {
     user_input = removeTabsAndNewlines(user_input);
     commands = getCommands(user_input);
     Object.values(commands).forEach(command => {
+      current_command = command;
       destination = getDestination(command);
       property = getProperty(command);
       statement = getStatement(command, property);
@@ -292,7 +293,7 @@ function facetParse(user_input) {
       facets = handleMultConnections(facets, mults);
     });
   } catch (e) {
-    notification(e);
+    notification(`${e}, command: ${current_command}`);
   }
   return facets;
 }

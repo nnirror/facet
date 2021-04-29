@@ -99,7 +99,7 @@ mute();`,
       }
 
       function isGlobalCommand(code) {
-        if ( code == 'mute();' ) {
+        if ( code == 'mute()' ) {
           return true;
         }
         return false;
@@ -130,32 +130,33 @@ mute();`,
 
       function runFacet(code) {
         let facet_data = {};
+        let skip_parsing = false;
 
-        // NEXT TODO: needs to be redone.
-        if ( !isGlobalCommand(code) && !isEveryNStatement(code) ) {
-          // for global commands like mute(), simply run those functions which reinitialize all data to 0
-          facet_data = facetParse(code);
+        if ( isEveryNStatement(code) || isClearEveryNStatement(code) ) {
+          if ( isClearEveryNStatement(code) ) {
+            undoEveryNStatement(code);
+          }
+          else {
+            parseEveryNStatement(code);
+          }
         }
-        else {
-          commands = getCommands(code);
-          Object.values(commands).forEach(command => {
-            if ( isEveryNStatement(command) ) {
-              if ( isClearEveryNStatement(command) ) {
-                undoEveryNStatement(command);
-              }
-              else {
-                // why did this get reinitialized?
-                every_n_hooks = {};
-                parseEveryNStatement(command);
-              }
-            }
-            else {
-              // global commands are eval'd as-is. so e.g. the command "mute();"
-              // would run the mute() function which will send a value of global[mute]: 0
-              // to every facet_param in Max, basically unsetting all buffers.
-              facet_data = eval(command);
-            }
-          });
+
+        commands = getCommands(code);
+        Object.values(commands).forEach(command => {
+          if ( isGlobalCommand(command) ) {
+            // global commands are evaled as-is. so e.g. the command "mute();"
+            // would run the mute() function which will send a value of global[mute]: 0
+            // to every facet_param in Max, basically unsetting all buffers.
+            facet_data = eval(command);
+            skip_parsing = true;
+          }
+          if ( isClearEveryNStatement(command) ) {
+            skip_parsing = true;
+          }
+        });
+
+        if ( !skip_parsing ) {
+          facet_data = facetParse(code);
         }
 
         $.post('http://127.0.0.1:1123', facet_data);
@@ -175,7 +176,7 @@ mute();`,
       }
 
       function isClearEveryNStatement(code) {
-        return /^clearevery\([0-9]*\)/gm.test(code);
+        return /clearevery\([0-9]*\)/gm.test(code);
       }
 
       function undoEveryNStatement(code) {
@@ -195,8 +196,8 @@ mute();`,
       }
 
       function parseEveryNStatement(code) {
-        let every_n_matches = code.match(/every\([a-zA-Z0-9, .()]*\)/gm);
-        let every_n_split = code.split(/every\([a-zA-Z0-9, .()]*\)/gm);
+        let every_n_matches = code.match(/^every\([a-zA-Z0-9, .()]*\)/gm);
+        let every_n_split = code.split(/^every\([a-zA-Z0-9, .()]*\)/gm);
         let prob = 1;
         if ( every_n_matches ) {
           for (const [key, every] of Object.entries(every_n_matches)) {
