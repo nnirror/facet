@@ -42,8 +42,9 @@ function codeIsFunction(code) {
 }
 
 function removeTabsAndNewlines(user_input) {
-  // remove tabs, newlines, and multiple spaces
+  // remove tabs, newlines, and multiple spaces. convert any single quotes to double quotes
   user_input = user_input.replace(/\s\s+/g, '');
+  user_input = user_input.replaceAll('\'', '"');
   return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
 }
 
@@ -91,6 +92,7 @@ function splitArguments(str) {
 function parseOperations(value) {
   let operations = [];
   // split the string of operations into an array, loop through
+  // value = value.replaceAll('"', '');
   let split_ops = splitArguments(value);
   for (const [k, d] of Object.entries(split_ops)) {
     let op = d.split('(')[0];
@@ -185,8 +187,23 @@ function parseOperations(value) {
             'args': processed_code_fom_args
           });
         } catch (e) {
-          // "Please everybody, if we haven't done what we could have done, we've tried"
-          throw `Could not parse argument: ${args}`;
+          // case: the 'sometimes' function has chained operations in it
+          if ( op == 'sometimes' ) {
+            // ultimately the argument should look like: [0.5, 'scale(-1,1).gain(0)']
+            // this just starts over from the user input (ie value) and attempts to
+            // reparse the arguments into that array like structure, first key is probability
+            // and second key is the chain of operations
+            let sometimes_split_regex = /sometimes\s*\(/;
+            let sometimes_split = value.split(sometimes_split_regex);
+            operations.push({
+              'op': op,
+              'args': `[${sometimes_split[1].slice(0,sometimes_split[1].length-1)}]`
+            });
+          }
+          else {
+            // "Please everybody, if we haven't done what we could have done, we've tried"
+            throw `Could not parse argument: ${args}`;
+          }
         }
       }
     }
@@ -739,6 +756,41 @@ function pong(sequence, min, max) {
     }
   }
   return pong_sequence;
+}
+
+function sometimes(sequence, controls) {
+  let prob = Math.abs(Number(controls[0]));
+  let command = controls[1];
+  if ( Math.random() < prob ) {
+    operations = parseOperations(command);
+    sequence = runOperations(operations, sequence);
+  }
+  return sequence;
+}
+
+function convolve(sequence1, sequence2) {
+  sequence2 = fft(sequence2);
+  if ( sequence1.length > sequence2.length ) {
+    sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
+  }
+  else if ( sequence2.length > sequence1.length ) {
+    sequence2 = reduce(sequence2, sequence1.length);
+  }
+  // now both arrays have the same number of keys, multiply seq1 key by same seq2
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( Array.isArray(step) ) {
+      sequence1[key] = convolve(step, sequence2);
+    }
+    else {
+      if ( isNaN(sequence2[key]) ) {
+        sequence1[key] = 0;
+      }
+      else {
+        sequence1[key] = step * sequence2[key];
+      }
+    }
+  }
+  return sequence1;
 }
 
 function fft(sequence) {
