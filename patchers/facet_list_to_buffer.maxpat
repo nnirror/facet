@@ -41,7 +41,7 @@
 				"box" : 				{
 					"comment" : "(symbol) buffer name",
 					"id" : "obj-3",
-					"index" : 0,
+					"index" : 2,
 					"maxclass" : "inlet",
 					"numinlets" : 0,
 					"numoutlets" : 1,
@@ -54,7 +54,7 @@
 				"box" : 				{
 					"comment" : "(list) becomes buffer data contents",
 					"id" : "obj-24",
-					"index" : 0,
+					"index" : 1,
 					"maxclass" : "inlet",
 					"numinlets" : 0,
 					"numoutlets" : 1,
@@ -205,18 +205,6 @@
 					"outlettype" : [ "float", "float" ],
 					"patching_rect" : [ 596.0, 464.1055908203125, 54.0, 35.0 ],
 					"text" : "unpack 0. 0."
-				}
-
-			}
-, 			{
-				"box" : 				{
-					"id" : "obj-9",
-					"maxclass" : "message",
-					"numinlets" : 2,
-					"numoutlets" : 1,
-					"outlettype" : [ "" ],
-					"patching_rect" : [ 806.652176678180695, 520.0, 41.0, 22.0 ],
-					"text" : "set $1"
 				}
 
 			}
@@ -391,7 +379,18 @@
 			}
 , 			{
 				"patchline" : 				{
-					"destination" : [ "obj-9", 0 ],
+					"destination" : [ "obj-22", 0 ],
+					"midpoints" : [ 816.152176678180695, 599.915255308151245, 605.0, 599.915255308151245 ],
+					"order" : 1,
+					"source" : [ "obj-3", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
+					"destination" : [ "obj-5", 0 ],
+					"midpoints" : [ 816.152176678180695, 599.429286003112793, 666.462738037109375, 599.429286003112793 ],
+					"order" : 0,
 					"source" : [ "obj-3", 0 ]
 				}
 
@@ -411,27 +410,7 @@
 				}
 
 			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-22", 0 ],
-					"midpoints" : [ 816.152176678180695, 599.915255308151245, 605.0, 599.915255308151245 ],
-					"order" : 1,
-					"source" : [ "obj-9", 0 ]
-				}
-
-			}
-, 			{
-				"patchline" : 				{
-					"destination" : [ "obj-5", 0 ],
-					"midpoints" : [ 816.152176678180695, 599.429286003112793, 666.462738037109375, 599.429286003112793 ],
-					"order" : 0,
-					"source" : [ "obj-9", 0 ]
-				}
-
-			}
- ],
-		"dependency_cache" : [  ],
-		"autosave" : 0
+ ]
 	}
 
 }

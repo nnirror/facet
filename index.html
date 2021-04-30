@@ -2,17 +2,19 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
-    <title>nnirror</title>
+    <title>facet</title>
+    <link rel="shortcut icon" type="image/png" href="img/favicon.png"/>
     <script src="node_modules/codemirror/lib/codemirror.js"></script>
     <link rel="stylesheet" href="node_modules/codemirror/lib/codemirror.css">
     <link rel="stylesheet" href="node_modules/codemirror/theme/mbo.css">
     <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <script src="node_modules/codemirror/mode/javascript/javascript.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="facet.js"></script>
+    <script src="js/facet.js"></script>
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
-    <script type="text/javascript" src="fft.js"></script>
+    <script type="text/javascript" src="js/fft.js"></script>
+    <script type="text/javascript" src="js/strip_comments.js"></script>
     <style media="screen">
       html {
         height: 1000px;
@@ -23,6 +25,7 @@
       }
       #status, #notifications {
         height: 5vh;
+        max-height: 5vh;
         padding-top: 1.5vh;
         padding-left: 0.5em;
         font-size: 1.667vh;
@@ -30,10 +33,10 @@
         vertical-align: middle;
       }
       #status {
-        width: 10%;
+        width: 200px;
       }
       #notifications {
-        width: 89.75%;
+        width: calc(100% - 205px);
       }
       .error {
         background-color: rgba(204, 0, 0, 0.5);
@@ -43,13 +46,7 @@
   <body>
     <script type="text/javascript">
     var cm = CodeMirror(document.body, {
-      value: `k1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0));
-s1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0)).rev();
-h1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0));
-a1 struct [sine(random(1,10,0),50)].subset(random(0.05,0.25,0)).gain(random(0,1,0)).fft().warp(random(1,5,0)).rev();
-global bpm [drunk(16,0.1)].gain(120).offset(30);
-
-mute();`,
+      value: `// Facet: live coding in the browser for Max`,
         mode:  "javascript",
         theme: "mbo",
         lineWrapping: true

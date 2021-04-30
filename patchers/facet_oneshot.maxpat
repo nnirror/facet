@@ -44,8 +44,8 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 580.800008654594421, 281.600004196166992, 155.0, 342.0 ],
-					"text" : "Retriggers a sample every time the input signal changes to a nonzero value.\n\nWhen the signal is 0, no trigger occurs.\n\nThe value of the signal controls the speed of playback, with 1 being normal speed, 2 being double speed, 0.5 being half speed, etc.\n\nSo you can trigger drums with anything, a sine wave, audio, control-rate data, etc.\n\nTo instantiate this object:\n\nfacet_onsehot @buffer name_of_buffer_in_your_patch_goes_here"
+					"patching_rect" : [ 598.800008654594421, 204.600004196166992, 155.0, 342.0 ],
+					"text" : "Retriggers a sample every time the input signal changes to a new nonzero value.\n\nOnly when the signal is 0 will no triggering occur.\n\nThe value of the (nonzero) signal also controls the speed of playback, with 1 being normal speed, 2 being double speed, 0.5 being half speed, etc.\n\nSo you can trigger drums with anything, a sine wave, audio, control-rate data, etc.\n\nTo instantiate this object:\n\nfacet_onsehot @buffer name_of_buffer_in_your_patch_goes_here"
 				}
 
 			}
@@ -527,9 +527,9 @@
 , 			{
 				"name" : "dUG Yello 01-1",
 				"default" : 				{
-					"fontface" : [ 1 ],
 					"textcolor_inverse" : [ 0.0, 0.0, 0.0, 1.0 ],
 					"fontsize" : [ 10.0 ],
+					"bgcolor" : [ 1.0, 0.941176, 0.803922, 1.0 ],
 					"bgfillcolor" : 					{
 						"type" : "gradient",
 						"color" : [ 0.290196, 0.309804, 0.301961, 1.0 ],
@@ -540,18 +540,17 @@
 						"autogradient" : 0
 					}
 ,
-					"bgcolor" : [ 1.0, 0.941176, 0.803922, 1.0 ]
+					"fontface" : [ 1 ]
 				}
 ,
 				"newobj" : 				{
-					"fontface" : [ 1 ],
 					"textcolor_inverse" : [ 0.0, 0.0, 0.0, 1.0 ],
 					"fontsize" : [ 10.0 ],
-					"bgcolor" : [ 1.0, 0.941176, 0.803922, 1.0 ]
+					"bgcolor" : [ 1.0, 0.941176, 0.803922, 1.0 ],
+					"fontface" : [ 1 ]
 				}
 ,
 				"message" : 				{
-					"fontface" : [ 1 ],
 					"textcolor_inverse" : [ 0.0, 0.0, 0.0, 1.0 ],
 					"fontsize" : [ 10.0 ],
 					"bgfillcolor" : 					{
@@ -563,14 +562,15 @@
 						"proportion" : 0.39,
 						"autogradient" : 0
 					}
-
-				}
 ,
-				"button" : 				{
-					"bgcolor" : [ 1.0, 0.941176, 0.803922, 1.0 ]
+					"fontface" : [ 1 ]
 				}
 ,
 				"toggle" : 				{
+					"bgcolor" : [ 1.0, 0.941176, 0.803922, 1.0 ]
+				}
+,
+				"button" : 				{
 					"bgcolor" : [ 1.0, 0.941176, 0.803922, 1.0 ]
 				}
 ,
@@ -644,8 +644,8 @@
 , 			{
 				"name" : "rsliderGold",
 				"default" : 				{
-					"color" : [ 0.646639, 0.821777, 0.854593, 1.0 ],
-					"bgcolor" : [ 0.764706, 0.592157, 0.101961, 1.0 ]
+					"bgcolor" : [ 0.764706, 0.592157, 0.101961, 1.0 ],
+					"color" : [ 0.646639, 0.821777, 0.854593, 1.0 ]
 				}
 ,
 				"parentstyle" : "",

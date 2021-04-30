@@ -1,5 +1,3 @@
-// begin code parsing testing
-
 function replaceAll(string, search, replace) {
   return string.split(search).join(replace);
 }
@@ -187,20 +185,19 @@ function parseOperations(value) {
             'args': processed_code_fom_args
           });
         } catch (e) {
-          // case: the 'sometimes' function has chained operations in it
-          if ( op == 'sometimes' ) {
+          try {
+            // case: arguments passed into a "sometimes" function
             // ultimately the argument should look like: [0.5, 'scale(-1,1).gain(0)']
-            // this just starts over from the user input (ie value) and attempts to
+            // this just starts over and attempts to
             // reparse the arguments into that array like structure, first key is probability
             // and second key is the chain of operations
             let sometimes_split_regex = /sometimes\s*\(/;
-            let sometimes_split = value.split(sometimes_split_regex);
+            let sometimes_split = d.split(sometimes_split_regex);
             operations.push({
               'op': op,
               'args': `[${sometimes_split[1].slice(0,sometimes_split[1].length-1)}]`
             });
-          }
-          else {
+          } catch (ee) {
             // "Please everybody, if we haven't done what we could have done, we've tried"
             throw `Could not parse argument: ${args}`;
           }
@@ -294,6 +291,7 @@ function facetParse(user_input) {
   // run those operations, scale and flatten the resulting array,
   // and send that data into Max so it can go in a buffer wavetable
   try {
+    user_input = stripComments(user_input);
     user_input = removeTabsAndNewlines(user_input);
     commands = getCommands(user_input);
     Object.values(commands).forEach(command => {
@@ -416,6 +414,22 @@ function palindrome(sequence) {
 
 function dup(sequence, num) {
   return Array.from({length: num}).flatMap(a => sequence);
+}
+
+function normalize(sequence) {
+  // converts any sequence back into 0-1 range
+  let normalized_sequence = [];
+  let min = Math.min.apply(Math, sequence);
+  let max = Math.max.apply(Math, sequence);
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      normalized_sequence[key] = normalze(step);
+    }
+    else {
+      normalized_sequence[key] = (step - min) / (max - min);
+    }
+  }
+  return normalized_sequence;
 }
 
 function echo(sequence, num) {
