@@ -1,28 +1,426 @@
-# Facet: live coding in the browser for Max
+# Facet: live coding for Max in the browser
 
 ## Overview
 
-Facet is a live coding system for controlling and applying algorithmic transformations to a Max patcher from the web browser. Any patcher can connect to Facet (as log is you're running Max 8), and it can connect to Max for Live devices too!
+Facet is a flexible live coding system for controlling and applying algorithmic transformations to a Max patcher from a web browser. Any patcher can connect to Facet as long as you're running Max 8, and it can connect to Max for Live devices, too!
 
-It's easy to configure for your own purposes in Max, CPU-efficient, and can modulate parameters up into the audio rate with sample-accuracy since it's based on wavetables.
+The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
 
-The language is similar in style to other live coding environments like TidalCycles and Hydra, where simple commands are chained together to create complex patterns. Functions generate data in the 0-1 range by default, but they can then be scaled, offset, modulated, shuffled, convolved, and more, into any number range or scale. This allows for highly precise operations. Need a signal going from 500-2000? No problem, add a .gain(1500).offset(500). Want to create a microtonal scale? Sick, add .map([0.1, 0.2, 0.3, 0.5, 0.8, 1.3, 2.1, 3.4, 5.5]) and every value will now be one of those 9 values.
+Facet runs with minimal CPU overhead in Max, allows for sample-accurate parameter modulation up into the audio rate, and can produce both precise and endlessly surprising patterns.
 
 ## Getting started
 
-1. Configure your local machine so it's running a web server. If you're not sure how to do this, Google something like "set up a local web server {your operating system here}."
-2. Move the facet repo into a subdirectory of your local web server.
-3. In your browser, navigate to the facet repo, which should now be available on your local web server. For example, on my machine: http://127.0.0.1/~cella/facet/
-4. In Max, open one of the .maxpat files in the /examples folder. They each have some sample commands you can run for testing.
-	- example_facet_basics.maxpat has a few simple examples.
-	- example_facet_drums.maxpat sequences 4 drums samples.
-	- example_facet_midi.maxpat generates MIDI note data.
-	- example_facet_m4l_fm.amxd connects to Max for Live.
-5.	Copy those commands into the code editor in the browser, and hit ctrl+enter to run any block of code. All commands NOT separated by two lines (i.e. in the same block) will run together. They should briefly highlight to illustrate what commands ran.
-6.	If all went well, whatever commands you ran should have begun to modify a parameter in your Max patcher.
+1. Download Node.js and npm: https://www.npmjs.com/get-npm
+2. Configure your local machine so it's running a web server. If you're not sure how to do this, Google "set up a local web server {your operating system here}." Facet is configured to work with your local web server running on 127.0.0.1.
+3. Move the Facet repo into a subdirectory of your local web server.
+4. In a terminal, while in the root of the facet repo, run `npm install`
+5. Now in your browser, navigate to the Facet repo directory on your local web server. For example, on my machine (OSX Catalina): http://127.0.0.1/~cella/facet/ A blank code editor with a single comment in it should appear:
+```
+// Facet: live coding in the browser for Max
+```
+6. Open Max and add the Facet repo and all subdirectories to your file preferences.
+7. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
+	- `example_facet_basics.maxpat` has a few simple examples
+	- `example_facet_debug.maxpat` shows how to view the pattern in Max that's created by Facet
+	- `example_facet_drum_generator.maxpat` synthesizes some drum sounds
+	- `example_facet_drums.maxpat` sequences 4 drum samples
+	- `example_facet_midi.maxpat` generates MIDI note data
+	- `example_facet_m4l_fm.amxd` connects to Max for Live
+8.	Copy those commands into the code editor in the browser. Move your cursor so it's on the line or block you want to run (All commands not separated by two blank lines will run together). Hit ctrl+enter to run the command(s). They should briefly highlight to illustrate what commands ran.
+9.	Those commands should go from your local web server into Max. If you copied the command from an example file, the it should work and begin modulating one of the parameters in the Max patcher without any additional configuration.
+
+## Facet command structure
+
+Here is the general structure of a Facet command:
+
+`destination property [datum].operations();`
+
+**Important*: there are a few global commands that do not adhere to this format. For example, if you want to unset all data, run `mute();` and every parameter will be set to 0.
+
+### Destination and Property
+
+The "destination" and "property" values can be anything, as long as both values match the ones in the corresponding object in your Max patcher (more on this later). They should also be alphanumeric strings and contain no spaces.
+
+Example of a valid destination and property:
+
+```
+kick resonance
+foo bar
+123_456 this_is_valid_but_silly
+synth note
+```
+Examples of an invalid destination and property:
+
+```
+bongo fury amount	// must be 2 words with only whitespace between
+friend's synth		// alphanumeric and underscores only
+kgs; asld!#			// the semicolon would cause a parsing error
+```
+
+### Datum
+
+The "datum" is the seed of data for the pattern that Facet ultimately generates. It must be enclosed in brackets, e.g. `[]`, and it has a maximum length of 1024. (If the datum ends up being longer than 1024, it will get rescaled to under 1024 before going to Max).
+
+There are two ways to program the contents of a datum:
+
+1. Manually enter numbers between the brackets. With this approach you can create nested arrays, where each higher level of the array will correspond to half as much time as the previous level when the array gets translated into a pattern in Max.
+
+So here's an example nested datum and how it would translate into a pattern in Max:
+
+```
+[1 [2 [3]]] /* a manually programmed nested datum */
+1 1 1 1 2 2 3 /* the resulting scaled pattern in Max */
+```
+
+The value `3` is nested twice, so it happens half as many times as the value `2`. Similarly, the `2` is nested once, so it happens half as many times as the `1`, which is at the root level of the array.
+
+All of the following are valid examples of a manually programmed datum :
+
+```
+[1 -0.4 2.5]
+[1 0 1 0 3 3 0 0.5 [1 1 1 0 0 0 1 0] [0 1 [1 2 3 4] 0]]
+[300]
+```
+
+2. You can also use a "generator" function to fill the datum (see command reference for more details). For instance:
+
+```
+[sine(3,100)]
+// fill the datum with 3 sine cycles 0-1, each cycle having 100 values
+[noise(64)]
+// fill the datum with 64 random values between 0 and 1
+[drunk(256, 0.05)]
+/* fill the datum with a 0-1 random walk for 256 steps, each value
+being maximum 0.05 times different than the previous number */
+```
+
+Note: you can also invoke certain other functions while programming the datum. For example:
+```
+[sine(random(1,20,1),choose([5,10,20,40,80]))]
+/* fill the datum with {random integer between 1-20} sine cycles,
+where each cycle has either 5, 10, 20, 40, or 80 values. */
+
+```
+You can also chain certain operations _after_ the datum, but before other processing operations, if you want the datum to have multiple discrete components:
+```
+[1 0].append(random(0,1,0))
+// fill the datum with 1, then 0, then a random float 0-1
+[noise(2)].append(choose([0,1]))
+// the opposite: fill the datum with 2 random floats 0-1, then either a 1 or 0
+[phasor(3,10)].append(square(3,10));
+/* fill with 3 cycles of a phasor, 10 values each. Append a square wave
+of the same length. */
+```
+### Operations
+You can transform the datum by chaining it through a series of operations (see command reference for a list of all operations). Since most functions generate data in the 0-1 range, these operations can be useful for scaling the datum into a range that is suitable for whatever you're doing in Max. They can also reorder, reduce, phase-flip, saturate, truncate, etc. For example, here's a command from `example_facet_midi.maxpat`:
+
+```
+midi note [tri(1,50)].gain(12).map([0,2,4,5,7,9,11,12]).offset(60);
+// in the datum: create a single triangle cycle with 50 values, going from 0 to 1.
+/* in the operations:
+	- multiply those values by 12 with gain(12), so the triangle goes from 0 to 12.
+	- map all triangle values onto one of the following: [0,2,4,5,7,9,11,12]
+		- (this filters the notes from a chromatic 12-tone scale into C major)
+	- add an offset of 60 to each value, so the triangle is now playing an up/down arpeggio of C major notes in the middle of the register.
+*/
+```
+And here's another example:
+```
+fm amt [noise(8)].sort().palindrome();
+// the datum is 8 random values 0-1. sort them and create a palindrome:
+```
+All operations transform the datum and pass it on, with the exception of  `choose()` and `random()`, which can only be used as arguments to other operations, since they return a single number.
+
+### Ending / formatting commands
+All commands must end in a semicolon. It's possible to have multiple commands on the same line without a new line, e.g:
+```
+k1 struct [1 0 0 0]; s1 struct [0 0 1 0];
+/* k1 triggers at beginning of each global phasor cycle, and
+s1 triggers halfway through */
+```
+You can add tabs and newlines to your commands to help with formatting / clarity:
+
+```
+midi note
+    [noise(12)].round().palindrome().quantize(choose([4,8,16]))
+		.append(phasor(random(1,10,1),20).palindrome()
+			.quantize(choose([2,4,6,8,12,16,20])))
+		.gain(12).offset(60).prob(0.125).offset(choose([0,5,7])).clip(60,72);
+```
+
+### every ()
+It's also possible to specify an optional prefix to any Facet command which will cause it to re-evaluate at whatever frequency the user specified. By default, Max will send a "bang" message to the Facet application in the browser every quarter note. (You could, of course, edit the `metro` object to run at a different speed if you want, in `facet_server.maxpat`). For example:
+
+```
+every(4) lp cutoff noise[1].gain(3000);
+// select a new random number between 0 and 3000 every 4 quarter notes
+every(1) lp reso [sine(random(1,6,1),100)].scale(0,0.7);
+// run a sine wave between 1-6 times every quarter note, going from 0 to 0.7
+```
+
+It's possible to specify a probability with every(), so that it will only run some of the time. By default, the every() commands have a probability of 1, meaning they will always run. For example:
+```
+every(4, 0.25) lp cutoff noise[1].gain(3000);
+// every 4 quarter notes, 25% of the time, select a new random number between 0 and 3000
+```
+
+### clearevery()
+By default, the `clearevery();` command will clear all `every()` processes from memory. `mute();` also clears all `every()` processes.
+
+If you want to clear a specific `every()` process, e.g. one running every 4, you would run `clearevery(4);`.
+
+### sometimes()
+The `sometimes()` operation has two arguments: a probability from 0-1, and a string of operations that should run some of the time. For example:
+
+```
+midi note [phasor(1,100)].sticky(0.5).scale(40, 80).sometimes(0.5, 'reverse()');
+// half the time, pattern goes up; half the time, it goes down
+```
 
 ## Debugging
+In the bottom of the Facet application in the browser is a status window which indicates whether the browser is connected to Max, and an additional space where further context is provided if a command failed.
 
-# How it works
+Facet is a live coding environment, so it's inevitable that sometimes the commands you run will technically "succeed", but they won't contain anything, or they won't produce the output you expect.
 
-The commands are sent from the browser to Max via HTTP. A Node for Max object, "facet_server"
+In either case, it can be helpful to open the Developer Tools in the browser and inspect network traffic, to see exactly what data Facet sent along. (In Chrome the tab is called "Network"). Facet sends HTTP requests to Max because the data payloads can be quite large, larger than OSC would allow. The HTTP requests are sent by default to a server in Max which is listening on port 1123 of your local web server, so the requests to Max are all to http://127.0.0.1:1123/.
+
+So, a good debugging step after running a command is to check the HTTP payload for that request to http://127.0.0.1:1123/ and see if the payload actually had data in it.. and if so, if it's what you expect. If there is no data in the payload, double check all your operations. Some operations require arrays as arguments. Some require multiple arguments. Check that all parentheses and brackets are starting and ending at the right place so that functions have the correct number of arguments, and check that the command ends with a semicolon.
+
+It's also possible that during development of a new patcher, you might occasionally need to refresh the page in your browser, or open the `facet_server` object in the patcher , click `script stop` and then `script start` to restart the server.
+
+There is also a utility object, `facet_buffer.maxpat`, which can visualize the Facet pattern in
+Max. Check out `example_facet_debug.maxpat` for an example.
+
+It's also entirely possible there are bugs. I welcome any bug reports!
+
+## Creating your own patches
+
+First, add a `facet_server` object (`facet_server.maxpat`) to your patcher. This object handles the connection between Max and the live coding interface in the browser. Verify that Max is now connected to the Facet application in the browser by checking the status window at the bottom of the browser.
+
+Then for each parameter in your patcher that you want to control, add a `facet_param` object. The `@destination` and `@prop` values must be specified when you create the object. So the structure would look like:
+
+`facet_param @destination foo @prop bar`
+
+The `facet_param` object outputs a signal, so you will need to use `snapshot~` if you want to use a number instead of a signal. Other than that, you can just connect it to whatever you want!
+
+In some cases it might also be helpful to use a `slide~` or `rampsmooth~` object after the `facet_param` object, since the output from Facet is not smoothed at all, which can produce audible clicks when modulating certain parameters like gain, filter cutoff, etc.
+
+## Command reference
+
+### Single number generators
+- **choose** ( pattern )
+	- returns a randomly selected value from a supplied pattern.
+	- example:
+		- `foo bar [1].append(choose(data([2,3]))); // returns 1 and either 2 or 3`
+- **random** ( min, max, int_mode )
+	- returns a number between `min` and `max`. If int_mode is 1, returns an integer. Otherwise, returns a float by default.
+	- example:
+		- `foo bar [0].append(random(0,1)); // returns 0 and a float between 0 and 1`
+		- `foo bar [0].append(random(1,10,1)); // returns 0 and an int between 1 and 10`
+---
+### Pattern modulators
+- **abs** ( )
+	- returns the absolute value of all numbers in the pattern.
+	- example:
+		- `foo bar [sine(1,100)].offset(-0.3).abs(); // a wonky sine`
+- **clip** ( min, max )
+	- clips any numbers in the pattern to a `min` and `max` range.
+	- example:
+		- `foo bar [1 2 3 4].clip(2, 3); // 2 2 3 3 `
+- **distavg** ( )
+	- computes the distance from the average of the pattern, for each element in the pattern.
+	- example:
+		- `foo bar [0.1 4 3.14].distavg(); // -2.3133 1.5867 0.7267`
+- **dup** ( num )
+	- duplicates the pattern `num` times.
+	- example:
+		- `foo bar [sine(1,100)].dup(random(2,4,1)); // sine has 2, 3, or 4 cycles `
+- **echo** ( num )
+	- repeats the pattern `num` times, with decreasing amplitude each repeat.
+	- example:
+		- `foo bar [1].echo(5); // 0.666 0.4435 0.29540 0.19674 0.13103`
+		- `foo bar [phasor(5,20)].echo(8); // phasor decreases after each 5 cycles `
+- **flipAbove** ( maximum )
+	- for all values above `maximum`, it returns `maximum` minus how far above the value was.
+	- example:
+		- `foo bar [sine(1,1000)].flipAbove(0.2); // wonky sine`
+- **flipBelow** ( min )
+	- for all values below `minimum`, it returns `minimum` plus how far below the value was.
+	- example:
+		- `foo bar [sine(1,1000)].flipBelow(0.2); // another wonky sine`
+- **fft** ( )
+	- computes the FFT of the pattern, translating the pattern data into "phase data" that could theoretically reconstruct the pattern using sine waves, but in this context is just a glitchy isomorphism.
+	- example:
+		- `foo bar [1 0 1 1].fft(); // 3 0 0 1 1 0 0 -1`
+- **fracture** ( max_chunk_size )
+- divides and scrambles the pattern into pieces, where no chunk is bigger than `max_chunk_size`, and all chunks will be larger than `max_chunk_size / 2`.
+- example:
+	- `foo bar [phasor(1,1000)].fracture(100); // the phasor has shattered into pieces!`
+- **invert** ( )
+- computes the `minimum` and `maximum` values in the pattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
+- example:
+	- `foo bar [0 0.1 0.5 0.667 1].invert(); // 1 0.9 0.5 0.333 0`
+- **fade** ( )
+- applies a crossfade window to the pattern, so the beginning and end are faded out.
+- example:
+	- `foo bar [noise(1024)].fade();`
+- **flattop** ( )
+- applies a flat top window to the pattern, which a different flavor of fade.
+- example:
+	- `foo bar [noise(1024)].flattop();`
+- **gain** ( amt )
+- multiplies every value in the pattern by a number.
+- example:
+	- `foo bar [0 1 2].gain(100); // 0 100 200`
+	-  `foo bar [0 1 2].gain(0.5); // 0 0.5 1`
+- **gt** ( amt )
+- returns `1` for every value in the pattern greater than `amt` and `0` for all other values.
+- example:
+	- `foo bar [0.1 0.3 0.5 0.7].gt(0.6); // 0 0 0 1`
+- **gte** ( amt )
+- returns `1` for every value in the pattern greater than or equal to `amt` and `0` for all other values.
+- example:
+	- `foo bar [0.1 0.3 0.5 0.7].gte(0.5); // 0 0 1 1`
+- **jam** ( prob, amt )
+- changes values in the pattern.  `prob` (float 0-1) sets the likelihood of each value changing. `amt` is how much bigger or smaller the changed values can be. If `amt` is set to 2, and `prob` is set to 0.5 half the values could have any number between 2 and -2 added to them.
+- example:
+	- `foo bar [drunk(128,0.05)].jam(0.1,0.7); // small 128 step random walk with larger deviations from the jam`
+- **lt** ( amt )
+- returns `1` for every value in the pattern less than `amt` and `0` for all other values.
+- example:
+	- `foo bar [0.1 0.3 0.5 0.7].lt(0.6); // 1 1 0 0`
+- **lte** ( amt )
+- returns `1` for every value in the pattern less than or equal to `amt` and `0` for all other values.
+- example:
+	- `foo bar [0.1 0.3 0.5 0.7].lte(0.5); // 1 1 1 0`
+- **log** ( )
+- returns a logarithmic growth representation of the pattern, where values at the beginning are stretched out and values at the end are squished together.
+- example:
+	- `foo bar [drunk(128,0.05)].log(); // getting into the percussive zone`
+- **modulo** ( amt )
+- returns the modulo i.e. `% amt` calculation for each value in the pattern.
+- example:
+	- `foo bar [1 2 3 4].modulo(3); // 1 2 0 1`
+- **normalize** ( )
+- scales the pattern to the 0 - 1 range.
+- example:
+	- `foo bar [sine(1,100)].gain(4000).normalize(); // the gain is undone!`
+	- `foo bar [sine(1,100)].scale(-1, 1).normalize(); // works with negative values`
+- **offset** ( amt )
+- adds `amt` to each value in the pattern.
+- example:
+	- `foo bar [sine(4,40)].offset(-0.2); // sine's dipping into negative territory`
+- **palindrome** ( )
+	- returns the original sequence plus the reversed sequence.
+	- example:
+		- 	 `foo bar [0 1 2 3].palindrome(); // 0 1 2 3 3 2 1 0`
+- **pong** ( min, max )
+- folds pattern values greater than `max` so their output continues at `min`.  If the values are twice greater than `max`, their output continues at `min` again. Similar for values less than `min`, such that they wrap around the min/max thresholds.
+- example:
+	- `foo bar [sine(1,1000)].offset(-0.1).pong(0.2,0.5); // EZ cool waveform ready to normalize`
+- **pow** ( expo )
+- stretches a pattern according to an exponential power, similar to log where the values at the beginning can be stretched for a significant portion of the pattern, and the values at the end can be squished together.
+- example:
+	- `foo bar [sine(5,200)].pow(6.5); // squished into the end`
+	-  `foo bar [sine(5,200)].pow(6.5).pow(6.5); // VERY squished at the end`
+	-  `foo bar [sine(5,200)].pow(0.5) // squished at the beginning, and kinda "bit-reduced"`
+- **prob** ( amt )
+- sets some values in the pattern to 0. `prob` (float 0-1) sets the likelihood of each value changing.
+- example:
+	- `foo bar [1 2 3 4].prob(0.5); // 1 0 3 0 first time it runs`
+	- `foo bar [1 2 3 4].prob(0.5); // 0 0 3 4 second time it runs`
+	-  `foo bar [1 2 3 4].prob(0.5); // 0 2 3 4 third time it runs`
+- **quantize** ( resolution )
+- returns `0` for every step in the pattern whose position is not a multiple of `resolution`.
+- example:
+	- `foo bar [drunk(16,0.5)].quantize(4); // 0.5241 0 0 0 0.7420 0 0 0 1.0 0 0 0 0.4268 0 0 0`
+- **range** ( new_min, new_max )
+- returns the subset of the pattern from the relative positions of `new_min` (float 0-1) and `new_max` (float 0-1).
+- example:
+	- `foo bar [0.1 0.2 0.3 0.4].range(0.5,1); // 0.3 0.4`
+- **recurse** ( prob )
+- randomly copies portions of the pattern onto itself, creating nested, self-similar structures. `prob` (float 0-1) sets the likelihood of each value running a recursive copying process.
+- example:
+	- `foo bar [1 2 [3] 4].recurse(0.25); // 1 2 3 2 2 3 3 1 2 3 4`
+- **reduce** ( new_size )
+- reduces the pattern length to `new_size`. If `new_size` is larger than the pattern length, no change. The values for the smaller array are interpolated from across the original array, preserving the structure as much as possible.
+- example:
+	- `foo bar [1 2 3 4].reduce(2); // 1 3`
+- **reverse** ( )
+	- returns the reversed pattern.
+	- example:
+		- `foo bar [phasor(1,1000)].reverse(); // go from 1 to 0 over 1000 values`
+- **round** (  )
+- rounds all values in the pattern to an integer.
+- example:
+	- `foo bar [0.1 0.5 0.9 1.1].round(); // 0 1 1 1`
+- **sahevery** ( n )
+	- samples and holds every `nth` value in the pattern until the next `nth` pattern.
+	- example:
+		- `foo bar [phasor(1,20)].sahevery(2); // 0 0 0.1 0.1 0.2 0.2 0.3 0.3 0.4 0.4 0.5 0.5 0.6 0.6 0.7 0.7 0.8 0.8 0.9 0.9`
+- **saturate** ( gain )
+- runs nonlinear waveshaping (distortion) on the pattern, always returning values between -1 and 1.
+- example:
+	- `foo bar [phasor(1,20)].gain(10).saturate(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
+- **scale** ( new_min, new_max )
+- moves the pattern to a new range, from `new_min` to `new_max`.
+- example:
+	- `foo bar [sine(10,100)].scale(-1,1); // bipolar signal`
+- **shift** ( amt )
+- moves the pattern to the left or the right. `amt` gets wrapped to values between -1 and 1, since you can't shift more than 100% left or 100% right.
+- example:
+	- `foo bar [1 2 3 4].shift(-0.5); // 3 4 2 1`
+- **shuffle** ( )
+- randomizes the pattern.
+- example:
+	- `foo bar [1 2 3 4].shuffle(); // first time: 3 2 1 4`
+	- `foo bar [1 2 3 4].shuffle(); // second time: 1 3 4 2`
+- **smooth** ( )
+- interpolates each value so it falls exactly between the values that precede and follow it.
+- example:
+	- `foo bar [noise(64)].smooth(); // less noisy`
+- **sort** ( )
+- returns the pattern ordered lowest to highest.
+- example:
+	- `foo bar [sine(1,100)].sort(); // a nice smoothing envelope from 0 to 1`
+- **sticky** ( amt )
+- samples and holds values in the pattern based on probability. `amt` (float 0-1) sets the likelihood of each value being sampled and held.
+- example
+	- `foo bar [sine(1,1000)].sticky(0.98); // glitchy sine`
+- **subset** ( percentage )
+- returns a subset of the pattern with `percentage`% values in it.
+- example:
+	- `foo bar [phasor(1,50)].subset(0.3); // originally 50 values long, now 0.02 0.08 0.50 0.58 0.62 0.700 0.76 0.78 0.92`
+- **truncate** ( length )
+	- truncates the pattern so it's now `length` values long. If `length` is longer than the pattern, return the whole pattern.
+	- example:
+		- `foo bar [0 1 2 3].truncate(2); // now 2 values long`
+		- `foo bar [0 1 2 3].truncate(6); // still 4 values long`
+- **unique** ( )
+- returns the set of unique values in the pattern.
+- example:
+	- `foo bar [1 2 3 0 0.4 2].unique(); // 1 2 3 0 0.4`
+- **walk** ( prob, amt )
+- changes positions in the pattern.  `prob` (float 0-1) sets the likelihood of each position changing. `amt` controls how many steps the values can move. If `amt` is set to 10, and `prob` is set to 0.5 half the values could move 10 positions to the left or the right.
+- example:
+	- `foo bar [0 1 2 0 1 0.5 2 0].walk(0.25, 3); // a sequence for jamming`
+---
+### Pattern modulators with a second pattern as argument
+- **am** ( pattern )
+- **append** ( pattern )
+- **interlace** ( pattern )
+- **map** ( pattern )
+
+### Pattern generators
+- **cosine** ( periods, length )
+- **data** ( pattern )
+- **drunk** ( length, intensity )
+- **noise** ( length )
+- **phasor** ( periods, length )
+- **ramp** ( from, to, size )
+- **sine** ( periods, length )
+- **square** ( periods, length )
+- **tri** ( periods, length )
+
+### Special operators
+- **sometimes** ( controls )

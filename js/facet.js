@@ -43,6 +43,7 @@ function removeTabsAndNewlines(user_input) {
   // remove tabs, newlines, and multiple spaces. convert any single quotes to double quotes
   user_input = user_input.replace(/\s\s+/g, '');
   user_input = user_input.replaceAll('\'', '"');
+  user_input = user_input.replaceAll(';', ';\n');
   return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
 }
 
@@ -367,21 +368,9 @@ function random(min, max, int_mode = 0) {
   return num;
 }
 
-function mult(sequence) {
-  // there is  additional logic for actually multing the resulting flattened array
-  // for a given destination / property. when mult() comes up in the code, simply
-  // return the pattern as-is for now.
-  return sequence;
-}
-
 function choose(list) {
   let shuffled = shuffle(list);
   return shuffled[0];
-}
-
-function data(list) {
-  // user can supply an aribtrary array of data to certain functions like am()
-  return list;
 }
 // END single-number operations
 
@@ -391,7 +380,7 @@ function reverse(sequence) {
   let reversed_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
-      reversed_sequence[((sequence.length - 1) - key)] = rev(step);
+      reversed_sequence[((sequence.length - 1) - key)] = reverse(step);
     }
     else {
       reversed_sequence[((sequence.length - 1) - key)] = step;
@@ -409,7 +398,7 @@ function truncate(sequence, length) {
 }
 
 function palindrome(sequence) {
-  return sequence.concat(rev(sequence));
+  return sequence.concat(reverse(sequence));
 }
 
 function dup(sequence, num) {
@@ -608,6 +597,8 @@ function interlace(sequence1, sequence2) {
 
 function jam(sequence, prob, amt) {
   // change some of the values
+  amt = Number(amt);
+  prob = Number(prob);
   let jammed_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -622,7 +613,7 @@ function jam(sequence, prob, amt) {
           if ( Math.random() < 0.5 ) {
             step_distance *= -1;
           }
-          jammed_sequence[key] = Number((step + step_distance).toFixed(4));
+          jammed_sequence[key] = Number((Number(step) + Number(step_distance)).toFixed(4));
         }
         else {
           // unchanged
@@ -782,31 +773,6 @@ function sometimes(sequence, controls) {
   return sequence;
 }
 
-function convolve(sequence1, sequence2) {
-  sequence2 = fft(sequence2);
-  if ( sequence1.length > sequence2.length ) {
-    sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
-  }
-  else if ( sequence2.length > sequence1.length ) {
-    sequence2 = reduce(sequence2, sequence1.length);
-  }
-  // now both arrays have the same number of keys, multiply seq1 key by same seq2
-  for (const [key, step] of Object.entries(sequence1)) {
-    if ( Array.isArray(step) ) {
-      sequence1[key] = convolve(step, sequence2);
-    }
-    else {
-      if ( isNaN(sequence2[key]) ) {
-        sequence1[key] = 0;
-      }
-      else {
-        sequence1[key] = step * sequence2[key];
-      }
-    }
-  }
-  return sequence1;
-}
-
 function fft(sequence) {
   let fft_sequence = [];
   let next_power_of_2 = nextPowerOf2(sequence.length);
@@ -843,7 +809,7 @@ function fracture(sequence, max_chunk_size) {
   let next_chunk = [];
   let i = 0;
   while (i < sequence.length) {
-    let chunk_size = Math.ceil(Math.random() * max_chunk_size);
+    let chunk_size = random(Math.ceil(Math.random() * max_chunk_size) * 0.5, Math.ceil(Math.random() * max_chunk_size),1);
     let temparray = sequence.slice(i, i + chunk_size);
     i += chunk_size;
     fracture_sequence.push(temparray);
@@ -1436,4 +1402,8 @@ function ramp(from, to, size) {
   return ramp_sequence;
 }
 
+function data(list) {
+  // user can supply an aribtrary array of data to certain functions like am()
+  return list;
+}
 // END pattern generators
