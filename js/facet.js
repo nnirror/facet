@@ -361,6 +361,9 @@ function getMaximumSubSteps(sequence) {
 // in the runOperations functions
 function random(min, max, int_mode = 0) {
   // returns number within range
+  if ( int_mode != 1 && int_mode != 0 ) {
+    throw `int_mode must be 1 or 0 if specified`;
+  }
   let num = Math.random() * (Number(max) - Number(min)) + Number(min);
   if ( int_mode != 0 ) {
     num = Math.round(num);
@@ -394,6 +397,9 @@ function append(sequence1, sequence2) {
 }
 
 function truncate(sequence, length) {
+  if ( Number(length) <= 0 ) {
+    return [];
+  }
   return sequence.slice(0, Number(length));
 }
 
@@ -402,7 +408,7 @@ function palindrome(sequence) {
 }
 
 function dup(sequence, num) {
-  return Array.from({length: num}).flatMap(a => sequence);
+  return Array.from({length: Number(num)}).flatMap(a => sequence);
 }
 
 function normalize(sequence) {
@@ -596,7 +602,6 @@ function interlace(sequence1, sequence2) {
 }
 
 function jam(sequence, prob, amt) {
-  // change some of the values
   amt = Number(amt);
   prob = Number(prob);
   let jammed_sequence = [];
@@ -633,6 +638,14 @@ function walk(sequence, prob, amt) {
   // swap some of the locations
   let jammed_sequence = [];
   let x_max = sequence.length - 1;
+  amt = Number(amt);
+  prob = Number(prob);
+  if ( prob < 0 ) {
+    prob = 0;
+  }
+  else if ( prob > 1 ) {
+    prob = 1;
+  }
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
       jammed_sequence[key] = walk(step, prob, amt);
@@ -668,6 +681,13 @@ function walk(sequence, prob, amt) {
 }
 
 function recurse(sequence, prob) {
+  prob = Number(prob);
+  if ( prob < 0 ) {
+    prob = 0;
+  }
+  else if ( prob > 1 ) {
+    prob = 1;
+  }
   let recursive_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -699,6 +719,12 @@ function recurse(sequence, prob) {
 
 function prob(sequence, amt) {
   amt = Number(amt);
+  if ( amt < 0 ) {
+    amt = 0;
+  }
+  else if ( amt > 1 ) {
+    amt = 1;
+  }
   let prob_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -924,7 +950,7 @@ function gain(sequence, amt) {
       gain_sequence[key] = gain(step, amt);
     }
     else {
-      gain_sequence[key] = Number(step) * Number(amt);
+      gain_sequence[key] = (Number(step) * Number(amt)).toFixed(4);
     }
   }
   return gain_sequence;
@@ -935,6 +961,9 @@ function reduce(sequence, new_size) {
   let reduced_sequence = [];
   if ( new_size > sequence.length ) {
     return sequence;
+  }
+  if ( new_size <= 0 ) {
+    return [];
   }
   let modulo = Math.round(sequence.length / new_size);
   for (const [key, step] of Object.entries(sequence)) {
@@ -1042,6 +1071,12 @@ function logslider(position, sequence_length) {
 
 function subset(sequence, percentage) {
   percentage = Number(percentage);
+  if ( percentage < 0 ) {
+    percentage = 0;
+  }
+  else if ( percentage > 1 ) {
+    percentage = 1;
+  }
   let subset_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -1117,6 +1152,9 @@ function shift(sequence, amt) {
 }
 
 function scale(sequence, new_min, new_max) {
+  if ( sequence.length == 1 ) {
+    return [(Number(new_max) + Number(new_min)) / 2];
+  }
   // first determine existing range
   let min = Math.min.apply(Math, sequence);
   let max = Math.max.apply(Math, sequence);
@@ -1153,6 +1191,13 @@ function distavg(sequence) {
 }
 
 function sticky(sequence, amt) {
+  amt = Number(amt);
+  if ( amt < 0 ) {
+    amt = 0;
+  }
+  else if ( amt > 1 ) {
+    amt = 1;
+  }
   let sticky_sequence = [];
   let stuck_key;
   for (const [key, step] of Object.entries(sequence)) {
@@ -1160,7 +1205,7 @@ function sticky(sequence, amt) {
       sticky_sequence[key] = sticky(step, amt);
     }
     else {
-      if ( Math.random() > Number(amt) ) {
+      if ( Math.random() > amt ) {
         stuck_key = key;
         sticky_sequence[key] = step;
       }
@@ -1229,7 +1274,7 @@ function saturate(sequence, gain) {
       saturated_sequence[key] = saturate(step, gain);
     }
     else {
-      saturated_sequence[key] = Math.tanh(step * gain);
+      saturated_sequence[key] = Math.tanh(step * gain).toFixed(4);;
     }
   }
   return saturated_sequence;
@@ -1295,8 +1340,8 @@ function flatTopInner (i,N) {
 // BEGIN pattern generators. NO sequence argument
 function sine(periods, length) {
   let sine_sequence = [];
-  periods = Number(periods);
-  length = Number(length);
+  periods = Math.abs(Number(periods));
+  length = Math.abs(Number(length));
   for (var a = 0; a < periods; a++) {
     for (var i = 0; i < length; i++) {
       let num_scaled = (Math.PI * 2) * (i / length);
@@ -1310,16 +1355,16 @@ function sine(periods, length) {
 function cosine(periods, length) {
   // apply a 0.25 phase shift to a sine
   let cosine_sequence = [];
-  periods = Number(periods);
-  length = Number(length);
+  periods = Math.abs(Number(periods));
+  length = Math.abs(Number(length));
   let sine_sequence = sine(periods, length);
   return invert(shift(sine_sequence, 0.25));
 }
 
 function tri(periods, length) {
   let tri_sequence = [];
-  periods = Number(periods);
-  length = Number(length);
+  periods = Math.abs(Number(periods));
+  length = Math.abs(Number(length));
   // create a ramp from 0 to 1
   for (var i = 0; i <= (length - 1); i++) {
     let num_scaled = i / (length - 1);
@@ -1339,8 +1384,8 @@ function tri(periods, length) {
 
 function square(periods, length) {
   let square_sequence = [];
-  periods = Number(periods);
-  length = Number(length);
+  periods = Math.abs(Number(periods));
+  length = Math.abs(Number(length));
   for (var a = 0; a < periods; a++) {
     for (var i = 0; i < length; i++) {
       let num_scaled = 0;
@@ -1374,15 +1419,15 @@ function drunk(length, intensity) {
 }
 
 function phasor(periods, length) {
-  periods = Number(periods);
-  length = Number(length);
+  periods = Math.abs(Number(periods));
+  length = Math.abs(Number(length));
   return dup(ramp(0,1,length), periods);
 }
 
 function noise(length) {
   let noise_sequence = [];
   for (var i = 0; i < length; i++) {
-    noise_sequence[i] = Math.random();
+    noise_sequence[i] = Math.random().toFixed(4);
   }
   return noise_sequence;
 }
@@ -1391,6 +1436,7 @@ function ramp(from, to, size) {
   let ramp_sequence = [];
   from = Number(from);
   to = Number(to);
+  size = Math.abs(Number(size));
   let amount_to_add = (Math.abs(to - from) / size);
   if ( to < from ) {
     amount_to_add *= -1;
