@@ -194,7 +194,7 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1].append(choose(data([2,3]))); // returns 1 and either 2 or 3`
 ---
-- **random** ( _min, _max_, _int_mode_ )
+- **random** ( _min_, _max_, _int_mode_ )
 	- returns a number between `min` and `max`. If int_mode is 1, returns an integer. Otherwise, returns a float by default.
 	- example:
 		- `foo bar [0].append(random(0,1)); // returns 0 and a float between 0 and 1`
