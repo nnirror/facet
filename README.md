@@ -166,8 +166,8 @@ A good next step is to double check the syntax of your operations. Some operatio
 
 It's also possible that during development of a new patcher, when refreshing the browser or opening and closing Max many times, you might occasionally need to refresh the page in your browser, or click into the `facet_server` object in the patcher , click `script stop` and then `script start` to restart the server in Max. Generally this should work automatically, but if you're doing rapid development things can get out of sync.
 
-There is also a utility object, `facet_buffer.maxpat`, which can visualize the Facet pattern in
-Max. Check out `example_facet_debug.maxpat` for an example.
+There is also a utility object, `facet_debug.maxpat`, which visualizes the Facet pattern in
+Max, along with the minimum value, maximum value, and pattern length. Check out `example_facet_debug.maxpat` for an example.
 
 Please also feel free to create issues on GitHub or contact me (michael.j.cella@gmail.com) if you have questions.
 
