@@ -1418,6 +1418,26 @@ function drunk(length, intensity) {
   return drunk_sequence;
 }
 
+function turing(length) {
+  length = Math.abs(Number(length));
+  return round(noise(length));
+}
+
+function mult(destination_prop) {
+  let split = destination_prop.split(' ');
+  let destination = split[0];
+  let prop = split[1];
+  if ( !destination || !prop || split.length != 2 ) {
+    throw `Could not parse mult: ${destination_prop}`;
+  }
+  let mult_sequence = facets[destination][prop];
+  if ( !mult_sequence ) {
+    return [];
+  }
+  mult_sequence = mult_sequence.split(' ');
+  return mult_sequence;
+}
+
 function phasor(periods, length) {
   periods = Math.abs(Number(periods));
   length = Math.abs(Number(length));

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Facet is a flexible live coding system for controlling and applying algorithmic transformations to a Max patcher from a web browser. Any patcher can connect to Facet as long as you're running Max 8, and it can connect to Max for Live devices, too!
+Facet is a flexible live coding system for controlling and applying synchronized algorithmic transformations to a Max patcher from a web browser. Any patcher can connect to Facet as long as you're running Max 8, and it can connect to Max for Live devices, too!
 
 The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
 
@@ -21,7 +21,7 @@ Facet runs with minimal CPU overhead in Max, allows for sample-accurate paramete
 6. Open Max and add the Facet repo and all subdirectories to your file preferences.
 7. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
 	- `example_facet_basics.maxpat` has a few simple examples
-	- `example_facet_debug.maxpat` shows how to view the pattern in Max that's created by Facet
+	- `example_facet_debug.maxpat` dispays the pattern in Max that's created by Facet
 	- `example_facet_drum_generator.maxpat` synthesizes some drum sounds
 	- `example_facet_drums.maxpat` sequences 4 drum samples
 	- `example_facet_midi.maxpat` generates MIDI note data
@@ -35,7 +35,7 @@ Here is the general structure of a Facet command:
 
 `destination property [datum].operations();`
 
-**Note**: there are a several global commands that do not adhere to this format. For example, if you want to unset all data, you would run `mute();`. Please see the command reference further below in the document.
+**Note**: there are a several exceptions for global commands, such as `mute()`, `every()`, `clearevery()`, and `sometimes()`. Please see the command reference further below in the document for more details.
 
 ### Destination and Property
 
@@ -147,6 +147,44 @@ midi note
 			.quantize(choose([2,4,6,8,12,16,20])))
 		.gain(12).offset(60).prob(0.125).offset(choose([0,5,7])).clip(60,72);
 ```
+
+## Debugging
+In the bottom of the Facet application in the browser is a status window which indicates whether the browser is connected to Max, and an additional space where further context is provided if a command failed.
+
+Facet is a live coding environment, so sometimes the commands you run will technically "succeed", but they won't contain anything, or they won't produce the output you expect. If the output isn't what you expected, first check the order of operations in your code. For example, these commands produce different output:
+
+```
+foo bar [1].offset(100).gain(10); // value is 1,010
+foo bar [1].gain(10).offset(100); // value is 110
+```
+
+In many cases, it can be helpful to open the Developer Tools in the browser and inspect network traffic, to see exactly what data Facet is sending along. (In Chrome the tab is called "Network"). After you run a command, the request should appear in the Network tab. To see the data that Facet sent along to Max, click on the request in the Network tab and view its Form Data.
+
+Facet sends HTTP requests to Max because the data payloads can be quite large (larger than OSC would allow). The HTTP requests are sent by default to a server in Max (thanks to Node for Max) which is listening on port 1123 of your local web server, so all the requests to Max are going to http://127.0.0.1:1123/.
+
+A good next step is to double check the syntax of your operations. Some operations require arrays as arguments. Some operations require multiple arguments in a specific order. Check that all parentheses and brackets are starting and ending at the right place so that functions have the correct number of arguments, and check that the command ends with a semicolon.
+
+It's also possible that during development of a new patcher, when refreshing the browser or opening and closing Max many times, you might occasionally need to refresh the page in your browser, or click into the `facet_server` object in the patcher , click `script stop` and then `script start` to restart the server in Max. Generally this should work automatically, but if you're doing rapid development things can get out of sync.
+
+There is also a utility object, `facet_buffer.maxpat`, which can visualize the Facet pattern in
+Max. Check out `example_facet_debug.maxpat` for an example.
+
+Please also feel free to create issues on GitHub or contact me (michael.j.cella@gmail.com) if you have questions.
+
+## Creating your own patches
+
+First, add a `facet_server` object (`facet_server.maxpat`) to your patcher. This object handles the connection between Max and the live coding interface in the browser. Verify that Max is now connected to the Facet application in the browser by checking the status window at the bottom of the browser.
+
+Then for each parameter in your patcher that you want to control, add a `facet_param` object. The `@destination` and `@prop` values must be specified when you create the object. So the structure would look like:
+
+`facet_param @destination foo @prop bar`
+
+The `facet_param` object outputs a signal, so you will need to use `snapshot~` if you want to use a number instead of a signal. Other than that, you can just connect it to whatever you want.
+
+In some cases it might also be helpful to include a `slide~` or `rampsmooth~` object after the `facet_param` object, since the output from Facet is not smoothed at all, which can produce clicks when modulating certain parameters like gain, filter cutoff, etc. You might also want to put a `clip~` object to prevent the possibility of accidentally sending numbers much larger or smaller than what you were expecting.
+
+Then open the Facet application in your browser, run commands to the destinations / properties you've built in Max, and voila!
+
 
 ## Command reference
 
@@ -431,6 +469,11 @@ midi note
 	- example:
 		- `foo bar [drunk(16), 10];`
 ---
+- **mult** ( _destination_and_property_ )
+	- copies the output pattern from a command in the same block that has already run, allowing you to reuse and repurpose a single pattern.
+	- example:
+		- `foo fizz [1 2 3 4].shuffle(); // i am a random sequence of 1, 2, 3,and 4 `
+		- `foo buzz [mult('foo fizz')].reverse(); // i am a reversed copy of that`
 - **noise** ( _length_ )
 	- generates a random series of values between9 0 and 1 for `length`.
 	- example:
@@ -456,6 +499,10 @@ midi note
 	- example:
 		- `foo bar [square(5,6)]; // 5 cycles, 6 values each`
 ---
+- **turing** ( _length_ )
+	- generates a pattern of length `length` with random 1s and 0s.
+	- example:
+		- `foo bar [turing(64)]; // instant rhythmic triggers`
 - **tri** ( _periods_, _length_ )
 - generates a triangle wave for `periods` periods, each period having `length` values.
 	- example:
@@ -536,38 +583,3 @@ Here is a mapping of possible `amt` values with their corresponding speeds in Ma
 6 = completes pattern over 1/6 whole note
 7 = completes pattern over 1/7 whole note
 8 = completes pattern over 1/8 whole note
-
-## Debugging
-In the bottom of the Facet application in the browser is a status window which indicates whether the browser is connected to Max, and an additional space where further context is provided if a command failed.
-
-Facet is a live coding environment, so it's inevitable that sometimes the commands you run will technically "succeed", but they won't contain anything, or they won't produce the output you expect. If the output isn't what you expected, check your order of operations in your code. For example, these commands produce different output:
-
-```
-foo bar [1].offset(100).gain(10); // value is 1,010
-foo bar [1].gain(10).offset(100); // value is 110
-```
-
-In many cases, it can be helpful to open the Developer Tools in the browser and inspect network traffic, to see exactly what data Facet is sending along. (In Chrome the tab is called "Network"). Facet sends HTTP requests to Max because the data payloads can be quite large (larger than OSC would allow). The HTTP requests are sent by default to a server in Max which is listening on port 1123 of your local web server, so the requests to Max are all to http://127.0.0.1:1123/.
-
-So, a good debugging step after running a command is to check the HTTP payload for that request to http://127.0.0.1:1123/ and see if the payload actually had data in it.. and if so, if the data is what you expect. If there is no data in the payload, a good next step is to double check all your operations. Some operations require arrays as arguments. Some require multiple arguments. Check that all parentheses and brackets are starting and ending at the right place so that functions have the correct number of arguments, and check that the command ends with a semicolon.
-
-It's also possible that during development of a new patcher, when refreshing the browser or opening and closing Max many times, you might occasionally need to refresh the page in your browser, or click into the `facet_server` object in the patcher , click `script stop` and then `script start` to restart the server in Max.
-
-There is also a utility object, `facet_buffer.maxpat`, which can visualize the Facet pattern in
-Max. Check out `example_facet_debug.maxpat` for an example.
-
-Please also feel free to create issues on GitHub or contact me (michael.j.cella@gmail.com) if you have questions.
-
-## Creating your own patches
-
-First, add a `facet_server` object (`facet_server.maxpat`) to your patcher. This object handles the connection between Max and the live coding interface in the browser. Verify that Max is now connected to the Facet application in the browser by checking the status window at the bottom of the browser.
-
-Then for each parameter in your patcher that you want to control, add a `facet_param` object. The `@destination` and `@prop` values must be specified when you create the object. So the structure would look like:
-
-`facet_param @destination foo @prop bar`
-
-The `facet_param` object outputs a signal, so you will need to use `snapshot~` if you want to use a number instead of a signal. Other than that, you can just connect it to whatever you want!
-
-In some cases it might also be helpful to use a `slide~` or `rampsmooth~` object after the `facet_param` object, since the output from Facet is not smoothed at all, which can produce audible clicks when modulating certain parameters like gain, filter cutoff, etc. You might also want to put a `clip~` object to prevent the possibility of accidentally sending numbers much larger or smaller than what you were expecting.
-
-Then open the Facet application in your browser, run commands to the destinations / properties you've built in Max, and voila!
