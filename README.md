@@ -35,7 +35,7 @@ Here is the general structure of a Facet command:
 
 `destination property [datum].operations();`
 
-**Note**: there are a several global commands that do not adhere to this format. For example, if you want to unset all data, run `mute();`.
+**Note**: there are a several global commands that do not adhere to this format. For example, if you want to unset all data, you would run `mute();`. Please see the command reference further below in the document.
 
 ### Destination and Property
 
