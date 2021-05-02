@@ -54,7 +54,7 @@ Examples of an invalid destination and property:
 ```
 bongo fury amount	// must be 2 words with only whitespace between
 friend's synth		// alphanumeric and underscores only
-kgs; asld!#			// the semicolon would cause a parsing error
+kgs; asld!#		// the semicolon would cause a parsing error
 ```
 
 ### Datum
