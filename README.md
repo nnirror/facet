@@ -427,7 +427,7 @@ midi note
 		- `foo bar [data([1,2,3,4])]; // kinda silly since you could just say [1 2 3 4]`
 ---
 - **drunk** ( _length_, _intensity_ )
-	- generates a random walk of values between 0 and 1 for `length`values. `intensity` controls how much to add. TODO: i don't think this is the right approach
+	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
 	- example:
 		- `foo bar [drunk(16), 10];`
 ---
@@ -568,4 +568,6 @@ Then for each parameter in your patcher that you want to control, add a `facet_p
 
 The `facet_param` object outputs a signal, so you will need to use `snapshot~` if you want to use a number instead of a signal. Other than that, you can just connect it to whatever you want!
 
-In some cases it might also be helpful to use a `slide~` or `rampsmooth~` object after the `facet_param` object, since the output from Facet is not smoothed at all, which can produce audible clicks when modulating certain parameters like gain, filter cutoff, etc.
+In some cases it might also be helpful to use a `slide~` or `rampsmooth~` object after the `facet_param` object, since the output from Facet is not smoothed at all, which can produce audible clicks when modulating certain parameters like gain, filter cutoff, etc. You might also want to put a `clip~` object to prevent the possibility of accidentally sending numbers much larger or smaller than what you were expecting.
+
+Then open the Facet application in your browser, run commands to the destinations / properties you've built in Max, and voila!
