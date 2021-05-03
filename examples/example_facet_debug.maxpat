@@ -4,7 +4,7 @@
 		"appversion" : 		{
 			"major" : 8,
 			"minor" : 1,
-			"revision" : 10,
+			"revision" : 3,
 			"architecture" : "x64",
 			"modernui" : 1
 		}
@@ -37,16 +37,15 @@
 		"tags" : "",
 		"style" : "",
 		"subpatcher_template" : "",
-		"assistshowspatchername" : 0,
 		"boxes" : [ 			{
 				"box" : 				{
 					"id" : "obj-10",
-					"linecount" : 12,
+					"linecount" : 10,
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 61.0, 270.0, 234.0, 167.0 ],
-					"text" : "Create this debugging utility with:\n\n\"bpatcher facet_debug\"\n\nThen enter the destination and prop values, run a command in Facet in the browser, and you should see some data about it here.\n\ne.g.\n\nhello test [noise(12)].gain(100);"
+					"patching_rect" : [ 61.0, 261.0, 312.0, 141.0 ],
+					"text" : "1. In a patcher where a facet_server is running, add the above debugging utility object in a bpatcher:\n\n\"bpatcher facet_debug\"\n\n2. Enter the destination and prop values for the command you want to debug.\n\n3. Run that command in Facet in the browser, and you should see its data here along with some metadata."
 				}
 
 			}
@@ -75,7 +74,7 @@
 					"numinlets" : 0,
 					"numoutlets" : 0,
 					"offset" : [ 0.0, 0.0 ],
-					"patching_rect" : [ 57.0, 111.0, 327.0, 141.0 ],
+					"patching_rect" : [ 57.0, 95.0, 327.0, 141.0 ],
 					"viewvisibility" : 1
 				}
 

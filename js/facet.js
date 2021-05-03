@@ -171,7 +171,7 @@ function parseOperations(value) {
             }
             else {
               for (var i = 0; i < processed_code_fom_args.length; i++) {
-                processed_code_fom_args[i] = processed_code_fom_args[i].toFixed(4);
+                processed_code_fom_args[i] = processed_code_fom_args[i];
               }
               processed_code_fom_args = JSON.stringify(processed_code_fom_args);
             }
@@ -303,7 +303,7 @@ function facetParse(user_input) {
       datum = getDatum(statement);
       datum = processCode(statement, datum);
       max_sub_steps = getMaximumSubSteps(datum) - 1;
-      flat_sequence = flattenSequence(datum, max_sub_steps);
+      flat_sequence = reduce(flattenSequence(datum, max_sub_steps), 1024);
       initFacetDestination(facets, destination);
       facets[destination][property] = convertFlatSequenceToMessage(flat_sequence);
       facets = handleMultConnections(facets, mults);
@@ -317,7 +317,12 @@ function facetParse(user_input) {
 function convertFlatSequenceToMessage(flat_sequence) {
   let out = '';
   for (var i = 1; i <= flat_sequence.length; i++) {
-    out += flat_sequence[i-1];
+    if ( isNaN(flat_sequence[i-1]) ) {
+      out += '0';
+    }
+    else {
+      out += parseFloat(flat_sequence[i-1]).toFixed(4);
+    }
     if ( i != flat_sequence.length ) {
        out += ' ';
     }
@@ -372,6 +377,9 @@ function random(min, max, int_mode = 0) {
 }
 
 function choose(list) {
+  if ( typeof list != 'object' ) {
+    throw `an array of numbers must be supplied to the choose() function`;
+  }
   let shuffled = shuffle(list);
   return shuffled[0];
 }
@@ -393,6 +401,9 @@ function reverse(sequence) {
 }
 
 function append(sequence1, sequence2) {
+  if ( typeof sequence2 != 'object' ) {
+    throw `an array of numbers must be supplied to the append() function`;
+  }
   return sequence1.concat(sequence2);
 }
 
@@ -473,32 +484,138 @@ function smooth(sequence) {
   return smoothed_sequence;
 }
 
-
-function am(sequence1, sequence2) {
-  if ( sequence1.length > sequence2.length ) {
-    sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
-  }
-  else if ( sequence2.length > sequence1.length ) {
-    sequence2 = reduce(sequence2, sequence1.length);
-  }
-  // now both arrays have the same number of keys, multiply seq1 key by same seq2
+function equals(sequence1, sequence2) {
+  let same_size_arrays = makeArraysTheSameSize(sequence1, sequence2);
+  sequence1 = same_size_arrays[0];
+  sequence2 = same_size_arrays[1];
   for (const [key, step] of Object.entries(sequence1)) {
     if ( Array.isArray(step) ) {
-      sequence1[key] = am(step, sequence2);
+      sequence1[key] = equals(step, sequence2[key]);
     }
     else {
-      if ( isNaN(sequence2[key]) ) {
-        sequence1[key] = 0;
+      if ( step == sequence2[key] ) {
+        sequence1[key] = 1;
       }
       else {
-        sequence1[key] = step * sequence2[key];
+        sequence1[key] = 0;
       }
     }
   }
   return sequence1;
 }
 
+function and(sequence1, sequence2) {
+  let same_size_arrays = makeArraysTheSameSize(sequence1, sequence2);
+  sequence1 = same_size_arrays[0];
+  sequence2 = same_size_arrays[1];
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( Array.isArray(step) ) {
+      sequence1[key] = and(step, sequence2[key]);
+    }
+    else {
+      if ( step != 0 && sequence2[key] != 0 ) {
+        sequence1[key] = 1;
+      }
+      else {
+        sequence1[key] = 0;
+      }
+    }
+  }
+  return sequence1;
+}
+
+function or(sequence1, sequence2) {
+  let same_size_arrays = makeArraysTheSameSize(sequence1, sequence2);
+  sequence1 = same_size_arrays[0];
+  sequence2 = same_size_arrays[1];
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( Array.isArray(step) ) {
+      sequence1[key] = or(step, sequence2[key]);
+    }
+    else {
+      if ( step != 0 || sequence2[key] != 0 ) {
+        sequence1[key] = 1;
+      }
+      else {
+        sequence1[key] = 0;
+      }
+    }
+  }
+  return sequence1;
+}
+
+function add(sequence1, sequence2) {
+  let same_size_arrays = makeArraysTheSameSize(sequence1, sequence2);
+  sequence1 = same_size_arrays[0];
+  sequence2 = same_size_arrays[1];
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( Array.isArray(step) ) {
+      sequence1[key] = plus(step, sequence2[key]);
+    }
+    else {
+      sequence1[key] = sequence1[key] + sequence2[key];
+    }
+  }
+  return sequence1;
+}
+
+function subtract(sequence1, sequence2) {
+  let same_size_arrays = makeArraysTheSameSize(sequence1, sequence2);
+  sequence1 = same_size_arrays[0];
+  sequence2 = same_size_arrays[1];
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( Array.isArray(step) ) {
+      sequence1[key] = plus(step, sequence2[key]);
+    }
+    else {
+      sequence1[key] = sequence1[key] - sequence2[key];
+    }
+  }
+  return sequence1;
+}
+
+function times(sequence1, sequence2) {
+  let same_size_arrays = makeArraysTheSameSize(sequence1, sequence2);
+  sequence1 = same_size_arrays[0];
+  sequence2 = same_size_arrays[1];
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( Array.isArray(step) ) {
+      sequence1[key] = plus(step, sequence2[key]);
+    }
+    else {
+      sequence1[key] = sequence1[key] * sequence2[key];
+    }
+  }
+  return sequence1;
+}
+
+function divide(sequence1, sequence2) {
+  let same_size_arrays = makeArraysTheSameSize(sequence1, sequence2);
+  sequence1 = same_size_arrays[0];
+  sequence2 = same_size_arrays[1];
+  for (const [key, step] of Object.entries(sequence1)) {
+    if ( Array.isArray(step) ) {
+      sequence1[key] = plus(step, sequence2[key]);
+    }
+    else {
+      sequence1[key] = sequence1[key] / sequence2[key];
+    }
+  }
+  return sequence1;
+}
+
+function makeArraysTheSameSize(sequence1, sequence2) {
+  if ( sequence1.length > sequence2.length ) {
+    sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
+  }
+  else if ( sequence2.length > sequence1.length ) {
+    sequence2 = reduce(sequence2, sequence1.length);
+  }
+  return [sequence1, sequence2];
+}
+
 function scaleTheArray(arrayToScale, nTimes) {
+    nTimes-= 1;
     for (var idx = 0, i = 0, len = arrayToScale.length * nTimes; i < len; i++) {
       var elem = arrayToScale[idx];
 
@@ -680,43 +797,6 @@ function walk(sequence, prob, amt) {
   return jammed_sequence;
 }
 
-function recurse(sequence, prob) {
-  prob = Number(prob);
-  if ( prob < 0 ) {
-    prob = 0;
-  }
-  else if ( prob > 1 ) {
-    prob = 1;
-  }
-  let recursive_sequence = [];
-  for (const [key, step] of Object.entries(sequence)) {
-    if ( Array.isArray(step) ) {
-      recursive_sequence[key] = recurse(step, prob);
-    }
-    else {
-      if ( (Math.random() < prob) ) {
-        // get two random points in the sequence, and re-insert everything
-        // between those two points in this location
-        let sub_selection = [];
-        let point1 = Math.floor(Math.random() * sequence.length);
-        let point2 = Math.floor(Math.random() * sequence.length);
-        let points = [point1, point2];
-        let sorted_points = points.sort(function(a,b) { return a - b;});
-        let i = sorted_points[0];
-        while (i <= sorted_points[1] ) {
-          sub_selection.push(sequence[i]);
-          i++;
-        }
-        recursive_sequence[key] = sub_selection;
-      }
-      else {
-        recursive_sequence[key] = step;
-      }
-    }
-  }
-  return recursive_sequence;
-}
-
 function prob(sequence, amt) {
   amt = Number(amt);
   if ( amt < 0 ) {
@@ -845,8 +925,9 @@ function fracture(sequence, max_chunk_size) {
 }
 
 function map(sequence, new_values) {
-  // parses ANY number of arguments into an array by removing the "sequence"
-  // from the set of all arguments when the function runs
+  if ( typeof new_values != 'object' ) {
+    throw `an array of numbers must be supplied to the map() function`;
+  }
   let mapped_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -950,7 +1031,7 @@ function gain(sequence, amt) {
       gain_sequence[key] = gain(step, amt);
     }
     else {
-      gain_sequence[key] = (Number(step) * Number(amt)).toFixed(4);
+      gain_sequence[key] = (Number(step) * Number(amt));
     }
   }
   return gain_sequence;
@@ -1447,7 +1528,7 @@ function phasor(periods, length) {
 function noise(length) {
   let noise_sequence = [];
   for (var i = 0; i < length; i++) {
-    noise_sequence[i] = Math.random().toFixed(4);
+    noise_sequence[i] = Math.random();
   }
   return noise_sequence;
 }
@@ -1469,6 +1550,9 @@ function ramp(from, to, size) {
 }
 
 function data(list) {
+  if ( typeof list != 'object' ) {
+    throw `an array of numbers must be supplied to the data() function`;
+  }
   // user can supply an aribtrary array of data to certain functions like am()
   return list;
 }

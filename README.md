@@ -151,7 +151,7 @@ midi note
 ## Debugging
 In the bottom of the Facet application in the browser is a status window which indicates whether the browser is connected to Max, and an additional space where further context is provided if a command failed.
 
-Facet is a live coding environment, so sometimes the commands you run will technically "succeed", but they won't contain anything, or they won't produce the output you expect. If the output isn't what you expected, first check the order of operations in your code. For example, these commands produce different output:
+Due to the experimental nature of live coding, sometimes the commands you run will produce a different output than what you expect. In that case, a good first place to investigate is the order of operations in your commands. For example, these produce different output:
 
 ```
 foo bar [1].offset(100).gain(10); // value is 1,010
@@ -348,11 +348,6 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [0.1 0.2 0.3 0.4].range(0.5,1); // 0.3 0.4`
 ---
-- **recurse** ( _prob_ )
-	- randomly copies portions of the pattern onto itself, creating nested, self-similar structures. `prob` (float 0-1) sets the likelihood of each value running a recursive copying process.
-	- example:
-		- `foo bar [1 2 [3] 4].recurse(0.25); // 1 2 3 2 2 3 3 1 2 3 4`
----
 - **reduce** ( _new_size_ )
 	- reduces the pattern length to `new_size`. If `new_size` is larger than the pattern length, no change. The values for the smaller array are interpolated from across the original array, preserving the structure as much as possible.
 	- example:
@@ -431,16 +426,32 @@ Then open the Facet application in your browser, run commands to the destination
 		- `foo bar [0 1 2 0 1 0.5 2 0].walk(0.25, 3); // a sequence for jamming`
 ---
 ### Pattern modulators with a second pattern as argument
-- **am** ( _pattern_ )
-	- applies amplitude modulation to the input pattern via a second pattern.
+- **add** ( _pattern_ )
+	- adds the first pattern and the second pattern.
 	- example:
-		- `foo bar [noise(128)].am(ramp(1,0,128)); // noise gets quieter`
+		- `foo bar [sine(1,100)].add(data([0.5, 0.25, 0.1, 1]));`
+- **and** ( _pattern_ )
+	- computes the logical AND of both patterns, returning a 0 if one of the values is 0 and returning a 1 if both of the values are nonzero.
+ If one pattern is smaller, it will get scaled so both patterns equal each other in size prior to running the operation.
+	- example:
+		- `foo bar [1 0 1 0].and(data([0,1])); // 0 0 1 0`
 ---
 - **append** ( _pattern_ )
-	- appends a second pattern onto the first.
+	- appends the second pattern onto the first.
 	- example:
 		- `foo bar [sine(1,100)].append(phasor(1,100)).append(data([1,2,3,4]));`
 ---
+- **divide** ( _pattern_ )
+	- divides the first pattern by the second pattern.
+	- example:
+		- `foo bar [sine(1,100)].divide(data([0.5, 0.25, 0.1, 1]));`
+---
+- **equals** ( _pattern_ )
+	- computes the logical EQUALS of both patterns, returning a 0 if the values don't equal each other and returning a 1 if they do.
+ If one pattern is smaller, it will get scaled so both patterns equal each other in size prior to running the operation.
+	- example:
+		- `foo bar [1 2 3 [4 5]].equals(data([1,2,3,[4,6]])); // 1 1 1 1 1 1 1 0`
+
 - **interlace** ( _pattern_ )
 	- interlaces two patterns. If one pattern is smaller, it will be interspersed evenly throughout the other pattern.
 	- example:
@@ -451,6 +462,22 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1 2 3 4].map([11, 12, 13, 14]); // 11 11 11 11`
 		- `foo bar [1 2 3 4].scale(30, 34).map([31, 31.5, 32, 32.5]); // 31 31.5 32.5 32.5`
+---
+- **or** ( _pattern_ )
+	- computes the logical OR of both patterns, returning a 0 if both of the values are 0 and returning a 1 if either of the values are nonzero.
+	If one pattern is smaller, it will get scaled so both patterns equal each other in size prior to running the operation.
+	- example:
+		- `foo bar [1 0 1 0].or(data([0,1])); // 1 0 1 1`
+---
+- **subtract** ( _pattern_ )
+	- subtracts the second pattern from the first pattern.
+	- example:
+		- `foo bar [sine(1,100)].subtract(data([0.5, 0.25, 0.1, 1]));`
+---
+- **times** ( _pattern_ )
+	- multiplies the first pattern by the second pattern (amplitude modulation).
+	- example:
+		- `foo bar [sine(1,100)].times(data([0.5, 0.25, 0.1, 1]));`
 ---
 
 ### Pattern generators
@@ -470,10 +497,15 @@ Then open the Facet application in your browser, run commands to the destination
 		- `foo bar [drunk(16), 10];`
 ---
 - **mult** ( _destination_and_property_ )
-	- copies the output pattern from a command in the same block that has already run, allowing you to reuse and repurpose a single pattern.
+	- copies the output pattern from a command in the same block that has already run, allowing you to reuse and potentially continue transforming a single pattern for multiple destinations.
 	- example:
 		- `foo fizz [1 2 3 4].shuffle(); // i am a random sequence of 1, 2, 3,and 4 `
 		- `foo buzz [mult('foo fizz')].reverse(); // i am a reversed copy of that`
+	- You can use a mult anywhere that a pattern generator could go:
+		-	`foo one [1 2 3 4];`
+		- `foo two [drunk(16,0.1)];`
+		- `foo three [mult('foo one')].gain(0.1).times(mult('foo two'));`
+
 - **noise** ( _length_ )
 	- generates a random series of values between9 0 and 1 for `length`.
 	- example:
