@@ -52,12 +52,12 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-10",
-					"linecount" : 29,
+					"linecount" : 65,
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 960.0, 190.0, 423.0, 395.0 ],
-					"text" : "example commands to run in the browser:\n\nevery(1) k1 struct [sine(10,100)].quantize(choose([4,16,24,32,64]));\ns1 struct [0 1 0 0 [1 0 2 0.5]];\nh1 struct [drunk(16,0.1)];\na1 struct [ramp(0.5, 2, 256)].quantize(choose([3,6,9,12,15,18])).normalize();\n\n---\n\nevery(1) k1 struct [1 0 1 0];\ns1 struct [0 0 0 0 1 0 0 0 1].prob(0.3);\nh1 struct [1 0 1 0 1 0 1 0];\nk1 speed [noise(1)].gain(16).offset(-8).round();\ns1 speed [noise(1)].gain(16).offset(-8).round();\nh1 speed [noise(1)].gain(16).offset(-8).round();\n\n---\n\nevery(1) k1 struct [noise(choose([32,64,128]))].divide(sine(random(1,20,1),100).gain(500));\ns1 struct [noise(64)].divide(sine(10,100).gain(500)).shift(0.5);\nh1 struct [noise(64)].divide(sine(choose([5,10,15,20,40]),100).gain(500)).sometimes(0.5, 'echo(random(2,12,1))');\na1 struct [drunk(16,0.1)].prob(0.25);\nevery(4) k1 speed [choose([1,2,3,4])]; s1 speed [choose([1,2,3,4])]; h1 speed [choose([1,3,6])]; a1 speed [choose([-4,-2,2,4])];\n\nmore documentation at https://github.com/mjcella/facet"
+					"patching_rect" : [ 960.0, 190.0, 423.0, 878.0 ],
+					"text" : "example commands to run in the browser:\n\nevery(1) k1 struct [sine(10,100)].quantize(choose([4,16,24,32,64]));\ns1 struct [0 1 0 0 [1 0 2 0.5]];\nh1 struct [drunk(16,0.1)];\na1 struct [ramp(0.5, 2, 256)].quantize(choose([3,6,9,12,15,18])).normalize();\n\n---\n\nevery(1) k1 struct [1 0 1 0];\ns1 struct [0 0 0 0 1 0 0 0 1].prob(0.3);\nh1 struct [1 0 1 0 1 0 1 0];\nk1 speed [noise(1)].gain(16).offset(-8).round();\ns1 speed [noise(1)].gain(16).offset(-8).round();\nh1 speed [noise(1)].gain(16).offset(-8).round();\n\n---\n\nevery(1)\n\tk1 struct\n\t\t[noise(choose([32,64,128]))]\n\t\t\t.divide(sine(random(1,20,1),100)\n\t\t\t.gain(500));\n\ts1 struct\n\t\t[noise(64)]\n\t\t\t.divide(sine(10,100).gain(500))\n\t\t\t.shift(0.5);\n\th1 struct\n    \t[noise(64)]\n\t\t\t.divide(sine(choose([5,10,15,20,40]),100)\n\t\t\t.gain(500))\n\t\t\t.sometimes(0.5, 'echo(random(2,12,1))');\n\ta1 struct\n\t\t[drunk(16,0.1)]\n\t\t\t.prob(0.25);\nevery(4)\n\tk1 speed\n\t\t[choose([1,2,3,4])];\n\ts1 speed\n    \t[choose([1,2,3,4])];\n\th1 speed\n    \t[choose([1,3,6])];\n\ta1 speed\n\t\t[choose([-4,-2,2,4])];\n\n---\n\nevery(4)\nk1 struct\n\t[noise(choose([8,16,32]))]\n\t\t.recurse(random(0,1))\n\t\t.reduce(choose([8,16,24,32,48]))\n\t\t.times(sine(random(1,50,1),100));\ns1 struct\n\t[noise(choose([8,16,32]))]\n\t\t.recurse(random(0,1))\n\t\t.reduce(choose([8,16,24,32,48]))\n\t\t.times(sine(random(1,50,1),100));\nh1 struct\n\t[noise(choose([8,16,32]))]\n\t\t.recurse(random(0,1))\n  \t\t.reduce(choose([8,16,24,32,48]))\n\t\t.times(sine(random(1,50,1),100));\n\nmore documentation at https://github.com/mjcella/facet"
 				}
 
 			}

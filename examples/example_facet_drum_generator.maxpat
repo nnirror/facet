@@ -80,7 +80,7 @@
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 72.0, 223.5, 240.0, 114.0 ],
+					"patching_rect" : [ 72.0, 223.5, 242.0, 114.0 ],
 					"text" : "The wavetable buffer name for every facet param is the concatenation of the @destination and @prop values.\n\nSo because the facet param object was initialized with \"@destination mybuff @prop data\", the wavetable buffer is called \"mybuff_data\". So we can then view it here"
 				}
 
@@ -112,12 +112,12 @@
 , 			{
 				"box" : 				{
 					"id" : "obj-17",
-					"linecount" : 5,
+					"linecount" : 7,
 					"maxclass" : "comment",
 					"numinlets" : 1,
 					"numoutlets" : 0,
-					"patching_rect" : [ 366.0, 214.5, 489.0, 74.0 ],
-					"text" : "You could also generate drum sounds\n\nmybuff data [noise(1024)].sticky(0.9).am(ramp(1,0,1024)).am(sine(250,5)).echo(6);\n\nmybuff data [sine(40,24)].pow(0.8).am(ramp(1,0,1024));"
+					"patching_rect" : [ 366.0, 214.5, 489.0, 100.0 ],
+					"text" : "You could also generate drum sounds\n\nmybuff data [noise(1024)].sticky(0.9).am(ramp(1,0,1024)).am(sine(250,5)).echo(6);\n\nmybuff data [sine(40,24)].pow(0.8).am(ramp(1,0,1024));\n\nmybuff speed [2 4 6 8];"
 				}
 
 			}
@@ -145,12 +145,12 @@
 					"patching_rect" : [ 407.0, 400.0, 48.0, 136.0 ],
 					"saved_attribute_attributes" : 					{
 						"valueof" : 						{
+							"parameter_shortname" : "live.gain~",
 							"parameter_type" : 0,
 							"parameter_unitstyle" : 4,
 							"parameter_mmin" : -70.0,
 							"parameter_longname" : "live.gain~",
-							"parameter_mmax" : 6.0,
-							"parameter_shortname" : "live.gain~"
+							"parameter_mmax" : 6.0
 						}
 
 					}
@@ -174,8 +174,8 @@
 					"id" : "obj-2",
 					"maxclass" : "newobj",
 					"numinlets" : 0,
-					"numoutlets" : 1,
-					"outlettype" : [ "signal" ],
+					"numoutlets" : 2,
+					"outlettype" : [ "signal", "" ],
 					"patching_rect" : [ 407.0, 345.0, 254.0, 22.0 ],
 					"text" : "facet_param @destination mybuff @prop data"
 				}
@@ -277,6 +277,13 @@
 				"bootpath" : "~/Sites/facet/js",
 				"patcherrelativepath" : "../js",
 				"type" : "TEXT",
+				"implicit" : 1
+			}
+, 			{
+				"name" : "facet_phasors.maxpat",
+				"bootpath" : "~/Sites/facet/patchers",
+				"patcherrelativepath" : "../patchers",
+				"type" : "JSON",
 				"implicit" : 1
 			}
 , 			{

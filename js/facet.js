@@ -48,11 +48,21 @@ function removeTabsAndNewlines(user_input) {
 }
 
 function getDestination(code) {
-  return code.split(' ')[0];
+  let every_n_regex = /every\(.*\)\s*/;
+  let contains_every_n_statement = code.match(every_n_regex);
+  if ( contains_every_n_statement ) {
+    // if there is an every() statement, destination is after that
+    code = code.substring(code.indexOf(')') + 1).trim();
+  }
+  // split on whitespace
+  return code.split(/\s+/)[0];
 }
 
-function getProperty(code) {
-  return code.split(' ')[1];
+function getProperty(code, destination) {
+  // property is the string after the destination string and before the datum
+  code = code.split(destination)[1].trim();
+  code = code.split('[')[0].trim();
+  return code;
 }
 
 function getStatement(code, property) {
@@ -293,12 +303,12 @@ function facetParse(user_input) {
   // and send that data into Max so it can go in a buffer wavetable
   try {
     user_input = stripComments(user_input);
-    user_input = removeTabsAndNewlines(user_input);
     commands = getCommands(user_input);
     Object.values(commands).forEach(command => {
       current_command = command;
       destination = getDestination(command);
-      property = getProperty(command);
+      property = getProperty(command, destination);
+      command = removeTabsAndNewlines(command);
       statement = getStatement(command, property);
       datum = getDatum(statement);
       datum = processCode(statement, datum);
@@ -565,7 +575,7 @@ function subtract(sequence1, sequence2) {
   sequence2 = same_size_arrays[1];
   for (const [key, step] of Object.entries(sequence1)) {
     if ( Array.isArray(step) ) {
-      sequence1[key] = plus(step, sequence2[key]);
+      sequence1[key] = subtract(step, sequence2[key]);
     }
     else {
       sequence1[key] = sequence1[key] - sequence2[key];
@@ -580,7 +590,7 @@ function times(sequence1, sequence2) {
   sequence2 = same_size_arrays[1];
   for (const [key, step] of Object.entries(sequence1)) {
     if ( Array.isArray(step) ) {
-      sequence1[key] = plus(step, sequence2[key]);
+      sequence1[key] = times(step, sequence2[key]);
     }
     else {
       sequence1[key] = sequence1[key] * sequence2[key];
@@ -595,7 +605,7 @@ function divide(sequence1, sequence2) {
   sequence2 = same_size_arrays[1];
   for (const [key, step] of Object.entries(sequence1)) {
     if ( Array.isArray(step) ) {
-      sequence1[key] = plus(step, sequence2[key]);
+      sequence1[key] = divide(step, sequence2[key]);
     }
     else {
       sequence1[key] = sequence1[key] / sequence2[key];
@@ -609,7 +619,7 @@ function makeArraysTheSameSize(sequence1, sequence2) {
     sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
   }
   else if ( sequence2.length > sequence1.length ) {
-    sequence2 = reduce(sequence2, sequence1.length);
+    sequence1 = scaleTheArray(sequence1, parseInt(sequence2.length / sequence1.length));
   }
   return [sequence1, sequence2];
 }
@@ -797,6 +807,43 @@ function walk(sequence, prob, amt) {
   return jammed_sequence;
 }
 
+function recurse(sequence, prob) {
+  prob = Number(prob);
+  if ( prob < 0 ) {
+    prob = 0;
+  }
+  else if ( prob > 1 ) {
+    prob = 1;
+  }
+  let recursive_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      recursive_sequence[key] = recurse(step, prob);
+    }
+    else {
+      if ( (Math.random() < prob) ) {
+        // get two random points in the sequence, and re-insert everything
+        // between those two points in this location
+        let sub_selection = [];
+        let point1 = Math.floor(Math.random() * sequence.length);
+        let point2 = Math.floor(Math.random() * sequence.length);
+        let points = [point1, point2];
+        let sorted_points = points.sort(function(a,b) { return a - b;});
+        let i = sorted_points[0];
+        while (i <= sorted_points[1] ) {
+          sub_selection.push(sequence[i]);
+          i++;
+        }
+        recursive_sequence[key] = sub_selection;
+      }
+      else {
+        recursive_sequence[key] = step;
+      }
+    }
+  }
+  return recursive_sequence;
+}
+
 function prob(sequence, amt) {
   amt = Number(amt);
   if ( amt < 0 ) {
@@ -910,7 +957,10 @@ function nextPowerOf2(n) {
 
 function fracture(sequence, max_chunk_size) {
   let fracture_sequence = [];
-  max_chunk_size = Number(max_chunk_size);
+  max_chunk_size = Math.round(Math.abs(Number(max_chunk_size)));
+  if ( max_chunk_size == 0 ) {
+    throw `fracture requires a nonzero maximum chunk size`;
+  }
   let new_positions = [];
   let next_chunk = [];
   let i = 0;
@@ -1038,22 +1088,15 @@ function gain(sequence, amt) {
 }
 
 function reduce(sequence, new_size) {
+  let orig_size = sequence.length;
   new_size = Number(new_size);
-  let reduced_sequence = [];
-  if ( new_size > sequence.length ) {
+  if ( new_size > orig_size ) {
     return sequence;
   }
-  if ( new_size <= 0 ) {
-    return [];
-  }
-  let modulo = Math.round(sequence.length / new_size);
-  for (const [key, step] of Object.entries(sequence)) {
-    // not recursive - only runs at global level so that the new size
-    //  actually is what is entered
-    // when % new_size = 0
-    if ( key % modulo == 0 ) {
-      reduced_sequence.push(step);
-    }
+  let reduced_sequence = [];
+  for ( let i = 0; i < new_size; i++ ) {
+    let large_array_index = Math.floor(i * (orig_size + Math.floor(orig_size / new_size)) / new_size);
+    reduced_sequence[i] = sequence[large_array_index];
   }
   return reduced_sequence;
 }

@@ -132,9 +132,10 @@ fm amt [noise(8)].sort().palindrome();
 All operations transform the datum and pass it on, with the exception of  `choose()` and `random()`, which can only be used as arguments to other operations, since they return a single number.
 
 ### Ending / formatting commands
-All commands must end in a semicolon. It's possible to have multiple commands on the same line without a new line, e.g:
+All commands must end in a semicolon. All commands should start on a new line, e.g:
 ```
-k1 struct [1 0 0 0]; s1 struct [0 0 1 0];
+k1 struct [1 0 0 0];
+s1 struct [0 0 1 0];
 /* k1 triggers at beginning of each global phasor cycle, and
 s1 triggers halfway through */
 ```
@@ -347,6 +348,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- returns the subset of the pattern from the relative positions of `new_min` (float 0-1) and `new_max` (float 0-1).
 	- example:
 		- `foo bar [0.1 0.2 0.3 0.4].range(0.5,1); // 0.3 0.4`
+---
+- **recurse** ( _prob_ )
+	- randomly copies portions of the pattern onto itself, creating nested, self-similar structures. `prob` (float 0-1) sets the likelihood of each value running a recursive copying process.
+	- example:
+		- `foo bar [1 2 [3] 4].recurse(0.25); // 1 2 3 2 2 3 3 1 2 3 4`
 ---
 - **reduce** ( _new_size_ )
 	- reduces the pattern length to `new_size`. If `new_size` is larger than the pattern length, no change. The values for the smaller array are interpolated from across the original array, preserving the structure as much as possible.
