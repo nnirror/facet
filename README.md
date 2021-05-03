@@ -194,7 +194,7 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1].append(choose(data([2,3]))); // returns 1 and either 2 or 3`
 ---
-- **random** ( _min, _max_, _int_mode_ )
+- **random** ( _min_, _max_, _int_mode_ )
 	- returns a number between `min` and `max`. If int_mode is 1, returns an integer. Otherwise, returns a float by default.
 	- example:
 		- `foo bar [0].append(random(0,1)); // returns 0 and a float between 0 and 1`
@@ -601,17 +601,31 @@ There are 14 possible speeds to choose from, all of which are in 1:n or n:1 rela
 Here is a mapping of possible `amt` values with their corresponding speeds in Max:
 
 -8 = completes pattern over 8 whole notes
+
 -7 = completes pattern over 7 whole notes
+
 -6 = completes pattern over 6 whole notes
+
 -5 = completes pattern over 5 whole notes
+
 -4 = completes pattern over 4 whole notes
+
 -3 = completes pattern over 3 whole notes
+
 -2 = completes pattern over 2 whole notes
+
 -1 / 0 / 1 = default, completes pattern over 1 whole note
+
 2 = completes pattern over 1/2 whole note
+
 3 = completes pattern over 1/3 whole note
+
 4 = completes pattern over 1/4 whole note
+
 5 = completes pattern over 1/5 whole note
+
 6 = completes pattern over 1/6 whole note
+
 7 = completes pattern over 1/7 whole note
+
 8 = completes pattern over 1/8 whole note
