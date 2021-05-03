@@ -1473,7 +1473,7 @@ function sine(periods, length) {
     }
   }
   // scale sine from 0 to 1 and make the first sample be 0
-  return shift(scale(sine_sequence,0,1), 0.25);
+  return shift(scale(sine_sequence,0,1), (periods % 4) * 0.25);
 }
 
 function cosine(periods, length) {
