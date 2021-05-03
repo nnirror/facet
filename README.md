@@ -39,7 +39,7 @@ Here is the general structure of a Facet command:
 
 ### Destination and Property
 
-The "destination" and "property" values can be anything, as long as both values match the ones in the corresponding object in your Max patcher (more on this later). They should also be alphanumeric strings and contain no spaces.
+The "destination" and "property" values can be anything, as long as both values match the ones in the corresponding object in your Max patcher (more on this later). They should also be alphanumeric strings and contain no spaces. They should also not be identical.
 
 Example of a valid destination and property:
 
@@ -53,8 +53,9 @@ Examples of an invalid destination and property:
 
 ```
 bongo fury amount	// must be 2 words with only whitespace between
-friend's synth		// alphanumeric and underscores only
-kgs; asld!#		// the semicolon would cause a parsing error
+friend's synth		// technically it will work, but it messes up the code formatting in the browser
+gain gain					// the destination and prop should not be identical
+kgs; asld!#				// the semicolon causes a parsing error
 ```
 
 ### Datum
@@ -132,14 +133,13 @@ fm amt [noise(8)].sort().palindrome();
 All operations transform the datum and pass it on, with the exception of  `choose()` and `random()`, which can only be used as arguments to other operations, since they return a single number.
 
 ### Ending / formatting commands
-All commands must end in a semicolon. All commands should start on a new line, e.g:
+All commands must end in a semicolon. You can run multiple commands in a single line:
 ```
-k1 struct [1 0 0 0];
-s1 struct [0 0 1 0];
+k1 struct [1 0 0 0]; s1 struct [0 0 1 0];
 /* k1 triggers at beginning of each global phasor cycle, and
 s1 triggers halfway through */
 ```
-You can add tabs and newlines to your commands to help with formatting / clarity:
+And you can add tabs, newlines, and comments to commands. **Note: multiple newlines in a row denote different "blocks" of code, so multiple newlines should not be used in series for formatting purposes ** :
 
 ```
 midi note
@@ -147,6 +147,16 @@ midi note
 		.append(phasor(random(1,10,1),20).palindrome()
 			.quantize(choose([2,4,6,8,12,16,20])))
 		.gain(12).offset(60).prob(0.125).offset(choose([0,5,7])).clip(60,72);
+
+
+every(4)  // this is a silly comment
+		foo // this names the destination as 'foo'
+bar		// here's a comment on the line where prop 'bar' is declared
+      [noise(32)]					
+          	.map([0.1, 0.2, 0.3, 0.5, 0.8])
+          				.sort()
+          .reverse().walk(0.25, 4);
+foaso asd [sine(1,100)]; ko asdl [1 2 [3]]; // two commands in one line
 ```
 
 ## Debugging
@@ -549,7 +559,7 @@ Then open the Facet application in your browser, run commands to the destination
 ### Special operators
 
 - **every** ( _times_ )
-	- It's possible to specify an optional prefix to any block of Facet commands which will cause the block to re-evaluate at whatever frequency is specified.  So for example:
+	- It's possible to specify an optional prefix to any block of Facet commands which will cause the block to re-evaluate at whatever frequency is specified.  **Note: the global transport must be enabled in Max for every() commands to run in the Browser, since they receive bangs from Max at whatever tempo is specified. **So for example:
 
 ```
 every(4) lp cutoff noise[1].gain(3000);
@@ -635,3 +645,12 @@ Here is a mapping of possible `amt` values with their corresponding speeds in Ma
 7 = completes pattern over 1/7 whole note
 
 8 = completes pattern over 1/8 whole note
+
+## Future development ##
+
+Below are a few ideas for future development. Ideas and feedback are welcome. Thanks!
+
+- Ability to run conditional logic in operations
+- Ability to view a reference of commands via a key combination
+- Ability to highlight commands if they fail
+- Ability to access some constants inside operations, like the global BPM in Max, the number of pattern cycles completed, total time elapsed, etc.

@@ -3,7 +3,7 @@ function replaceAll(string, search, replace) {
 }
 
 function getDatum(value) {
-  let datum_regex = /\[.*][\.;]/;
+  let datum_regex = /\[.*]\s*[\.;]/;
   let datum;
 
   let hard_coded_syntax_match = value.match(datum_regex);
@@ -49,6 +49,7 @@ function removeTabsAndNewlines(user_input) {
 
 function getDestination(code) {
   let every_n_regex = /every\(.*\)\s*/;
+  code = code.trim();
   let contains_every_n_statement = code.match(every_n_regex);
   if ( contains_every_n_statement ) {
     // if there is an every() statement, destination is after that
@@ -241,7 +242,6 @@ function runOperations(operations, datum) {
 }
 
 function getCommands(user_input) {
-  user_input = removeTabsAndNewlines(user_input);
   return user_input.trim().split(';').filter(Boolean);
 }
 
@@ -305,10 +305,9 @@ function facetParse(user_input) {
     user_input = stripComments(user_input);
     commands = getCommands(user_input);
     Object.values(commands).forEach(command => {
-      current_command = command;
+      current_command = removeTabsAndNewlines(command);
       destination = getDestination(command);
-      property = getProperty(command, destination);
-      command = removeTabsAndNewlines(command);
+      property = getProperty(command, destination);;
       statement = getStatement(command, property);
       datum = getDatum(statement);
       datum = processCode(statement, datum);
