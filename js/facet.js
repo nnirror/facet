@@ -67,7 +67,7 @@ function getProperty(code, destination) {
 }
 
 function getStatement(code, property) {
-  let statement_regex = /\[.*]*/;
+  let statement_regex = /\[.*]*/s;
   return code.match(statement_regex)[0];
 }
 
@@ -173,7 +173,12 @@ function parseOperations(value) {
           let arg_has_operations = /\).*\./;
           if ( args.match(arg_has_operations) ) {
             // case: there are multiple chained operations in the argument
-            args = args.replace(').', ')].');
+            if ( args.indexOf(').') > 0 ) {
+                args = args.replace(').', ')].');
+            }
+            else {
+                args += ']';
+            }
             args = '[' + args;
             datum_from_args = getDatum(args);
             processed_code_fom_args = processCode(args, datum_from_args);
@@ -307,8 +312,9 @@ function facetParse(user_input) {
     commands = getCommands(user_input);
     Object.values(commands).forEach(command => {
       current_command = removeTabsAndNewlines(command);
+	  command = removeTabsAndNewlines(command);
       destination = getDestination(command);
-      property = getProperty(command, destination);;
+      property = getProperty(command, destination);
       statement = getStatement(command, property);
       datum = getDatum(statement);
       datum = processCode(statement, datum);
@@ -327,7 +333,7 @@ function facetParse(user_input) {
 function convertFlatSequenceToMessage(flat_sequence) {
   let out = '';
   for (var i = 1; i <= flat_sequence.length; i++) {
-    if ( isNaN(flat_sequence[i-1]) ) {
+    if ( isNaN(flat_sequence[i-1]) || !isFinite(flat_sequence[i-1]) ) {
       out += '0';
     }
     else {
