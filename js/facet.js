@@ -200,14 +200,15 @@ function parseOperations(value) {
           try {
             // case: arguments passed into a "sometimes" function
             // ultimately the argument should look like: [0.5, 'scale(-1,1).gain(0)']
-            // this just starts over and attempts to
-            // reparse the arguments into that array like structure, first key is probability
-            // and second key is the chain of operations
             let sometimes_split_regex = /sometimes\s*\(/;
             let sometimes_split = d.split(sometimes_split_regex);
+            // remove the trailing ')' from the sometimes command
+            let sometimes_args = `${sometimes_split[1].slice(0,sometimes_split[1].length-1)}`;
+            sometimes_args = sometimes_args.replaceAll('\'', '"');
+            sometimes_args = `[${sometimes_args}]`;
             operations.push({
               'op': op,
-              'args': `[${sometimes_split[1].slice(0,sometimes_split[1].length-1)}]`
+              'args': sometimes_args
             });
           } catch (ee) {
             // "Please everybody, if we haven't done what we could have done, we've tried"
