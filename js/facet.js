@@ -393,9 +393,6 @@ function random(min, max, int_mode = 0) {
 }
 
 function choose(list) {
-  if ( typeof list != 'object' ) {
-    throw `an array of numbers must be supplied to the choose() function`;
-  }
   let shuffled = shuffle(list);
   return shuffled[0];
 }
@@ -417,10 +414,12 @@ function reverse(sequence) {
 }
 
 function append(sequence1, sequence2) {
-  if ( typeof sequence2 != 'object' ) {
-    throw `an array of numbers must be supplied to the append() function`;
-  }
   return sequence1.concat(sequence2);
+}
+
+function push(sequence1, sequence2) {
+  sequence1[sequence1.length] = sequence2;
+  return sequence1;
 }
 
 function truncate(sequence, length) {
@@ -981,9 +980,6 @@ function fracture(sequence, max_chunk_size) {
 }
 
 function map(sequence, new_values) {
-  if ( typeof new_values != 'object' ) {
-    throw `an array of numbers must be supplied to the map() function`;
-  }
   let mapped_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {
     if ( Array.isArray(step) ) {
@@ -1599,9 +1595,6 @@ function ramp(from, to, size) {
 }
 
 function data(list) {
-  if ( typeof list != 'object' ) {
-    throw `an array of numbers must be supplied to the data() function`;
-  }
   // user can supply an aribtrary array of data to certain functions like am()
   return list;
 }
