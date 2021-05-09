@@ -1348,7 +1348,7 @@ function sticky(sequence, amt) {
   return sticky_sequence;
 }
 
-function sahevery(sequence, num) {
+function saheach(sequence, num) {
   num = Math.round(Math.abs(Number(num)));
   let count = 0;
   let sah_sequence = [];

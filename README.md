@@ -381,10 +381,10 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [0.1 0.5 0.9 1.1].round(); // 0 1 1 1`
 ---
-- **sahevery** ( _n_ )
+- **saheach** ( _n_ )
 	- samples and holds every `nth` value in the pattern until the next `nth` pattern.
 	- example:
-		- `foo bar [phasor(1,20)].sahevery(2); // 0 0 0.1 0.1 0.2 0.2 0.3 0.3 0.4 0.4 0.5 0.5 0.6 0.6 0.7 0.7 0.8 0.8 0.9 0.9`
+		- `foo bar [phasor(1,20)].saheach(2); // 0 0 0.1 0.1 0.2 0.2 0.3 0.3 0.4 0.4 0.5 0.5 0.6 0.6 0.7 0.7 0.8 0.8 0.9 0.9`
 ---
 - **saturate** ( _gain_ )
 	- runs nonlinear waveshaping (distortion) on the pattern, always returning values between -1 and 1.
