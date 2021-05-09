@@ -417,7 +417,7 @@ function append(sequence1, sequence2) {
   return sequence1.concat(sequence2);
 }
 
-function push(sequence1, sequence2) {
+function nest(sequence1, sequence2) {
   sequence1[sequence1.length] = sequence2;
   return sequence1;
 }

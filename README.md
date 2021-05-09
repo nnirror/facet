@@ -487,10 +487,10 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1 0 1 0].or(data([0,1])); // 1 0 1 1`
 ---
-- **push** ( _pattern_ )
-	- similar to append, but it puts the new pattern at the end of the input pattern, as a nested array.
+- **nest** ( _pattern_ )
+	- similar to append, but it appends the new pattern at the end of the input pattern as a nested array.
 	- example:
-		- `foo bar [1 0].push([2,0]); // the array looks like [1,0,[2,0]] which flattens into 1 1 0 0 2 0 when sent into Max`
+		- `foo bar [1 0].nest([2,0]); // the array looks like [1,0,[2,0]] which flattens into 1 1 0 0 2 0 when sent into Max`
 ---
 - **subtract** ( _pattern_ )
 	- subtracts the second pattern from the first pattern.
