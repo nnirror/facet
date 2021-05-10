@@ -61,7 +61,7 @@ function getDestination(code) {
 
 function getProperty(code, destination) {
   // property is the string after the destination string and before the datum
-  code = code.split(destination)[1].trim();
+  code = code.replace(destination, '').trim();
   code = code.split('[')[0].trim();
   return code;
 }
@@ -316,6 +316,9 @@ function facetParse(user_input) {
       destination = getDestination(command);
       property = getProperty(command, destination);
       statement = getStatement(command, property);
+      // TODO: modify the statement to handle a rerun function here.
+      // it should replace "rerun(n)" with "append(data(.......{datum and prior ops copied here}.....))
+      // copied n times. this would allow a statement with variables in it to be re-parsed n times
       datum = getDatum(statement);
       datum = processCode(statement, datum);
       max_sub_steps = getMaximumSubSteps(datum) - 1;
@@ -380,7 +383,7 @@ function getMaximumSubSteps(sequence) {
 // BEGIN single-number operations
 // sequence is not needed as an argument for these in the actual code since it's added implicitly
 // in the runOperations functions
-function random(min, max, int_mode = 0) {
+function random(min = 0, max = 1, int_mode = 0) {
   // returns number within range
   if ( int_mode != 1 && int_mode != 0 ) {
     throw `int_mode must be 1 or 0 if specified`;
@@ -420,6 +423,34 @@ function append(sequence1, sequence2) {
 function nest(sequence1, sequence2) {
   sequence1[sequence1.length] = sequence2;
   return sequence1;
+}
+
+function changed(sequence) {
+  let changed_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      changed_sequence[key] = changed(step);
+    }
+    else {
+      if ( key == 0 ) {
+        if ( step == sequence[sequence.length - 1]) {
+          changed_sequence[key] = 0;
+        }
+        else {
+          changed_sequence[key] = 1;
+        }
+      }
+      else {
+        if ( step == sequence[key - 1]) {
+          changed_sequence[key] = 0;
+        }
+        else {
+          changed_sequence[key] = 1;
+        }
+      }
+    }
+  }
+  return changed_sequence;
 }
 
 function truncate(sequence, length) {

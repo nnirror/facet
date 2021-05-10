@@ -41,7 +41,7 @@ Here is the general structure of a Facet command:
 
 ### Destination and Property
 
-The "destination" and "property" values can be anything, as long as both values match the ones in the corresponding object in your Max patcher (more on this later). They should also be alphanumeric strings and contain no spaces. They should also not be identical.
+The "destination" and "property" values can be anything, as long as both values match the ones in the corresponding object in your Max patcher (more on this later). They should also be alphanumeric strings and contain no spaces.
 
 Example of a valid destination and property:
 
@@ -56,8 +56,7 @@ Examples of an invalid destination and property:
 ```
 bongo fury amount	// must be 2 words with only whitespace between
 friend's synth		// technically it will work, but it messes up the code formatting in the browser
-gain gain					// the destination and prop should not be identical
-kgs; asld!#				// the semicolon causes a parsing error
+kgs; asld!#		// the semicolon causes a parsing error
 ```
 
 ### Datum
@@ -208,9 +207,10 @@ Then open the Facet application in your browser, run commands to the destination
 		- `foo bar [1].append(choose(data([2,3]))); // returns 1 and either 2 or 3`
 ---
 - **random** ( _min_, _max_, _int_mode_ )
-	- returns a number between `min` and `max`. If int_mode is 1, returns an integer. Otherwise, returns a float by default.
+	- returns a number between `min` and `max`. If int_mode is 1, returns an integer. Otherwise, returns a float by default. `min` is 0 by default, and `max` is 1 by default.
 	- example:
 		- `foo bar [0].append(random(0,1)); // returns 0 and a float between 0 and 1`
+		- `foo bar [0].append(random())  // also returns 0 and a float between 0 and 1`
 		- `foo bar [0].append(random(1,10,1)); // returns 0 and an int between 1 and 10`
 ---
 ### Pattern modulators
@@ -218,6 +218,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- returns the absolute value of all numbers in the pattern.
 	- example:
 		- `foo bar [sine(1,100)].offset(-0.3).abs(); // a wonky sine`
+---
+- **changed** ( _pattern_ )
+	- returns a 1 or 0 for each value in the pattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the pattern.)
+	- example:
+		- `foo bar [1 1 3 4].changed(); // 1 0 1 1`
 ---
 - **clip** ( _min_, _max_ )
 	- clips any numbers in the pattern to a `min` and `max` range.
