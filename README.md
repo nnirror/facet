@@ -376,6 +376,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1 2 3 4].reduce(2); // 1 3`
 ---
+- **rerun** ( _num_ )
+	- reruns the datum and operations preceding the rerun command, appending the results of each iteration to the pattern. If the commands that are bein rerun have elements of randomness in them, each iteration of rerun will be potentially unique. This is different than dup(), where each copy is identical.
+	- example:
+		- `foo bar [phasor(1,random(10,50,1))].rerun(random(1,6,1)); // run a phasor between 2 and 7 times total, where each cycle will have a random number between 10 and 50 values in its cycle.`
+---
 - **reverse** ( )
 	- returns the reversed pattern.
 	- example:

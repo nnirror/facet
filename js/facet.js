@@ -280,6 +280,49 @@ function handleMultConnections(facets, mults) {
   return facets;
 }
 
+function handleReruns(statement) {
+  // any time a .rerun() command is found in the command,
+  // get the entire statement up to that point, and rerun it however many times are specified,
+  // replacing the .rerun() command with the actual rerun results, via .append(data([]))
+  // whereas .dup() takes the result of a command and copies it n times,
+  // .rerun() actually reruns the preceding command(s), so if they contain elements of chance,
+  // each iteration of .rerun() will be potentially unique.
+  let rerun_regex = /.rerun\((.*?)\)/;
+  let statment_has_reruns = rerun_regex.test(statement);
+  let rerun_datum, remove_last_paren = false;
+  if ( statment_has_reruns ) {
+    // this code is a bit wonky, but it handles all possibilities of
+    // both numbers or commands being the argument of .rerun(), as well as
+    // the possibility of commands continuing after .rerun(), or not.
+    // . e.g. ".rerun(2);" or ".rerun(random(1,5,1)).gain(3);"
+    let rerun_times = statement.split(rerun_regex)[1];
+    if ( isNaN(rerun_times) ) {
+      remove_last_paren = true;
+      rerun_times = rerun_times + ')';
+    }
+    rerun_times = Math.abs(Math.round(eval(rerun_times)));
+    if (rerun_times < 1 ) {
+      return statement;
+    }
+    let rerun_split = statement.split(rerun_regex)[0];
+    let i = 0;
+    let rerun_out = '';
+    while (i < rerun_times) {
+      rerun_datum = getDatum(rerun_split);
+      rerun_datum = processCode(rerun_split, rerun_datum);
+      rerun_out += `.append(data([${rerun_datum.toString()}]))`;
+      i++;
+    }
+    if ( remove_last_paren ) {
+      rerun_out = rerun_out.substring(0, rerun_out.lastIndexOf(")"),);
+    }
+    statement = statement.replace(rerun_regex, rerun_out);
+    // recurse until all instances of .rerun() have been replaced
+    statement = handleReruns(statement);
+  }
+  return statement;
+}
+
 function initFacetDestination(facets, destination) {
   if ( !facets[destination] ) {
     facets[destination] = {};
@@ -316,9 +359,7 @@ function facetParse(user_input) {
       destination = getDestination(command);
       property = getProperty(command, destination);
       statement = getStatement(command, property);
-      // TODO: modify the statement to handle a rerun function here.
-      // it should replace "rerun(n)" with "append(data(.......{datum and prior ops copied here}.....))
-      // copied n times. this would allow a statement with variables in it to be re-parsed n times
+	  statement = handleReruns(statement);
       datum = getDatum(statement);
       datum = processCode(statement, datum);
       max_sub_steps = getMaximumSubSteps(datum) - 1;
