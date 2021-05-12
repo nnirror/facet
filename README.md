@@ -311,10 +311,10 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [0.1 0.3 0.5 0.7].lte(0.5); // 1 1 1 0`
 ---
-- **log** ( )
-	- returns a logarithmic growth representation of the pattern, where values at the beginning are stretched out and values at the end are squished together.
+- **log** ( _base_, _direction_ )
+	- stretches a pattern according to a logarithmic curve `base`, where the values at the end can be stretched for a significant portion of the pattern, and the values at the beginning can be squished together. If `direction` is negative, returns the pattern in reverse.
 	- example:
-		- `foo bar [drunk(128,0.05)].log(); // getting into the percussive zone`
+		- `foo bar [ramp(1,0,1000)].log(100); // a logarithmic curve from 1 to 0`
 ---
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the pattern.
@@ -342,12 +342,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,1000)].offset(-0.1).pong(0.2,0.5); // EZ cool waveform ready to normalize`
 ---
-- **pow** ( _expo_ )
-	- stretches a pattern according to an exponential power, similar to log where the values at the beginning can be stretched for a significant portion of the pattern, and the values at the end can be squished together.
+- **pow** ( _expo_, _direction_ = 1 )
+	- stretches a pattern according to an exponential power `expo`, where the values at the beginning can be stretched for a significant portion of the pattern, and the values at the end can be squished together. If `direction` is negative, returns the pattern in reverse.
 	- example:
 		- `foo bar [sine(5,200)].pow(6.5); // squished into the end`
-		-  `foo bar [sine(5,200)].pow(6.5).pow(6.5); // VERY squished at the end`
-		-  `foo bar [sine(5,200)].pow(0.5) // squished at the beginning, and kinda "bit-reduced"`
+		- `foo bar [sine(5,200)].pow(6.5,-1) // squished at the beginning`
 ---
 - **prob** ( _amt_ )
 	- sets some values in the pattern to 0. `prob` (float 0-1) sets the likelihood of each value changing.

@@ -1215,56 +1215,41 @@ function sort(sequence) {
   return sorted_sequence;
 }
 
-function pow(sequence, expo) {
-  let pow_sequence = [];
-  let original_sequence = sequence;
-  let number_of_steps = original_sequence.length;
-  expo = Number(expo);
-  let maximum = Math.pow(original_sequence.length, expo);
-  for (const [key, step] of Object.entries(sequence)) {
-    if ( Array.isArray(step) ) {
-      pow_sequence[key] = pow(step, expo);
-    }
-    else {
-      // calculate the key for this step based on the sequence length raised to an exponential power
-      let warped_key = parseInt(Math.pow(Number(key), expo));
-      let warped_relative_pos = (warped_key / maximum).toFixed(4);
-      let original_seqence_pos = parseInt(warped_relative_pos * number_of_steps);
-      pow_sequence[key] = original_sequence[original_seqence_pos];
-    }
-  }
-  return pow_sequence;
+function log(sequence, base, rotation = 1) {
+    return warp(sequence, base, rotation);
 }
 
-function log(sequence) {
-  let log_sequence = [];
-  let number_of_steps = sequence.length;
-  for (const [key, step] of Object.entries(sequence)) {
-    if ( Array.isArray(step) ) {
-      log_sequence[key] = log(step);
-    }
-    else {
-      let scaled_key = key / number_of_steps;
-      let warped_key = parseInt(logslider(scaled_key, number_of_steps)) - 1;
-      log_sequence[key] = sequence[warped_key];
-    }
-  }
-  return log_sequence;
+function pow(sequence, base, rotation = 1) {
+    return reverse(invert(warp(sequence, base, rotation)));
 }
 
-// position value 0-1, sequence length is the array length
-function logslider(position, sequence_length) {
-  sequence_length = Number(sequence_length);
-  // position will be between 0 and 100
-  let minp = 0;
-  let maxp = 1;
-
-  var minv = Math.log(1);
-  var maxv = Math.log(sequence_length);
-
-  // calculate adjustment factor
-  var scale = (maxv-minv) / (maxp-minp);
-  return Math.exp(minv + scale*(position-minp));
+function warp(sequence, base, rotation = 1) {
+  // forked from: https://github.com/naomiaro/fade-curves/blob/master/index.js
+  let warp_sequence = [];
+  let length = sequence.length;
+  base = Math.abs(Number(base));
+  rotation = Number(rotation);
+  let curve = new Float32Array(length), index, x = 0, i;
+  // create a curve that will be used to look up the original pattern's keys nonlinearly
+  for ( i = 0; i < length; i++ ) {
+    index = rotation > 0 ? i : length - 1 - i;
+    x = i / length;
+    curve[index] = Math.log(1 + base * x) / Math.log(1 + base);
+  }
+  // loop through the curve, pushing the corresponding pattern keys into the warped structure
+  for (var a = 0; a < length; a++) {
+    foo = Math.round(Number(curve[a]) * length);
+    if (foo >= sequence.length ) {
+        foo = sequence.length - 1;
+    }
+    if ( Array.isArray(sequence[foo]) ) {
+      warp_sequence[a] = log(sequence[foo], base, rotation);
+    }
+    else {
+      warp_sequence[a] = sequence[foo];
+    }
+  }
+  return warp_sequence;
 }
 
 function subset(sequence, percentage) {
