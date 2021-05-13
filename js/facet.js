@@ -692,11 +692,20 @@ function divide(sequence1, sequence2) {
 }
 
 function makeArraysTheSameSize(sequence1, sequence2) {
+  // first, make both arrays as big as possible in relation to each other while preserving all values & scale
+  // so if one array was 100 and the other 250, this would convert them to 200 and 250
   if ( sequence1.length > sequence2.length ) {
     sequence2 = scaleTheArray(sequence2, parseInt(sequence1.length / sequence2.length));
   }
   else if ( sequence2.length > sequence1.length ) {
     sequence1 = scaleTheArray(sequence1, parseInt(sequence2.length / sequence1.length));
+  }
+  // then reduce the bigger array to smaller one's size
+  if ( sequence1.length > sequence2.length ) {
+    sequence1 = reduce(sequence1, sequence2.length);
+  }
+  else if ( sequence2.length > sequence1.length ) {
+    sequence2 = reduce(sequence2, sequence1.length);
   }
   return [sequence1, sequence2];
 }
@@ -783,17 +792,20 @@ function interlace(sequence1, sequence2) {
     let big_sequence = sequence1, small_sequence = sequence2;
     if ( sequence1.length > sequence2.length ) {
       interlace_every = parseInt(sequence1.length / sequence2.length);
-      big_sequence = sequence1;
+      big_sequence = reduce(sequence1, sequence2.length);
       small_sequence = sequence2;
     }
     else if ( sequence2.length > sequence1.length ) {
       interlace_every = parseInt(sequence2.length / sequence1.length);
-      big_sequence = sequence2;
+      big_sequence = reduce(sequence2, sequence1.length);
       small_sequence = sequence1;
+    }
+    else if ( sequence2.length == sequence1.length ) {
+        interlace_every = 1;
     }
     for (const [key, step] of Object.entries(big_sequence)) {
       interlaced_sequence.push(big_sequence[key]);
-      if ( key % interlace_every == 0 ) {
+      if ( Number(key) % interlace_every == 0 ) {
         if ( isNaN(small_sequence[key]) ) {
           interlaced_sequence.push(0)
         }
