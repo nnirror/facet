@@ -1051,6 +1051,20 @@ function fracture(sequence, max_chunk_size) {
   return fracture_sequence;
 }
 
+function spiral(length, angle_degrees = 137.5) {
+  let spiral_sequence = [], i = 1, angle = 0;
+  angle_degrees = Math.abs(Number(angle_degrees));
+  length = Math.abs(Number(length));
+  while ( i <= length ) {
+    angle += angle_degrees;
+    angle = pong([angle],0,360)[0];
+    // convert degrees back to radians, and then to a 0. - 1. range
+    spiral_sequence.push( (angle * (Math.PI/180) ) / (Math.PI * 2) );
+    i++;
+  }
+  return spiral_sequence;
+}
+
 function map(sequence, new_values) {
   let mapped_sequence = [];
   for (const [key, step] of Object.entries(sequence)) {

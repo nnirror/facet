@@ -558,6 +558,12 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [cosine(2,30)]; // 2 cycles, 30 values each`
 ---
+- **spiral** ( _length_, _degrees_ = 137.5 )
+	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to 137.5 which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
+	- example:
+		- `foo bar [sine(1,1000)].times(spiral(1000,random(1,360))); // an interesting, modulated sine wave`
+		- `foo bar [spiral(100)]; // defaults to a Fibonacci leaf spiral`
+---
 - **square** ( _periods_, _length_ )
 	- generates a square wave (all 0 and 1 values) for `periods` periods, each period having `length` values.
 	- example:
