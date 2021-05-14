@@ -1269,7 +1269,7 @@ function warp(sequence, base, rotation = 1) {
         foo = sequence.length - 1;
     }
     if ( Array.isArray(sequence[foo]) ) {
-      warp_sequence[a] = log(sequence[foo], base, rotation);
+      warp_sequence[a] = warp(sequence[foo], base, rotation);
     }
     else {
       warp_sequence[a] = sequence[foo];
@@ -1358,6 +1358,33 @@ function shift(sequence, amt) {
     }
   }
   return moved_sequence;
+}
+
+function nonzero(sequence) {
+    let nonzero_sequence = [];
+    let prev_val;
+    let cur_val;
+    for (const [key, step] of Object.entries(sequence)) {
+      if ( Array.isArray(step) ) {
+        nonzero_sequence[key] = nonzero(step);
+      }
+      else {
+        cur_val = step;
+        if ( Number(cur_val) == 0 ) {
+            if ( prev_val ) {
+                cur_val = prev_val;
+            }
+            else {
+                continue;
+            }
+        }
+        else {
+            prev_val = step;
+        }
+        nonzero_sequence[key] = cur_val;
+      }
+    }
+    return nonzero_sequence;
 }
 
 function scale(sequence, new_min, new_max) {
