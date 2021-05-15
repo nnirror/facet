@@ -10,7 +10,7 @@ Facet runs with minimal CPU overhead in Max, allows for sample-accurate paramete
 
 ## Getting started
 
-Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installation steps.
+Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installation steps, and a [getting started](https://www.youtube.com/watch?v=5RDgfDYWCkI) video for once Facet is installed.
 
 1. Download Node.js and npm: https://www.npmjs.com/get-npm
 2. Configure your local machine so it's running a web server. If you're not sure how to do this, Google "set up a local web server {your operating system here}." Facet is configured to work with your local web server running on 127.0.0.1.
