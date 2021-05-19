@@ -207,11 +207,21 @@
                 prob = Number(n_split[1]);
                 n = eval(n_split[0]);
               } catch (e) {
-                $.notify(`Could not parse every(n) statement.`, {
-                  allow_dismiss: true,
-                  delay: 500,
-                  newest_on_top: true
-                });
+                // if the every() statment is for a message hook rather than a "bang" number
+                n = every.replace('every(', '').replace(' ', '').slice(0, -1);
+                let n_split = n.split(',');
+                n = n_split[0];
+                prob = 1;
+                if (n_split[1] ) {
+                  prob = n_split[1];
+                }
+                if ( !n || !prob ) {
+                  $.notify(`Could not parse every(n) statement.`, {
+                    allow_dismiss: true,
+                    delay: 500,
+                    newest_on_top: true
+                  });
+				}
               }
             }
             // if the command is for every(5), this will take whatever code ran after the every(5),
@@ -264,6 +274,28 @@
             runFacet(hooks_code);
           }
         }
+      });
+      // running custom hooks based on messages from max
+      osc.on('/hook', message => {
+        let hooks_code = '';
+        for (const [key, everys] of Object.entries(every_n_hooks)) {
+          if ( key == message.args[0] ) {
+            for (var i = 0; i < everys.length; i++) {
+            // it's time to rerun the code at this hook for every n bars
+            let code = everys[i];
+              if ( Math.random() < code.prob ) {
+                hooks_code += code.code.trim();
+              }
+            }
+          }
+        }
+        if ( hooks_code ) {
+          runFacet(hooks_code);
+        }
+      });
+      // setting global variables in the browser from Max
+      osc.on('/set', message => {
+        window[message.args[0]] = message.args[1];
       });
 
       function connectToMaxOscServer() {

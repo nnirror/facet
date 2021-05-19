@@ -61,7 +61,9 @@ function getDestination(code) {
 
 function getProperty(code, destination) {
   // property is the string after the destination string and before the datum
+  let dest_index = code.indexOf(destination);
   code = code.replace(destination, '').trim();
+  code = code.substring(dest_index, code.length);
   code = code.split('[')[0].trim();
   return code;
 }
@@ -112,8 +114,12 @@ function parseOperations(value) {
         d.lastIndexOf(")"),
     );
     if ( !args.includes('(') && !args.includes(')') ) {
-      // if there are no functions aka parenthesis in the middle of the string,
-      // no need to eval any code -- simply push the pre-existing value into args
+        // if there are no functions aka parenthesis in the middle of the string,
+      if ( typeof args == 'string' && args.length > 0 ) {
+          // and global variable found - eval it
+          args = eval(args);
+      }
+      // otherwise no need to eval any code -- simply push the pre-existing value into args
       operations.push({
         'op': op,
         'args': args
@@ -1585,7 +1591,7 @@ function sine(periods, length) {
     }
   }
   // scale sine from 0 to 1 and make the first sample be 0
-  return shift(scale(sine_sequence,0,1), (periods % 4) * 0.25);
+  return shift(scale(sine_sequence,0,1), ((1/periods) * 0.25));
 }
 
 function cosine(periods, length) {
@@ -1594,7 +1600,7 @@ function cosine(periods, length) {
   periods = Math.abs(Number(periods));
   length = Math.abs(Number(length));
   let sine_sequence = sine(periods, length);
-  return invert(shift(sine_sequence, 0.25));
+  return shift(sine_sequence, ((1/periods) * -0.25));
 }
 
 function tri(periods, length) {

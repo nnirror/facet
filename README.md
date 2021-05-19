@@ -133,6 +133,16 @@ fm amt [noise(8)].sort().palindrome();
 ```
 All operations transform the datum and pass it on, with the exception of  `choose()` and `random()`, which can only be used as arguments to other operations, since they return a single number.
 
+### Variables
+
+In addition to hard-coding numbers into your commands, you can send variables from Max into Facet, making it possible to run commands like this, where `myvar` is a variable that could be changed in Max.
+
+```
+foo bar [sine(1,1000)].gain(myvar);
+```
+
+Please see `/examples/example_facet_variables.maxpat` for more information on using variables.
+
 ### Ending / formatting commands
 All commands must end in a semicolon. You can run multiple commands in a single line:
 ```
@@ -602,6 +612,11 @@ It's also possible to specify a probability with every(), so that it will only r
 every(4, 0.25) lp cutoff noise[1].gain(3000);
 // every 4 quarter notes, 25% of the time, select a new random number between 0 and 3000
 ```
+Lastly, it's possible to integrate custom hooks in Max with the every() command, so you can run commands like this. Please see the `examples/example_facet_hooks.maxpat` file for more information.
+```
+every(kick) lp cutoff noise[1].gain(3000);
+```
+
 ---
 - **clearevery** (_times_)
 	- clears any currently-running `every()` processes from memory. _Note:_ `mute();` also clears all `every()` processes.
