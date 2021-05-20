@@ -14,6 +14,7 @@
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
     <script type="text/javascript" src="js/fft.js"></script>
+    <script type="text/javascript" src="js/float_to_bin.js"></script>
     <script type="text/javascript" src="js/strip_comments.js"></script>
     <style media="screen">
       html {
@@ -107,6 +108,12 @@
         if ( e.ctrlKey && e.keyCode == 13 ) {
           clearNotifications();
           parseCode();
+        }
+        else if ( e.ctrlKey && e.keyCode == 67 ) {
+          runFacet('clearevery();');
+        }
+        else if ( e.ctrlKey && e.keyCode == 77 ) {
+          runFacet('mute();');
         }
       });
 

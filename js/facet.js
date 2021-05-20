@@ -1075,12 +1075,57 @@ function spiral(length, angle_degrees = 137.5) {
   length = Math.abs(Number(length));
   while ( i <= length ) {
     angle += angle_degrees;
-    angle = pong([angle],0,360)[0];
+    if (angle > 359) {
+      angle = Math.abs(360 - angle);
+    }
     // convert degrees back to radians, and then to a 0. - 1. range
     spiral_sequence.push( (angle * (Math.PI/180) ) / (Math.PI * 2) );
     i++;
   }
   return spiral_sequence;
+}
+
+function binary(sequence) {
+  // support functions in float_to_bin.js
+  let binary_sequence = [];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      binary(step);
+    }
+    else {
+      let normalPart, fracPart, base2float, bin32exp, bin32mantissa, sign;
+      // Extract the integer from the real number
+      normalPart = parseInt(Math.abs(step));
+      // Extract the fractional part from the real number
+      fracPart = Math.abs(step) - normalPart;
+      // Resolve sign of the number for the sign bit
+      sign = Math.abs(step) === step ? '0' : '1';
+      // Get the base2 representation of the real number
+      base2float = convert2bin(normalPart) + '.' + frac2bin(fracPart);
+      // Calculate the value of exp for Normalized number (https://en.wikipedia.org/wiki/Normalized_number)
+      var exp = base2float.indexOf('.') - base2float.indexOf('1');
+      if ( exp > 0 ) {
+        exp = exp - 1;
+      }
+      // Get the 8-bit exponent part
+      if ( exp !== 1 ) {
+        bin32exp = pad(convert2bin(127 + exp), 8, 1);
+      }
+      else {
+        bin32exp = pad('', 8, 1);
+      }
+      // Get the 23-bit mantissa part
+      bin32mantissa = pad(binary32mantissa(base2float, exp), 23, 0);
+      // Return the 32-bit binary32 representation
+      var bin32float = (bin32exp + bin32mantissa).slice(0, 31);
+      // push each binary digit into the out array
+      let binary_for_this_step = (sign + bin32float).split('');
+      for (var i = 0; i < binary_for_this_step.length; i++) {
+        binary_sequence.push(binary_for_this_step[i]);
+      }
+    }
+  }
+  return binary_sequence;
 }
 
 function map(sequence, new_values) {

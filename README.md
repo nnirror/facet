@@ -229,6 +229,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].offset(-0.3).abs(); // a wonky sine`
 ---
+- **binary** ( )
+	- returns a 32-bit binary representation of all numbers in the pattern.
+	- example:
+		- `foo bar [1 2 0.1 4.2].binary(); // 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 1 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0`
+---
 - **changed** ( _pattern_ )
 	- returns a 1 or 0 for each value in the pattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the pattern.)
 	- example:
@@ -620,14 +625,14 @@ every(kick) lp cutoff noise[1].gain(3000);
 ---
 - **clearevery** (_times_)
 	- clears any currently-running `every()` processes from memory. _Note:_ `mute();` also clears all `every()` processes.
-
-If you want to clear a specific `every()` process, e.g. one running every 4, you would run `clearevery(4);`.
-
+	- If you want to clear a specific `every()` process, e.g. one running every 4, you would run `clearevery(4);`.
+	- The shortcut command `[control + c]` will run `clearevery();`.
 ---
 - **mute** ( )
 	- Sets every `facet_param` object in the Max patch to 0.
 		- example:
 		- `mute(); // stops all patterns from running`
+  - The shortcut command `[control + m]` will run `mute();`.
 ---
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.
