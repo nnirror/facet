@@ -533,6 +533,15 @@ Then open the Facet application in your browser, run commands to the destination
 ---
 
 ### Pattern generators
+- **any** ( )
+	- randomly selects a command higher up in the block of commands. As such, it cannot be the first command in a block.
+	- example:
+		- ```
+			foo bar [sine(2,30)]; // 2 cycles, 30 values each
+			foo fiz [noise(32)]; 	// 32 noise values
+			foo buz [any()];			// sometimes a sine; sometimes noise
+		```
+---
 - **cosine** ( _periods_, _length_ )
 	- generates a cosine for `periods` periods, each period having `length` values.
 	- example:

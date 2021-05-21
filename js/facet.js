@@ -1725,6 +1725,17 @@ function mult(destination_prop) {
   return mult_sequence;
 }
 
+function any() {
+  if ( facets.length == 0 || !facets ) {
+    throw `Could not run any(); no prior commands have been run`;
+  }
+  // randomly select any of the prior commands in the block
+  let facet_keys = Object.keys(facets);
+  let selected_facet = facets[facet_keys[facet_keys.length * Math.random() << 0]];
+  let selected_facet_value = Object.values(selected_facet);
+  return selected_facet_value[0].split(' ');
+}
+
 function phasor(periods, length) {
   periods = Math.abs(Number(periods));
   length = Math.abs(Number(length));
