@@ -113,7 +113,7 @@ function parseOperations(value) {
         d.indexOf("(") + 1,
         d.lastIndexOf(")"),
     );
-    if ( !args.includes('(') && !args.includes(')') ) {
+    if ( !args.includes('(') && !args.includes(')') && !args.includes(',') ) {
         // if there are no functions aka parenthesis in the middle of the string,
       if ( typeof args == 'string' && args.length > 0 ) {
           // and global variable found - eval it
@@ -1580,6 +1580,15 @@ function invert(sequence) {
     }
   }
   return inverted_sequence;
+}
+
+function at(sequence, position, bobo) {
+  position = clip([Math.abs(Number(position))],0,1);
+  // value = Number(value);
+  // calculate key where value should go, given position.
+  let replace_position = Math.round(position * (sequence.length-1));
+  sequence[replace_position] = bobo;
+  return sequence;
 }
 
 // WINDOW operations

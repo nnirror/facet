@@ -229,6 +229,12 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].offset(-0.3).abs(); // a wonky sine`
 ---
+- **at** ( _position_, _value_ )
+	- replaces the value of a pattern at the relative position `position` with `value`.
+	- example:
+		- `foo bar [turing(16)].at(0,1); // the 1st value of the 16-step Turing sequence (i.e. 0% position) is always 1`
+		- `foo bar [turing(16)].at(0.5,2); // the 9th value of the 16-step Turing sequence (i.e. 50% position) is always 2`
+---
 - **binary** ( )
 	- returns a 32-bit binary representation of all numbers in the pattern.
 	- example:
