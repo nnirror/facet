@@ -505,6 +505,12 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].interlace(phasor(1,20));`
 ---
+- **interp** ( _prob_, _destination_and_property_ )
+	- interpolates linearly between the input pattern and a second pattern specified by `destination_and_property`, which must be another pattern higher in the block of commands being run. `prob` controls how strong to weight each pattern, with 0 being no interpolation and 1 being a complete copy of the pattern specified by `destination_and_property`.
+	- example:
+		- `foo bar [drunk(16,0.1)]`
+		- `foo woo [noise(12)].interp(0.7, 'k1 struct') // now both patterns are somewhat related`
+---
 - **map** ( _pattern_ )
 	- forces all values in the input pattern to be mapped onto a new set of values. The mapping pattern should have the same range as the input pattern. **Note the array syntax!**
 	- example:

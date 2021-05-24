@@ -217,6 +217,7 @@ function parseOperations(value) {
             let sometimes_args = `${sometimes_split[1].slice(0,sometimes_split[1].length-1)}`;
             sometimes_args = sometimes_args.replaceAll('\'', '"');
             sometimes_args = `[${sometimes_args}]`;
+            // TODO: sometimes() does not handle dynamic arguments, like random(). Would require a more significant rewrite
             operations.push({
               'op': op,
               'args': sometimes_args
@@ -1582,13 +1583,34 @@ function invert(sequence) {
   return inverted_sequence;
 }
 
-function at(sequence, position, bobo) {
+function at(sequence, position, value) {
   position = clip([Math.abs(Number(position))],0,1);
-  // value = Number(value);
-  // calculate key where value should go, given position.
   let replace_position = Math.round(position * (sequence.length-1));
-  sequence[replace_position] = bobo;
+  sequence[replace_position] = value;
   return sequence;
+}
+
+function interp(sequence, args) {
+  let interp_sequence = [];
+  let amt = Math.abs(Number(args[0]));
+  let mult_str = args[1].replace(',', ' ');
+  let mult_sequence = mult(mult_str);
+  let same_size_arrays = makeArraysTheSameSize(sequence, mult_sequence);
+  sequence = same_size_arrays[0];
+  mult_sequence = same_size_arrays[1];
+  for (const [key, step] of Object.entries(sequence)) {
+    if ( Array.isArray(step) ) {
+      interp_sequence[key] = interp(step, destination_prop, amt);
+    }
+    else {
+      // linear interpolation between the two provided sequences
+      let seq_amt = (1 - amt) * step;
+      let mult_amt = amt * mult_sequence[key];
+      let avg = (seq_amt + mult_amt);
+      interp_sequence[key] = avg;
+    }
+  }
+  return interp_sequence;
 }
 
 // WINDOW operations
