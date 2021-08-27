@@ -250,6 +250,13 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1 2 3 4].clip(2, 3); // 2 2 3 3 `
 ---
+- **curve** ( _tension_ = 0.5, _segments_ = 25 )
+	- returns a curved version of the input sequence. Tension and number of segments in the curve can be included but default to 0.5 and 25, respectively.
+	- example:
+		- `foo bar [noise(16)].curve();					// not so noisy`
+		- `foo bar [noise(16)].curve(0.5, 10);	// fewer segments per curve`
+		- `foo bar [noise(16)].curve(0.9);			// different curve type`
+---
 - **distavg** ( )
 	- computes the distance from the average of the pattern, for each element in the pattern.
 	- example:
@@ -437,6 +444,11 @@ Then open the Facet application in your browser, run commands to the destination
 		- `foo bar [1 2 3 4].shuffle(); // first time: 3 2 1 4`
 		- `foo bar [1 2 3 4].shuffle(); // second time: 1 3 4 2`
 ---
+- **slew** ( _depth_ = 25, _up_speed_ = 1, _down_speed_ = 1 )
+	- adds upwards and/or downwards slew to the sequence data. `depth` controls how many slew values exist between each value of the sequence. `up_speed` and `down_speed` control how long the slew lasts: at 0, the slew has no effect, whereas at 1, the slew occurs over the entire `depth` between each sequence value.
+	- example:
+		- `foo bar [0 0.5 0.9 0.1].slew(25,0,1) // the first three numbers will jump immediately because upwards slew is 0. then it will slew from 0.9 to 0.1 over the course of the entire depth range`
+---
 - **smooth** ( )
 	- interpolates each value so it falls exactly between the values that precede and follow it.
 	- example:
@@ -554,6 +566,13 @@ Then open the Facet application in your browser, run commands to the destination
 			foo buz [any()];			// sometimes a sine; sometimes noise
 		```
 ---
+- **brot** ( _length_, _x_, _y_)
+	- over _length_ iterations, computes `x = (x*x)+y`. Returns the series of all `x` values computed over time. NOTE: iterative functions can have both stable and unstable results ( hello... Mandelbrot set... :D ). However in a musical context, there is not much use for an unstable result which would endlessly grow to infinity. So this function clips between -1 and 1, and there is no danger of sending humongous numbers to Max. For stable results, the best x values are within -0.8 and 0.25, and the best y values are within -0.8 and 0.8.
+	- example:
+		- ```
+			foo bar [brot(16,(random()-0.5),(random()-0.5))]; // 16 values somewhere between -1 and 1, moving upwards, downwards, or finding stability
+		```
+---
 - **cosine** ( _periods_, _length_ )
 	- generates a cosine for `periods` periods, each period having `length` values.
 	- example:
@@ -654,6 +673,11 @@ every(kick) lp cutoff noise[1].gain(3000);
 		- example:
 		- `mute(); // stops all patterns from running`
   - The shortcut command `[control + m]` will run `mute();`.
+---
+- **skip** ( )
+	- Does not send the sequence data from the browser to Max. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
+		- example:
+		- `sample vals [spiral(16,random(1,360))].sometimes(0.95, 'skip()');	// only load data into the "new samples" wavetable 5% of the time when this command runs`
 ---
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.

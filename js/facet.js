@@ -211,7 +211,7 @@ function parseOperations(value) {
           try {
             // case: arguments passed into a "sometimes" function
             // ultimately the argument should look like: [0.5, 'scale(-1,1).gain(0)']
-            let sometimes_split_regex = /sometimes\s*\(/;
+            let sometimes_split_regex = /sometimes|when\s*\(/;
             let sometimes_split = d.split(sometimes_split_regex);
             // remove the trailing ')' from the sometimes command
             let sometimes_args = `${sometimes_split[1].slice(0,sometimes_split[1].length-1)}`;
@@ -235,6 +235,9 @@ function parseOperations(value) {
 
 function runOperations(operations, datum) {
   for (const [key, op] of Object.entries(operations)) {
+    if ( op.op == 'skip' ) {
+      return 'SKIP';
+    }
     var fn = window[op.op];
     if ( typeof fn === 'function' ) {
       let args = [];
@@ -362,18 +365,23 @@ function facetParse(user_input) {
     commands = getCommands(user_input);
     Object.values(commands).forEach(command => {
       current_command = removeTabsAndNewlines(command);
-	  command = removeTabsAndNewlines(command);
+      command = removeTabsAndNewlines(command);
       destination = getDestination(command);
       property = getProperty(command, destination);
       statement = getStatement(command, property);
-	  statement = handleReruns(statement);
+      statement = handleReruns(statement);
       datum = getDatum(statement);
       datum = processCode(statement, datum);
-      max_sub_steps = getMaximumSubSteps(datum) - 1;
-      flat_sequence = reduce(flattenSequence(datum, max_sub_steps), 1024);
-      initFacetDestination(facets, destination);
-      facets[destination][property] = convertFlatSequenceToMessage(flat_sequence);
-      facets = handleMultConnections(facets, mults);
+      if ( datum == 'SKIP' ) {
+        // do nothing - don't add the command to the facets object
+      }
+      else {
+        max_sub_steps = getMaximumSubSteps(datum) - 1;
+        flat_sequence = reduce(flattenSequence(datum, max_sub_steps), 1024);
+        initFacetDestination(facets, destination);
+        facets[destination][property] = convertFlatSequenceToMessage(flat_sequence);
+        facets = handleMultConnections(facets, mults);
+      }
     });
   } catch (e) {
     notification(`${e}, command: ${current_command}`);
@@ -471,6 +479,10 @@ function append(sequence1, sequence2) {
 function nest(sequence1, sequence2) {
   sequence1[sequence1.length] = sequence2;
   return sequence1;
+}
+
+function skip(sequence) {
+  return sequence;
 }
 
 function changed(sequence) {
@@ -576,6 +588,116 @@ function smooth(sequence) {
     }
   }
   return smoothed_sequence;
+}
+
+function curve(sequence, tension = 0.5, segments = 25) {
+  // flatten the array to avoid nested arrays
+  let curved_sequence = [];
+  sequence = flattenSequence(sequence, 0);
+  // interlace a 0 for the x axis value of each sequence value
+  let points = [];
+  for (var i = 0; i < sequence.length; i++) {
+    points.push(0);
+    points.push(sequence[i]);
+  }
+  // run the curve function
+  let splinePoints = getCurvePoints(points, tension, segments, false);
+  // deinterlace the 0s on the x axis
+  for (var i = 0; i < splinePoints.length; i++) {
+    if (i % 2 == 0 ) {
+      continue;
+    }
+    curved_sequence.push(splinePoints[i]);
+  }
+  return curved_sequence;
+}
+
+function slew(sequence, depth = 25, up_speed = 1, down_speed = 1) {
+  let slewed_sequence = [];
+  up_speed = clip([Math.abs(Number(up_speed))],0,1)[0];
+  down_speed = clip([Math.abs(Number(down_speed))],0,1)[0];
+  depth = Math.round(Math.abs(Number(depth)));
+  for (const [key, step] of Object.entries(sequence)) {
+    let k = Number(key);
+    if ( Array.isArray(step) ) {
+      slewed_sequence.push(slew(step, depth, up_speed, down_speed));
+    }
+    else {
+        // check if next step up or down
+        // if up, run from this step to next step in (up_speed * depth) samples, then hold for rest of depth
+        // if down, run from this step to next step in (down_speed * depth) samples, then hold for rest of depth
+      if ( !isNaN(sequence[k+1]) ) {
+        if ( sequence[k+1] > sequence[k] ) {
+          // up
+          for (var i = 0; i < depth; i++) {
+            if ( i < Math.round(up_speed * depth) ) {
+              // up slew
+              slewed_sequence.push(((Number(sequence[k]) * (1-(i/Math.round(up_speed * depth)))) + (Number(sequence[k+1]) * (i/Math.round(up_speed * depth)))));
+            }
+            else {
+              // hold
+              slewed_sequence.push(sequence[k+1]);
+            }
+          }
+        }
+        else if ( sequence[k+1] < sequence[k] ) {
+          // down
+          for (var i = 0; i < depth; i++) {
+            if ( i < Math.round(down_speed * depth) ) {
+              // down slew
+              slewed_sequence.push(((Number(sequence[k]) * (1-(i/Math.round(up_speed * depth)))) + (Number(sequence[k+1]) * (i/Math.round(up_speed * depth)))));
+            }
+            else {
+              // hold
+              slewed_sequence.push(sequence[k+1]);
+            }
+          }
+        }
+        else {
+          // static
+          for (var i = 0; i < depth; i++) {
+            slewed_sequence.push(sequence[k]);
+          }
+        }
+      }
+      else {
+        // going back to first val
+        if ( sequence[0] > sequence[k] ) {
+          // up
+          for (var i = 0; i < depth; i++) {
+            if ( i < Math.round(up_speed * depth) ) {
+              // up slew
+              slewed_sequence.push(((Number(sequence[k]) * (1-(i/Math.round(up_speed * depth)))) + (Number(sequence[0]) * (i/Math.round(up_speed * depth)))));
+            }
+            else {
+              // hold
+              slewed_sequence.push(sequence[0]);
+            }
+          }
+        }
+        else if ( sequence[0] < sequence[k] ) {
+          // down
+          for (var i = 0; i < depth; i++) {
+            if ( i < Math.round(down_speed * depth) ) {
+              // down slew
+              slewed_sequence.push(((Number(sequence[k]) * (1-(i/Math.round(up_speed * depth)))) + (Number(sequence[0]) * (i/Math.round(up_speed * depth)))));
+            }
+            else {
+              // hold
+              slewed_sequence.push(sequence[0]);
+            }
+          }
+        }
+        else {
+          // static
+          for (var i = 0; i < depth; i++) {
+            slewed_sequence.push(sequence[0]);
+          }
+        }
+      }
+    }
+  }
+  return slewed_sequence;
 }
 
 function equals(sequence1, sequence2) {
@@ -1800,5 +1922,23 @@ function ramp(from, to, size) {
 function data(list) {
   // user can supply an aribtrary array of data to certain functions like am()
   return list;
+}
+
+function brot(length, x, y) {
+  // iterates based on the function used to generate the mandelbrot set.
+  // takes a complex number (x,y). squares x, adds y... repeat.
+  // the output of this function is the x value. sadly there is just as much information in y
+  // but wavetables (the destination for facet's data) are 2D not 3D!
+  // the best values for x are within -0.8 and 0.25
+  // the best values for y are within -0.8 0.8
+  length = Math.abs(Number(length));
+  x = Number(x);
+  y = Number(y);
+  let brot_sequence = [];
+  for (var i = 0; i < length; i++) {
+    brot_sequence.push(x);
+    x = (x*x) + y;
+  }
+  return clip(brot_sequence,-1, 1);
 }
 // END pattern generators
