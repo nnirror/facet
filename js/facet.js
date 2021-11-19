@@ -39,6 +39,17 @@ function codeIsFunction(code) {
   return false;
 }
 
+function fileExists(url) {
+    if ( url ) {
+        var req = new XMLHttpRequest();
+        req.open('GET', url, false);
+        req.send();
+        return req.status == 200;
+    } else {
+        return false;
+    }
+}
+
 function removeTabsAndNewlines(user_input) {
   // remove tabs, newlines, and multiple spaces. convert any single quotes to double quotes
   user_input = user_input.replace(/\s\s+/g, '');
@@ -254,7 +265,7 @@ function runOperations(operations, datum) {
     }
   }
   // if the array exceeds 1024 values, re-scale it to 1024.
-  return reduce(datum, 1024);
+  return datum;
 }
 
 function getCommands(user_input) {
@@ -377,7 +388,7 @@ function facetParse(user_input) {
       }
       else {
         max_sub_steps = getMaximumSubSteps(datum) - 1;
-        flat_sequence = reduce(flattenSequence(datum, max_sub_steps), 1024);
+        flat_sequence = flattenSequence(datum, max_sub_steps);
         initFacetDestination(facets, destination);
         facets[destination][property] = convertFlatSequenceToMessage(flat_sequence);
         facets = handleMultConnections(facets, mults);
@@ -511,6 +522,27 @@ function changed(sequence) {
     }
   }
   return changed_sequence;
+}
+
+function stepAs(sequence, user_defined_var) {
+  // add this a global array of named pattern objects that can be stepped through
+  let step_obj = {
+    name: user_defined_var,
+    cur_step: 0,
+    sequence: sequence
+  }
+  let matching_step_found = false;
+  for (var i = 0; i < window.steps.length; i++) {
+    cur_step = window.steps[i];
+    if ( cur_step.name == user_defined_var ) {
+      matching_step_found = true;
+      window.steps[i] = step_obj;
+    }
+  }
+  if ( !matching_step_found ) {
+    window.steps.push(step_obj);
+  }
+  return sequence;
 }
 
 function truncate(sequence, length) {
@@ -1145,6 +1177,9 @@ function sometimes(sequence, controls) {
 }
 
 function fft(sequence) {
+  if ( sequence.length == 0 ) {
+    return sequence;
+  }
   let fft_sequence = [];
   let next_power_of_2 = nextPowerOf2(sequence.length);
   let power2_sequence = new Array(next_power_of_2);
@@ -1735,6 +1770,23 @@ function interp(sequence, args) {
   return interp_sequence;
 }
 
+function convolve(sequence1, sequence2) {
+  sequence1 = sequence1;
+  sequence2 = sequence2;
+  var al = sequence1.length;
+  var wl = sequence2.length;
+  var offset = ~~(wl / 2);
+  var output = new Array(al);
+  for (var i = 0; i < al; i++) {
+    var kmin = (i >= offset) ? 0 : offset - i;
+    var kmax = (i + offset < al) ? wl - 1 : al - 1 - i + offset;
+    output[i] = 0;
+    for (var k = kmin; k <= kmax; k++)
+      output[i] += sequence1[i - offset + k] * sequence2[k];
+  }
+  return normalize(output);
+}
+
 // WINDOW operations
 function applyWindow(signal, func) {
   var i, n=signal.length, args=[0,n]
@@ -1940,5 +1992,56 @@ function brot(length, x, y) {
     x = (x*x) + y;
   }
   return clip(brot_sequence,-1, 1);
+}
+
+function wait(ms){
+   var start = new Date().getTime();
+   var end = start;
+   while(end < start + ms) {
+     end = new Date().getTime();
+  }
+}
+
+function sample(file_name) {
+  let sample_str = localStorage.getItem(`${file_name}`);
+  if ( sample_str === null ) {
+    throw(`sample ${file_name} not loaded. First run: loadsample('${file_name}');`);
+  }
+  return sample_str.split(',');
+}
+
+function loadsample(file_name, channel=0) {
+  if ( !fileExists(`../facet/samples/${file_name}`) ) {
+    throw(`sample ${file_name} not found. Check that it exists in the facet/samples directory!`);
+    return;
+  }
+  let file_sequence = [];
+  channel = Number(channel);
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  var audioCtx = new AudioContext();
+  // okay the file exists, let's get the samples :)
+  fetch(`../facet/samples/${file_name}`)
+    .then(
+      response => response.arrayBuffer()
+    )
+    .then(
+      buffer => audioCtx.decodeAudioData(buffer)
+    )
+    .then(
+      buffer => {
+        // load first 44.1k samples into localStorage
+        let data = buffer.getChannelData(channel);
+        for (var i = 0; i < 44099; i++) {
+          let d = data[i];
+          if ( isNaN(d) ) {
+            break;
+            d = 0;
+          }
+          file_sequence[i] = d;
+        }
+        localStorage.setItem(`${file_name}`, file_sequence);
+      }
+    )
+
 }
 // END pattern generators

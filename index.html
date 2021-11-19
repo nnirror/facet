@@ -17,6 +17,7 @@
     <script type="text/javascript" src="js/float_to_bin.js"></script>
     <script type="text/javascript" src="js/strip_comments.js"></script>
     <script type="text/javascript" src="js/curve_calc.js"></script>
+    <script type="text/javascript" src="node_modules/wavefile/dist/wavefile.js"></script>
     <style media="screen">
       html {
         height: 1000px;
@@ -47,6 +48,7 @@
   </head>
   <body>
     <script type="text/javascript">
+    localStorage.clear();
     var cm = CodeMirror(document.body, {
       value: `// Facet: live coding in the browser for Max`,
         mode:  "javascript",
@@ -98,7 +100,7 @@
       }
 
       function isGlobalCommand(code) {
-        if ( code == 'mute()' ) {
+        if ( code == 'mute()' || code.includes('loadsample(' ) ) {
           return true;
         }
         return false;
@@ -152,7 +154,12 @@
             // global commands are evaled as-is. so e.g. the command "mute();"
             // would run the mute() function which will send a value of global[mute]: 0
             // to every facet_param in Max, basically unsetting all buffers.
-            facet_data = eval(command);
+            try {
+              facet_data = eval(command);
+            } catch (e) {
+              // adds try/catch to handle the possibility that loadsample('') is run on a non-existent file
+              notification(`${e}, command: ${command}`);
+            }
             skip_parsing = true;
           }
           if ( isClearEveryNStatement(command) ) {
@@ -277,6 +284,20 @@
       osc.on('/eoc', message => {
         if ( message.args[0] == 'bang' ) {
           num_cycles++;
+          // step through any window.steps patterns, re-setting global variables with the same name for the next value in any of those pattenrs
+          for (var i = 0; i < window.steps.length; i++) {
+            cur_step = window.steps[i];
+            // increment step position
+            if ( cur_step.position < (cur_step.sequence.length - 1) ) {
+              cur_step.position++;
+            }
+            else {
+              cur_step.position = 0;
+            }
+
+            window[cur_step.name] = cur_step.sequence[cur_step.position];
+          }
+
           hooks_code = getHooksToRunEveryN();
           if ( hooks_code ) {
             runFacet(hooks_code);
@@ -305,6 +326,9 @@
       osc.on('/set', message => {
         window[message.args[0]] = message.args[1];
       });
+
+      // init a global array which can contain named patterns to step through each time max sends a tick
+      window.steps = [];
 
       function connectToMaxOscServer() {
         let connected = false;
