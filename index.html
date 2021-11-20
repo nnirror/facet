@@ -10,12 +10,9 @@
     <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <script src="node_modules/codemirror/mode/javascript/javascript.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="js/facet.js"></script>
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
     <script type="text/javascript" src="js/fft.js"></script>
-    <script type="text/javascript" src="js/float_to_bin.js"></script>
-    <script type="text/javascript" src="js/strip_comments.js"></script>
     <script type="text/javascript" src="js/curve_calc.js"></script>
     <script type="text/javascript" src="node_modules/wavefile/dist/wavefile.js"></script>
     <style media="screen">
@@ -148,7 +145,7 @@
           }
         }
 
-        commands = getCommands(code);
+        commands = code.trim().split(';').filter(Boolean);
         Object.values(commands).forEach(command => {
           if ( isGlobalCommand(command) ) {
             // global commands are evaled as-is. so e.g. the command "mute();"
@@ -168,18 +165,18 @@
         });
 
         if ( !skip_parsing ) {
-          facet_data = facetParse(code);
+          // send it off
+          $.post('http://127.0.0.1:1123', {code:code});
         }
 
-        $.post('http://127.0.0.1:1123', facet_data);
         // re-initialize the facets object after it has been parsed
-        facets = facetInit();
+        facets = {};
       }
 
       function mute() {
         // mute clears the every_n_hooks object too
         undoEveryNStatement('clearevery()');
-        return {global: { mute: 0 }};
+        $.post('http://127.0.0.1:1123', {code:'mute();'});
       }
 
       // begin EVERY
