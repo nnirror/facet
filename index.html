@@ -33,10 +33,13 @@
         vertical-align: middle;
       }
       #status {
-        width: 200px;
+        float: left;
       }
       #notifications {
-        width: calc(100% - 205px);
+        float: left;
+        padding-left: 5%;
+        overflow: scroll;
+        width: 80%;
       }
       .error {
         background-color: rgba(204, 0, 0, 0.5);
@@ -166,7 +169,15 @@
 
         if ( !skip_parsing ) {
           // send it off
-          $.post('http://127.0.0.1:1123', {code:code});
+          setStatus(`processing`);
+          waiting_for_response = true;
+          $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
+            setStatus(`connected`);
+            waiting_for_response = false;
+            if ( data.error )  {
+              notification(data.error);
+            }
+          });
         }
 
         // re-initialize the facets object after it has been parsed
@@ -272,6 +283,7 @@
       // end EVERY
 
       // begin OSC
+      let waiting_for_response = false;
       let num_cycles = 0;
       let every_n_hooks = {};
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
@@ -281,20 +293,6 @@
       osc.on('/eoc', message => {
         if ( message.args[0] == 'bang' ) {
           num_cycles++;
-          // step through any window.steps patterns, re-setting global variables with the same name for the next value in any of those pattenrs
-          for (var i = 0; i < window.steps.length; i++) {
-            cur_step = window.steps[i];
-            // increment step position
-            if ( cur_step.position < (cur_step.sequence.length - 1) ) {
-              cur_step.position++;
-            }
-            else {
-              cur_step.position = 0;
-            }
-
-            window[cur_step.name] = cur_step.sequence[cur_step.position];
-          }
-
           hooks_code = getHooksToRunEveryN();
           if ( hooks_code ) {
             runFacet(hooks_code);
@@ -324,9 +322,6 @@
         window[message.args[0]] = message.args[1];
       });
 
-      // init a global array which can contain named patterns to step through each time max sends a tick
-      window.steps = [];
-
       function connectToMaxOscServer() {
         let connected = false;
         let connection_status_change = false;
@@ -352,8 +347,10 @@
               else {
                 connection_status_change = false;
               }
-              connected = false;
-              setStatus(`disconnected`);
+              // comeback
+              if ( !waiting_for_response ) {
+                setStatus(`disconnected`);
+              }
             }
           }, 1000);
         }, 3000);
@@ -362,6 +359,9 @@
       function setStatus(status) {
         let colored_span = '';
         if ( status == 'connected' ) {
+          colored_span = `status: <span style="color:green;"">${status}</span>`;
+        }
+        else if ( status == 'processing' ) {
           colored_span = `status: <span style="color:green;"">${status}</span>`;
         }
         else if ( status == 'disconnected' ) {
@@ -376,7 +376,7 @@
       }
 
       function notification(msg) {
-        $('#notifications').html(msg);
+        $('#notifications').html('<p style="white-space: nowrap;">'+msg+'</p>');
         $('#notifications').addClass('error');
         setTimeout(function () {
           $('#notifications').removeClass('error');

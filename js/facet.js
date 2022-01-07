@@ -1,5 +1,7 @@
 const fs = require('fs');
 const wav = require("node-wav");
+const fftjs = require('./fft.js');
+const float_to_bin = require('./float_to_bin.js');
 
 module.exports = {
 
@@ -26,10 +28,12 @@ module.exports = {
       datum = datum.substring(1, datum.length-1);
       datum = datum.replace(/random/g, 'module.exports.random');
       datum = datum.replace(/choose/g, 'module.exports.choose');
-      if (datum.includes('jam')) {
-        throw(datum);
+      if (datum) {
+        datum = eval(`module.exports.${datum}`);
       }
-      datum = eval(`module.exports.${datum}`);
+      else {
+        datum = 0;
+      }
     }
     else {
       datum = datum.trim();
@@ -152,22 +156,23 @@ module.exports = {
           // there is a function somewhere in the argument, so now we'll
           // attempt to eval the code, accounting for a few ways it could be structured
           let split_args = [];
-          let multiple_functions_regex = /(?<=\)\,)/;
-          let multi_function_args = args.split(multiple_functions_regex);
-          let multiple_arguments_regex = /,(?![^()]*(?:\([^()]*\))?\))/;
-          let multi_args = args.split(multiple_arguments_regex);
+          let multi_function_args = args.split(/(?<=\)\,)/);
+          let multi_args = args.split(/,(?![^\(\[]*[\]\)])/);
           let args_array = [];
           if ( multi_function_args.length > 1 ) {
             // case: multiple functions as arguments
             args_array = multi_function_args;
           }
           else if ( multi_args.length > 1 ) {
-            // case: multiple arguments, at least one function as argument
-            args_array = multi_args;
+            let rgs = [];
+            for (let [x, y] of Object.entries(multi_args)) {
+              rgs.push(y);
+            }
+            args_array = rgs
           }
           else {
             // case: function as only argument, just initialize the args array to that
-            args_array = [args];
+            args_array = [args]
           }
           // however many arguments are now split into an array. loop through
           // them, eval them, and create a csv string of the evaled arguments
@@ -175,7 +180,15 @@ module.exports = {
           for (const [y, r] of Object.entries(args_array)) {
             // prevent any straggling trailing parens
             let valid_parsed_arg = r.replace('),',')');
-            let evaled_arg = parseFloat(eval(`module.exports.${valid_parsed_arg}`));
+            let evaled_arg;
+            // if random/choose, run parsefloat.. which requires a reference to module.exports..
+            if ( valid_parsed_arg.includes('random(') || valid_parsed_arg.includes('choose(') ) {
+              evaled_arg = parseFloat(eval(`module.exports.${valid_parsed_arg}`));
+            }
+            else {
+              // otherwise just eval it :D it's so simple...
+              evaled_arg = parseFloat(eval(`${valid_parsed_arg}`));
+            }
             args_str += `${evaled_arg.toFixed(4)},`;
           }
           // remove last comma
@@ -232,7 +245,7 @@ module.exports = {
             try {
               // case: arguments passed into a "sometimes" function
               // ultimately the argument should look like: [0.5, 'scale(-1,1).gain(0)']
-              let sometimes_split_regex = /sometimes|when\s*\(/;
+              let sometimes_split_regex = /sometimes\(/;
               let sometimes_split = d.split(sometimes_split_regex);
               // remove the trailing ')' from the sometimes command
               let sometimes_args = `${sometimes_split[1].slice(0,sometimes_split[1].length-1)}`;
@@ -244,8 +257,15 @@ module.exports = {
                 'args': sometimes_args
               });
             } catch (ee) {
-              // "Please everybody, if we haven't done what we could have done, we've tried"
-              throw `Could not parse argument: ${args}`;
+              try {
+                operations.push({
+                  'op': op,
+                  'args': ''
+                });
+              } catch (eee) {
+                // "Please everybody, if we haven't done what we could have done, we've tried"
+                throw `Could not parse argument: ${args}`;
+              }
             }
           }
         }
@@ -501,25 +521,30 @@ module.exports = {
     return changed_sequence;
   },
 
+  steps: [],
+
   stepAs: function (sequence, user_defined_var) {
-    // TODO: rework to not use window
-    // add this a global array of named pattern objects that can be stepped through
+    // example: foo bar [noise(16)].stepAs('myNoise').gain(0.25)...;
+    // 'myNoise' would become a globally accessible variable in further function calls, and would be stepped through
+    // as Max continually pings the browser
     let step_obj = {
       name: user_defined_var,
       cur_step: 0,
       sequence: sequence
     }
     let matching_step_found = false;
-    for (var i = 0; i < window.steps.length; i++) {
-      cur_step = window.steps[i];
+    for (var i = 0; i < module.exports.steps.length; i++) {
+      cur_step = module.exports.steps[i];
       if ( cur_step.name == user_defined_var ) {
         matching_step_found = true;
-        window.steps[i] = step_obj;
+        module.exports.steps[i] = step_obj;
       }
     }
     if ( !matching_step_found ) {
-      window.steps.push(step_obj);
+      module.exports.steps.push(step_obj);
     }
+    // now that the step pattern has been stored in module.exports.steps,
+    // the pattern can return unchanged
     return sequence;
   },
 
@@ -535,7 +560,7 @@ module.exports = {
   },
 
   dup: function (sequence, num) {
-    return Array.from({length: Number(num)}).flatMap(a => sequence);
+    return Array.from({length: Number(num+1)}).flatMap(a => sequence);
   },
 
   normalize: function (sequence) {
@@ -545,7 +570,7 @@ module.exports = {
     let max = Math.max.apply(Math, sequence);
     for (const [key, step] of Object.entries(sequence)) {
       if ( Array.isArray(step) ) {
-        normalized_sequence[key] = module.exports.normalze(step);
+        normalized_sequence[key] = module.exports.normalize(step);
       }
       else {
         normalized_sequence[key] = (step - min) / (max - min);
@@ -560,6 +585,12 @@ module.exports = {
 
   echo: function (sequence, num) {
     num = Math.round(Math.abs(Number(num)));
+    if ( num < 0 ) {
+      num = Math.abs(num);
+    }
+    if ( num === 0 ) {
+      return sequence;
+    }
     let echo_sequence = module.exports.dup(sequence, num);
     let amplitude = 1;
     let count = 1;
@@ -1159,10 +1190,8 @@ module.exports = {
   },
 
   fft: function (sequence) {
-    if ( sequence.length == 0 ) {
-      return sequence;
-    }
     let fft_sequence = [];
+    let complex_fft_sequence = [];
     let next_power_of_2 = module.exports.nextPowerOf2(sequence.length);
     let power2_sequence = new Array(next_power_of_2);
     for (var i = 0; i < power2_sequence.length; i++) {
@@ -1173,8 +1202,14 @@ module.exports = {
         power2_sequence[i] = 0;
       }
     }
-    let f = new FFT(next_power_of_2);
-    f.realTransform(fft_sequence, power2_sequence);
+    complex_fft_sequence = fftjs.cfft(power2_sequence);
+    for (var i = 0; i < complex_fft_sequence.length; i++) {
+      let n = complex_fft_sequence[i].re;
+      if ( isNaN(n)) {
+        n = 0;
+      }
+      fft_sequence.push(n);
+    }
     return fft_sequence;
   },
 
@@ -1190,23 +1225,166 @@ module.exports = {
       return 1 << count;
   },
 
-  fracture: function (sequence, max_chunk_size) {
+  fracture: function (sequence, pieces) {
+    pieces = Math.round(Math.abs(Number(pieces)));
     let fracture_sequence = [];
-    max_chunk_size = Math.round(Math.abs(Number(max_chunk_size)));
-    if ( max_chunk_size == 0 ) {
-      throw `fracture requires a nonzero maximum chunk size`;
+    let break_points = [];
+    for (var i = 0; i < pieces; i++) {
+      break_points.push(Math.floor(Math.random() * sequence.length));
     }
-    let new_positions = [];
-    let next_chunk = [];
-    let i = 0;
-    while (i < sequence.length) {
-      let chunk_size = module.exports.random(Math.ceil(Math.random() * max_chunk_size) * 0.5, Math.ceil(Math.random() * max_chunk_size),1);
-      let temparray = sequence.slice(i, i + chunk_size);
-      i += chunk_size;
-      fracture_sequence.push(temparray);
+    break_points = module.exports.sort(break_points);
+    let prev_point = 0;
+    let chunks = [];
+    let chunk = [];
+    for (var i = 0; i < sequence.length; i++) {
+      chunk.push(sequence[i]);
+      for (var a = 0; a < break_points.length; a++) {
+        if ( break_points[a] == i || i == (sequence.length - 1)) {
+          chunks.push(chunk);
+          chunk = [];
+          break;
+        }
+      }
     }
-    fracture_sequence = module.exports.shuffle(fracture_sequence).flat();
+    chunks = module.exports.shuffleArray(chunks);
+    for (var i = 0; i < chunks.length; i++) {
+      chunk = chunks[i];
+      for (var a = 0; a < chunk.length; a++) {
+        fracture_sequence.push(chunk[a]);
+      }
+    }
     return fracture_sequence;
+  },
+
+  getchunks: function(sequence, num_chunks) {
+    let chunk_size = sequence.length / parseInt(num_chunks);
+    let window_size = parseInt((sequence.length / num_chunks) * 0.04);
+    let chunked_sequence = [];
+    let chunk_obj = {
+      pre: [],
+      chunk: [],
+      post: []
+    };
+    for (var i = 0; i < sequence.length; i++) {
+      chunk_obj.chunk.push(sequence[i]);
+      if ( ( chunk_obj.chunk.length >= chunk_size ) || (i == (sequence.length - 1)) ) {
+        // pre should always start at window_size before
+        let pre = i - window_size;
+        if ( pre < 0 ) {
+          pre = chunk_obj.chunk.length + pre;
+        }
+        v = 0;
+        while ( v < window_size ) {
+          chunk_obj.pre.push(sequence[pre+v]);
+          v++;
+        }
+        for (var x = i; x < i + window_size; x++) {
+          let calc_x = x;
+          if (calc_x >= sequence.length ) {
+            calc_x = Math.abs(calc_x - sequence.length);
+          }
+          chunk_obj.post.push(sequence[calc_x]);
+        }
+        chunked_sequence.push(chunk_obj);
+        chunk_obj = {
+          pre: [],
+          chunk: [],
+          post: []
+        };
+      }
+    }
+    return chunked_sequence;
+  },
+
+  rechunk: function(sequence, chunks = 8) {
+    chunks = Math.round(Math.abs(Number(chunks)));
+    let chunked_sequence = module.exports.shuffleArray(module.exports.getchunks(sequence, chunks));
+    let rechunk_sequence = [];
+    let chunk = [];
+    let pre_chunk = [];
+    let post_chunk = [];
+    let window_size = chunked_sequence[0].post.length;
+    let window_amts = module.exports.reverse(module.exports.range(module.exports.sine(1,window_size*2),0,0.5));
+    for (var i = 0; i < chunked_sequence.length; i++) {
+      chunk = chunked_sequence[i].chunk;
+      let next = i+1 >= chunked_sequence.length ? 0 : i+1;
+      pre_chunk = chunked_sequence[next].pre;
+      post_chunk = chunked_sequence[i].post;
+      for (var a = 0; a < (chunk.length - window_size); a++) {
+        rechunk_sequence.push(chunk[a]);
+      }
+      for (var a = 0; a < post_chunk.length; a++) {
+        let post_window_mix = parseFloat(window_amts[a]);
+        let pre_window_mix = Math.abs(1-post_window_mix);
+        rechunk_sequence.push(((post_chunk[a] * post_window_mix)) + ((pre_chunk[a] * pre_window_mix)));
+      }
+    }
+    return rechunk_sequence;
+  },
+
+  mutechunks: function(sequence, chunks, prob) {
+    if ( !chunks ) {
+      chunks = 16;
+    }
+    if ( !prob ) {
+      prob = 0.75;
+    }
+    let mutechunk_sequence = module.exports.getchunks(sequence, parseInt(chunks));
+    let out = [];
+    let window_size = parseInt((sequence.length / chunks) * 0.02);
+    let window_amts = module.exports.reverse(module.exports.range(module.exports.sine(1,window_size*2),0,0.5));
+    let chunk;
+    let pre_chunk;
+    let post_chunk;
+    // first loop through and "fade" some by setting their pre/chunk/post to 0
+    for (var i = 0; i < mutechunk_sequence.length; i++) {
+      chunk = mutechunk_sequence[i].chunk;
+      pre_chunk = mutechunk_sequence[i].pre;
+      post_chunk = mutechunk_sequence[i].post;
+      if ( Math.random() < parseFloat(prob) ) {
+        mutechunk_sequence[i].pre = [];
+        mutechunk_sequence[i].chunk = [];
+        mutechunk_sequence[i].post = [];
+        for (var a = 0; a < pre_chunk.length; a++) {
+          mutechunk_sequence[i].pre.push(0);
+        }
+        for (var a = 0; a < chunk.length; a++) {
+          mutechunk_sequence[i].chunk.push(0);
+        }
+        for (var a = 0; a < post_chunk.length; a++) {
+          mutechunk_sequence[i].post.push(0);
+        }
+      }
+    }
+    // then loop through to interp out
+    for (var i = 0; i < mutechunk_sequence.length; i++) {
+      chunk = mutechunk_sequence[i].chunk;
+      let next = i >= (mutechunk_sequence.length - 1) ? 0 : i + 1;
+      pre_chunk = mutechunk_sequence[next].pre;
+      post_chunk = mutechunk_sequence[i].post;
+      for (var a = 0; a < (chunk.length - window_size); a++) {
+        out.push(chunk[a]);
+      }
+      for (var a = 0; a < post_chunk.length; a++) {
+        let post_window_mix = parseFloat(window_amts[a]);
+        let pre_window_mix = Math.abs(1-post_window_mix);
+        out.push(parseFloat((post_chunk[a] * post_window_mix)) + parseFloat((pre_chunk[a] * pre_window_mix)));
+      }
+    }
+    // phase rotate to handle windows
+    out = module.exports.shift(out, window_size / out.length);
+    return out;
+  },
+
+  shuffleArray: function (array) {
+    // only for shuffling the outer-most level elements... added in for fracture
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+    return array;
   },
 
   spiral: function (length, angle_degrees = 137.5) {
@@ -1223,50 +1401,6 @@ module.exports = {
       i++;
     }
     return spiral_sequence;
-  },
-
-  binary: function (sequence) {
-    // TODO: rework library for node
-    // support functions in float_to_bin.js
-    let binary_sequence = [];
-    for (const [key, step] of Object.entries(sequence)) {
-      if ( Array.isArray(step) ) {
-        binary(step);
-      }
-      else {
-        let normalPart, fracPart, base2float, bin32exp, bin32mantissa, sign;
-        // Extract the integer from the real number
-        normalPart = parseInt(Math.abs(step));
-        // Extract the fractional part from the real number
-        fracPart = Math.abs(step) - normalPart;
-        // Resolve sign of the number for the sign bit
-        sign = Math.abs(step) === step ? '0' : '1';
-        // Get the base2 representation of the real number
-        base2float = convert2bin(normalPart) + '.' + frac2bin(fracPart);
-        // Calculate the value of exp for Normalized number (https://en.wikipedia.org/wiki/Normalized_number)
-        var exp = base2float.indexOf('.') - base2float.indexOf('1');
-        if ( exp > 0 ) {
-          exp = exp - 1;
-        }
-        // Get the 8-bit exponent part
-        if ( exp !== 1 ) {
-          bin32exp = pad(convert2bin(127 + exp), 8, 1);
-        }
-        else {
-          bin32exp = pad('', 8, 1);
-        }
-        // Get the 23-bit mantissa part
-        bin32mantissa = pad(binary32mantissa(base2float, exp), 23, 0);
-        // Return the 32-bit binary32 representation
-        var bin32float = (bin32exp + bin32mantissa).slice(0, 31);
-        // push each binary digit into the out array
-        let binary_for_this_step = (sign + bin32float).split('');
-        for (var i = 0; i < binary_for_this_step.length; i++) {
-          binary_sequence.push(binary_for_this_step[i]);
-        }
-      }
-    }
-    return binary_sequence;
   },
 
   map: function (sequence, new_values) {
@@ -1461,7 +1595,7 @@ module.exports = {
           foo = sequence.length - 1;
       }
       if ( Array.isArray(sequence[foo]) ) {
-        warp_sequence[a] = warp(sequence[foo], base, rotation);
+        warp_sequence[a] = module.exports.warp(sequence[foo], base, rotation);
       }
       else {
         warp_sequence[a] = sequence[foo];
@@ -1496,6 +1630,10 @@ module.exports = {
     // this is a horizontal range - returns a range of the buffer
     min = parseInt(Number(new_min) * sequence.length);
     max = parseInt(Number(new_max) * sequence.length);
+    if (max < min) {
+      max = parseInt(Number(new_min) * sequence.length);;
+      min = parseInt(Number(new_max) * sequence.length);;
+    }
     let range_sequence = [];
     for (const [key, step] of Object.entries(sequence)) {
       if ( Array.isArray(step) ) {
@@ -1657,7 +1795,7 @@ module.exports = {
     let prev_step;
     for (const [key, step] of Object.entries(sequence)) {
       if ( Array.isArray(step) ) {
-        sah_sequence[key] = module.exports.sahevery(step, num);
+        sah_sequence[key] = module.exports.saheach(step, num);
       }
       else {
         if ( count % num == 0 || key == 0 ) {
@@ -1694,12 +1832,12 @@ module.exports = {
     return clipped_sequence;
   },
 
-  saturate: function (sequence, gain) {
+  saturate: function (sequence, gain = 1) {
     gain = Number(gain);
     let saturated_sequence = [];
     for (const [key, step] of Object.entries(sequence)) {
       if ( Array.isArray(step) ) {
-        saturated_sequence[key] = saturate(step, gain);
+        saturated_sequence[key] = module.exports.saturate(step, gain);
       }
       else {
         saturated_sequence[key] = Math.tanh(step * gain).toFixed(4);;
@@ -1767,7 +1905,7 @@ module.exports = {
       for (var k = kmin; k <= kmax; k++)
         output[i] += sequence1[i - offset + k] * sequence2[k];
     }
-    return module.exports.normalize(output);
+    return output;
   },
 
   // WINDOW operations
@@ -1914,14 +2052,16 @@ module.exports = {
   },
 
   any: function () {
-    if ( facets.length == 0 || !facets ) {
-      throw `Could not run any(); no prior commands have been run`;
-    }
     // randomly select any of the prior commands in the block
-    let facet_keys = Object.keys(facets);
-    let selected_facet = facets[facet_keys[facet_keys.length * Math.random() << 0]];
+    let selected_facet = module.exports.randomProperty(module.exports.facets);
     let selected_facet_value = Object.values(selected_facet);
+    selected_facet_value = module.exports.shuffle(selected_facet_value);
     return selected_facet_value[0].split(' ');
+  },
+
+  randomProperty: function (obj) {
+    let keys = Object.keys(obj);
+    return obj[keys[ keys.length * Math.random() << 0]];
   },
 
   phasor: function (periods, length) {
@@ -1977,12 +2117,18 @@ module.exports = {
     return module.exports.clip(brot_sequence,-1, 1);
   },
 
+  randsamp: function(dir = `../samples/`) {
+    var files = fs.readdirSync(dir);
+    let chosenFile = files[Math.floor(Math.random() * files.length)];
+    let buffer = fs.readFileSync(`${dir}${chosenFile}`);
+    let decodedAudio = wav.decode(buffer);
+    return Array.from(decodedAudio.channelData[0]);
+  },
+
   sample: function(file_name) {
-    // TODO: error handling
     let buffer = fs.readFileSync(`../samples/${file_name}`);
     let decodedAudio = wav.decode(buffer);
-    // always reduce the data to 1 second of audio - just as a general safeguard against humongous computation
-    return module.exports.reduce(Array.from(decodedAudio.channelData[0]), 44100);
+    return Array.from(decodedAudio.channelData[0]);
   },
   // END pattern generators
 

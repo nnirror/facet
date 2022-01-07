@@ -1,6 +1,5 @@
 module.exports = {
 	convert2bin: function (input) {
-
 	  	// If input is 0|1
 		if(input === 0 || input === 1) return '' + input
 
