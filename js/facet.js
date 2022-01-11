@@ -1,7 +1,6 @@
 const fs = require('fs');
 const wav = require("node-wav");
 const fftjs = require('./fft.js');
-const float_to_bin = require('./float_to_bin.js');
 
 module.exports = {
 
@@ -189,7 +188,13 @@ module.exports = {
               // otherwise just eval it :D it's so simple...
               evaled_arg = parseFloat(eval(`${valid_parsed_arg}`));
             }
-            args_str += `${evaled_arg.toFixed(4)},`;
+            if (isNaN(evaled_arg) ) {
+              valid_parsed_arg = valid_parsed_arg.replace(/"/g,'');
+              args_str += `${valid_parsed_arg},`;
+            }
+            else {
+              args_str += `${evaled_arg.toFixed(4)},`;
+            }
           }
           // remove last comma
           args_str = args_str.slice(0,-1);
@@ -242,6 +247,7 @@ module.exports = {
               'args': processed_code_fom_args
             });
           } catch (e) {
+            throw(e);
             try {
               // case: arguments passed into a "sometimes" function
               // ultimately the argument should look like: [0.5, 'scale(-1,1).gain(0)']
@@ -270,7 +276,7 @@ module.exports = {
           }
         }
       }
-    }
+    };
     return operations;
   },
 
@@ -286,7 +292,7 @@ module.exports = {
         try {
           args.push(JSON.parse(op.args));
         } catch (e) {
-          let args_split = op.args.replace(/\s/g, '').split(',');
+          let args_split = op.args.split(',');
           for (var i = 0; i < args_split.length; i++) {
             args.push(args_split[i]);
           }
@@ -362,7 +368,8 @@ module.exports = {
       let rerun_out = '';
       while (i < rerun_times) {
         rerun_datum = module.exports.getDatum(rerun_split);
-        rerun_datum = module.exports.processCode(rerun_split, rerun_datum);
+        // max 48000 to prevent humongous computation
+        rerun_datum = module.exports.reduce(module.exports.processCode(rerun_split, rerun_datum),12000);
         rerun_out += `.append(data([${rerun_datum.toString()}]))`;
         i++;
       }
@@ -522,10 +529,11 @@ module.exports = {
   },
 
   steps: [],
+  stores: [],
 
   stepAs: function (sequence, user_defined_var) {
     // example: foo bar [noise(16)].stepAs('myNoise').gain(0.25)...;
-    // 'myNoise' would become a globally accessible variable in further function calls, and would be stepped through
+    // global['myNoise'] can then be used as a variable in following function calls, and the stepAs() pattern will be stepped through
     // as Max continually pings the browser
     let step_obj = {
       name: user_defined_var,
@@ -545,6 +553,15 @@ module.exports = {
     }
     // now that the step pattern has been stored in module.exports.steps,
     // the pattern can return unchanged
+    return sequence;
+  },
+
+  set: function (sequence, user_defined_var) {
+    // example: foo bar [noise(16)].storeAs('myNoise').gain(0.25)...;
+    // global['myNoise'] can then be used as a pattern in following function calls
+    // the difference between this an mult, is that mult gets wiped every time commands are run.
+    // storeAs remains around in global memory
+    module.exports.stores[user_defined_var.trim()] = sequence;
     return sequence;
   },
 
@@ -746,6 +763,8 @@ module.exports = {
   },
 
   equals: function (sequence1, sequence2) {
+    sequence1 = module.exports.flattenSequence(sequence1,0);
+    sequence2 = module.exports.flattenSequence(sequence2,0);
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence1, sequence2);
     sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -766,6 +785,8 @@ module.exports = {
   },
 
   and: function (sequence1, sequence2) {
+    sequence1 = module.exports.flattenSequence(sequence1,0);
+    sequence2 = module.exports.flattenSequence(sequence2,0);
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence1, sequence2);
     sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -786,6 +807,8 @@ module.exports = {
   },
 
   or: function (sequence1, sequence2) {
+    sequence1 = module.exports.flattenSequence(sequence1,0);
+    sequence2 = module.exports.flattenSequence(sequence2,0);
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence1, sequence2);
     sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -806,6 +829,8 @@ module.exports = {
   },
 
   add: function (sequence1, sequence2) {
+    sequence1 = module.exports.flattenSequence(sequence1,0);
+    sequence2 = module.exports.flattenSequence(sequence2,0);
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence1, sequence2);
     sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -821,6 +846,8 @@ module.exports = {
   },
 
   subtract: function (sequence1, sequence2) {
+    sequence1 = module.exports.flattenSequence(sequence1,0);
+    sequence2 = module.exports.flattenSequence(sequence2,0);
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence1, sequence2);
     sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -836,6 +863,9 @@ module.exports = {
   },
 
   times: function (sequence1, sequence2) {
+    sequence1 = module.exports.flattenSequence(sequence1,0);
+    sequence2 = module.exports.flattenSequence(sequence2,0);
+    let out = [];
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence1, sequence2);
     sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -844,13 +874,15 @@ module.exports = {
         sequence1[key] = module.exports.times(step, sequence2[key]);
       }
       else {
-        sequence1[key] = sequence1[key] * sequence2[key];
+        out[key] = sequence1[key] * sequence2[key];
       }
     }
-    return sequence1;
+    return out;
   },
 
   divide: function (sequence1, sequence2) {
+    sequence1 = module.exports.flattenSequence(sequence1,0);
+    sequence2 = module.exports.flattenSequence(sequence2,0);
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence1, sequence2);
     sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -991,6 +1023,15 @@ module.exports = {
       return interlaced_sequence;
   },
 
+  markov: function(sequence_name, prob, amt) {
+    amt = Number(amt);
+    prob = Number(prob);
+    let markov_sequence = module.exports.get(sequence_name);
+    markov_sequence = module.exports.jam(markov_sequence, prob, amt);
+    module.exports.set(markov_sequence, sequence_name);
+    return markov_sequence;
+  },
+
   jam: function (sequence, prob, amt) {
     amt = Number(amt);
     prob = Number(prob);
@@ -1071,6 +1112,9 @@ module.exports = {
   },
 
   recurse: function (sequence, prob) {
+    // there is no need for the input to this function to ever be huge, and it would
+    // be dangerous to remove the limits - could easily max out CPU. remove at your own risk lol
+    sequence = module.exports.reduce(sequence,1024);
     prob = Number(prob);
     if ( prob < 0 ) {
       prob = 0;
@@ -1179,9 +1223,9 @@ module.exports = {
     return pong_sequence;
   },
 
-  sometimes: function (sequence, controls) {
-    let prob = Math.abs(Number(controls[0]));
-    let command = controls[1];
+  sometimes: function (sequence, prob, command) {
+    prob = Math.abs(Number(prob));
+    command = command.trim();
     if ( Math.random() < prob ) {
       operations = module.exports.parseOperations(command);
       sequence = module.exports.runOperations(operations, sequence);
@@ -1322,6 +1366,87 @@ module.exports = {
     return rechunk_sequence;
   },
 
+  ichunk: function(sequence, sequence2) {
+    sequence2 = module.exports.reduce(sequence2, 512);
+    let chunks = sequence2.length;
+    let chunked_sequence = module.exports.getchunks(sequence, chunks);
+    let ichunk_sequence = [];
+    let chunk = [];
+    let pre_chunk = [];
+    let post_chunk = [];
+    let window_size = chunked_sequence[0].post.length;
+    let window_amts = module.exports.reverse(module.exports.range(module.exports.sine(1,window_size*2),0,0.5));
+    let calc_chunk_index;
+    for (var i = 0; i < chunks; i++) {
+      calc_chunk_index = Math.floor(sequence2[i] * (chunks - 1));
+      if (!chunked_sequence[calc_chunk_index]) {
+        continue;
+      }
+      if (!chunked_sequence[i]) {
+        continue;
+      }
+      chunk = chunked_sequence[calc_chunk_index].chunk;
+      let next = i+1 >= chunked_sequence.length ? 0 : i+1;
+      pre_chunk = chunked_sequence[next].pre;
+
+      post_chunk = chunked_sequence[i].post;
+      for (var a = 0; a < (chunk.length - window_size); a++) {
+        ichunk_sequence.push(chunk[a]);
+      }
+      for (var a = 0; a < post_chunk.length; a++) {
+        let post_window_mix = parseFloat(window_amts[a]);
+        let pre_window_mix = Math.abs(1-post_window_mix);
+        ichunk_sequence.push(((post_chunk[a] * post_window_mix)) + ((pre_chunk[a] * pre_window_mix)));
+      }
+    }
+    return ichunk_sequence;
+  },
+
+  harmonics: function(sequence, ctrl_sequence) {
+    amplitude = 0.9;
+    let harmonics_array = [];
+    let harmonics_sequence = [];
+    ctrl_sequence = module.exports.reduce(ctrl_sequence,32);
+    for (var i = 0; i < ctrl_sequence.length; i++) {
+      let harmonic_gain = Math.pow(amplitude, i);
+      let harmonic = [];
+      let ratio = parseFloat(ctrl_sequence[i]);
+      let num_loops = Math.floor(ratio);
+      let fraction_loop = Math.floor((ratio - num_loops) * sequence.length);
+      for (var a = 0; a < num_loops; a++) {
+        for (var b = 0; b < sequence.length; b++) {
+          harmonic.push(sequence[b] * harmonic_gain);
+        }
+      }
+      for (var c = 0; c < fraction_loop; c++) {
+        harmonic.push(sequence[c] * harmonic_gain);
+      }
+      harmonics_array.push(module.exports.reduce(harmonic, sequence.length));
+    }
+    for (var i = 0; i < harmonics_array.length; i++) {
+      var h = harmonics_array[i];
+      for (var a = 0; a < h.length; a++) {
+        var h_samp = h[a];
+        if (!harmonics_sequence[a] ) {
+          harmonics_sequence[a] = h_samp;
+        }
+        else {
+          harmonics_sequence[a] += h_samp;
+        }
+      }
+    }
+    return module.exports.scale(harmonics_sequence,-1,1);
+  },
+
+  sieve: function(sequence, sequence2) {
+    let sieve_sequence = [];
+    sequence2 = module.exports.normalize(sequence2);
+    for (var i = 0; i < sequence2.length; i++) {
+      sieve_sequence.push(sequence[Math.round(sequence2[i] * (sequence.length - 1))]);
+    }
+    return sieve_sequence;
+  },
+
   mutechunks: function(sequence, chunks, prob) {
     if ( !chunks ) {
       chunks = 16;
@@ -1404,6 +1529,11 @@ module.exports = {
   },
 
   map: function (sequence, new_values) {
+    sequence = module.exports.flattenSequence(sequence,0);
+    new_values = module.exports.flattenSequence(new_values,0);
+    let same_size_arrays = module.exports.makeArraysTheSameSize(sequence, new_values);
+    sequence = same_size_arrays[0];
+    same_size_arrays = same_size_arrays[1];
     let mapped_sequence = [];
     for (const [key, step] of Object.entries(sequence)) {
       if ( Array.isArray(step) ) {
@@ -1812,6 +1942,12 @@ module.exports = {
   },
 
   clip: function (sequence, min, max) {
+    if (!min) {
+      min = 0;
+    }
+    if (!max) {
+      max = 0;
+    }
     let clipped_sequence = [];
     for (const [key, step] of Object.entries(sequence)) {
       if ( Array.isArray(step) ) {
@@ -1832,7 +1968,10 @@ module.exports = {
     return clipped_sequence;
   },
 
-  saturate: function (sequence, gain = 1) {
+  saturate: function (sequence, gain) {
+    if (!gain) {
+      gain = 1;
+    }
     gain = Number(gain);
     let saturated_sequence = [];
     for (const [key, step] of Object.entries(sequence)) {
@@ -1868,11 +2007,10 @@ module.exports = {
     return sequence;
   },
 
-  interp: function (sequence, args) {
+  interp: function (sequence, prob, mult_str) {
     let interp_sequence = [];
-    let amt = Math.abs(Number(args[0]));
-    let mult_str = args[1].replace(',', ' ');
-    let mult_sequence = module.exports.mult(mult_str);
+    let amt = Math.abs(Number(prob));
+    let mult_sequence = module.exports.get(mult_str.trim());
     let same_size_arrays = module.exports.makeArraysTheSameSize(sequence, mult_sequence);
     sequence = same_size_arrays[0];
     mult_sequence = same_size_arrays[1];
@@ -1892,8 +2030,8 @@ module.exports = {
   },
 
   convolve: function (sequence1, sequence2) {
-    sequence1 = sequence1;
-    sequence2 = sequence2;
+    sequence1 = module.exports.reduce(sequence1,8192);
+    sequence2 = module.exports.reduce(sequence2,8192);
     var al = sequence1.length;
     var wl = sequence2.length;
     var offset = ~~(wl / 2);
@@ -2036,19 +2174,16 @@ module.exports = {
     return module.exports.round(noise(length));
   },
 
-  mult: function (destination_prop) {
-    let split = destination_prop.split(' ');
-    let destination = split[0];
-    let prop = split[1];
-    if ( !destination || !prop || split.length != 2 ) {
-      throw `Could not parse mult: ${destination_prop}`;
+  mult: function (varname) {
+    varname = varname.trim();
+    return module.exports.get(varname.trim());
+  },
+
+  get: function(varname) {
+    if (!module.exports.stores[varname]) {
+      throw `Could not find set pattern: ${varname}`;
     }
-    let mult_sequence = module.exports.facets[destination][prop];
-    if ( !mult_sequence ) {
-      return [];
-    }
-    mult_sequence = mult_sequence.split(' ');
-    return mult_sequence;
+    return module.exports.stores[varname];
   },
 
   any: function () {
@@ -2083,7 +2218,7 @@ module.exports = {
     from = Number(from);
     to = Number(to);
     size = Math.abs(Number(size));
-    let amount_to_add = (Math.abs(to - from) / size);
+    let amount_to_add = parseFloat(Math.abs(to - from) / size);
     if ( to < from ) {
       amount_to_add *= -1;
     }
@@ -2117,12 +2252,36 @@ module.exports = {
     return module.exports.clip(brot_sequence,-1, 1);
   },
 
-  randsamp: function(dir = `../samples/`) {
+  randsamp: function(dir) {
+    if (!dir) {
+      dir = `../samples/`;
+    }
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];
-    let buffer = fs.readFileSync(`${dir}${chosenFile}`);
-    let decodedAudio = wav.decode(buffer);
-    return Array.from(decodedAudio.channelData[0]);
+    let buffer, decodedAudio;
+    try {
+      buffer = fs.readFileSync(`${dir}${chosenFile}`);
+      decodedAudio = wav.decode(buffer);
+      // this is a bit hacky - ideally if it fails loading the wav file, it would try again
+      // in the directory until it finds one.. or until it has tried as many files as are in the directory.
+      // until i implement that, this is just 3 tries before throwing the exception
+    } catch (e) {
+      try {
+        chosenFile = files[Math.floor(Math.random() * files.length)];
+        buffer = fs.readFileSync(`${dir}${chosenFile}`);
+        decodedAudio = wav.decode(buffer);
+      } catch (e) {
+        try {
+          chosenFile = files[Math.floor(Math.random() * files.length)];
+          buffer = fs.readFileSync(`${dir}${chosenFile}`);
+          decodedAudio = wav.decode(buffer);
+        } catch (e) {
+          throw(e);
+        }
+      }
+    } finally {
+      return module.exports.reduce(Array.from(decodedAudio.channelData[0]),48000);
+    }
   },
 
   sample: function(file_name) {
