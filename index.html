@@ -10,13 +10,11 @@
     <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
     <script src="node_modules/codemirror/mode/javascript/javascript.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="js/facet.js"></script>
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
     <script type="text/javascript" src="js/fft.js"></script>
-    <script type="text/javascript" src="js/float_to_bin.js"></script>
-    <script type="text/javascript" src="js/strip_comments.js"></script>
     <script type="text/javascript" src="js/curve_calc.js"></script>
+    <script type="text/javascript" src="node_modules/wavefile/dist/wavefile.js"></script>
     <style media="screen">
       html {
         height: 1000px;
@@ -35,10 +33,13 @@
         vertical-align: middle;
       }
       #status {
-        width: 200px;
+        float: left;
       }
       #notifications {
-        width: calc(100% - 205px);
+        float: left;
+        padding-left: 5%;
+        overflow: scroll;
+        width: 80%;
       }
       .error {
         background-color: rgba(204, 0, 0, 0.5);
@@ -47,6 +48,7 @@
   </head>
   <body>
     <script type="text/javascript">
+    localStorage.clear();
     var cm = CodeMirror(document.body, {
       value: `// Facet: live coding in the browser for Max`,
         mode:  "javascript",
@@ -98,7 +100,7 @@
       }
 
       function isGlobalCommand(code) {
-        if ( code == 'mute()' ) {
+        if ( code == 'mute()' || code.includes('loadsample(' ) ) {
           return true;
         }
         return false;
@@ -146,13 +148,18 @@
           }
         }
 
-        commands = getCommands(code);
+        commands = code.trim().split(';').filter(Boolean);
         Object.values(commands).forEach(command => {
           if ( isGlobalCommand(command) ) {
             // global commands are evaled as-is. so e.g. the command "mute();"
             // would run the mute() function which will send a value of global[mute]: 0
             // to every facet_param in Max, basically unsetting all buffers.
-            facet_data = eval(command);
+            try {
+              facet_data = eval(command);
+            } catch (e) {
+              // adds try/catch to handle the possibility that loadsample('') is run on a non-existent file
+              notification(`${e}, command: ${command}`);
+            }
             skip_parsing = true;
           }
           if ( isClearEveryNStatement(command) ) {
@@ -161,18 +168,26 @@
         });
 
         if ( !skip_parsing ) {
-          facet_data = facetParse(code);
+          // send it off
+          setStatus(`processing`);
+          waiting_for_response = true;
+          $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
+            setStatus(`connected`);
+            waiting_for_response = false;
+            if ( data.error )  {
+              notification(data.error);
+            }
+          });
         }
 
-        $.post('http://127.0.0.1:1123', facet_data);
         // re-initialize the facets object after it has been parsed
-        facets = facetInit();
+        facets = {};
       }
 
       function mute() {
         // mute clears the every_n_hooks object too
         undoEveryNStatement('clearevery()');
-        return {global: { mute: 0 }};
+        $.post('http://127.0.0.1:1123', {code:'mute();'});
       }
 
       // begin EVERY
@@ -268,6 +283,7 @@
       // end EVERY
 
       // begin OSC
+      let waiting_for_response = false;
       let num_cycles = 0;
       let every_n_hooks = {};
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
@@ -331,8 +347,9 @@
               else {
                 connection_status_change = false;
               }
-              connected = false;
-              setStatus(`disconnected`);
+              if ( !waiting_for_response ) {
+                setStatus(`disconnected`);
+              }
             }
           }, 1000);
         }, 3000);
@@ -341,6 +358,9 @@
       function setStatus(status) {
         let colored_span = '';
         if ( status == 'connected' ) {
+          colored_span = `status: <span style="color:green;"">${status}</span>`;
+        }
+        else if ( status == 'processing' ) {
           colored_span = `status: <span style="color:green;"">${status}</span>`;
         }
         else if ( status == 'disconnected' ) {
@@ -355,7 +375,7 @@
       }
 
       function notification(msg) {
-        $('#notifications').html(msg);
+        $('#notifications').html('<p style="white-space: nowrap;">'+msg+'</p>');
         $('#notifications').addClass('error');
         setTimeout(function () {
           $('#notifications').removeClass('error');

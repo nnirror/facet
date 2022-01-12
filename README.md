@@ -8,6 +8,8 @@ The language is similar to other live coding environments like [TidalCycles](htt
 
 Facet runs with minimal CPU overhead in Max, allows for sample-accurate parameter modulation up into the audio rate, and can produce both precise and surprising patterns.
 
+As of v0.2.1, it is possible to generate and manipulate audio file data in real-time with Facet.
+
 ## Getting started
 
 Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installation steps, and a [getting started](https://www.youtube.com/watch?v=5RDgfDYWCkI) video for once Facet is installed.
@@ -22,22 +24,28 @@ Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installa
 ```
 6. Open Max and add the Facet repo and all subdirectories to your file preferences.
 7. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
+	- `example_facet_audio.maxpat` has some audio-rate examples
 	- `example_facet_basics.maxpat` has a few simple examples
 	- `example_facet_debug.maxpat` dispays the pattern in Max that's created by Facet
 	- `example_facet_drum_generator.maxpat` synthesizes some drum sounds
 	- `example_facet_drums.maxpat` sequences 4 drum samples
 	- `example_facet_midi.maxpat` generates MIDI note data
 	- `example_facet_m4l_fm.amxd` connects to Max for Live
+	- `example_facet_m4l_audio.amxd` has an audio-rate example for Max for Live
 8.	Copy those commands into the code editor in the browser. Move your cursor so it's on the line or block you want to run (All commands not separated by two blank lines will run together). Hit ctrl+enter to run the command(s). They should briefly highlight to illustrate what commands ran.
 9.	Those commands should go from your local web server into Max. If you copied the command from an example file, the it should work and begin modulating one of the parameters in the Max patcher without any additional configuration.
 
-## Facet command structure
+## Facet commands
 
-Here is the general structure of a Facet command:
+Here is the syntax of a Facet command:
 
 `destination property [datum].operations();`
 
 **Note**: there are a several exceptions for global commands, such as `mute()`, `every()`, `clearevery()`, and `sometimes()`. Please see the command reference further below in the document for more details.
+
+Here is how to run a Facet command:
+
+In your browser, with your cursor on the line or block you want to run, press ctrl+enter to run the command(s). The lines should briefly highlight to illustrate what ran. _All_ _commands_ _not_ _separated_ _by_ _a_ _blank_ _line_ _run_ _together_.
 
 ### Destination and Property
 
@@ -135,13 +143,30 @@ All operations transform the datum and pass it on, with the exception of  `choos
 
 ### Variables
 
-In addition to hard-coding numbers into your commands, you can send variables from Max into Facet, making it possible to run commands like this, where `myvar` is a variable that could be changed in Max.
+You can send variables from Max into Facet, making it possible to run commands like this, where `myvar` is a variable that could be changed in Max.
 
 ```
 foo bar [sine(1,1000)].gain(myvar);
 ```
 
-Please see `/examples/example_facet_variables.maxpat` for more information on using variables.
+Please see `/examples/example_facet_variables.maxpat` for more information on sending variables from Max.
+
+#### mousex / mousey
+
+Both `mousex` and `mousey`, as floating-point number representations of your cursor's position on your screen, are available for use in commands, e.g.:
+
+```
+every(1) foo bar [sine(1,1000)].gain(mousey); // cursor y position controls volume every time the code runs
+```
+
+#### stepAs
+
+It is also possible to set a global variable to step through pattern, via stepAs. Further documentation on `stepAs()` is available in the command reference at the bottom of this document.
+
+```
+my steps [10 20 30 40 50 60].stepAs('cycles');
+every(1) voice one [sine(cycles,33)];
+```
 
 ### Ending / formatting commands
 All commands must end in a semicolon. You can run multiple commands in a single line:
@@ -197,8 +222,9 @@ Please also feel free to create issues on GitHub or contact me (michael.j.cella@
 
 First, add a `facet_server` object (`facet_server.maxpat`) to your patcher. This object handles the connection between Max and the live coding interface in the browser. Verify that Max is now connected to the Facet application in the browser by checking the status window at the bottom of the browser.
 
-Then for each parameter in your patcher that you want to control, add a `facet_param` object. The `@destination` and `@prop` values must be specified when you create the object. So the structure would look like:
+Then for each parameter in your patcher that you want to control, add a `facet_param` object. The `@destination` and `@prop` values can optionally be specified when you create the object. So the following structures are both valid and equivalent:
 
+`facet_param foo bar`
 `facet_param @destination foo @prop bar`
 
 The `facet_param` object outputs a signal, so you will need to use `snapshot~` if you want to use a number instead of a signal. Other than that, you can just connect it to whatever you want.
@@ -234,11 +260,6 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [turing(16)].at(0,1); // the 1st value of the 16-step Turing sequence (i.e. 0% position) is always 1`
 		- `foo bar [turing(16)].at(0.5,2); // the 9th value of the 16-step Turing sequence (i.e. 50% position) is always 2`
----
-- **binary** ( )
-	- returns a 32-bit binary representation of all numbers in the pattern.
-	- example:
-		- `foo bar [1 2 0.1 4.2].binary(); // 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 1 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 0 1 0 0 0 0 0 0 1 0 0 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0`
 ---
 - **changed** ( _pattern_ )
 	- returns a 1 or 0 for each value in the pattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the pattern.)
@@ -284,14 +305,14 @@ Then open the Facet application in your browser, run commands to the destination
 		- `foo bar [sine(1,1000)].flipBelow(0.2); // another wonky sine`
 ---
 - **fft** ( )
-	- computes the FFT of the pattern, translating the pattern data into "phase data" that could theoretically reconstruct the pattern using sine waves, but in this context is just a glitchy isomorphism.
+	- computes the FFT of the pattern, translating the pattern data into "phase data" that could theoretically reconstruct the pattern using sine waves. I haven't tried to re-synthesize the pattern based on the FFT, so I don't know for sure how accurate it is, but it is an interesting spectral-sounding transformation nonetheless.
 	- example:
 		- `foo bar [1 0 1 1].fft(); // 3 0 0 1 1 0 0 -1`
 ---
-- **fracture** ( _max_chunk_size_ )
-	- divides and scrambles the pattern into pieces, where no chunk is bigger than `max_chunk_size`, and all chunks will be larger than `max_chunk_size / 2`.
+- **fracture** ( _pieces_ )
+	- divides and scrambles the pattern into `pieces` pieces.
 	- example:
-		- `foo bar [phasor(1,1000)].fracture(100); // the phasor has shattered into pieces!`
+		- `foo bar [phasor(1,1000)].fracture(100); // the phasor has shattered into 100 pieces!`
 ---
 - **invert** ( )
 	- computes the `minimum` and `maximum` values in the pattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
@@ -517,11 +538,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].interlace(phasor(1,20));`
 ---
-- **interp** ( _prob_, _destination_and_property_ )
-	- interpolates linearly between the input pattern and a second pattern specified by `destination_and_property`, which must be another pattern higher in the block of commands being run. `prob` controls how strong to weight each pattern, with 0 being no interpolation and 1 being a complete copy of the pattern specified by `destination_and_property`.
+- **interp** ( _prob_, _stored_sequence_name_ )
+	- interpolates linearly between the input pattern and a second pattern specified by `_stored_sequence_name_`, which must be a sequence stored in memory via the `set` command. `prob` controls how strongly to weight each pattern, with 0 being no interpolation and 1 being a complete copy of the pattern specified by `_stored_sequence_name_`.
 	- example:
-		- `foo bar [drunk(16,0.1)]`
-		- `foo woo [noise(12)].interp(0.7, 'k1 struct') // now both patterns are somewhat related`
+		- `mycool pattern [sine(10,128)].set('puresine');`
+		- `foo bar [noise(1024)].interp(0.5, 'puresine'); // half noise, half sine`
 ---
 - **map** ( _pattern_ )
 	- forces all values in the input pattern to be mapped onto a new set of values. The mapping pattern should have the same range as the input pattern. **Note the array syntax!**
@@ -544,6 +565,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- similar to append, but it appends the new pattern at the end of the input pattern as a nested array.
 	- example:
 		- `foo bar [1 0].nest([2,0]); // the array looks like [1,0,[2,0]] which flattens into 1 1 0 0 2 0 when sent into Max`
+---
+- **sieve** ( _pattern_ )
+	- uses the second pattern as a lookup table, with each value's relative value determining which value from the input sequence to select.
+	- example:
+		- `foo bar [noise(1024)].sieve(sine(10,1024)); // sieving noise with a sine wave into the audio rate :D`
 ---
 - **subtract** ( _pattern_ )
 	- subtracts the second pattern from the first pattern.
@@ -588,15 +614,15 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [drunk(16), 10];`
 ---
-- **mult** ( _destination_and_property_ )
-	- copies the output pattern from a command in the same block that has already run, allowing you to reuse and potentially continue transforming a single pattern for multiple destinations.
+- **mult** ( _stored_sequence_name_ )
+	- copies a sequence stored in memory (via `set`), allowing you to reuse and potentially continue transforming a single pattern for multiple destinations.
 	- example:
-		- `foo fizz [1 2 3 4].shuffle(); // i am a random sequence of 1, 2, 3,and 4 `
-		- `foo buzz [mult('foo fizz')].reverse(); // i am a reversed copy of that`
+		- `foo fizz [1 2 3 4].shuffle().set('seqname'); // i am a random sequence of 1, 2, 3,and 4 `
+		- `foo buzz [mult('seqname')].reverse(); // i am a reversed copy of that`
 	- You can use a mult anywhere that a pattern generator could go:
-		-	`foo one [1 2 3 4];`
-		- `foo two [drunk(16,0.1)];`
-		- `foo three [mult('foo one')].gain(0.1).times(mult('foo two'));`
+		-	`foo one [1 2 3 4].set('abc');`
+		- `foo two [drunk(16,0.1)].set('def');`
+		- `foo three [mult('abc')].gain(0.1).times(mult('def'));`
 
 - **noise** ( _length_ )
 	- generates a random series of values between9 0 and 1 for `length`.
@@ -638,6 +664,54 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [triangle(30,33)]; // 30 cycles, 33 values each`
 ---
+### Audio-rate operators
+
+As of v0.2.1, it is possible to run arbitrary operations audio file data in Facet, but this comes with some size limitations - "wavelets" of audio, several seconds at most in length, are best. To prevent humongous computations, there are some guardrails for certain functions, but this software is still experimental, and it is possible that you accidentally run a command that uses too much computing power. It happened to me every once in a while during development. To kill the node process, find the process ID (I use top) and run:
+
+kill -9 pid_goes_here
+
+Also, I would suggest putting a de-clicking plugin in the signal chain after any audio you are generating with Facet. Eventually, I would like to include one with Facet. For now I'm using the Izotope RX-8 De-clicker.
+
+Please see the `examples/example_facet_audio.maxpat` file for more information.
+
+There is also a video of audio-rate operators on [YouTube](https://youtu.be/GlJWNpjZtRg).
+
+- **audio** ( )
+	- a utility function for converting an input sequence to a bipolar wave between -1 and 1, since certain functions, e.g. `sine()`, generate unipolar data (between 0 and 1) by default.
+	- example:
+		- `foo bar [sine(10,200)].times(ramp(1,0,1024)).audio();`
+- **mutechunks** ( _chunks_, _prob_ )
+	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
+	- example:
+		- `foo bar [randsamp()].mutechunks(16,0.33);	// 33% of 16 audio slices muted`
+- **rechunk** ( _chunks_ )
+	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and shuffles all of them.
+	- example:
+		- `foo bar [randsamp()].rechunk(32);	// scrambled into 32 parts`
+- **randsamp** ( _dir_ = `../samples/` )
+	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument. Just make sure that directory is available in the Max File Preferences.
+	- example:
+		- `foo bar [randsamp()].reverse(); // random backwards sample`
+- **ichunk** ( _index_sequence_ )
+	- slices the input sequence into `index_sequence` windowed chunks (to avoid audible clicks). Loops through every value of `index_sequence` as a lookup table, determines which ordered chunk of audio from the input sequence it corresponds to, and appends that window to the output buffer.
+	- example:
+		- `foo bar [randsamp()].ichunk(ramp(0,0.5,256)); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
+		- `foo bar [noise(4096)].sort().ichunk(noise(256).sort()); // structuring noise with noise`
+- **harmonics** ( _sequence2_ )
+	- superimposes `sequence2.length` copies of the input sequence onto the output. Each number in `sequence2` corresponds to the frequency of the harmonic, which is a copy of the input signal playing at a different speed. Each harmonic _n_ in the output sequence is slightly lower in level, by 0.9^_n_. Allows for all sorts of crazy sample-accurate polyphony.
+	- example:
+		- `foo bar [randsamp()].harmonics(noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
+		- `foo bar [randsamp()].harmonics(map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)) // add 3 harmonics at geometric ratios`
+- **convolve** ( _sequence2_ )
+	- computes the convolution between the two sequences.
+	- example:
+		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
+- **sample** ( _filename_ )
+	- loads a wav file from the `../samples/` directory into memory. You can specify subdirectories of `../samples/`.
+	- example:
+		- `foo bar [sample('1234.wav')];`
+		- `foo bar [sample('kicks/kick1.wav')];`
+
 ### Special operators
 
 - **every** ( _times_ )
@@ -668,11 +742,26 @@ every(kick) lp cutoff noise[1].gain(3000);
 	- If you want to clear a specific `every()` process, e.g. one running every 4, you would run `clearevery(4);`.
 	- The shortcut command `[control + c]` will run `clearevery();`.
 ---
+- **markov** ( _stored_sequence_name_, _prob_, _amt_ )
+	- gets a sequence stored in memory (via `set`), transforming _prob_ percentage of values by a maximum of +/- _amt_, and automatically stores the new sequence in memory via `set`. Continually running this will cause the input pattern to drift.
+```
+mycool pattern [sine(1,128)].set('puresine'); // run this first, to store the pattern
+
+every(1) foo bar [markov('puresine', 0.1,0.05)]; // now run this to begin drifting on the 'puresine' pattern
+
+// you can rerun the first command to 'reset' to the base pattern :)
+```
+---
 - **mute** ( )
 	- Sets every `facet_param` object in the Max patch to 0.
 		- example:
 		- `mute(); // stops all patterns from running`
   - The shortcut command `[control + m]` will run `mute();`.
+---
+- **set** ( )
+	- stores a sequence in temporary memory for use with `mult()`, `markov()`, and `interp()`.
+		- example:
+		- `my drum [noise(1024)].times(ramp(1,0,1024)).set('drum1');`
 ---
 - **skip** ( )
 	- Does not send the sequence data from the browser to Max. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
@@ -737,6 +826,16 @@ Here is a mapping of possible `amt` values with their corresponding speeds in Ma
 7 = completes pattern over 1/7 whole note
 
 8 = completes pattern over 1/8 whole note
+
+---
+- **stepAs** ( _stored_var_name_ )
+	- stores the computed sequence in memory, but only makes one value of it available at any time. Every quarter note when the global transport is running, the next value in the sequence is assigned to `_stored_var_name_`, a globally accessible variable for use in other commands.
+		- example:
+		```
+		my steps [10 20 30 40 50 60].stepAs('how_many_cycles');	// first run this
+
+		every(1) voice one [sine(how_many_cycles,33)];						// now run this, and the number of cycles in the wavetable changes each time, stepping through the above pattern
+		```
 
 ## Future development ##
 
