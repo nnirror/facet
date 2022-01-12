@@ -1225,7 +1225,7 @@ module.exports = {
 
   sometimes: function (sequence, prob, command) {
     prob = Math.abs(Number(prob));
-    command = command.trim();
+    command = command.trim().replace(/\'/g, '').replace(/"/g, '');
     if ( Math.random() < prob ) {
       operations = module.exports.parseOperations(command);
       sequence = module.exports.runOperations(operations, sequence);

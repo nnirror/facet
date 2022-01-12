@@ -674,6 +674,8 @@ Also, I would suggest putting a de-clicking plugin in the signal chain after any
 
 Please see the `examples/example_facet_audio.maxpat` file for more information.
 
+There is also a video of audio-rate operators on [YouTube](https://youtu.be/GlJWNpjZtRg).
+
 - **audio** ( )
 	- a utility function for converting an input sequence to a bipolar wave between -1 and 1, since certain functions, e.g. `sine()`, generate unipolar data (between 0 and 1) by default.
 	- example:
