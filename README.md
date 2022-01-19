@@ -69,7 +69,7 @@ kgs; asld!#		// the semicolon causes a parsing error
 
 ### Datum
 
-The "datum" is the seed of data for the pattern that Facet ultimately generates. It must be enclosed in brackets, e.g. `[]`, and it has a maximum length of 1024. (If the datum ends up being longer than 1024, it will get rescaled to under 1024 before going to Max).
+The "datum" is the seed of data for the pattern that Facet ultimately generates, which is a one-dimensional table of numbers, stored in a .wav file and immediately accessible in the correspondingly named `facet_param` Max object. The datum can hold 0 to ~200k samples (several seconds at a 48KHz sample rate). It must be enclosed in brackets, e.g. `[]`.
 
 There are two ways to program the contents of a datum:
 
