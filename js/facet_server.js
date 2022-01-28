@@ -8,6 +8,7 @@ const OSC = require('osc-js');
 const fs = require('fs');
 const WaveFile = require('wavefile').WaveFile;
 const facet = require('./facet.js');
+const { exec } = require('child_process');
 
 const osc = new OSC({
   discardLateMessages: false,
@@ -77,6 +78,11 @@ app.post('/', function (req, res) {
     }
     else {
       Object.values(commands).forEach(command => {
+        let is_audio = false;
+        // todo: data default? audio instead idk?? this is necessary tho, data buffers need 32f and audio buffers need 16
+        if (command.includes('audio()')) {
+          is_audio = true;
+        }
         current_command = facet.removeTabsAndNewlines(command);
         command = facet.removeTabsAndNewlines(command);
         destination = facet.getDestination(command);
@@ -108,7 +114,7 @@ app.post('/', function (req, res) {
               } else {
                 // create the speed file create it as buffer with 1 value in it: 1.
                 data = [Math.fround(parseFloat(1))];
-                wav.fromScratch(1, 44100, '32f', data);
+                wav.fromScratch(1, 48000, '32f', data);
                 fs.writeFile(`../tmp/${key}_speed.wav`, wav.toBuffer(),(err) => {
                   if (err) throw err;
                   Max.outlet(`speed ${key}`);
@@ -116,11 +122,21 @@ app.post('/', function (req, res) {
               }
               // now create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
               data = facet_data.split(' ');
-              for (var i = 0; i < data.length; i++) {
-                // convert every number in the wav buffer to 32-bit floating point. these numbers are allowed to be outside the [1.0 - -1.0] boundary
-                data[i] = Math.fround(parseFloat(data[i]));
+
+              if (k == 'speed' || is_audio === false ) {
+                for (var i = 0; i < data.length; i++) {
+                  data[i] = Math.fround(parseFloat(data[i]));
+                }
+                wav.fromScratch(2, 44100, '32f', [data,data]);
               }
-              wav.fromScratch(1, 44100, '32f', data);
+              else {
+                for (var i = 0; i < data.length; i++) {
+                  // audio files are rendered as 44.1/16 stereo files. this is so they can work with the declick function
+                  // which runs immediately after this .wav file is saved.
+                  data[i] = convertRange(data[i], [-1,1],[-32768,32767]);
+                }
+                wav.fromScratch(2, 44100, '16', [data,data]);
+              }
               // store the wav in /tmp/ for access in Max
               fs.writeFile(`../tmp/${key}_${k}.wav`, wav.toBuffer(),(err) => {
                 if (err) throw err;
@@ -129,6 +145,9 @@ app.post('/', function (req, res) {
                   Max.outlet(`speed ${key}`);
                 }
                 else {
+                  if ( is_audio === true ) {
+                    declickWavFile(key,k);
+                  }
                   Max.outlet(`update ${key}_${k}`);
                 }
               });
@@ -145,5 +164,16 @@ app.post('/', function (req, res) {
   }
   res.sendStatus(200);
 });
+
+async function declickWavFile(key,k) {
+  try {
+    const { stdout, stderr } = await exec(`/usr/local/bin/declick -d0 ../tmp/${key}_${k}.wav`);
+  } catch (e) {
+  }
+}
+
+function convertRange( value, r1, r2 ) {
+    return ( value - r1[ 0 ] ) * ( r2[ 1 ] - r2[ 0 ] ) / ( r1[ 1 ] - r1[ 0 ] ) + r2[ 0 ];
+}
 
 app.listen(1123);

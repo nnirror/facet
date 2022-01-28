@@ -18,12 +18,13 @@ Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installa
 2. Configure your local machine so it's running a web server. If you're not sure how to do this, Google "set up a local web server {your operating system here}." Facet is configured to work with your local web server running on 127.0.0.1.
 3. Move the Facet repo into a subdirectory of your local web server.
 4. In a terminal, while in the root of the facet repo, run `npm install`
-5. Now in your browser, navigate to the Facet repo directory on your local web server. For example, on my machine (OSX Catalina): http://127.0.0.1/~cella/facet/ A blank code editor with a single comment in it should appear:
+5. Still in the terminal, move into the `declick` directory. Run `make all`. Then run `make install`. This should make the `declick` command available in your terminal. The declick tool runs in the background on any audio samples that are processed, so it does need to be installed but you shouldn't have to deal with it after installing.
+6. Now in your browser, navigate to the Facet repo directory on your local web server. For example, on my machine (OSX Catalina): http://127.0.0.1/~cella/facet/ A blank code editor with a single comment in it should appear:
 ```
 // Facet: live coding in the browser for Max
 ```
-6. Open Max and add the Facet repo and all subdirectories to your file preferences.
-7. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
+7. Open Max and add the Facet repo and all subdirectories to your file preferences.
+8. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
 	- `example_facet_audio.maxpat` has some audio-rate examples
 	- `example_facet_basics.maxpat` has a few simple examples
 	- `example_facet_debug.maxpat` dispays the pattern in Max that's created by Facet
@@ -32,8 +33,8 @@ Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installa
 	- `example_facet_midi.maxpat` generates MIDI note data
 	- `example_facet_m4l_fm.amxd` connects to Max for Live
 	- `example_facet_m4l_audio.amxd` has an audio-rate example for Max for Live
-8.	Copy those commands into the code editor in the browser. Move your cursor so it's on the line or block you want to run (All commands not separated by two blank lines will run together). Hit ctrl+enter to run the command(s). They should briefly highlight to illustrate what commands ran.
-9.	Those commands should go from your local web server into Max. If you copied the command from an example file, the it should work and begin modulating one of the parameters in the Max patcher without any additional configuration.
+9.	Copy those commands into the code editor in the browser. Move your cursor so it's on the line or block you want to run (All commands not separated by two blank lines will run together). Hit ctrl+enter to run the command(s). They should briefly highlight to illustrate what commands ran.
+10.	Those commands should go from your local web server into Max. If you copied the command from an example file, the it should work and begin modulating one of the parameters in the Max patcher without any additional configuration.
 
 ## Facet commands
 
@@ -677,13 +678,25 @@ Please see the `examples/example_facet_audio.maxpat` file for more information.
 There is also a video of audio-rate operators on [YouTube](https://youtu.be/hjcfrTHZMAc).
 
 - **audio** ( )
-	- a utility function for converting an input sequence to a bipolar wave between -1 and 1, since certain functions, e.g. `sine()`, generate unipolar data (between 0 and 1) by default.
+	- including this function will de-click the resulting wav file before propagating to Max. It's a helpful safeguard against undesired audible clicks that can sometimes occur when transforming patterns with raw, non-windowed operations.
 	- example:
-		- `foo bar [sine(10,200)].times(ramp(1,0,1024)).audio();`
+		- `foo bar [randsamp()].times(noise(4)).audio();`
+- **comb** ( _ms_ )
+	- generates a comb filtered version of the input pattern, with a delay of `ms` milliseconds.
+	- example:
+		- `foo bar [randsamp()].comb(random(40,100));`
+- **convolve** ( _sequence2_ )
+	- computes the convolution between the two sequences.
+	- example:
+		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
 	- example:
 		- `foo bar [randsamp()].mutechunks(16,0.33);	// 33% of 16 audio slices muted`
+- **suspend** ( _start_pos_, _end_pos_ )
+	- surrounds the pattern with silence, so that the entire input pattern still occurs, but only for a fraction of the overall resulting pattern. The smallest possible fraction is 1/8 of the input buffer, to safeguard against generating humongous and almost entirely empty wav files.
+	- example:
+		- `foo bar [randsamp()].suspend(0.25,0.75);	// the input pattern is now squished into the middle 50% of the buffer`
 - **rechunk** ( _chunks_ )
 	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and shuffles all of them.
 	- example:
@@ -702,10 +715,6 @@ There is also a video of audio-rate operators on [YouTube](https://youtu.be/hjcf
 	- example:
 		- `foo bar [randsamp()].harmonics(noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
 		- `foo bar [randsamp()].harmonics(map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)) // add 3 harmonics at geometric ratios`
-- **convolve** ( _sequence2_ )
-	- computes the convolution between the two sequences.
-	- example:
-		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
 - **sample** ( _filename_ )
 	- loads a wav file from the `../samples/` directory into memory. You can specify subdirectories of `../samples/`.
 	- example:

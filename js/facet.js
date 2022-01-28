@@ -597,7 +597,72 @@ module.exports = {
   },
 
   audio: function(sequence) {
-    return module.exports.scale(module.exports.normalize(sequence),-1,1);
+    return sequence;
+  },
+
+  comb: function(sequence, ms) {
+    let samples = Math.round(Math.abs(Number(ms)) * 44.1);
+    let shift_percentage = samples / sequence.length;
+    let comb_sequence = [];
+    for (const [key, step] of Object.entries(sequence)) {
+      if ( Array.isArray(step) ) {
+        comb_sequence[key] = module.exports.comb(step, ms);
+      }
+      else {
+        comb_sequence[key] = step;
+      }
+    }
+    // now add a shifted sequence on top, average the two copies
+    sequence = module.exports.shift(sequence, shift_percentage);
+    for (const [key, step] of Object.entries(sequence)) {
+      if ( Array.isArray(step) ) {
+        comb_sequence[key] = module.exports.comb(step, ms);
+      }
+      else {
+        comb_sequence[key] = (step + comb_sequence[key]) * 0.5;
+      }
+    }
+    return comb_sequence;
+  },
+
+  suspend: function (sequence, start, end) {
+    sequence = module.exports.reduce(sequence, 88200);
+    let suspend_sequence = [];
+    start = Math.abs(Number(start));
+    end = Math.abs(Number(end));
+    if ( start < 0 ) {
+      start = 0;
+    }
+    else if ( start > 1 ) {
+      start = 1;
+    }
+    if ( end < 0 ) {
+      end = 0;
+    }
+    else if ( end > 1 ) {
+      end = 1;
+    }
+    let sorted = module.exports.sort([start,end]);
+    start = sorted[0];
+    end = sorted[1];
+    let calc_size = Math.abs(end-start);
+    if ( calc_size < 0.125 ) {
+      // maximum 1/8th resolution
+      calc_size = 0.125;
+    }
+    let size_increase_coefficient = 1 / calc_size;
+
+    let begin_zeroes = Math.round(start * (sequence.length * size_increase_coefficient));
+    let end_zeroes = begin_zeroes + sequence.length;
+    for (var i = 0; i < (size_increase_coefficient * sequence.length); i++) {
+      if ( i < begin_zeroes || i > end_zeroes ) {
+        suspend_sequence.push(0);
+      }
+      else {
+        suspend_sequence.push(sequence[i - begin_zeroes]);
+      }
+    }
+    return suspend_sequence;
   },
 
   echo: function (sequence, num) {
@@ -608,6 +673,8 @@ module.exports = {
     if ( num === 0 ) {
       return sequence;
     }
+    let quality_reduction = 1 / num;
+    sequence = module.exports.reduce(sequence, Math.round(quality_reduction * sequence.length));
     let echo_sequence = module.exports.dup(sequence, num);
     let amplitude = 1;
     let count = 1;
@@ -676,8 +743,8 @@ module.exports = {
 
   slew: function (sequence, depth = 25, up_speed = 1, down_speed = 1) {
     let slewed_sequence = [];
-    up_speed = module.exports.clip([Math.abs(Number(up_speed))],0,1)[0];
-    down_speed = module.exports.clip([Math.abs(Number(down_speed))],0,1)[0];
+    up_speed = module.exports.clip([Math.abs(Number(up_speed))],0.02,1)[0];
+    down_speed = module.exports.clip([Math.abs(Number(down_speed))],0.02,1)[0];
     depth = Math.round(Math.abs(Number(depth)));
     for (const [key, step] of Object.entries(sequence)) {
       let k = Number(key);
@@ -2171,7 +2238,7 @@ module.exports = {
 
   turing: function (length) {
     length = Math.abs(Number(length));
-    return module.exports.round(noise(length));
+    return module.exports.round(module.exports.noise(length));
   },
 
   mult: function (varname) {
@@ -2270,24 +2337,33 @@ module.exports = {
         chosenFile = files[Math.floor(Math.random() * files.length)];
         buffer = fs.readFileSync(`${dir}${chosenFile}`);
         decodedAudio = wav.decode(buffer);
-      } catch (e) {
+      } catch (er) {
         try {
           chosenFile = files[Math.floor(Math.random() * files.length)];
           buffer = fs.readFileSync(`${dir}${chosenFile}`);
           decodedAudio = wav.decode(buffer);
-        } catch (e) {
-          throw(e);
+        } catch (err) {
+          throw(err);
         }
       }
     } finally {
-      return module.exports.reduce(Array.from(decodedAudio.channelData[0]),48000);
+      if (!decodedAudio) {
+        chosenFile = files[Math.floor(Math.random() * files.length)];
+        buffer = fs.readFileSync(`${dir}${chosenFile}`);
+        decodedAudio = wav.decode(buffer);
+      }
+      return module.exports.reduce(Array.from(decodedAudio.channelData[0]),44100);
     }
   },
 
   sample: function(file_name) {
-    let buffer = fs.readFileSync(`../samples/${file_name}`);
-    let decodedAudio = wav.decode(buffer);
-    return Array.from(decodedAudio.channelData[0]);
+    try {
+      let buffer = fs.readFileSync(`../samples/${file_name}`);
+      let decodedAudio = wav.decode(buffer);
+      return Array.from(decodedAudio.channelData[0]);
+    } catch (e) {
+      throw(e);
+    }
   },
   // END pattern generators
 
