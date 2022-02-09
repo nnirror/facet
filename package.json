@@ -14,7 +14,8 @@
     "express": "^4.17.1",
     "node-wav": "^0.0.2",
     "osc-js": "^2.1.2",
-    "wavefile": "^11.0.0"
+    "wavefile": "^11.0.0",
+    "ws": "^8.5.0"
   },
   "devDependencies": {},
   "scripts": {
