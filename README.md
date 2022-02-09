@@ -289,8 +289,8 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].dup(random(2,4,1)); // sine has 2, 3, or 4 cycles `
 ---
-- **echo** ( _num_ )
-	- repeats the pattern `num` times, with decreasing amplitude each repeat.
+- **echo** ( _num_, _feedback_ )
+	- repeats the pattern `num` times, with amplitude multiplied by `feedback` each repeat.
 	- example:
 		- `foo bar [1].echo(5); // 0.666 0.4435 0.29540 0.19674 0.13103`
 		- `foo bar [phasor(5,20)].echo(8); // phasor decreases after each 5 cycles `
@@ -319,6 +319,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- computes the `minimum` and `maximum` values in the pattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
 	- example:
 		- `foo bar [0 0.1 0.5 0.667 1].invert(); // 1 0.9 0.5 0.333 0`
+---
+- **iter** ( _num_times_ )
+	- a shorthand for repeating the previous operation. While `rerun` runs the entire command up to that point, `iter` simply repeats the previous command.
+	- example:
+		- `foo bar [randsamp()].comb(random(1,200)).iter(random(6,12,1));`
 ---
 - **fade** ( )
 	- applies a crossfade window to the pattern, so the beginning and end are faded out.
@@ -689,6 +694,10 @@ There is also a video of audio-rate operators on [YouTube](https://youtu.be/hjcf
 	- computes the convolution between the two sequences.
 	- example:
 		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
+- **dilate** ( _sequence2_ )
+	- warps the playback speed of the input buffer according to the lookup sequence, `sequence2`. A value of `1` in the lookup sequence will mean the corresponding portion in the playback buffer will play at "regular" speed. Values lower than 1 will play faster, and values higher than 1 will play slower.
+	- example:
+		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
 	- example:
@@ -779,6 +788,8 @@ every(1) foo bar [markov('puresine', 0.1,0.05)]; // now run this to begin drifti
 ---
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.
+
+**Note:** currently, `rerun` cannot be used inside a sometimes operation.
 ```
 midi note [phasor(1,100)].sticky(0.5).scale(40, 80).sometimes(0.5, 'reverse()');
 // half the time, pattern goes up; half the time, it goes down

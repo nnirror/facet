@@ -173,35 +173,52 @@ module.exports = {
             // case: function as only argument, just initialize the args array to that
             args_array = [args]
           }
-          // however many arguments are now split into an array. loop through
-          // them, eval them, and create a csv string of the evaled arguments
-          let args_str = '';
-          for (const [y, r] of Object.entries(args_array)) {
-            // prevent any straggling trailing parens
-            let valid_parsed_arg = r.replace('),',')');
-            let evaled_arg;
-            // if random/choose, run parsefloat.. which requires a reference to module.exports..
-            if ( valid_parsed_arg.includes('random(') || valid_parsed_arg.includes('choose(') ) {
-              evaled_arg = parseFloat(eval(`module.exports.${valid_parsed_arg}`));
-            }
-            else {
-              // otherwise just eval it :D it's so simple...
-              evaled_arg = parseFloat(eval(`${valid_parsed_arg}`));
-            }
-            if (isNaN(evaled_arg) ) {
-              valid_parsed_arg = valid_parsed_arg.replace(/"/g,'');
-              args_str += `${valid_parsed_arg},`;
-            }
-            else {
-              args_str += `${evaled_arg.toFixed(4)},`;
-            }
+
+          // this whole parser needs to be refactored. this is working in most situations but is terrible code.
+          // it's not worth continuing to spaghetiffy; this will do for now.
+          let args_str2 = '', args_str = '';
+          for (var i = 0; i < args_array.length; i++) {
+            args_str2 += args_array[i] + ',';
           }
-          // remove last comma
-          args_str = args_str.slice(0,-1);
-          operations.push({
-            'op': op,
-            'args': args_str
-          });
+          args_str2 = args_str2.slice(0,-1);
+          args_str2 = args_str2.replace(/,,/g, ',');
+
+          // however many arguments are now split into an array.
+          if (op == 'sometimes' || op == 'iter' || op == 'slices' ) {
+            operations.push({
+              'op': op,
+              'args': args_str2
+            });
+          }
+          else {
+            // loop through them, eval them, and create a csv string of the evaled arguments
+            for (const [y, r] of Object.entries(args_array)) {
+              // prevent any straggling trailing parens
+              let valid_parsed_arg = r.replace('),',')');
+              let evaled_arg;
+              // if random/choose, run parsefloat.. which requires a reference to module.exports..
+              if ( valid_parsed_arg.includes('random(') || valid_parsed_arg.includes('choose(') ) {
+                evaled_arg = parseFloat(eval(`module.exports.${valid_parsed_arg}`));
+              }
+              else {
+                // otherwise just eval it :D it's so simple...
+                evaled_arg = parseFloat(eval(`${valid_parsed_arg}`));
+              }
+              if (isNaN(evaled_arg) ) {
+                valid_parsed_arg = valid_parsed_arg.replace(/"/g,'');
+                args_str += `${valid_parsed_arg},`;
+              }
+              else {
+                args_str += `${evaled_arg.toFixed(4)},`;
+              }
+            }
+            // remove last comma
+            args_str = args_str.slice(0,-1);
+            operations.push({
+              'op': op,
+              'args': args_str
+            });
+          }
         } catch (er) {
           try {
             // case: with functions like am() or interlace(), which can take a generator as input,
@@ -247,31 +264,14 @@ module.exports = {
               'args': processed_code_fom_args
             });
           } catch (e) {
-            throw(e);
             try {
-              // case: arguments passed into a "sometimes" function
-              // ultimately the argument should look like: [0.5, 'scale(-1,1).gain(0)']
-              let sometimes_split_regex = /sometimes\(/;
-              let sometimes_split = d.split(sometimes_split_regex);
-              // remove the trailing ')' from the sometimes command
-              let sometimes_args = `${sometimes_split[1].slice(0,sometimes_split[1].length-1)}`;
-              sometimes_args = sometimes_args.replace(/\'/g, '"');
-              sometimes_args = `[${sometimes_args}]`;
-              // TODO: sometimes() does not handle dynamic arguments, like random(). Would require a more significant rewrite
               operations.push({
                 'op': op,
-                'args': sometimes_args
+                'args': ''
               });
             } catch (ee) {
-              try {
-                operations.push({
-                  'op': op,
-                  'args': ''
-                });
-              } catch (eee) {
-                // "Please everybody, if we haven't done what we could have done, we've tried"
-                throw `Could not parse argument: ${args}`;
-              }
+              // "Please everybody, if we haven't done what we could have done, we've tried"
+              throw `Could not parse argument: ${args}`;
             }
           }
         }
@@ -292,7 +292,7 @@ module.exports = {
         try {
           args.push(JSON.parse(op.args));
         } catch (e) {
-          let args_split = op.args.split(',');
+          let args_split = op.args.split(/,(?![^\(\[]*[\]\)])/);
           for (var i = 0; i < args_split.length; i++) {
             args.push(args_split[i]);
           }
@@ -344,7 +344,7 @@ module.exports = {
     // whereas .dup() takes the result of a command and copies it n times,
     // .rerun() actually reruns the preceding command(s), so if they contain elements of chance,
     // each iteration of .rerun() will be potentially unique.
-    let rerun_regex = /.rerun\((.*?)\)/;
+    let rerun_regex = /rerun\((.*?)\)/;
     let statment_has_reruns = rerun_regex.test(statement);
     let rerun_datum, remove_last_paren = false;
     if ( statment_has_reruns ) {
@@ -596,31 +596,22 @@ module.exports = {
     return normalized_sequence;
   },
 
-  audio: function(sequence) {
+  declick: function(sequence) {
     return sequence;
   },
 
   comb: function(sequence, ms) {
+    sequence = module.exports.flattenSequence(sequence,0);
     let samples = Math.round(Math.abs(Number(ms)) * 44.1);
     let shift_percentage = samples / sequence.length;
     let comb_sequence = [];
     for (const [key, step] of Object.entries(sequence)) {
-      if ( Array.isArray(step) ) {
-        comb_sequence[key] = module.exports.comb(step, ms);
-      }
-      else {
-        comb_sequence[key] = step;
-      }
+      comb_sequence[key] = step;
     }
     // now add a shifted sequence on top, average the two copies
     sequence = module.exports.shift(sequence, shift_percentage);
     for (const [key, step] of Object.entries(sequence)) {
-      if ( Array.isArray(step) ) {
-        comb_sequence[key] = module.exports.comb(step, ms);
-      }
-      else {
-        comb_sequence[key] = (step + comb_sequence[key]) * 0.5;
-      }
+      comb_sequence[key] = (step + comb_sequence[key]) * 0.5;
     }
     return comb_sequence;
   },
@@ -665,8 +656,12 @@ module.exports = {
     return suspend_sequence;
   },
 
-  echo: function (sequence, num) {
+  echo: function (sequence, num, feedback) {
     num = Math.round(Math.abs(Number(num)));
+    feedback = Number(feedback);
+    if ( !feedback ) {
+      feedback = 0.666;
+    }
     if ( num < 0 ) {
       num = Math.abs(num);
     }
@@ -674,13 +669,15 @@ module.exports = {
       return sequence;
     }
     let quality_reduction = 1 / num;
-    sequence = module.exports.reduce(sequence, Math.round(quality_reduction * sequence.length));
+    if (sequence.length * num > 88200 ) {
+      sequence = module.exports.reduce(sequence, Math.round(quality_reduction * sequence.length));
+    }
     let echo_sequence = module.exports.dup(sequence, num);
     let amplitude = 1;
     let count = 1;
     for (const [key, step] of Object.entries(echo_sequence)) {
       if ( count >= sequence.length ) {
-        amplitude *= 0.666;
+        amplitude *= feedback;
         count = 0;
       }
       if ( Array.isArray(step) ) {
@@ -704,11 +701,11 @@ module.exports = {
       else {
         if ( k > 0 && ( (k + 1) < sequence.length ) ) {
           // all other steps
-          smoothed_sequence[k] = (smoothed_sequence[k-1] + sequence[k+1]) / 2;
+          smoothed_sequence[k] = parseFloat(smoothed_sequence[k-1] + sequence[k]) / 2;
         }
         else if ( k +1 ==  sequence.length ) {
           // last step loops around to average with first
-          smoothed_sequence[k] = (smoothed_sequence[k-1] + sequence[0]) / 2;
+          smoothed_sequence[k] = parseFloat(smoothed_sequence[k-1] + sequence[0]) / 2;
         }
         else {
           // first step is static
@@ -1290,7 +1287,70 @@ module.exports = {
     return pong_sequence;
   },
 
+  iter: function(sequence, times, prob, command) {
+    if ( prob.includes('random(') || prob.includes('choose(') ) {
+      prob = eval(`module.exports.${prob}`);
+    }
+    if ( times.includes('random(') || times.includes('choose(') ) {
+      times = eval(`module.exports.${times}`);
+    }
+    prob = Math.abs(Number(prob));
+    times = Math.abs(Math.round(Number(times)));
+    command = command.trim().replace(/\'/g, '').replace(/"/g, '');
+    operations = module.exports.parseOperations(command);
+    let iter_sequence = sequence;
+    if ( times == 0 ) {
+      return iter_sequence;
+    }
+    else if ( times > 32 ) {
+      times = 32;
+    }
+    for (var i = 0; i < times; i++) {
+      if ( Math.random() < prob ) {
+        iter_sequence = module.exports.runOperations(operations, iter_sequence);
+      }
+    }
+    return module.exports.flattenSequence(iter_sequence,0);
+  },
+
+  slices: function(sequence, num_slices, prob, command) {
+    if ( prob.includes('random(') || prob.includes('choose(') ) {
+      prob = Number(eval(`module.exports.${prob}`));
+    }
+    if ( num_slices.includes('random(') || num_slices.includes('choose(') ) {
+      num_slices = Number(eval(`module.exports.${num_slices}`));
+    }
+    prob = Math.abs(Number(eval(prob)));
+    num_slices = Math.abs(Math.round(Number(eval(num_slices))));
+    command = command.trim().replace(/\'/g, '').replace(/"/g, '');
+    operations = module.exports.parseOperations(command);
+    let foreach_sequence = [];
+    if ( num_slices == 0 ) {
+      return sequence;
+    }
+    else if ( num_slices > 32 ) {
+      num_slices = 32;
+    }
+    let calc_slice_size = Math.round(sequence.length / num_slices);
+    let slice_start_pos, slice_end_pos;
+    let current_slice;
+    for (var i = 0; i < num_slices; i++) {
+
+      slice_start_pos = i * calc_slice_size;
+      slice_end_pos = slice_start_pos + calc_slice_size;
+      current_slice = module.exports.range(sequence, slice_start_pos/sequence.length, slice_end_pos/sequence.length);
+      if ( Math.random() < prob ) {
+        current_slice = module.exports.runOperations(operations, current_slice);
+      }
+      foreach_sequence.push(current_slice);
+    }
+    return module.exports.flattenSequence(foreach_sequence,0);
+  },
+
   sometimes: function (sequence, prob, command) {
+    if ( prob.includes('random(') || prob.includes('choose(') ) {
+      prob = eval(`module.exports.${prob}`);
+    }
     prob = Math.abs(Number(prob));
     command = command.trim().replace(/\'/g, '').replace(/"/g, '');
     if ( Math.random() < prob ) {
@@ -1502,7 +1562,7 @@ module.exports = {
         }
       }
     }
-    return module.exports.scale(harmonics_sequence,-1,1);
+    return harmonics_sequence;
   },
 
   sieve: function(sequence, sequence2) {
@@ -1724,6 +1784,21 @@ module.exports = {
     return reduced_sequence;
   },
 
+  reduceFloat: function (sequence, new_size) {
+    let orig_size = sequence.length;
+    new_size = Math.abs(Number(new_size));
+    if ( new_size > 1 ) {
+      return sequence;
+    }
+    new_size = Math.round(new_size * sequence.length);
+    let reduced_sequence = [];
+    for ( let i = 0; i < new_size; i++ ) {
+      let large_array_index = Math.floor(i * (orig_size + Math.floor(orig_size / new_size)) / new_size);
+      reduced_sequence[i] = sequence[large_array_index];
+    }
+    return reduced_sequence;
+  },
+
   shuffle: function (sequence) {
     let shuffle_sequence = sequence;
     for (let i = shuffle_sequence.length - 1; i > 0; i--) {
@@ -1762,6 +1837,26 @@ module.exports = {
       }
     }
     return sorted_sequence;
+  },
+
+  dilate: function(sequence, sequence2) {
+    sequence = module.exports.flattenSequence(sequence,0);
+    sequence2 = module.exports.clip(module.exports.flattenSequence(sequence2,0),0,4);
+    let dilate_amt, slice, dilate_sequence = [];
+    let chunked_sequence = module.exports.getchunks(sequence, sequence2.length);
+    for (var i = 0; i < chunked_sequence.length; i++) {
+      slice = chunked_sequence[i].chunk;
+      dilate_amt = sequence2[i];
+      if ( dilate_amt < 1 ) {
+        slice = module.exports.reduce(slice, slice.length * dilate_amt);
+      }
+      else {
+        slice = module.exports.ichunk(slice, module.exports.ramp(0,1,256));
+        slice = module.exports.reduce(slice, slice.length * dilate_amt);
+      }
+      dilate_sequence.push(slice);
+    }
+    return dilate_sequence;
   },
 
   log: function (sequence, base, rotation = 1) {
@@ -1944,7 +2039,7 @@ module.exports = {
     let average = sequence.reduce((a, b) => a + b) / sequence.length;
     for (const [key, step] of Object.entries(sequence)) {
       if ( Array.isArray(step) ) {
-        dist_sequence[key] = distavg(step);
+        dist_sequence[key] = module.exports.distavg(step);
       }
       else {
         dist_sequence[key] = Number((step - average).toFixed(4));
@@ -2097,8 +2192,6 @@ module.exports = {
   },
 
   convolve: function (sequence1, sequence2) {
-    sequence1 = module.exports.reduce(sequence1,8192);
-    sequence2 = module.exports.reduce(sequence2,8192);
     var al = sequence1.length;
     var wl = sequence2.length;
     var offset = ~~(wl / 2);
@@ -2302,7 +2395,7 @@ module.exports = {
   },
 
   brot: function (length, x, y) {
-    // iterates based on the function used to generate the mandelbrot set.
+    // ates based on the function used to generate the mandelbrot set.
     // takes a complex number (x,y). squares x, adds y... repeat.
     // the output of this function is the x value. sadly there is just as much information in y
     // but wavetables (the destination for facet's data) are 2D not 3D!
@@ -2693,7 +2786,7 @@ module.exports = {
     var doubleQuotedString = /"(?:[^\\"]|\\.)*"/;
     var singleQuotedString = /'(?:[^\\']|\\.)*'/;
 
-    var regexLiteral = /\/(?![/*])(?:[^/\\[]|\\.|\[(?:[^\]\\]|\\.)*\])*\//;
+    var regexLal = /\/(?![/*])(?:[^/\\[]|\\.|\[(?:[^\]\\]|\\.)*\])*\//;
 
     var anyChar = /[\S\s]/;
 
@@ -2720,7 +2813,7 @@ module.exports = {
     stripper.addRule (doubleQuotedString, id);
     stripper.addRule (singleQuotedString, id);
 
-    stripper.addRule (regexLiteral, id);
+    stripper.addRule (regexLal, id);
 
     stripper.addRule (anyChar, id);
 

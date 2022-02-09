@@ -78,10 +78,9 @@ app.post('/', function (req, res) {
     }
     else {
       Object.values(commands).forEach(command => {
-        let is_audio = false;
-        // todo: data default? audio instead idk?? this is necessary tho, data buffers need 32f and audio buffers need 16
-        if (command.includes('audio()')) {
-          is_audio = true;
+        let needs_declick = false;
+        if (command.includes('declick()')) {
+          needs_declick = true;
         }
         current_command = facet.removeTabsAndNewlines(command);
         command = facet.removeTabsAndNewlines(command);
@@ -123,7 +122,7 @@ app.post('/', function (req, res) {
               // now create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
               data = facet_data.split(' ');
 
-              if (k == 'speed' || is_audio === false ) {
+              if (k == 'speed' || needs_declick === false ) {
                 for (var i = 0; i < data.length; i++) {
                   data[i] = Math.fround(parseFloat(data[i]));
                 }
@@ -145,7 +144,7 @@ app.post('/', function (req, res) {
                   Max.outlet(`speed ${key}`);
                 }
                 else {
-                  if ( is_audio === true ) {
+                  if ( needs_declick === true ) {
                     declickWavFile(key,k);
                   }
                   Max.outlet(`update ${key}_${k}`);
