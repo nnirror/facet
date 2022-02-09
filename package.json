@@ -1,0 +1,38 @@
+{
+  "name": "facet",
+  "version": "0.2.0",
+  "description": "Facet is a flexible live coding system for controlling and applying synchronized algorithmic transformations to a Max patcher from a web browser.",
+  "main": "index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "bootstrap-growl": "^3.1.3",
+    "codemirror": "^5.60.0",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "node-wav": "^0.0.2",
+    "osc-js": "^2.1.2",
+    "wavefile": "^11.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjcella/facet.git"
+  },
+  "keywords": [
+    "livecoding",
+    "maxmsp",
+    "generative-art"
+  ],
+  "author": "Michael Cella",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mjcella/facet/issues"
+  },
+  "homepage": "https://github.com/mjcella/facet#readme"
+}
