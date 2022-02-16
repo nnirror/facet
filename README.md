@@ -18,13 +18,12 @@ Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installa
 2. Configure your local machine so it's running a web server. If you're not sure how to do this, Google "set up a local web server {your operating system here}." Facet is configured to work with your local web server running on 127.0.0.1.
 3. Move the Facet repo into a subdirectory of your local web server.
 4. In a terminal, while in the root of the facet repo, run `npm install`
-5. Still in the terminal, move into the `declick` directory. Run `make all`. Then run `make install`. This should make the `declick` command available in your terminal. The declick tool runs in the background on any audio samples that are processed, so it does need to be installed but you shouldn't have to deal with it after installing.
-6. Now in your browser, navigate to the Facet repo directory on your local web server. For example, on my machine (OSX Catalina): http://127.0.0.1/~cella/facet/ A blank code editor with a single comment in it should appear:
+5. Now in your browser, navigate to the Facet repo directory on your local web server. For example, on my machine (OSX Catalina): http://127.0.0.1/~cella/facet/ A blank code editor with a single comment in it should appear:
 ```
 // Facet: live coding in the browser for Max
 ```
-7. Open Max and add the Facet repo and all subdirectories to your file preferences.
-8. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
+6. Open Max and add the Facet repo and all subdirectories to your file preferences.
+7. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
 	- `example_facet_audio.maxpat` has some audio-rate examples
 	- `example_facet_basics.maxpat` has a few simple examples
 	- `example_facet_debug.maxpat` dispays the pattern in Max that's created by Facet
@@ -33,8 +32,8 @@ Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installa
 	- `example_facet_midi.maxpat` generates MIDI note data
 	- `example_facet_m4l_fm.amxd` connects to Max for Live
 	- `example_facet_m4l_audio.amxd` has an audio-rate example for Max for Live
-9.	Copy those commands into the code editor in the browser. Move your cursor so it's on the line or block you want to run (All commands not separated by two blank lines will run together). Hit ctrl+enter to run the command(s). They should briefly highlight to illustrate what commands ran.
-10.	Those commands should go from your local web server into Max. If you copied the command from an example file, the it should work and begin modulating one of the parameters in the Max patcher without any additional configuration.
+8.	Copy those commands into the code editor in the browser. Move your cursor so it's on the line or block you want to run (All commands not separated by two blank lines will run together). Hit ctrl+enter to run the command(s). They should briefly highlight to illustrate what commands ran.
+9.	Those commands should go from your local web server into Max. If you copied the command from an example file, the it should work and begin modulating one of the parameters in the Max patcher without any additional configuration.
 
 ## Facet commands
 

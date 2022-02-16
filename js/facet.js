@@ -596,8 +596,8 @@ module.exports = {
     return normalized_sequence;
   },
 
-  declick: function(sequence) {
-    return sequence;
+  audio: function(sequence) {
+    return module.exports.scale(module.exports.normalize(sequence),-1,1);
   },
 
   comb: function(sequence, ms) {
