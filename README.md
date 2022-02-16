@@ -576,6 +576,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [noise(1024)].sieve(sine(10,1024)); // sieving noise with a sine wave into the audio rate :D`
 ---
+- **slices** ( _num_slices_, _prob_, _commands_ )
+	- slices the input pattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together.
+	- example:
+		- `foo bar [ramp(0,1,16)].slices(16,1,'append(ramp(0.5,1,3))'); // ramps within ramps over 64 values`
+---
 - **subtract** ( _pattern_ )
 	- subtracts the second pattern from the first pattern.
 	- example:
