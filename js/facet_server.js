@@ -63,6 +63,11 @@ app.use(cors());
 
 facet.facetInit();
 
+// make the ../tmp/ directory if it doesn't exist
+if ( !fs.existsSync('../tmp/')) {
+    fs.mkdirSync('../tmp/');
+};
+
 app.post('/', function (req, res) {
 // loop through each command in req.body. create a new buffer object in max if it doesnt exist, with an undercore between the vars
   let commands = [], destination, property, statement, datum, ops_string,
