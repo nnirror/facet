@@ -288,8 +288,8 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].dup(random(2,4,1)); // sine has 2, 3, or 4 cycles `
 ---
-- **echo** ( _num_ )
-	- repeats the pattern `num` times, with decreasing amplitude each repeat.
+- **echo** ( _num_, _feedback_ )
+	- repeats the pattern `num` times, with amplitude multiplied by `feedback` each repeat.
 	- example:
 		- `foo bar [1].echo(5); // 0.666 0.4435 0.29540 0.19674 0.13103`
 		- `foo bar [phasor(5,20)].echo(8); // phasor decreases after each 5 cycles `
@@ -576,6 +576,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [noise(1024)].sieve(sine(10,1024)); // sieving noise with a sine wave into the audio rate :D`
 ---
+- **slices** ( _num_slices_, _prob_, _commands_ )
+	- slices the input pattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together.
+	- example:
+		- `foo bar [ramp(0,1,16)].slices(16,1,'append(ramp(0.5,1,3))'); // ramps within ramps over 64 values`
+---
 - **subtract** ( _pattern_ )
 	- subtracts the second pattern from the first pattern.
 	- example:
@@ -682,13 +687,29 @@ Please see the `examples/example_facet_audio.maxpat` file for more information.
 There is also a video of audio-rate operators on [YouTube](https://youtu.be/hjcfrTHZMAc).
 
 - **audio** ( )
-	- a utility function for converting an input sequence to a bipolar wave between -1 and 1, since certain functions, e.g. `sine()`, generate unipolar data (between 0 and 1) by default.
+	- including this function will de-click the resulting wav file before propagating to Max. It's a helpful safeguard against undesired audible clicks that can sometimes occur when transforming patterns with raw, non-windowed operations.
 	- example:
-		- `foo bar [sine(10,200)].times(ramp(1,0,1024)).audio();`
+		- `foo bar [randsamp()].times(noise(4)).audio();`
+- **comb** ( _ms_ )
+	- generates a comb filtered version of the input pattern, with a delay of `ms` milliseconds.
+	- example:
+		- `foo bar [randsamp()].comb(random(40,100));`
+- **convolve** ( _sequence2_ )
+	- computes the convolution between the two sequences.
+	- example:
+		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
+- **dilate** ( _sequence2_ )
+	- warps the playback speed of the input buffer according to the lookup sequence, `sequence2`. A value of `1` in the lookup sequence will mean the corresponding portion in the playback buffer will play at "regular" speed. Values lower than 1 will play faster, and values higher than 1 will play slower.
+	- example:
+		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
 	- example:
 		- `foo bar [randsamp()].mutechunks(16,0.33);	// 33% of 16 audio slices muted`
+- **suspend** ( _start_pos_, _end_pos_ )
+	- surrounds the pattern with silence, so that the entire input pattern still occurs, but only for a fraction of the overall resulting pattern. The smallest possible fraction is 1/8 of the input buffer, to safeguard against generating humongous and almost entirely empty wav files.
+	- example:
+		- `foo bar [randsamp()].suspend(0.25,0.75);	// the input pattern is now squished into the middle 50% of the buffer`
 - **rechunk** ( _chunks_ )
 	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and shuffles all of them.
 	- example:
@@ -707,10 +728,6 @@ There is also a video of audio-rate operators on [YouTube](https://youtu.be/hjcf
 	- example:
 		- `foo bar [randsamp()].harmonics(noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
 		- `foo bar [randsamp()].harmonics(map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)) // add 3 harmonics at geometric ratios`
-- **convolve** ( _sequence2_ )
-	- computes the convolution between the two sequences.
-	- example:
-		- `foo bar [randsamp()].convolve(randsamp());	// convolving random samples`
 - **sample** ( _filename_ )
 	- loads a wav file from the `../samples/` directory into memory. You can specify subdirectories of `../samples/`.
 	- example:
@@ -775,6 +792,8 @@ every(1) foo bar [markov('puresine', 0.1,0.05)]; // now run this to begin drifti
 ---
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.
+
+**Note:** currently, `rerun` cannot be used inside a sometimes operation.
 ```
 midi note [phasor(1,100)].sticky(0.5).scale(40, 80).sometimes(0.5, 'reverse()');
 // half the time, pattern goes up; half the time, it goes down
