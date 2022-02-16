@@ -319,6 +319,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [0 0.1 0.5 0.667 1].invert(); // 1 0.9 0.5 0.333 0`
 ---
+- **iter** ( _num_times_, _prob_, _commands_ )
+	- A shorthand for rerunning a certain command over and over, with `prob` as a float between 0 and 1 controlling the likelihood that the code actually runs.
+	- example:
+		- `foo bar [randsamp()].iter(12,1,'comb(random(1,200))'); // twelve random comb filters in series`
+---
 - **fade** ( )
 	- applies a crossfade window to the pattern, so the beginning and end are faded out.
 	- example:
