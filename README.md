@@ -195,6 +195,16 @@ bar		// here's a comment on the line where prop 'bar' is declared
 foaso asd [sine(1,100)]; ko asdl [1 2 [3]]; // two commands in one line
 ```
 
+## Scheduling commands to rerun automatically
+
+You can schedule commands to rerun automatically in sync with the Max global transport by using the `every()` command.
+
+The simplest use case, `every(1) ...`, automatically runs at the beginning of every whole note, whereas `every(4)` would happen every 4 whole notes.
+
+***EXTREMELY IMPORTANT***: if you run an `every()` command, it will continue to rerun indefinitely as long the Max transport is enabled, until it is cleared, either via `[control + c]`, `clearevery()`, or if you want to stop Facet entirely, `mute()` or `[control + m]`. 
+
+If you don't clear an `every()` command before running it again manually, the previous command _AND_ the new command will both be queued up to run every full note. This can cause all sorts of confusion! I am in the habit of running `[ctrl + c]` before I run any `every()` commands. Please see the every() function documentation further below for more details.
+
 ## Debugging
 In the bottom of the Facet application in the browser is a status window which indicates whether the browser is connected to Max, and an additional space where further context is provided if a command failed.
 
