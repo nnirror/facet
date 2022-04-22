@@ -1,8 +1,8 @@
 "use strict";
 const fs = require('fs');
 const wav = require('node-wav');
-const curve_calc = require('./curve_calc.js');
-const fftjs = require('./fft.js');
+const curve_calc = require('./lib/curve_calc.js');
+const fftjs = require('./lib/fft.js');
 
 class FacetPattern {
   constructor (name) {
@@ -247,37 +247,6 @@ class FacetPattern {
     this.data = turing_sequence.data;
     return this;
   }
-
-  // TODO these are more specialty functions to re-examine
-  // mult(varname) {
-  //   varname = varname.trim();
-  //   return this.get(varname.trim());
-  // }
-
-  // get(varname) {
-  //   if (!this.stores[varname]) {
-  //     throw `Could not find set pattern: ${varname}`;
-  //   }
-  //   return this.stores[varname];
-  // }
-
-  // any() {
-  //   // randomly select any of the prior commands in the block
-  //   let selected_facet = this.randomProperty(this.facets);
-  //   let selected_facet_value = Object.values(selected_facet);
-  //   selected_facet_value = this.shuffle(selected_facet_value);
-  //   return selected_facet_value[0].split(' ');
-  // },
-  //
-  // randomProperty: function (obj) {
-  //   let keys = Object.keys(obj);
-  //   return obj[keys[ keys.length * Math.random() << 0]];
-  // },
-
-  //skip() {
-  //  return sequence;
-  //},
-
   // END generator operations
 
   // BEGIN modulator operations
@@ -1546,9 +1515,109 @@ class FacetPattern {
     this.data = ichunk_sequence;
     return this;
   }
+
+  mutechunks (chunks, prob) {
+    if ( !chunks ) {
+      chunks = 16;
+    }
+    if ( !prob ) {
+      prob = 0.75;
+    }
+    let mutechunk_sequence = this.getchunks(parseInt(chunks)).data;
+    let out = [];
+    let window_size = parseInt((sequence.length / chunks) * 0.02);
+    let window_amts = new FacetPattern().sine(1,window_size*2).range(0,0.5).reverse().data;
+    let chunk;
+    let pre_chunk;
+    let post_chunk;
+    // first loop through and "fade" some by setting their pre/chunk/post to 0
+    for (var i = 0; i < mutechunk_sequence.length; i++) {
+      chunk = mutechunk_sequence[i].chunk;
+      pre_chunk = mutechunk_sequence[i].pre;
+      post_chunk = mutechunk_sequence[i].post;
+      if ( Math.random() < parseFloat(prob) ) {
+        mutechunk_sequence[i].pre = [];
+        mutechunk_sequence[i].chunk = [];
+        mutechunk_sequence[i].post = [];
+        for (var a = 0; a < pre_chunk.length; a++) {
+          mutechunk_sequence[i].pre.push(0);
+        }
+        for (var a = 0; a < chunk.length; a++) {
+          mutechunk_sequence[i].chunk.push(0);
+        }
+        for (var a = 0; a < post_chunk.length; a++) {
+          mutechunk_sequence[i].post.push(0);
+        }
+      }
+    }
+    // then loop through to interp out
+    for (var i = 0; i < mutechunk_sequence.length; i++) {
+      chunk = mutechunk_sequence[i].chunk;
+      let next = i >= (mutechunk_sequence.length - 1) ? 0 : i + 1;
+      pre_chunk = mutechunk_sequence[next].pre;
+      post_chunk = mutechunk_sequence[i].post;
+      for (var a = 0; a < (chunk.length - window_size); a++) {
+        out.push(chunk[a]);
+      }
+      for (var a = 0; a < post_chunk.length; a++) {
+        let post_window_mix = parseFloat(window_amts[a]);
+        let pre_window_mix = Math.abs(1-post_window_mix);
+        out.push(parseFloat((post_chunk[a] * post_window_mix)) + parseFloat((pre_chunk[a] * pre_window_mix)));
+      }
+    }
+    this.data = out;
+    // phase rotate to handle windows
+    this.shift(window_size / out.length);
+    return out;
+  }
   // END audio operations
 
   // BEGIN special operations
+  iter (times, prob, command) {
+    prob = Math.abs(Number(prob));
+    times = Math.abs(Math.round(Number(times)));
+    if ( times == 0 ) {
+      return this;
+    }
+    else if ( times > 32 ) {
+      times = 32;
+    }
+    for (var i = 0; i < times; i++) {
+      if ( Math.random() < prob ) {
+        let current_iteration = eval(this.utils + ' this.' + command);
+        this.data = current_iteration.data;
+      }
+    }
+    return this;
+  }
+
+  slices (num_slices, prob, command) {
+    let out = [];
+    prob = Math.abs(Number(eval(prob)));
+    num_slices = Math.abs(Math.round(Number(eval(num_slices))));
+    let foreach_sequence = [];
+    if ( num_slices == 0 ) {
+      return sequence;
+    }
+    else if ( num_slices > 32 ) {
+      num_slices = 32;
+    }
+    let calc_slice_size = Math.round(this.data.length / num_slices);
+    let slice_start_pos, slice_end_pos;
+    let current_slice;
+    for (var i = 0; i < num_slices; i++) {
+      slice_start_pos = i * calc_slice_size;
+      slice_end_pos = slice_start_pos + calc_slice_size;
+      current_slice = new FacetPattern().from(this.data).range(slice_start_pos/this.data.length, slice_end_pos/this.data.length);
+      if ( Math.random() < prob ) {
+        current_slice = eval(this.utils + 'current_slice.' + command);
+      }
+      out.push(current_slice.data);
+    }
+    this.data = out;
+    return this.flatten();
+  }
+
   sometimes (prob, command) {
     prob = Math.abs(Number(prob));
     if ( Math.random() < prob ) {

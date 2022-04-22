@@ -319,6 +319,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [0 0.1 0.5 0.667 1].invert(); // 1 0.9 0.5 0.333 0`
 ---
+- **iter** ( _num_times_, _prob_, _commands_ )
+	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
+	- example:
+		- `foo bar [randsamp()].iter(12,1,'comb(random(1,200))'); // twelve random comb filters in series`
+---
 - **fade** ( )
 	- applies a crossfade window to the pattern, so the beginning and end are faded out.
 	- example:
@@ -538,12 +543,6 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].interlace(phasor(1,20));`
 ---
-- **interp** ( _prob_, _stored_sequence_name_ )
-	- interpolates linearly between the input pattern and a second pattern specified by `_stored_sequence_name_`, which must be a sequence stored in memory via the `set` command. `prob` controls how strongly to weight each pattern, with 0 being no interpolation and 1 being a complete copy of the pattern specified by `_stored_sequence_name_`.
-	- example:
-		- `mycool pattern [sine(10,128)].set('puresine');`
-		- `foo bar [noise(1024)].interp(0.5, 'puresine'); // half noise, half sine`
----
 - **map** ( _pattern_ )
 	- forces all values in the input pattern to be mapped onto a new set of values. The mapping pattern should have the same range as the input pattern. **Note the array syntax!**
 	- example:
@@ -750,27 +749,11 @@ every(kick) lp cutoff noise[1].gain(3000);
 	- If you want to clear a specific `every()` process, e.g. one running every 4, you would run `clearevery(4);`.
 	- The shortcut command `[control + c]` will run `clearevery();`.
 ---
-- **markov** ( _stored_sequence_name_, _prob_, _amt_ )
-	- gets a sequence stored in memory (via `set`), transforming _prob_ percentage of values by a maximum of +/- _amt_, and automatically stores the new sequence in memory via `set`. Continually running this will cause the input pattern to drift.
-```
-mycool pattern [sine(1,128)].set('puresine'); // run this first, to store the pattern
-
-every(1) foo bar [markov('puresine', 0.1,0.05)]; // now run this to begin drifting on the 'puresine' pattern
-
-// you can rerun the first command to 'reset' to the base pattern :)
-```
----
 - **mute** ( )
 	- Sets every `facet_param` object in the Max patch to 0.
 		- example:
 		- `mute(); // stops all patterns from running`
   - The shortcut command `[control + m]` will run `mute();`.
----
-- **set** ( )
-	- stores a sequence in temporary memory for use with `mult()`, `markov()`, and `interp()`.
-		- example:
-		- `my drum [noise(1024)].times(ramp(1,0,1024)).set('drum1');`
----
 - **skip** ( )
 	- Does not send the sequence data from the browser to Max. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
 		- example:
