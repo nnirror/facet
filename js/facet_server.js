@@ -8,12 +8,14 @@ const OSC = require('osc-js');
 const fs = require('fs');
 const WaveFile = require('wavefile').WaveFile;
 const facet = require('./facet.js');
-
+const FacetPattern = require('./FacetPattern.js')
+let $ = FacetPattern;
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
 });
 osc.open();
+let utils = fs.readFileSync('utils.js', 'utf8', (err, data) => {return data});
 
 const handlers = {
   bang: () => {
@@ -84,23 +86,19 @@ app.post('/', function (req, res) {
       Object.values(commands).forEach(command => {
         current_command = facet.removeTabsAndNewlines(command);
         command = facet.removeTabsAndNewlines(command);
-        destination = facet.getDestination(command);
-        property = facet.getProperty(command, destination);
-        statement = facet.getStatement(command, property);
-        statement = facet.handleReruns(statement);
-        // this is where i would need to refactor the actual "parser", in the stack of functions that getDatum
-        // and processCode currently run. Instead i shold take a step back and map out all the things before starting
-        // so i can make it intelligible
-        datum = facet.getDatum(statement);
-        datum = facet.processCode(statement, datum);
+        let fp = eval(utils + command);
+        // TODO: handle reruns
+        // statement = facet.handleReruns(statement);
+        datum = fp.data;
         if ( datum == 'SKIP' ) {
+          // TODO check this
           // do nothing - don't add the command to the facets object
         }
         else {
           max_sub_steps = facet.getMaximumSubSteps(datum) - 1;
           flat_sequence = facet.flattenSequence(datum, max_sub_steps);
-          facet.initFacetDestination(facet.facets, destination);
-          facet.facets[destination][property] = facet.convertFlatSequenceToMessage(flat_sequence);
+          facet.initFacetDestination(facet.facets, fp.name);
+          facet.facets[fp.name]['data'] = facet.convertFlatSequenceToMessage(flat_sequence);
           facet.facets = facet.handleMultConnections(facet.facets, mults);
 
           for (const [key, value] of Object.entries(facet.facets)) {
@@ -134,7 +132,7 @@ app.post('/', function (req, res) {
                   Max.outlet(`speed ${key}`);
                 }
                 else {
-                  Max.outlet(`update ${key}_${k}`);
+                  Max.outlet(`update ${key}_data`);
                 }
               });
             }

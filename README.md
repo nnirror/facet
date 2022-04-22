@@ -319,11 +319,6 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [0 0.1 0.5 0.667 1].invert(); // 1 0.9 0.5 0.333 0`
 ---
-- **iter** ( _num_times_, _prob_, _commands_ )
-	- A shorthand for rerunning a certain command over and over, with `prob` as a float between 0 and 1 controlling the likelihood that the code actually runs.
-	- example:
-		- `foo bar [randsamp()].iter(12,1,'comb(random(1,200))'); // twelve random comb filters in series`
----
 - **fade** ( )
 	- applies a crossfade window to the pattern, so the beginning and end are faded out.
 	- example:
@@ -566,11 +561,6 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1 0 1 0].or(data([0,1])); // 1 0 1 1`
 ---
-- **nest** ( _pattern_ )
-	- similar to append, but it appends the new pattern at the end of the input pattern as a nested array.
-	- example:
-		- `foo bar [1 0].nest([2,0]); // the array looks like [1,0,[2,0]] which flattens into 1 1 0 0 2 0 when sent into Max`
----
 - **sieve** ( _pattern_ )
 	- uses the second pattern as a lookup table, with each value's relative value determining which value from the input sequence to select.
 	- example:
@@ -710,10 +700,6 @@ There is also a video of audio-rate operators on [YouTube](https://youtu.be/hjcf
 	- surrounds the pattern with silence, so that the entire input pattern still occurs, but only for a fraction of the overall resulting pattern. The smallest possible fraction is 1/8 of the input buffer, to safeguard against generating humongous and almost entirely empty wav files.
 	- example:
 		- `foo bar [randsamp()].suspend(0.25,0.75);	// the input pattern is now squished into the middle 50% of the buffer`
-- **rechunk** ( _chunks_ )
-	- slices the input sequence into `chunks` windowed chunks (to avoid audible clicks) and shuffles all of them.
-	- example:
-		- `foo bar [randsamp()].rechunk(32);	// scrambled into 32 parts`
 - **randsamp** ( _dir_ = `../samples/` )
 	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument. Just make sure that directory is available in the Max File Preferences.
 	- example:
@@ -723,7 +709,7 @@ There is also a video of audio-rate operators on [YouTube](https://youtu.be/hjcf
 	- example:
 		- `foo bar [randsamp()].ichunk(ramp(0,0.5,256)); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
 		- `foo bar [noise(4096)].sort().ichunk(noise(256).sort()); // structuring noise with noise`
-- **harmonics** ( _sequence2_ )
+- **harmonics** ( _sequence2_, _amplitude=0.9_  )
 	- superimposes `sequence2.length` copies of the input sequence onto the output. Each number in `sequence2` corresponds to the frequency of the harmonic, which is a copy of the input signal playing at a different speed. Each harmonic _n_ in the output sequence is slightly lower in level, by 0.9^_n_. Allows for all sorts of crazy sample-accurate polyphony.
 	- example:
 		- `foo bar [randsamp()].harmonics(noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
