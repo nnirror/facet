@@ -159,15 +159,6 @@ Both `mousex` and `mousey`, as floating-point number representations of your cur
 every(1) foo bar [sine(1,1000)].gain(mousey); // cursor y position controls volume every time the code runs
 ```
 
-#### stepAs
-
-It is also possible to set a global variable to step through pattern, via stepAs. Further documentation on `stepAs()` is available in the command reference at the bottom of this document.
-
-```
-my steps [10 20 30 40 50 60].stepAs('cycles');
-every(1) voice one [sine(cycles,33)];
-```
-
 ### Ending / formatting commands
 All commands must end in a semicolon. You can run multiple commands in a single line:
 ```
@@ -580,17 +571,7 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [sine(1,100)].times(data([0.5, 0.25, 0.1, 1]));`
 ---
-
 ### Pattern generators
-- **any** ( )
-	- randomly selects a command higher up in the block of commands. As such, it cannot be the first command in a block.
-	- example:
-		- ```
-			foo bar [sine(2,30)]; // 2 cycles, 30 values each
-			foo fiz [noise(32)]; 	// 32 noise values
-			foo buz [any()];			// sometimes a sine; sometimes noise
-		```
----
 - **brot** ( _length_, _x_, _y_)
 	- over _length_ iterations, computes `x = (x*x)+y`. Returns the series of all `x` values computed over time. NOTE: iterative functions can have both stable and unstable results ( hello... Mandelbrot set... :D ). However in a musical context, there is not much use for an unstable result which would endlessly grow to infinity. So this function clips between -1 and 1, and there is no danger of sending humongous numbers to Max. For stable results, the best x values are within -0.8 and 0.25, and the best y values are within -0.8 and 0.8.
 	- example:
@@ -754,10 +735,10 @@ every(kick) lp cutoff noise[1].gain(3000);
 		- example:
 		- `mute(); // stops all patterns from running`
   - The shortcut command `[control + m]` will run `mute();`.
-- **skip** ( )
-	- Does not send the sequence data from the browser to Max. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
+- **skip** ( _prob_ )
+	- Sometimes does not send the sequence data from the browser to Max. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
 		- example:
-		- `sample vals [spiral(16,random(1,360))].sometimes(0.95, 'skip()');	// only load data into the "new samples" wavetable 5% of the time when this command runs`
+		- `sample vals [spiral(16,random(1,360))].skip(0.95);	// only load data into the "new samples" wavetable 5% of the time when this command runs`
 ---
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.
@@ -821,15 +802,6 @@ Here is a mapping of possible `amt` values with their corresponding speeds in Ma
 8 = completes pattern over 1/8 whole note
 
 ---
-- **stepAs** ( _stored_var_name_ )
-	- stores the computed sequence in memory, but only makes one value of it available at any time. Every quarter note when the global transport is running, the next value in the sequence is assigned to `_stored_var_name_`, a globally accessible variable for use in other commands.
-		- example:
-		```
-		my steps [10 20 30 40 50 60].stepAs('how_many_cycles');	// first run this
-
-		every(1) voice one [sine(how_many_cycles,33)];						// now run this, and the number of cycles in the wavetable changes each time, stepping through the above pattern
-		```
-
 ## Future development ##
 
 Below are a few ideas for future development. Ideas and feedback are welcome. Thanks!

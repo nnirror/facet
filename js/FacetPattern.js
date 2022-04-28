@@ -3,12 +3,18 @@ const fs = require('fs');
 const wav = require('node-wav');
 const curve_calc = require('./lib/curve_calc.js');
 const fftjs = require('./lib/fft.js');
+const http = require('http');
 
 class FacetPattern {
   constructor (name) {
     this.name = name;
     this.data = [];
-    this.utils = fs.readFileSync('utils.js', 'utf8', (err, data) => {return data} );
+    this.hooks = [];
+    this.phasor_speed = [1];
+    this.skipped = false;
+    this.store = [];
+    this.stored_patterns = JSON.parse(this.getPatterns());
+    this.utils = this.getUtils();
   }
 
   // BEGIN generator operations
@@ -25,7 +31,6 @@ class FacetPattern {
     let brot_sequence = [];
     for (var i = 0; i < length; i++) {
       brot_sequence.push(x);
-      //  TODO: needs to be based on complex number FOIL math
       x = (x*x) + y;
     }
     this.data = brot_sequence;
@@ -662,6 +667,23 @@ class FacetPattern {
       return this;
   }
 
+  interp (prob, sequence2) {
+    let interp_sequence = [];
+    let amt = Math.abs(Number(prob));
+    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
+    let sequence = same_size_arrays[0];
+    let mult_sequence = same_size_arrays[1];
+    for (const [key, step] of Object.entries(sequence.data)) {
+      // linear interpolation between the two provided sequences
+      let seq_amt = (1 - amt) * step;
+      let mult_amt = amt * mult_sequence.data[key];
+      let avg = (seq_amt + mult_amt);
+      interp_sequence[key] = avg;
+    }
+    this.data = interp_sequence;
+    return this;
+  }
+
   invert () {
     let inverted_sequence = [];
     let min = Math.min.apply(Math, this.data);
@@ -925,8 +947,8 @@ class FacetPattern {
         recursive_sequence[key] = step;
       }
     }
-    // TODO: this needs to be flattened. the output here is not flat yet.
     this.data = recursive_sequence;
+    this.flatten();
     return this;
   }
 
@@ -1010,6 +1032,14 @@ class FacetPattern {
     }
     this.data = scaled_sequence;
     return this.data;
+  }
+
+  skip (prob) {
+    prob = Math.abs(Number(prob));
+    if ( Math.random() < prob ) {
+      this.skipped = true;
+    }
+    return this;
   }
 
   shift (amt) {
@@ -1524,8 +1554,8 @@ class FacetPattern {
       prob = 0.75;
     }
     let mutechunk_sequence = this.getchunks(parseInt(chunks)).data;
+    let window_size = mutechunk_sequence[0].post.length;
     let out = [];
-    let window_size = parseInt((sequence.length / chunks) * 0.02);
     let window_amts = new FacetPattern().sine(1,window_size*2).range(0,0.5).reverse().data;
     let chunk;
     let pre_chunk;
@@ -1567,12 +1597,17 @@ class FacetPattern {
     }
     this.data = out;
     // phase rotate to handle windows
-    this.shift(window_size / out.length);
-    return out;
+    this.shift(window_size / this.data.length);
+    return this;
   }
   // END audio operations
 
   // BEGIN special operations
+  get (varname) {
+    this.data = this.stored_patterns[varname];
+    return this;
+  }
+
   iter (times, prob, command) {
     prob = Math.abs(Number(prob));
     times = Math.abs(Math.round(Number(times)));
@@ -1588,6 +1623,16 @@ class FacetPattern {
         this.data = current_iteration.data;
       }
     }
+    return this;
+  }
+
+  on (hook) {
+    this.hooks.push(hook);
+    return this;
+  }
+
+  set (varname) {
+    this.store.push(varname);
     return this;
   }
 
@@ -1625,6 +1670,11 @@ class FacetPattern {
     }
     return this;
   }
+
+  speed (s) {
+    this.phasor_speed = s.data;
+    return this;
+  }
   // END special operations
 
   // BEGIN utility functions used in other methods
@@ -1642,6 +1692,18 @@ class FacetPattern {
     });
     this.data = out;
     return this;
+  }
+
+  getPatterns() {
+    return fs.readFileSync('stored.json', 'utf8', (err, data) => {
+      return data;
+    });
+  }
+
+  getUtils() {
+    return fs.readFileSync('utils.js', 'utf8', (err, data) => {
+      return data;
+    });
   }
 
   makePatternsTheSameSize (sequence1, sequence2) {
