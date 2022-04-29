@@ -12,8 +12,8 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
-    <script type="text/javascript" src="js/curve_calc.js"></script>
-    <script type="text/javascript" src="node_modules/wavefile/dist/wavefile.js"></script>
+    <script src="js/jquery.growl.js" type="text/javascript"></script>
+    <link href="css/jquery.growl.css" rel="stylesheet" type="text/css" />
     <style media="screen">
       html {
         height: 1000px;
@@ -47,13 +47,14 @@
   </head>
   <body>
     <script type="text/javascript">
-    localStorage.clear();
-    var cm = CodeMirror(document.body, {
-      value: `// Facet: live coding in the browser for Max`,
+
+      var cm = CodeMirror(document.body, {
+        value: `// Facet: live coding in the browser for Max`,
         mode:  "javascript",
         theme: "mbo",
         lineWrapping: true
       });
+
       function getFirstLineOfBlock(initial_line) {
         // true if line above is empty or the line number gets to 0
         let above_line_is_empty = false;
@@ -98,28 +99,35 @@
         return last_line;
       }
 
-      function isGlobalCommand(code) {
-        if ( code == 'mute()' || code.includes('loadsample(' ) ) {
-          return true;
-        }
-        return false;
-      }
-
       $(document).keydown(function(e) {
         // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
         if ( e.ctrlKey && e.keyCode == 13 ) {
-          clearNotifications();
-          parseCode();
+          runFacet();
         }
         else if ( e.ctrlKey && e.keyCode == 67 ) {
-          runFacet('clearevery();');
+          // clear hooks: ctrl+c
+          $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+          $.growl.notice({ message: 'all hooks cleared' });
+        }
+        else if ( e.ctrlKey && e.keyCode == 70 ) {
+          // mute hooks: ctrl+f
+          $.post('http://127.0.0.1:1123/hooks/mute', {}).done(function( data, status ) {
+            let msg = 'hooks running';
+            if ( data.muted === true ) {
+              msg = 'hooks muted';
+            }
+            $.growl.notice({ message: msg });
+          });
         }
         else if ( e.ctrlKey && e.keyCode == 77 ) {
-          runFacet('mute();');
+          // clear hooks and mute everything: ctrl+m
+          $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {});
+          $.growl.notice({ message: 'system muted' });
         }
       });
 
-      function parseCode() {
+      function runFacet() {
         // select the entire block surrounding the cursor pos, based on if
         // newlines exist above and below
         let cursor = cm.getCursor();
@@ -130,196 +138,27 @@
         cm.setSelection({line: first_line_of_block, ch: 0 }, {line: last_line_of_block, ch: 10000 });
         // de-highlight, set back to initial cursor position
         setTimeout(function(){ cm.setCursor({line: line, ch: cursor.ch }); }, 100);
+        setStatus(`processing`);
         let code = cm.getSelection();
-        runFacet(code);
-      }
-
-      function runFacet(code) {
-        let facet_data = {};
-        let skip_parsing = false;
-
-        if ( isEveryNStatement(code) || isClearEveryNStatement(code) ) {
-          if ( isClearEveryNStatement(code) ) {
-            undoEveryNStatement(code);
+        let commands = code.trim().split(';').filter(Boolean);
+        waiting_for_response = true;
+        $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
+          setStatus(`connected`);
+          waiting_for_response = false;
+          if ( data.success == true ) {
+            $.growl.notice({ message: 'success:<br/>' + code });
           }
-          else {
-            parseEveryNStatement(code);
-          }
-        }
-
-        commands = code.trim().split(';').filter(Boolean);
-        Object.values(commands).forEach(command => {
-          if ( isGlobalCommand(command) ) {
-            // global commands are evaled as-is. so e.g. the command "mute();"
-            // would run the mute() function which will send a value of global[mute]: 0
-            // to every facet_param in Max, basically unsetting all buffers.
-            try {
-              facet_data = eval(command);
-            } catch (e) {
-              // adds try/catch to handle the possibility that loadsample('') is run on a non-existent file
-              notification(`${e}, command: ${command}`);
-            }
-            skip_parsing = true;
-          }
-          if ( isClearEveryNStatement(command) ) {
-            skip_parsing = true;
+          else if ( data.error )  {
+            $.growl.error({ message: 'error:<br/>' + data.error });
           }
         });
-
-        if ( !skip_parsing ) {
-          // send it off
-          setStatus(`processing`);
-          waiting_for_response = true;
-          $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
-            setStatus(`connected`);
-            waiting_for_response = false;
-            if ( data.error )  {
-              notification(data.error);
-            }
-          });
-        }
-
-        // re-initialize the facets object after it has been parsed
-        facets = {};
       }
-
-      function mute() {
-        // mute clears the every_n_hooks object too
-        undoEveryNStatement('clearevery()');
-        $.post('http://127.0.0.1:1123', {code:'mute();'});
-      }
-
-      // begin EVERY
-      function isEveryNStatement(code) {
-        return /^every\([a-zA-Z0-9, .()]*\)/gm.test(code);
-      }
-
-      function isClearEveryNStatement(code) {
-        return /clearevery\([0-9]*\)/gm.test(code);
-      }
-
-      function undoEveryNStatement(code) {
-        let every_n_matches = code.match(/clearevery\([0-9]*\)/gm);
-        let every_n_split = code.split(/clearevery\([0-9]*\)/gm);
-        if ( every_n_matches ) {
-          for (const [key, every] of Object.entries(every_n_matches)) {
-            let n = Number(every.replace('(', '').replace(')', '').replace('clearevery', ''));
-            // if no args, clears all hooks
-            if ( n == 0 ) {
-              every_n_hooks = {};
-            }
-            // if the command is for clearevery(5), this will delete the hook that runs every 5
-            delete every_n_hooks[Number(n)];
-          }
-        }
-      }
-
-      function parseEveryNStatement(code) {
-        let every_n_matches = code.match(/^every\([a-zA-Z0-9, .()]*\)/gm);
-        let every_n_split = code.split(/^every\([a-zA-Z0-9, .()]*\)/gm);
-        let prob = 1;
-        if ( every_n_matches ) {
-          for (const [key, every] of Object.entries(every_n_matches)) {
-            let n = Number(every.replace('(', '').replace(')', '').replace('every', ''));
-            if ( isNaN(n) ) {
-              try {
-                n = every.replace('every(', '').replace(' ', '').slice(0, -1);
-                let n_split = n.split(',');
-                // get probability coefficient
-                prob = Number(n_split[1]);
-                n = eval(n_split[0]);
-              } catch (e) {
-                // if the every() statment is for a message hook rather than a "bang" number
-                n = every.replace('every(', '').replace(' ', '').slice(0, -1);
-                let n_split = n.split(',');
-                n = n_split[0];
-                prob = 1;
-                if (n_split[1] ) {
-                  prob = n_split[1];
-                }
-                if ( !n || !prob ) {
-                  $.notify(`Could not parse every(n) statement.`, {
-                    allow_dismiss: true,
-                    delay: 500,
-                    newest_on_top: true
-                  });
-				         }
-              }
-            }
-            // if the command is for every(5), this will take whatever code ran after the every(5),
-            // UNTIL the next every N (if it exists), and set that in the every_n_hooks obj
-            if ( !every_n_hooks[n] ) {
-              every_n_hooks[n] = [];
-            }
-            every_n_hooks[n].push({
-              code: every_n_split[Number(key)+1],
-              prob: prob
-            });
-          }
-        }
-      }
-
-      function getHooksToRunEveryN() {
-        let hooks_to_run = '';
-        if  ( every_n_hooks ) {
-          for (const [key, everys] of Object.entries(every_n_hooks)) {
-            if ( num_cycles % key == 0 ) {
-              for (var i = 0; i < everys.length; i++) {
-                // it's time to rerun the code at this hook for every n bars
-                let code = everys[i];
-                if ( Math.random() < code.prob ) {
-                  hooks_to_run += code.code.trim();
-                }
-              }
-            }
-          }
-          return hooks_to_run;
-        }
-        else {
-          return false;
-        }
-      }
-      // end EVERY
 
       // begin OSC
       let waiting_for_response = false;
-      let num_cycles = 0;
-      let every_n_hooks = {};
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 
       connectToMaxOscServer();
-
-      osc.on('/eoc', message => {
-        if ( message.args[0] == 'bang' ) {
-          num_cycles++;
-          hooks_code = getHooksToRunEveryN();
-          if ( hooks_code ) {
-            runFacet(hooks_code);
-          }
-        }
-      });
-      // running custom hooks based on messages from max
-      osc.on('/hook', message => {
-        let hooks_code = '';
-        for (const [key, everys] of Object.entries(every_n_hooks)) {
-          if ( key == message.args[0] ) {
-            for (var i = 0; i < everys.length; i++) {
-            // it's time to rerun the code at this hook for every n bars
-            let code = everys[i];
-              if ( Math.random() < code.prob ) {
-                hooks_code += code.code.trim();
-              }
-            }
-          }
-        }
-        if ( hooks_code ) {
-          runFacet(hooks_code);
-        }
-      });
-      // setting global variables in the browser from Max
-      osc.on('/set', message => {
-        window[message.args[0]] = message.args[1];
-      });
 
       function connectToMaxOscServer() {
         let connected = false;
@@ -366,19 +205,6 @@
           colored_span = `status: <span style="color:red;"">${status}</span>`;
         }
         $('#status').html(colored_span);
-      }
-
-      function clearNotifications() {
-        $('#notifications').html('');
-        $('#notifications').removeClass('error');
-      }
-
-      function notification(msg) {
-        $('#notifications').html('<p style="white-space: nowrap;">'+msg+'</p>');
-        $('#notifications').addClass('error');
-        setTimeout(function () {
-          $('#notifications').removeClass('error');
-        }, 500);
       }
       // end OSC
     </script>

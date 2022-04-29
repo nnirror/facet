@@ -23,26 +23,13 @@ module.exports = {
     if (!hook_mode) {
       if ( fp.hooks.length > 0 ) {
         for (var i = 0; i < fp.hooks.length; i++) {
-          module.exports.hooks[fp.hooks[i]] = command;
+          if ( !module.exports.hooks[fp.hooks[i]] ) {
+            module.exports.hooks[fp.hooks[i]] = [];
+          }
+          module.exports.hooks[fp.hooks[i]].push(command);
         }
       }
     }
-  },
-
-  convertFlatSequenceToMessage: (flat_sequence) => {
-    let out = '';
-    for (var i = 1; i <= flat_sequence.length; i++) {
-      if ( isNaN(flat_sequence[i-1]) || !isFinite(flat_sequence[i-1]) ) {
-        out += '0';
-      }
-      else {
-        out += parseFloat(flat_sequence[i-1]).toFixed(4);
-      }
-      if ( i != flat_sequence.length ) {
-         out += ' ';
-      }
-    }
-    return out;
   },
 
   facetInit: () => {
@@ -50,27 +37,6 @@ module.exports = {
   },
 
   facets: {},
-
-  flattenSequence: (sequence, max_sub_steps) => {
-    // converts a basic "sequence array" into an isomorphism that can go in a wavetable buffer.
-    // if the "sequence array" was [0, 1, [2,4], [1,2,3,4]], the wavetable buffer would be:
-    // [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 1, 2, 3, 4]
-    let out = [];
-    Object.values(sequence).forEach(step => {
-      if ( Array.isArray(step) ) {
-        let s = module.exports.flattenSequence(step, max_sub_steps-1);
-        for (var i = 0; i < s.length; i++) {
-          out.push(s[i]);
-        }
-      }
-      else {
-        for (var i = 0; i < Math.pow(2, max_sub_steps); i++) {
-          out.push(step);
-        }
-      }
-    });
-    return out;
-  },
 
   getCommands: (user_input) => {
      return user_input.trim().split(';').filter(Boolean);
@@ -133,6 +99,8 @@ module.exports = {
   initStore: () => {
     fs.writeFileSync('stored.json', '{}');
   },
+
+  muteHooks: false,
 
   removeTabsAndNewlines: (user_input) => {
     user_input = user_input.replace(/\s\s+/g, '');
@@ -210,8 +178,10 @@ module.exports = {
 
 const handlers = {
   hook: (...args) => {
-    if ( module.exports.hooks[args[0]] ) {
-      module.exports.runCode(module.exports.hooks[args[0]],true);
+    if ( module.exports.hooks[args[0]] && module.exports.muteHooks == false ) {
+      for (var i = 0; i < module.exports.hooks[args[0]].length; i++) {
+        module.exports.runCode(module.exports.hooks[args[0]][i],true);
+      }
     }
   },
   set: (...args) => {
@@ -249,7 +219,9 @@ if ( !fs.existsSync('../tmp/')) {
 app.post('/', (req, res) => {
   try {
     module.exports.runCode(req.body.code);
-    res.sendStatus(200);
+    res.send({
+      success: true
+    });
   } catch (e) {
     res.send({
       status: 400,
@@ -258,12 +230,31 @@ app.post('/', (req, res) => {
   }
 });
 
-app.get('/hooks/mute', (req, res) => {
-  module.exports.muteHooks();
+// global mute request via ctrl+m in the browser
+app.post('/mute', (req, res) => {
+  Max.outlet(`global mute`);
+  res.sendStatus(200);
 });
 
-app.get('/hooks/clear', (req, res) => {
-  module.exports.clearHooks();
+// mute all hooks request via ctrl+f in the browser
+app.post('/hooks/mute', (req, res) => {
+  if ( module.exports.muteHooks == true ) {
+    module.exports.muteHooks = false;
+  }
+  else {
+    module.exports.muteHooks = true;
+  }
+  res.send({
+    muted: module.exports.muteHooks
+  });
+});
+
+// clear all hooks request via ctrl+c in the browser
+app.post('/hooks/clear', (req, res) => {
+  module.exports.hooks = {};
+  res.send({
+    cleared: true
+  });
 });
 
 app.listen(1123);

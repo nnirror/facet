@@ -154,7 +154,7 @@ class FacetPattern {
         decodedAudio = wav.decode(buffer);
       }
       this.data = Array.from(decodedAudio.channelData[0]);
-      this.reduce(44100);
+      this.reduce(88200);
       return this;
     }
   }

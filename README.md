@@ -725,6 +725,7 @@ every(kick) lp cutoff noise[1].gain(3000);
 ```
 
 ---
+TODO fix these, add mute hooks
 - **clearevery** (_times_)
 	- clears any currently-running `every()` processes from memory. _Note:_ `mute();` also clears all `every()` processes.
 	- If you want to clear a specific `every()` process, e.g. one running every 4, you would run `clearevery(4);`.
