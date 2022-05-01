@@ -22,7 +22,7 @@
         height: 95vh;
         font-size: 2em;
       }
-      #status, #notifications {
+      #status, #notifications, #cpu {
         height: 5vh;
         max-height: 5vh;
         padding-top: 1.5vh;
@@ -31,12 +31,12 @@
         display: inline-block;
         vertical-align: middle;
       }
-      #status {
+      #status, #cpu {
         float: left;
       }
       #notifications {
         float: left;
-        padding-left: 5%;
+        padding-left: 1%;
         overflow: scroll;
         width: 80%;
       }
@@ -160,6 +160,15 @@
 
       connectToMaxOscServer();
 
+      osc.on('/cpu', message => {
+        let cpu_percent = parseFloat(message.args[0]).toFixed(1);
+        $('#cpu').html(cpu_percent + '% CPU');
+      });
+
+      osc.on('/hook', message => {
+        $.growl.notice({ message: 'hook executed successfully, command:<br/>' + message.args[0] });
+      });
+
       function connectToMaxOscServer() {
         let connected = false;
         let connection_status_change = false;
@@ -209,6 +218,7 @@
       // end OSC
     </script>
     <div id="status">status: initializing...</div>
+    <div id="cpu"></div>
     <div id="notifications"></div>
   </body>
 </html>

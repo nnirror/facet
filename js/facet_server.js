@@ -1,3 +1,5 @@
+const { exec } = require('child_process');
+const find = require('find-process');
 const path = require('path');
 const Max = require('max-api');
 const bodyParser = require('body-parser');
@@ -11,6 +13,7 @@ const wav = require('node-wav');
 const commentStripper = require('./lib/strip_comments.js');
 const FacetPattern = require('./FacetPattern.js')
 let $ = FacetPattern;
+let _ = new $();
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
@@ -30,6 +33,19 @@ module.exports = {
         }
       }
     }
+  },
+
+  checkIfOverloaded: () => {
+    exec(`ps -p ${module.exports.pid} -o %cpu`, (error, stdout, stderr) => {
+      let percent_cpu = Number(stdout.split('\n')[1].trim());
+      osc.send(new OSC.Message('/cpu', percent_cpu));
+      if ( percent_cpu > 70 ) {
+        module.exports.isOverloaded = true;
+      }
+      else {
+        module.exports.isOverloaded = false;
+      }
+    });
   },
 
   facetInit: () => {
@@ -96,11 +112,26 @@ module.exports = {
     return facets;
   },
 
+  setPID: () => {
+    find('port', 1123)
+      .then(function (list) {
+        if (!list.length) {
+          // do nothing
+        } else {
+          module.exports.pid = list[0].pid;
+        }
+      });
+  },
+
   initStore: () => {
     fs.writeFileSync('stored.json', '{}');
   },
 
+  isOverloaded: false,
+
   muteHooks: false,
+
+  pid: '',
 
   removeTabsAndNewlines: (user_input) => {
     user_input = user_input.replace(/\s\s+/g, '');
@@ -178,9 +209,12 @@ module.exports = {
 
 const handlers = {
   hook: (...args) => {
-    if ( module.exports.hooks[args[0]] && module.exports.muteHooks == false ) {
-      for (var i = 0; i < module.exports.hooks[args[0]].length; i++) {
-        module.exports.runCode(module.exports.hooks[args[0]][i],true);
+    if (!module.exports.isOverloaded===true) {
+      if ( module.exports.hooks[args[0]] && module.exports.muteHooks == false ) {
+        for (var i = 0; i < module.exports.hooks[args[0]].length; i++) {
+          module.exports.runCode(module.exports.hooks[args[0]][i],true);
+          osc.send(new OSC.Message('/hook', module.exports.hooks[args[0]][i]));
+        }
       }
     }
   },
@@ -200,6 +234,7 @@ const handlers = {
       });
       // clear any stored patterns
       module.exports.initStore();
+      microstats.stop();
   }
 };
 
@@ -216,6 +251,7 @@ if ( !fs.existsSync('../tmp/')) {
     fs.mkdirSync('../tmp/');
 };
 
+// receive and run commands via HTTP POST
 app.post('/', (req, res) => {
   try {
     module.exports.runCode(req.body.code);
@@ -257,4 +293,9 @@ app.post('/hooks/clear', (req, res) => {
   });
 });
 
+// run the server
 app.listen(1123);
+// find its PID
+module.exports.setPID();
+// check that every 500ms it's not overloaded - so that superfluous hook events can be prevented from stacking up
+setInterval(module.exports.checkIfOverloaded, 500);

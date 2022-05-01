@@ -300,6 +300,11 @@ Then open the Facet application in your browser, run commands to the destination
 	- example:
 		- `foo bar [1 0 1 1].fft(); // 3 0 0 1 1 0 0 -1`
 ---
+- **follow** ( _pieces_ )
+	- TODO
+	- example:
+		- ``
+---
 - **fracture** ( _pieces_ )
 	- divides and scrambles the pattern into `pieces` pieces.
 	- example:

@@ -40,8 +40,8 @@ class FacetPattern {
 
   cosine (periods, length) {
     let cosine_sequence = [];
-    periods = Math.abs(Number(periods));
-    length = Math.abs(Number(length));
+    periods = Math.round(Math.abs(Number(periods)));
+    length =Math.round(Math.abs(Number(length)));
     // apply a 0.25 phase shift to a sine
     this.sine(periods, length);
     this.shift(((1/periods) * 0.25));
@@ -172,8 +172,8 @@ class FacetPattern {
 
   sine (periods, length) {
     let sine_sequence = [];
-    periods = Math.abs(Number(periods));
-    length = Math.abs(Number(length));
+    periods = Math.round(Math.abs(Number(periods)));
+    length = Math.round(Math.abs(Number(length)));
     for (var a = 0; a < periods; a++) {
       for (var i = 0; i < length; i++) {
         let num_scaled = (Math.PI * 2) * (i / length);
@@ -265,6 +265,9 @@ class FacetPattern {
   }
 
   add (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let out = [];
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
@@ -275,6 +278,9 @@ class FacetPattern {
   }
 
   and (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let and_sequence = [];
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     let sequence1 = same_size_arrays[0];
@@ -292,6 +298,9 @@ class FacetPattern {
   }
 
   append (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     this.data = this.data.concat(sequence2.data);
     return this;
   }
@@ -372,6 +381,9 @@ class FacetPattern {
   }
 
   convolve (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     var al = this.data.length;
     var wl = sequence2.data.length;
     var offset = ~~(wl / 2);
@@ -419,6 +431,9 @@ class FacetPattern {
   }
 
   divide (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let out = [];
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
@@ -467,6 +482,9 @@ class FacetPattern {
   }
 
   equals (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     let sequence1 = same_size_arrays[0];
     sequence2 = same_size_arrays[1];
@@ -539,6 +557,16 @@ class FacetPattern {
     return this;
   }
 
+  follow (audio, up_samps, down_samps) {
+    if ( !this.isFacetPattern(audio) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof audio}`;
+    }
+    up_samps = Math.round(Math.abs(Number(up_samps)));
+    down_samps = Math.round(Math.abs(Number(down_samps)));
+    this.times(audio.slew(up_samps,down_samps));
+    return this;
+  }
+
   fracture (pieces) {
     pieces = Math.round(Math.abs(Number(pieces)));
     let fracture_sequence = [];
@@ -599,6 +627,9 @@ class FacetPattern {
   }
 
   harmonics (ctrl_sequence, amplitude = 0.9) {
+    if ( !this.isFacetPattern(ctrl_sequence) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof ctrl_sequence}`;
+    }
     let harmonics_array = [];
     let harmonics_sequence = [];
     this.reduce(10000);
@@ -636,6 +667,9 @@ class FacetPattern {
   }
 
   interlace (sequence2) {
+      if ( !this.isFacetPattern(sequence2) ) {
+        throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+      }
       let interlaced_sequence = [];
       let interlace_every;
       let big_sequence = this, small_sequence = sequence2;
@@ -668,6 +702,9 @@ class FacetPattern {
   }
 
   interp (prob, sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let interp_sequence = [];
     let amt = Math.abs(Number(prob));
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
@@ -748,6 +785,9 @@ class FacetPattern {
   }
 
   map (new_values) {
+    if ( !this.isFacetPattern(new_values) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof new_values}`;
+    }
     let same_size_arrays = this.makePatternsTheSameSize(this, new_values);
     let sequence = same_size_arrays[0];
     same_size_arrays = same_size_arrays[1];
@@ -805,6 +845,9 @@ class FacetPattern {
   }
 
   or (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let or_sequence = [];
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     let sequence1 = same_size_arrays[0];
@@ -1091,6 +1134,9 @@ class FacetPattern {
   }
 
   sieve (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     sequence2.normalize();
     let sieve_sequence = [];
     for (var i = 0; i < sequence2.data.length; i++) {
@@ -1101,6 +1147,7 @@ class FacetPattern {
   }
 
   slew (depth = 25, up_speed = 1, down_speed = 1) {
+    let initial_size = this.data.length;
     let slewed_sequence = [];
     up_speed = Math.abs(up_speed);
     down_speed = Math.abs(down_speed);
@@ -1193,6 +1240,7 @@ class FacetPattern {
       }
     }
     this.data = slewed_sequence;
+    this.reduce(initial_size);
     return this;
   }
 
@@ -1271,6 +1319,9 @@ class FacetPattern {
   }
 
   subtract (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let out = [];
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
@@ -1322,6 +1373,9 @@ class FacetPattern {
   }
 
   times (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     let out = [];
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
@@ -1447,6 +1501,9 @@ class FacetPattern {
 
   // BEGIN audio operations
   dilate (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     sequence2.scale(0.5,1.5);
     let dilate_amt, slice, dilate_sequence = [];
     let chunked_sequence = this.getchunks(sequence2.data.length).data;
@@ -1510,6 +1567,9 @@ class FacetPattern {
   }
 
   ichunk (sequence2) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
     sequence2.reduce(512);
     let chunks = sequence2.data.length;
     let chunked_sequence = this.getchunks(chunks).data;
@@ -1704,6 +1764,15 @@ class FacetPattern {
     return fs.readFileSync('utils.js', 'utf8', (err, data) => {
       return data;
     });
+  }
+
+  isFacetPattern(t) {
+    if ( typeof t == 'object' && t.constructor.name == 'FacetPattern' ) {
+      return true;
+    }
+    else {
+      return false;
+    }
   }
 
   makePatternsTheSameSize (sequence1, sequence2) {
