@@ -107,7 +107,7 @@
         else if ( e.ctrlKey && e.keyCode == 67 ) {
           // clear hooks: ctrl+c
           $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
-          $.growl.notice({ message: 'all hooks cleared' });
+          $.growl.notice({ message: 'hooks cleared' });
         }
         else if ( e.ctrlKey && e.keyCode == 70 ) {
           // mute hooks: ctrl+f
@@ -141,10 +141,7 @@
         setStatus(`processing`);
         let code = cm.getSelection();
         let commands = code.trim().split(';').filter(Boolean);
-        waiting_for_response = true;
         $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
-          setStatus(`connected`);
-          waiting_for_response = false;
           if ( data.success == true ) {
             $.growl.notice({ message: 'success:<br/>' + code });
           }
@@ -155,7 +152,6 @@
       }
 
       // begin OSC
-      let waiting_for_response = false;
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 
       connectToMaxOscServer();
@@ -166,7 +162,7 @@
       });
 
       osc.on('/hook', message => {
-        $.growl.notice({ message: 'hook executed successfully, command:<br/>' + message.args[0] });
+        $.growl.notice({ message: 'hook ran successfully:<br/>' + message.args[0] });
       });
 
       function connectToMaxOscServer() {
@@ -177,26 +173,10 @@
           osc.open();
           setTimeout( () => {
             if ( osc.status() == 1 ) {
-              // connected!
-              if ( connected == false ) {
-                connection_status_change = true;
-              }
-              else {
-                connection_status_change = false;
-              }
-              connected = true;
               setStatus(`connected`);
             }
             else {
-              if ( connected == true ) {
-                connection_status_change = true;
-              }
-              else {
-                connection_status_change = false;
-              }
-              if ( !waiting_for_response ) {
-                setStatus(`disconnected`);
-              }
+              setStatus(`disconnected`);
             }
           }, 1000);
         }, 3000);

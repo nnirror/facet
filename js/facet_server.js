@@ -234,7 +234,6 @@ const handlers = {
       });
       // clear any stored patterns
       module.exports.initStore();
-      microstats.stop();
   }
 };
 

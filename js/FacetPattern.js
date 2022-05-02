@@ -458,7 +458,7 @@ class FacetPattern {
       num = Math.abs(num);
     }
     if ( num === 0 ) {
-      return sequence;
+      return this;
     }
     let quality_reduction = 1 / num;
     if (this.data.length * num > 88200 ) {
@@ -1732,6 +1732,9 @@ class FacetPattern {
   }
 
   speed (s) {
+    if ( !this.isFacetPattern(s) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof s}`;
+    }
     this.phasor_speed = s.data;
     return this;
   }
