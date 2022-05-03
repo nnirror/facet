@@ -156,7 +156,7 @@ module.exports = {
         command = module.exports.removeTabsAndNewlines(command);
         command = module.exports.handleReruns(command);
         let fp = eval(utils + command);
-        if ( fp.skipped === true ) {
+        if ( fp.skipped === true || typeof fp == 'undefined' ) {
           // do nothing
         }
         else {

@@ -18,22 +18,19 @@ class FacetPattern {
   }
 
   // BEGIN generator operations
-  brot (length, x, y) {
-    // based on the function used to generate the mandelbrot set.
+  chaos (length, x, y) {
     // takes a complex number (x,y). squares x, adds y... repeat.
-    // the output of this function is the x value. sadly there is just as much information in y
-    // but wavetables (the destination for facet's data) are 2D not 3D!
     // the best values for x are within -0.8 and 0.25
     // the best values for y are within -0.8 0.8
     length = Math.abs(Number(length));
     x = Number(x);
     y = Number(y);
-    let brot_sequence = [];
+    let chaos_sequence = [];
     for (var i = 0; i < length; i++) {
-      brot_sequence.push(x);
+      chaos_sequence.push(x);
       x = (x*x) + y;
     }
-    this.data = brot_sequence;
+    this.data = chaos_sequence;
     this.clip(-1, 1);
     return this;
   }
@@ -999,7 +996,7 @@ class FacetPattern {
     let orig_size = this.data.length;
     new_size = Number(new_size);
     if ( new_size > orig_size ) {
-      return this.data;
+      return this;
     }
     let reduced_sequence = [];
     for ( let i = 0; i < new_size; i++ ) {
@@ -1071,10 +1068,10 @@ class FacetPattern {
     let scaled_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
       let new_val = this.scaleInner(step, [min,max], [Number(new_min), Number(new_max)]);
-      scaled_sequence[key] = Number(new_val.toFixed(4));
+      scaled_sequence[key] = Number(new_val);
     }
     this.data = scaled_sequence;
-    return this.data;
+    return this;
   }
 
   skip (prob) {
@@ -1120,7 +1117,7 @@ class FacetPattern {
       moved_sequence[key] = this.data[new_key];
     }
     this.data = moved_sequence;
-    return this.data;
+    return this;
   }
 
   shuffle () {
