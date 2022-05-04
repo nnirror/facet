@@ -6,7 +6,7 @@ Facet is a flexible, JavaScript-based live coding system for Max. Using a code e
 
 The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns of data. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
 
-Facet runs as a NodeJS server on your local machine, with minimal CPU overhead in Max. It allows for sample-accurate DSP from 1 sample up to multiple seconds of audio. It also can incorporate variables from your Max patcher as if they were global variables in your code, and you can attach these patterns to event "hooks" so they automatically rerun when a certain event occurs in Max.
+Facet runs as a NodeJS server on your local machine, with minimal CPU overhead in Max. It allows for sample-accurate DSP from 1 sample up to multiple seconds of audio. It also can incorporate variables from your Max patcher as if they were global variables in your code, and you can attach commands to event "hooks" so they automatically rerun when a certain event occurs in Max.
 
 ## Getting started
 
