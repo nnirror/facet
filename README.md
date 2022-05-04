@@ -43,7 +43,7 @@ Finally, there are shorthands to improve syntax and legibility. The rest of this
 
 `new FacetPattern() == _;                    // shorthand for FacetPattern with no name`
 
-[This overview video](https://youtu.be/lmOH-wJPfAk) has more details on writing commands.
+[This overview video](https://youtu.be/8ngD7rWFlOc) has more details on writing commands.
 
 ### How to run
 
