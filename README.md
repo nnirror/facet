@@ -38,6 +38,7 @@ Next, translate that data somehow. (The `FacetPattern modulators` section of the
 However, not all FacetPatterns need to be "findable" to Max. For example, if you are adding two FacetPatterns together, and you only care about the sum, then you can leave empty the name of the second FacetPattern. Note how only the first FacetPattern has a name: `new FacetPattern('example_name').noise(128).add(new FacetPattern().sine(1,128));`
 
 Finally, there are shorthands to improve syntax and legibility. The rest of this document will use these shorthands.
+
 `new FacetPattern('example') == $('example') // shorthand for FacetPattern with a name`
 
 `new FacetPattern() == _;                    // shorthand for FacetPattern with no name`
