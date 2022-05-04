@@ -6,63 +6,53 @@ Facet is a flexible live coding system for controlling and applying synchronized
 
 The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
 
-Facet runs with minimal CPU overhead in Max, allows for sample-accurate patterning up into the audio rate, and can produce both precise and surprising patterns.
+Facet runs with minimal CPU overhead in Max, allows for sample-accurate patterning from 1 sample up to multiple seconds of audio, and can produce both precise and surprising patterns.
 
 ## Getting started
 
-Here's a [walkthrough video](https://youtu.be/aFzpexg-AdY) of the below installation steps, and a [getting started](https://www.youtube.com/watch?v=5RDgfDYWCkI) video for once Facet is installed.
-
 1. Download Node.js and npm: https://www.npmjs.com/get-npm
-2. Configure your local machine so it's running a web server. If you're not sure how to do this, Google "set up a local web server {your operating system here}." Facet is configured to work with your local web server running on 127.0.0.1.
-3. Move the Facet repo into a subdirectory of your local web server.
-4. In a terminal, while in the root of the facet repo, run `npm install`
-5. Now in your browser, navigate to the Facet repo directory on your local web server. For example, on my machine (OSX Catalina): http://127.0.0.1/~cella/facet/ A blank code editor with a single comment in it should appear:
-```
-// Facet: live coding in the browser for Max
-```
-6. Open Max and add the Facet repo and all subdirectories to your file preferences.
-7. In Max, open one of the .maxpat files in the /examples folder. They have sample commands to run for testing.
-	- `example_facet_audio.maxpat` has some audio-rate examples
-	- `example_facet_basics.maxpat` has a few simple examples
-	- `example_facet_debug.maxpat` dispays the pattern in Max that's created by Facet
-	- `example_facet_drum_generator.maxpat` synthesizes some drum sounds
-	- `example_facet_drums.maxpat` sequences 4 drum samples
-	- `example_facet_midi.maxpat` generates MIDI note data
-	- `example_facet_m4l_fm.amxd` connects to Max for Live
-	- `example_facet_m4l_audio.amxd` has an audio-rate example for Max for Live
-8.	Copy those commands into the code editor in the browser. Move your cursor so it's on the line or block you want to run (All commands not separated by two blank lines will run together). Hit ctrl+enter to run the command(s). They should briefly highlight to illustrate what commands ran.
-9.	Those commands should go from your local web server into Max. If you copied the command from an example file, the it should work and begin modulating one of the parameters in the Max patcher without any additional configuration.
+2. In a terminal, while in the root of the facet repo, run `npm install`
+3. In a browser, open the index.html page. A blank code editor should appear.
+
+Alternatively, you can install the Facet repo as part of your localhost web server, so that you don't need to navigate to index.html. For example, on my machine (OSX Catalina), I run Facet from here: http://127.0.0.1/~cella/facet/.
+
+4. In Max, add the Facet repo and all subdirectories to your file preferences.
+5. In Max, open `examples/facet_helloworld.maxpat`.
+6. Copy this command into the code editor in the browser: `new $('helloworld').sine(60,10).gain(0.1123);` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave.
 
 ## Facet commands
 
-TODO
+Facet commands are based entirely around JavaScript, using a custom class called a FacetPattern. In order to generate and modify a FacetPattern's data, you chain methods together just like you would with any JavaScript library. This overview video has more details on the FacetPattern class. Here's a summary:
+
+1. In order to be "findable" in Max, the FacetPattern object needs a name, which you supply upon construction: `new FacetPattern('name_here');`. In this case, you would need to create a corresponding `facet name_here` object in Max (along with a `facet_server` object in your patcher).
+
+2. Not all FacetPatterns need to be "findable" to Max. For example, if you are adding two FacetPatterns together, and you only care about the result sum, then you can leave empty the name of the second FacetPattern. Note how only the first FacetPattern has a name: `new FacetPattern('example_name').noise(128).add(new FacetPattern().sine(1,128));`
+
+3. There are shorthands to improve syntax legibility. The rest of this document will use these shorthands.
+`new FacetPattern('abc') == $('abc') // shorthand for FacetPattern with a name`
+`new FacetPattern() == _;            // shorthand for FacetPattern with no name`
 
 ### Variables
 
-You can send variables from Max into Facet, making it possible to run commands like this, where `myvar` is a variable that could be changed in Max.
-
-TODO
+You can send variables from Max into Facet, making it possible to run code with variables that you can control externally. The right inlet of the `facet_server` Max object will take custom variables in this format: `foo $1`.
 
 #### mousex / mousey
 
 Both `mousex` and `mousey`, as floating-point number representations of your cursor's position on your screen, are available for use in commands, e.g.:
 
 ```
-every(1) foo bar [sine(1,1000)].gain(mousey); // cursor y position controls volume every time the code runs
+new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume every time the code runs
 ```
-
-### Ending / formatting commands
-All commands must end in a semicolon. You can run multiple commands in a single line:
-```
-k1 struct [1 0 0 0]; s1 struct [0 0 1 0];
-/* k1 triggers at beginning of each global phasor cycle, and
-s1 triggers halfway through */
-```
-And you can add tabs, newlines, and comments to commands. **Note: multiple newlines in a row denote different "blocks" of code, so multiple newlines should not be used in series for formatting purposes **.
 
 ## Creating your own patches
 
-TODO
+All Max patches must have one **and only one** instance of a `facet_server` object. Then, simply create however many FacetPatterns you want via commands in the browser. All commands not separated by multiple spaces will run together. Each FacetPattern name needs to match a `facet` object in Max. For example, in the browser:
+
+`new $('abcdef').noise(10000).times(_.ramp(1,0,10000).log(100));`
+
+And in Max:
+
+`facet abcdef`
 
 ## Command reference
 
@@ -299,6 +289,11 @@ TODO
 		- `new $('example').from([1,2,3,4]).shuffle(); // first time: 3 2 1 4`
 		- `new $('example').from([1,2,3,4]).shuffle(); // second time: 1 3 4 2`
 ---
+- **skip** ( _prob_ )
+	- Sometimes, skip executing the command, as if it had never been attempted. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
+		- example:
+		- `new $('example').spiral(16,random(1,360)).skip(0.95);	// only load data into the "new samples" wavetable 5% of the time when this command runs`
+---
 - **slew** ( _depth_ = 25, _up_speed_ = 1, _down_speed_ = 1 )
 	- adds upwards and/or downwards slew to the FacetPattern. `depth` controls how many slew values exist between each value. `up_speed` and `down_speed` control how long the slew lasts: at 0, the slew has no effect, whereas at 1, the slew occurs over the entire `depth` between each FacetPattern value.
 	- example:
@@ -313,6 +308,17 @@ TODO
 	- interpolates each value so it falls exactly between the values that precede and follow it.
 	- example:
 		- `new $('example').noise(64)].smooth(); // less noisy`
+---
+- **sometimes** (_prob_, _operations_)
+	- runs a chain of operations only some of the time, at a probability set by `prob`.
+
+**Note:** currently, `rerun` cannot be used inside a sometimes operation.
+```
+new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,'reverse()');
+// half the time, pattern goes up; half the time, it goes down
+new $('example').drunk(16,0.1).sometimes(0.5,'sort().palindrome()');
+// run a sequence that sometimes is random and sometimes goes up and down
+```
 ---
 - **sort** ( )
 	- returns the FacetPattern ordered lowest to highest.
@@ -471,9 +477,9 @@ TODO
 ---
 ### Audio-rate operations
 
-Facet load audio samples and run arbitrary operations on that data, but this does come with the caveat that Facet is limited to the CPU power of a single thread on your machine. This is because Facet is a NodeJS server running as a single thread on your machine. One idea for future development of Facet is to make it so that each command spawns its own sub-process on the machine. I think this would make accessible more CPU power to multi-core machines. However, in the meantime, there is a CPU% indicator in the bottom window of the browser that can be helpful when running audio operations to see when you are running out of resources.
+Facet can load audio samples and run arbitrary operations on that data, but this comes with the caveat that Facet is limited to the CPU power of a single thread on your machine. One idea for future development of Facet is to make it so that each command spawns its own sub-process on the machine. I think this would make accessible more CPU power to multi-core machines. However, in the meantime, there is a CPU% indicator in the bottom window of the browser that can be helpful when running audio operations to see when you are running out of resources.
 
- To prevent humongous computations, there are some guardrails for certain functions, but this software is still experimental, and it is possible that you accidentally run a command that uses too much computing power. It happened to me every once in a while during development. In that case, you need to kill the process. Find the `node` process ID (I use top) and run:
+ To prevent humongous computations, there are some guardrails for certain functions, but this software is still experimental, and it is possible that you accidentally run a command that uses too much computing power. (It happened to me every once in a while during development). In that case, you need to kill the node process running in the background. Find the `node` process ID (I use top) and run:
 
 `kill -9 pid_goes_here`
 
@@ -523,68 +529,16 @@ Facet load audio samples and run arbitrary operations on that data, but this doe
 
 ### Hooks
 
-- **on** ( _times_ )
-	- TODO
+- **on** ( _hook_ )
+	- Reruns the command Whenever an event with name `hook` is sent as a message to the left inlet of the `facet_server` object in Max.
+	- By default, every 32nd note of the Max global transport there is a hook that you can automatically use via, e.g.: `.on(6)`. This would mean the command reruns on the 6th 32nd note of each whole note.
 
-By default, Max sends a "bang" message to the Facet application in the browser every quarter note. Hence the every(4) and every(1) example above. (You could, of course, edit the `metro` object to run at a different speed in `facet_server.maxpat`).
+### Speed
 
-It's also possible to specify a probability with every(), so that it will only run some of the time. By default, the every() commands have a probability of 1, meaning they will always run. For example:
-```
-every(4, 0.25) lp cutoff noise[1].gain(3000);
-// every 4 quarter notes, 25% of the time, select a new random number between 0 and 3000
-```
-Lastly, it's possible to integrate custom hooks in Max with the every() command, so you can run commands like this. Please see the `examples/example_facet_hooks.maxpat` file for more information.
-```
-every(kick) lp cutoff noise[1].gain(3000);
-```
-
----
-TODO fix these, add mute hooks
-- **clearevery** (_times_)
-	- clears any currently-running `every()` processes from memory. _Note:_ `mute();` also clears all `every()` processes.
-	- If you want to clear a specific `every()` process, e.g. one running every 4, you would run `clearevery(4);`.
-	- The shortcut command `[control + c]` will run `clearevery();`.
----
-- **mute** ( )
-	- Sets every `facet_param` object in the Max patch to 0.
-		- example:
-		- `mute(); // stops all patterns from running`
-  - The shortcut command `[control + m]` will run `mute();`.
-- **skip** ( _prob_ )
-	- Sometimes does not send the sequence data from the browser to Max. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
-		- example:
-		- `sample vals [spiral(16,random(1,360))].skip(0.95);	// only load data into the "new samples" wavetable 5% of the time when this command runs`
----
-- **sometimes** (_prob_, _operations_)
-	- runs a chain of operations only some of the time, at a probability set by `prob`.
-
-**Note:** currently, `rerun` cannot be used inside a sometimes operation.
-```
-midi note [phasor(1,100)].sticky(0.5).scale(40, 80).sometimes(0.5, 'reverse()');
-// half the time, pattern goes up; half the time, it goes down
-every(1) foo bar [drunk(16,0.1)].sometimes(0.5, 'sort().palindrome()');
-// run a sequence that sometimes is random and sometimes goes up and down
-```
----
 - **speed** ( _amt_ )
-	- changes the amount of time that it takes to loop through all values in a pattern. It should be specified in a separate command, such as:
-```
-foo speed [2];
-kick1 speed [1 3 6 6];
-```
-**Note:** All destinations with the specified name will now run at that speed. For example:
+	- changes the amount of time that it takes to loop through all values in a pattern.
 
-```
-kick1 gain [0.5 1 0];
-kick1 filter [sine(3,1000)];
-kick1 speed [2];
-/* kick1 gain and kick1 filter are both running at speed 2 now
-because they share a destination "kick1"*/
-```
-
-There are 14 possible speeds to choose from, all of which are in 1:n or n:1 relations with the global transport tempo in Max. (So they all stay in sync with each other).
-
-Here is a mapping of possible `amt` values with their corresponding speeds in Max:
+There are 14 possible speeds to choose from, all of which are in 1:n or n:1 relations with the global transport tempo in Max. (So all the `facet` objects are synced with each other):
 
 -8 = completes pattern over 8 whole notes
 
