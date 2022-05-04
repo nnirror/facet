@@ -563,10 +563,8 @@ Facet can load audio samples as FacetPatterns and run arbitrary operations on th
 
 ### Speed
 
-- **speed** ( _amt_ )
-	- changes the amount of time that it takes to loop through all values in a pattern.
-
-There are 14 possible speeds to choose from, all of which are in 1:n or n:1 relations with the global transport tempo in Max. (So all the `facet` objects are synced with each other):
+- **speed** ( _FacetPattern_ )
+	- changes the amount of time that it takes to scan through every value in `FacetPattern`. There are 14 possible phasor speeds to choose from, all of which are in 1:n or n:1 relations with the global transport tempo in Max. (So all the `facet` objects are synced with each other):
 
 -8 = completes pattern over 8 whole notes
 
