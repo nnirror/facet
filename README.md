@@ -2,35 +2,69 @@
 
 ## Overview
 
-Facet is a flexible live coding system for controlling and applying synchronized algorithmic transformations to a Max patcher from a web browser. Any patcher can connect to Facet as long as you're running Max 8, and it can connect to Max for Live devices, too!
+Facet is a flexible, JavaScript-based live coding system for Max, using a code editor in the browser. You can generate and manipulate audio and control data in real-time with Facet.
 
-The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
+The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns of data. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
 
-Facet runs with minimal CPU overhead in Max, allows for sample-accurate patterning from 1 sample up to multiple seconds of audio, and can produce both precise and surprising patterns.
+Facet runs as a NodeJS server on your local machine, with minimal CPU overhead in Max. It allows for sample-accurate DSP from 1 sample up to multiple seconds of audio, and it can produce both precise and surprising patterns. It also can incorporate variables from your Max patcher as if they were global variables in your code, and you can attach these patterns to event "hooks" so they automatically rerun when a certain event occurs in Max.
 
 ## Getting started
 
-1. Download Node.js and npm: https://www.npmjs.com/get-npm
-2. In a terminal, while in the root of the facet repo, run `npm install`
-3. In a browser, open the index.html page. A blank code editor should appear.
+1. Make sure you a running Max 8.0+. Facet will not work with previous versions.
+2. Download Node.js and npm: https://www.npmjs.com/get-npm
+3. In a terminal, while in the root of the facet repo, run `npm install`
+4. In a browser, open the index.html page. A blank code editor should appear.
 
-Alternatively, you can install the Facet repo as part of your localhost web server, so that you don't need to navigate to index.html. For example, on my machine (OSX Catalina), I run Facet from here: http://127.0.0.1/~cella/facet/.
+Alternatively, you can install the Facet repo as part of your localhost web server, so that you don't need to navigate to the `index.html` page. For example, on my machine (OSX Catalina), I run Facet from http://127.0.0.1/~cella/facet/.
 
-4. In Max, add the Facet repo and all subdirectories to your file preferences.
-5. In Max, open `examples/facet_helloworld.maxpat`.
-6. Copy this command into the code editor in the browser: `new $('helloworld').sine(60,10).gain(0.1123);` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave.
+5. In Max, add the Facet repo and all subdirectories to your file preferences.
+6. In Max, open `examples/facet_helloworld.maxpat`.
+7. Copy this command into the code editor in the browser: `new $('helloworld').sine(60,10).gain(0.1123);` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave.
 
 ## Facet commands
 
-Facet commands are based entirely around JavaScript, using a custom class called a FacetPattern. In order to generate and modify a FacetPattern's data, you chain methods together just like you would with any JavaScript library. This overview video has more details on the FacetPattern class. Here's a summary:
+### Structure
 
-1. In order to be "findable" in Max, the FacetPattern object needs a name, which you supply upon construction: `new FacetPattern('name_here');`. In this case, you would need to create a corresponding `facet name_here` object in Max (along with a `facet_server` object in your patcher).
+Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. When constructed, you can give the FacetPattern a name, e.g.: `new FacetPattern('example');`. **A FacetPattern must have a name if you want to use it in Max.**
 
-2. Not all FacetPatterns need to be "findable" to Max. For example, if you are adding two FacetPatterns together, and you only care about the result sum, then you can leave empty the name of the second FacetPattern. Note how only the first FacetPattern has a name: `new FacetPattern('example_name').noise(128).add(new FacetPattern().sine(1,128));`
+The FacetPattern has no data when it initializes, so first, we need to generate and attach some data. (The `FacetPattern generators` section of the command reference below has a list of all generators).
 
-3. There are shorthands to improve syntax legibility. The rest of this document will use these shorthands.
-`new FacetPattern('abc') == $('abc') // shorthand for FacetPattern with a name`
-`new FacetPattern() == _;            // shorthand for FacetPattern with no name`
+`new FacetPattern('example').from([1,1,2,3]);`
+
+Next, translate that data somehow. (The `FacetPattern modulators` section of the command reference below has a list of all modulators).
+
+`new FacetPattern('example').from([1,1,2,3]).palindrome();`
+
+However, not all FacetPatterns need to be "findable" to Max. For example, if you are adding two FacetPatterns together, and you only care about the sum, then you can leave empty the name of the second FacetPattern. Note how only the first FacetPattern has a name: `new FacetPattern('example_name').noise(128).add(new FacetPattern().sine(1,128));`
+
+Finally, there are shorthands to improve syntax and legibility. The rest of this document will use these shorthands.
+`new FacetPattern('example') == $('example') // shorthand for FacetPattern with a name`
+`new FacetPattern() == _;                    // shorthand for FacetPattern with no name`
+
+[This overview video](https://youtu.be/lmOH-wJPfAk) has more details on writing commands.
+
+### How to run
+
+- Run command(s): `[ctrl + enter]`. All commands not separated by multiple newlines will run together.
+- Clear all `facet` objects in Max (effectively a global mute): `[ctrl + m]`
+
+## Connecting to Max
+
+In order to receive commands from the browser, all Max patches must have **one and only one** instance of a `facet_server` object. This will load an ExpressJS server via a node.script object behind the scenes. It will listen for HTTP POSTs, parse the commands, and  automatically update any `facet` objects in your patch with an identical name to the FacetPattern's name.
+
+Create a `facet` object in Max, matching the FacetPattern's name in your code:
+
+```
+// browser code
+new $('example').noise(10000).times(_.ramp(1,0,10000).log(100));
+
+// max object
+|=============|
+|facet example|
+|=============|
+```
+
+The `facet example` Max object will now be emitting a signal with whatever data you attach to it when you run commands. Voila!
 
 ### Variables
 
@@ -43,16 +77,6 @@ Both `mousex` and `mousey`, as floating-point number representations of your cur
 ```
 new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume every time the code runs
 ```
-
-## Creating your own patches
-
-All Max patches must have one **and only one** instance of a `facet_server` object. Then, simply create however many FacetPatterns you want via commands in the browser. All commands not separated by multiple spaces will run together. Each FacetPattern name needs to match a `facet` object in Max. For example, in the browser:
-
-`new $('abcdef').noise(10000).times(_.ramp(1,0,10000).log(100));`
-
-And in Max:
-
-`facet abcdef`
 
 ## Command reference
 
@@ -67,7 +91,7 @@ And in Max:
 	- example:
 		- `new $('example').sine(random(1,100,1),40) // a sine wave with 1 - 100 cycles`
 ---
-### Pattern modulators
+### FacetPattern modulators
 - **abs** ( )
 	- returns the absolute value of all numbers in the FacetPattern.
 	- example:
@@ -251,7 +275,7 @@ And in Max:
 - **rerun** ( _num_ )
 	- reruns the datum and operations that precede the rerun command, appending the results of each iteration to the FacetPattern. If the commands that are being rerun have elements of randomness in them, each iteration of rerun will be potentially unique. This is different than dup(), where each copy is identical.
 	- example:
-		- `new $('example').phasor(1,random(10,50,1))].rerun(random(1,6,1)); // run a phasor between 2 and 7 times total, where each cycle will have a random number between 10 and 50 values in its cycle.`
+		- `new $('example').phasor(1,random(10,50,1)).rerun(random(1,6,1)); // run a phasor between 2 and 7 times total, where each cycle will have a random number between 10 and 50 values in its cycle.`
 ---
 - **reverse** ( )
 	- returns the reversed FacetPattern.
@@ -261,7 +285,7 @@ And in Max:
 - **round** (  )
 	- rounds all values in the FacetPattern to an integer.
 	- example:
-		- `new $('example').from([0.1,0.5,0.9,1.1].round(); // 0 1 1 1`
+		- `new $('example').from([0.1,0.5,0.9,1.1]).round(); // 0 1 1 1`
 ---
 - **saheach** ( _n_ )
 	- samples and holds every `nth` value in the FacetPattern.
@@ -302,12 +326,12 @@ And in Max:
 - **slices** ( _num_slices_, _prob_, _commands_ )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together.
 	- example:
-		- `new $('example').ramp(0,1,16)].slices(16,1,'append(ramp(0.5,1,3))'); // ramps within ramps over 64 values`
+		- `new $('example').ramp(0,1,16).slices(16,1,'append(ramp(0.5,1,3))'); // ramps within ramps over 64 values`
 ---
 - **smooth** ( )
 	- interpolates each value so it falls exactly between the values that precede and follow it.
 	- example:
-		- `new $('example').noise(64)].smooth(); // less noisy`
+		- `new $('example').noise(64).smooth(); // less noisy`
 ---
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.
@@ -323,17 +347,17 @@ new $('example').drunk(16,0.1).sometimes(0.5,'sort().palindrome()');
 - **sort** ( )
 	- returns the FacetPattern ordered lowest to highest.
 	- example:
-		- `new $('example').sine(1,100)].sort(); // a nice smoothing envelope from 0 to 1`
+		- `new $('example').sine(1,100).sort(); // a nice smoothing envelope from 0 to 1`
 ---
 - **sticky** ( _amt_ )
 	- samples and holds values in the FacetPattern based on probability. `amt` (float 0-1) sets the likelihood of each value being sampled and held.
 	- example
-		- `new $('example').sine(1,1000)].sticky(0.98); // glitchy sine`
+		- `new $('example').sine(1,1000).sticky(0.98); // glitchy sine`
 ---
 - **subset** ( _percentage_ )
 	- returns a subset of the FacetPattern with `percentage`% values in it.
 	- example:
-		- `new $('example').phasor(1,50)].subset(0.3); // originally 50 values long, now 0.02 0.08 0.50 0.58 0.62 0.700 0.76 0.78 0.92`
+		- `new $('example').phasor(1,50).subset(0.3); // originally 50 values long, now 0.02 0.08 0.50 0.58 0.62 0.700 0.76 0.78 0.92`
 ---
 - **truncate** ( _length_ )
 	- truncates the FacetPattern so it's now `length` values long. If `length` is longer than the FacetPattern, return the whole FacetPattern.
@@ -355,7 +379,7 @@ new $('example').drunk(16,0.1).sometimes(0.5,'sort().palindrome()');
 - **add** ( _FacetPattern_ )
 	- adds the first FacetPattern and the second FacetPattern.
 	- example:
-		- `new $('example').sine(1,100)].add(data([0.5, 0.25, 0.1, 1]));`
+		- `new $('example').sine(1,100).add(data([0.5, 0.25, 0.1, 1]));`
 - **and** ( _FacetPattern_ )
 	- computes the logical AND of both FacetPattern, returning a 0 if one of the values is 0 and returning a 1 if both of the values are nonzero. If one FacetPattern is smaller, it will get scaled so both FacetPatterns equal each other in size prior to running the operation.
 	- example:
@@ -369,7 +393,7 @@ new $('example').drunk(16,0.1).sometimes(0.5,'sort().palindrome()');
 - **divide** ( _FacetPattern_ )
 	- divides the first FacetPattern by the second.
 	- example:
-		- `new $('example').sine(1,100)].divide(_.from([0.5,0.25,0.1,1]));`
+		- `new $('example').sine(1,100).divide(_.from([0.5,0.25,0.1,1]));`
 ---
 - **equals** ( _FacetPattern_ )
 	- computes the logical EQUALS of both FacetPattern, returning a 0 if the values don't equal each other and returning a 1 if they do. If one FacetPattern is smaller, it will get scaled so both FacetPatterns equal each other in size prior to running the operation.
@@ -412,7 +436,7 @@ new $('example').drunk(16,0.1).sometimes(0.5,'sort().palindrome()');
 	- example:
 		- `new $('example').sine(1,100).times(_.from([0.5,0.25,0.1,1]));`
 ---
-### Pattern generators
+### FacetPattern generators
 - **chaos** ( _length_, _x_, _y_)
 	- over _length_ iterations, computes `x = (x*x)+y`. Returns the series of all `x` values computed over time. NOTE: iterative functions can have both stable and unstable results ( hello... Mandelbrot set... :D ). However in a musical context, there is not much use for an unstable result which would endlessly grow to infinity. So this function clips between -1 and 1, and there is no danger of sending humongous numbers to Max. For stable results, the best x values are within -0.8 and 0.25, and the best y values are within -0.8 and 0.8.
 	- example:
@@ -477,9 +501,9 @@ new $('example').drunk(16,0.1).sometimes(0.5,'sort().palindrome()');
 ---
 ### Audio-rate operations
 
-Facet can load audio samples and run arbitrary operations on that data, but this comes with the caveat that Facet is limited to the CPU power of a single thread on your machine. One idea for future development of Facet is to make it so that each command spawns its own sub-process on the machine. I think this would make accessible more CPU power to multi-core machines. However, in the meantime, there is a CPU% indicator in the bottom window of the browser that can be helpful when running audio operations to see when you are running out of resources.
+Facet can load audio samples as FacetPatterns and run arbitrary operations on them, but this comes with the caveat that Facet is limited to the CPU power of a single thread on your machine. One idea for future development is to make it so that each command spawns its own sub-process on the machine. I think this would open up more CPU power on multi-core machines. However, in the meantime, there is a CPU% indicator in the bottom window of the browser that can be helpful when running audio operations to see when you are running out of resources.
 
- To prevent humongous computations, there are some guardrails for certain functions, but this software is still experimental, and it is possible that you accidentally run a command that uses too much computing power. (It happened to me every once in a while during development). In that case, you need to kill the node process running in the background. Find the `node` process ID (I use top) and run:
+ To prevent humongous computations, there are some guardrails for certain functions, but not too much. This software is experimental, and it is possible that you accidentally run a command that uses too much computing power. (It happened to me once in a while during development). In that case, you need to kill the node process running in the background. Find the `node` process ID (I use top) and run:
 
 `kill -9 pid_goes_here`
 
@@ -532,6 +556,8 @@ Facet can load audio samples and run arbitrary operations on that data, but this
 - **on** ( _hook_ )
 	- Reruns the command Whenever an event with name `hook` is sent as a message to the left inlet of the `facet_server` object in Max.
 	- By default, every 32nd note of the Max global transport there is a hook that you can automatically use via, e.g.: `.on(6)`. This would mean the command reruns on the 6th 32nd note of each whole note.
+	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
+	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
 
 ### Speed
 
