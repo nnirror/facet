@@ -2,7 +2,7 @@
 
 ## Overview
 
-Facet is a flexible, JavaScript-based live coding system for Max. Using a code editor in the browser, you can build and transmit commands to algorithmically generate and manipulate multiple channels of audio and control data in real-time.
+Facet is a JavaScript-based live coding system for Max. Using a code editor in the browser, you can build and transmit commands to algorithmically generate and manipulate multiple channels of audio and control data in real-time.
 
 The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns of data. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
 
