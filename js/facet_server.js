@@ -1,42 +1,222 @@
+const { exec } = require('child_process');
+const find = require('find-process');
 const path = require('path');
 const Max = require('max-api');
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
-var cors = require('cors');
+const cors = require('cors');
 const OSC = require('osc-js');
 const fs = require('fs');
 const WaveFile = require('wavefile').WaveFile;
-const facet = require('./facet.js');
-
+const wav = require('node-wav');
+const commentStripper = require('./lib/strip_comments.js');
+const FacetPattern = require('./FacetPattern.js')
+let $ = FacetPattern;
+let _ = new $();
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
 });
 osc.open();
+let utils = fs.readFileSync('utils.js', 'utf8', (err, data) => {return data});
 
-const handlers = {
-  bang: () => {
-    // runs on every bang of the facet_server metro, which itself can be configured via "metro speed"
-    let message = new OSC.Message('/eoc', 'bang');
-      osc.send(message);
-      // step through any facet.steps patterns, re-setting global variables with the same name for the next value in any of those pattenrs
-      for (var i = 0; i < facet.steps.length; i++) {
-        cur_step = facet.steps[i];
-        // increment step position
-        if ( cur_step.position < (cur_step.sequence.length - 1) ) {
-          cur_step.position++;
+module.exports = {
+  addAnyHooks: (fp, hook_mode, command) => {
+    if (!hook_mode) {
+      if ( fp.hooks.length > 0 ) {
+        for (var i = 0; i < fp.hooks.length; i++) {
+          if ( !module.exports.hooks[fp.hooks[i]] ) {
+            module.exports.hooks[fp.hooks[i]] = [];
+          }
+          module.exports.hooks[fp.hooks[i]].push(command);
+        }
+      }
+    }
+  },
+
+  checkIfOverloaded: () => {
+    exec(`ps -p ${module.exports.pid} -o %cpu`, (error, stdout, stderr) => {
+      let percent_cpu = Number(stdout.split('\n')[1].trim());
+      osc.send(new OSC.Message('/cpu', percent_cpu));
+      if ( percent_cpu > 70 ) {
+        module.exports.isOverloaded = true;
+      }
+      else {
+        module.exports.isOverloaded = false;
+      }
+    });
+  },
+
+  facetInit: () => {
+    return {};
+  },
+
+  facets: {},
+
+  getCommands: (user_input) => {
+     return user_input.trim().split(';').filter(Boolean);
+  },
+
+  // returns the maximum number of sub-steps in a given pattern.
+  // needed to calculate the resolution of a given row sequence when converting from
+  // multi-dimensional array to wavetable buffer
+  getMaximumSubSteps: (sequence) => {
+    return Array.isArray(sequence) ?
+      1 + Math.max(...sequence.map(module.exports.getMaximumSubSteps)) :
+      0;
+  },
+
+  handleReruns: (statement) => {
+   let rerun_regex = /.rerun\((.*?)\)/;
+   let rerun_out = '';
+   let statment_has_reruns = rerun_regex.test(statement);
+   let rerun_datum, remove_last_paren = false;
+   if ( statment_has_reruns ) {
+     // this code is a bit wonky and should be checked more thoroughly but
+     // seemingly handles the possibilities of
+     // both numbers or commands being the argument of .rerun(), as well as
+     // the possibility of commands continuing after .rerun(), or not.
+     // . e.g. ".rerun(2);" or ".rerun(random(1,5,1)).gain(3);"
+     let rerun_times = statement.split(rerun_regex)[1];
+     if ( isNaN(rerun_times) ) {
+       remove_last_paren = true;
+       rerun_times = rerun_times + ')';
+     }
+     rerun_times = Math.abs(Math.round(eval(utils + rerun_times)));
+     if (rerun_times < 1 ) {
+       return statement;
+     }
+     let rerun_split = statement.split(rerun_regex)[0];
+     let i = 0;
+     rerun_out = rerun_split;
+     while (i < rerun_times) {
+       rerun_out += '.append(' + rerun_split + ')';
+       i++;
+     }
+     // recurse until all instances of .rerun() have been replaced
+     rerun_out = module.exports.handleReruns(rerun_out);
+     return rerun_out;
+   }
+   else {
+     return statement;
+   }
+  },
+
+  hooks: {},
+
+  initFacetDestination: (facets, destination) => {
+    if ( !facets[destination] ) {
+      facets[destination] = {};
+    }
+    return facets;
+  },
+
+  setPID: () => {
+    find('port', 1123)
+      .then(function (list) {
+        if (!list.length) {
+          // do nothing
+        } else {
+          module.exports.pid = list[0].pid;
+        }
+      });
+  },
+
+  initStore: () => {
+    fs.writeFileSync('stored.json', '{}');
+  },
+
+  isOverloaded: false,
+
+  muteHooks: false,
+
+  pid: '',
+
+  removeTabsAndNewlines: (user_input) => {
+    user_input = user_input.replace(/\s\s+/g, '');
+    user_input = user_input.replace(/\'/g, '"');
+    user_input = user_input.replace(/;/g, ';\n');
+    return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
+  },
+
+  runCode: (code, hook_mode = false) => {
+    let commands = [], destination, property, statement, ops_string,
+    operations = [], max_sub_steps, flat_sequence, sequence_msg, current_command;
+    // parse user input into individual operations on data.
+    // run those operations, scale and flatten the resulting array,
+    // and send that data into Max so it can go in a buffer wavetable
+    user_input = commentStripper.stripComments(code);
+    commands = module.exports.getCommands(code);
+    if (commands[0] == 'mute()') {
+      Max.outlet(`global mute`);
+    }
+    else {
+      Object.values(commands).forEach(command => {
+        command = module.exports.removeTabsAndNewlines(command);
+        command = module.exports.handleReruns(command);
+        let fp = eval(utils + command);
+        if ( fp.skipped === true || typeof fp == 'undefined' ) {
+          // do nothing
         }
         else {
-          cur_step.position = 0;
+          module.exports.initFacetDestination(module.exports.facets, fp.name);
+          module.exports.facets[fp.name]['data'] = fp.data;
+          module.exports.addAnyHooks(fp, hook_mode, command);
+          module.exports.storeAnyPatterns(fp);
+          for (const [key, value] of Object.entries(module.exports.facets)) {
+            for (const [k, facet_data] of Object.entries(value)) {
+              let wav = new WaveFile();
+              let data;
+              // first check if a speed file exists - if not, create it
+              wav.fromScratch(1, 44100, '32f', fp.phasor_speed);
+              fs.writeFile(`../tmp/${key}_speed.wav`, wav.toBuffer(),(err) => {
+                if (err) throw err;
+                Max.outlet(`speed ${key}`);
+              });
+              // now create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
+              for (var i = 0; i < facet_data.length; i++) {
+                // convert every number in the wav buffer to 32-bit floating point. these numbers are allowed to be outside the [1.0 - -1.0] boundary
+                facet_data[i] = Math.fround(parseFloat(facet_data[i]));
+              }
+              wav.fromScratch(1, 44100, '32f', facet_data);
+              // store the wav in /tmp/ for access in Max
+              fs.writeFile(`../tmp/${key}_${k}.wav`, wav.toBuffer(),(err) => {
+                if (err) throw err;
+                // file written successfully - send an update/speed command out so the facet_param object can read the new data for this dest/prop
+                Max.outlet(`speed ${fp.name}`);
+                Max.outlet(`update ${key}_data`);
+              });
+            }
+          }
         }
-        // global scope for the step variable
-        global[cur_step.name] = cur_step.sequence[cur_step.position];
-      }
+      });
+    }
+    module.exports.facets = {};
   },
+
+  storeAnyPatterns: (fp) => {
+    if ( fp.store.length > 0 ) {
+      for (var i = 0; i < fp.store.length; i++) {
+        module.exports.stored[fp.store[i]] = fp.data;
+        fs.writeFileSync('stored.json', JSON.stringify(module.exports.stored));
+      }
+    }
+  },
+
+  stored: {}
+}
+
+const handlers = {
   hook: (...args) => {
-    let message = new OSC.Message('/hook', args[0]);
-    osc.send(message);
+    if (!module.exports.isOverloaded===true) {
+      if ( module.exports.hooks[args[0]] && module.exports.muteHooks == false ) {
+        for (var i = 0; i < module.exports.hooks[args[0]].length; i++) {
+          module.exports.runCode(module.exports.hooks[args[0]][i],true);
+          osc.send(new OSC.Message('/hook', module.exports.hooks[args[0]][i]));
+        }
+      }
+    }
   },
   set: (...args) => {
     global[args[0]] = args[1];
@@ -52,6 +232,8 @@ const handlers = {
           });
         }
       });
+      // clear any stored patterns
+      module.exports.initStore();
   }
 };
 
@@ -60,95 +242,59 @@ Max.addHandlers(handlers);
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
 
-facet.facetInit();
+module.exports.facetInit();
+module.exports.initStore();
 
 // make the ../tmp/ directory if it doesn't exist
 if ( !fs.existsSync('../tmp/')) {
     fs.mkdirSync('../tmp/');
 };
 
-app.post('/', function (req, res) {
-// loop through each command in req.body. create a new buffer object in max if it doesnt exist, with an undercore between the vars
-  let commands = [], destination, property, statement, datum, ops_string,
-  operations = [], max_sub_steps, flat_sequence, sequence_msg, mults = {}, current_command;
-  // parse user input into individual operations on data.
-  // run those operations, scale and flatten the resulting array,
-  // and send that data into Max so it can go in a buffer wavetable
+// receive and run commands via HTTP POST
+app.post('/', (req, res) => {
   try {
-    user_input = facet.stripComments(req.body.code);
-    commands = facet.getCommands(req.body.code);
-    if (commands[0] == 'mute()') {
-      Max.outlet(`global mute`);
-    }
-    else {
-      Object.values(commands).forEach(command => {
-        current_command = facet.removeTabsAndNewlines(command);
-        command = facet.removeTabsAndNewlines(command);
-        destination = facet.getDestination(command);
-        property = facet.getProperty(command, destination);
-        statement = facet.getStatement(command, property);
-        statement = facet.handleReruns(statement);
-        // this is where i would need to refactor the actual "parser", in the stack of functions that getDatum
-        // and processCode currently run. Instead i shold take a step back and map out all the things before starting
-        // so i can make it intelligible
-        datum = facet.getDatum(statement);
-        datum = facet.processCode(statement, datum);
-        if ( datum == 'SKIP' ) {
-          // do nothing - don't add the command to the facets object
-        }
-        else {
-          max_sub_steps = facet.getMaximumSubSteps(datum) - 1;
-          flat_sequence = facet.flattenSequence(datum, max_sub_steps);
-          facet.initFacetDestination(facet.facets, destination);
-          facet.facets[destination][property] = facet.convertFlatSequenceToMessage(flat_sequence);
-          facet.facets = facet.handleMultConnections(facet.facets, mults);
-
-          for (const [key, value] of Object.entries(facet.facets)) {
-            for (const [k, facet_data] of Object.entries(value)) {
-              let wav = new WaveFile();
-              let data;
-              // first check if a speed file exists - if not, create it
-              if (fs.existsSync(`../tmp/${key}_speed.wav`)) {
-                // do nothing
-              } else {
-                // create the speed file create it as buffer with 1 value in it: 1.
-                data = [Math.fround(parseFloat(1))];
-                wav.fromScratch(1, 44100, '32f', data);
-                fs.writeFile(`../tmp/${key}_speed.wav`, wav.toBuffer(),(err) => {
-                  if (err) throw err;
-                  Max.outlet(`speed ${key}`);
-                });
-              }
-              // now create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
-              data = facet_data.split(' ');
-              for (var i = 0; i < data.length; i++) {
-                // convert every number in the wav buffer to 32-bit floating point. these numbers are allowed to be outside the [1.0 - -1.0] boundary
-                data[i] = Math.fround(parseFloat(data[i]));
-              }
-              wav.fromScratch(1, 44100, '32f', data);
-              // store the wav in /tmp/ for access in Max
-              fs.writeFile(`../tmp/${key}_${k}.wav`, wav.toBuffer(),(err) => {
-                if (err) throw err;
-                // file written successfully - send an update/speed command out so the facet_param object can read the new data for this dest/prop
-                if ( k === 'speed' ) {
-                  Max.outlet(`speed ${key}`);
-                }
-                else {
-                  Max.outlet(`update ${key}_${k}`);
-                }
-              });
-            }
-          }
-        }
-      });
-    }
-    facet.facets = {};
+    module.exports.runCode(req.body.code);
+    res.send({
+      success: true
+    });
   } catch (e) {
     res.send({
-      error: `${e}, command: ${current_command}`
+      status: 400,
+      error: `${e}, command: ${req.body.code}`
     });
   }
+});
+
+// global mute request via ctrl+m in the browser
+app.post('/mute', (req, res) => {
+  Max.outlet(`global mute`);
   res.sendStatus(200);
 });
 
+// mute all hooks request via ctrl+f in the browser
+app.post('/hooks/mute', (req, res) => {
+  if ( module.exports.muteHooks == true ) {
+    module.exports.muteHooks = false;
+  }
+  else {
+    module.exports.muteHooks = true;
+  }
+  res.send({
+    muted: module.exports.muteHooks
+  });
+});
+
+// clear all hooks request via ctrl+c in the browser
+app.post('/hooks/clear', (req, res) => {
+  module.exports.hooks = {};
+  res.send({
+    cleared: true
+  });
+});
+
+// run the server
 app.listen(1123);
+// find its PID
+module.exports.setPID();
+// check that every 500ms it's not overloaded - so that superfluous hook events can be prevented from stacking up
+setInterval(module.exports.checkIfOverloaded, 500);
