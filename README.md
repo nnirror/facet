@@ -70,7 +70,7 @@ The `facet example` Max object will now be emitting a signal with whatever data 
 
 ### Variables
 
-You can send variables from Max into Facet, making it possible to run code with variables that you can control externally. The right inlet of the `facet_server` Max object will take custom variables in this format: `foo $1`.
+You can send variables from Max into Facet to incorporate in your code. The right inlet of the `facet_server` Max object will take custom variables in this format: `foo $1`.
 
 #### mousex / mousey
 
