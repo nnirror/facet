@@ -545,8 +545,8 @@ Facet can load audio samples as FacetPatterns and run arbitrary operations on th
 - **harmonics** ( _FacetPattern_, _amplitude=0.9_  )
 	- superimposes `FacetPattern.length` copies of the input FacetPattern onto the output. Each number in `FacetPattern` corresponds to the frequency of the harmonic, which is a copy of the input signal playing at a different speed. Each harmonic _n_ in the output sequence is slightly lower in level, by 0.9^_n_. Allows for all sorts of crazy sample-accurate polyphony.
 	- example:
-		- `new $('example').randsamp().harmonics(noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
-		- `new $('example').randsamp().harmonics(map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)) // add 3 harmonics at geometric ratios`
+		- `new $('example').randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
+		- `new $('example').randsamp().harmonics(_.map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)) // add 3 harmonics at geometric ratios`
 - **sample** ( _filename_ )
 	- loads a wav file from the `../samples/` directory into memory. You can specify subdirectories of `../samples/`.
 	- example:
