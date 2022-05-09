@@ -9,3 +9,6 @@ function random(min = 0, max = 1, int_mode = 0) {
 function choose (list) {
   return list[Math.floor(Math.random()*list.length)];
 }
+
+var $ = FacetPattern;
+var _ = new $();

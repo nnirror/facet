@@ -9,6 +9,7 @@ class FacetPattern {
   constructor (name) {
     this.name = name;
     this.data = [];
+    this.history = '';
     this.hooks = [];
     this.phasor_speed = [1];
     this.skipped = false;
@@ -65,7 +66,7 @@ class FacetPattern {
       if ( d > 1 ) {
         d = 1;
       }
-      drunk_sequence[i] = d.toFixed(4);
+      drunk_sequence[i] = d;
     }
     this.data = drunk_sequence;
     return this;
@@ -174,7 +175,7 @@ class FacetPattern {
     for (var a = 0; a < periods; a++) {
       for (var i = 0; i < length; i++) {
         let num_scaled = (Math.PI * 2) * (i / length);
-        sine_sequence[(a * length) + i] = Number(Math.sin(num_scaled).toFixed(4));
+        sine_sequence[(a * length) + i] = Number(Math.sin(num_scaled));
       }
     }
     // scale sine from 0 to 1 and make the first sample be 0
@@ -211,7 +212,7 @@ class FacetPattern {
         if ( i / length > 0.5 ) {
           num_scaled = 1;
         }
-        square_sequence[(a * length) + i] = Number(Math.sin(num_scaled).toFixed(4));
+        square_sequence[(a * length) + i] = Number(Math.sin(num_scaled));
       }
     }
     this.data = square_sequence;
@@ -225,7 +226,7 @@ class FacetPattern {
     // create a ramp from 0 to 1
     for (var i = 0; i <= (length - 1); i++) {
       let num_scaled = i / (length - 1);
-      tri_sequence[i] = Number(num_scaled.toFixed(4));
+      tri_sequence[i] = Number(num_scaled);
     }
     // palindrome the ramp to create a triangle, then reduce it to the specified length
     this.data = tri_sequence;
@@ -421,7 +422,7 @@ class FacetPattern {
     let dist_sequence = [];
     let average = this.data.reduce((a, b) => a + b) / this.data.length;
     for (const [key, step] of Object.entries(this.data)) {
-      dist_sequence[key] = Number((step - average).toFixed(4));
+      dist_sequence[key] = Number((step - average));
     }
     this.data = dist_sequence;
     return this;
@@ -742,7 +743,7 @@ class FacetPattern {
           if ( Math.random() < 0.5 ) {
             step_distance *= -1;
           }
-          jammed_sequence[key] = Number((Number(step) + Number(step_distance)).toFixed(4));
+          jammed_sequence[key] = Number((Number(step) + Number(step_distance)));
         }
         else {
           // unchanged
@@ -781,23 +782,21 @@ class FacetPattern {
     return this;
   }
 
-  map (new_values) {
-    if ( !this.isFacetPattern(new_values) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof new_values}`;
+  map (fp) {
+    if ( !this.isFacetPattern(fp) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof fp}`;
     }
-    let same_size_arrays = this.makePatternsTheSameSize(this, new_values);
+    // safeguard against mapping more than 48k samples to another pattern.
+    // otherwise it can be very cpu expensive!
+    this.reduce(48000);
+    let same_size_arrays = this.makePatternsTheSameSize(this, fp);
     let sequence = same_size_arrays[0];
-    same_size_arrays = same_size_arrays[1];
+    let new_values = same_size_arrays[1];
     let mapped_sequence = [];
     for (const [key, step] of Object.entries(sequence.data)) {
-      if ( Array.isArray(step) ) {
-        mapped_sequence[key] = module.exports.map(step, new_values);
-      }
-      else {
-        mapped_sequence[key] = new_values.data.reduce((a, b) => {
-          return Math.abs(b - step) < Math.abs(a - step) ? b : a;
-        });
-      }
+      mapped_sequence[key] = new_values.data.reduce((a, b) => {
+        return Math.abs(b - step) < Math.abs(a - step) ? b : a;
+      });
     }
     this.data = mapped_sequence;
     return this;
@@ -1051,7 +1050,7 @@ class FacetPattern {
     gain = Number(gain);
     let saturated_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
-      saturated_sequence[key] = Math.tanh(step * gain).toFixed(4);;
+      saturated_sequence[key] = Math.tanh(step * gain);
     }
     this.data = saturated_sequence;
     return this;
@@ -1402,7 +1401,7 @@ class FacetPattern {
     for (const [key, step] of Object.entries(this.data)) {
       if ( Math.random() < prob) {
         // changed
-        let step_distance = parseInt((Math.random() * amt).toFixed());
+        let step_distance = parseInt((Math.random() * amt));
         if ( step_distance < 1 ) {
           step_distance = 1;
         }
@@ -1671,8 +1670,8 @@ class FacetPattern {
     if ( times == 0 ) {
       return this;
     }
-    else if ( times > 32 ) {
-      times = 32;
+    else if ( times > 128 ) {
+      times = 128;
     }
     for (var i = 0; i < times; i++) {
       if ( Math.random() < prob ) {

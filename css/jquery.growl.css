@@ -7,7 +7,7 @@
   position: fixed; }
 
 #growls-default {
-  top: 10px;
+  bottom: 10px;
   right: 10px; }
 #growls-tl {
   top: 10px;

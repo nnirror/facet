@@ -86,7 +86,7 @@ new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume
 - **choose** ( _pattern_ )
 	- returns a randomly selected value from a supplied array.
 	- example:
-		- `new $('example').sine(1,40).rerun(choose([1,2,3])); // sine wave with either 2, 3, or 4 cycles`
+		- `new $('example').sine(choose([2,3,4]),40); // sine wave with either 2, 3, or 4 cycles`
 ---
 - **random** ( _min_ = 0, _max_ = 1, _int_mode_ = 0 )
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
@@ -274,11 +274,6 @@ new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume
 	- example:
 		- `new $('example').from([1,2,3,4]).reduce(2); // 1 3`
 ---
-- **rerun** ( _num_ )
-	- reruns the datum and operations that precede the rerun command, appending the results of each iteration to the FacetPattern. If the commands that are being rerun have elements of randomness in them, each iteration of rerun will be potentially unique. This is different than dup(), where each copy is identical.
-	- example:
-		- `new $('example').phasor(1,random(10,50,1)).rerun(random(1,6,1)); // run a phasor between 2 and 7 times total, where each cycle will have a random number between 10 and 50 values in its cycle.`
----
 - **reverse** ( )
 	- returns the reversed FacetPattern.
 	- example:
@@ -337,8 +332,6 @@ new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume
 ---
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.
-
-**Note:** currently, `rerun` cannot be used inside a sometimes operation.
 ```
 new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,'reverse()');
 // half the time, pattern goes up; half the time, it goes down

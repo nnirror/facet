@@ -12,8 +12,6 @@ const WaveFile = require('wavefile').WaveFile;
 const wav = require('node-wav');
 const commentStripper = require('./lib/strip_comments.js');
 const FacetPattern = require('./FacetPattern.js')
-let $ = FacetPattern;
-let _ = new $();
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
@@ -67,42 +65,6 @@ module.exports = {
       0;
   },
 
-  handleReruns: (statement) => {
-   let rerun_regex = /.rerun\((.*?)\)/;
-   let rerun_out = '';
-   let statment_has_reruns = rerun_regex.test(statement);
-   let rerun_datum, remove_last_paren = false;
-   if ( statment_has_reruns ) {
-     // this code is a bit wonky and should be checked more thoroughly but
-     // seemingly handles the possibilities of
-     // both numbers or commands being the argument of .rerun(), as well as
-     // the possibility of commands continuing after .rerun(), or not.
-     // . e.g. ".rerun(2);" or ".rerun(random(1,5,1)).gain(3);"
-     let rerun_times = statement.split(rerun_regex)[1];
-     if ( isNaN(rerun_times) ) {
-       remove_last_paren = true;
-       rerun_times = rerun_times + ')';
-     }
-     rerun_times = Math.abs(Math.round(eval(utils + rerun_times)));
-     if (rerun_times < 1 ) {
-       return statement;
-     }
-     let rerun_split = statement.split(rerun_regex)[0];
-     let i = 0;
-     rerun_out = rerun_split;
-     while (i < rerun_times) {
-       rerun_out += '.append(' + rerun_split + ')';
-       i++;
-     }
-     // recurse until all instances of .rerun() have been replaced
-     rerun_out = module.exports.handleReruns(rerun_out);
-     return rerun_out;
-   }
-   else {
-     return statement;
-   }
-  },
-
   hooks: {},
 
   initFacetDestination: (facets, destination) => {
@@ -153,16 +115,16 @@ module.exports = {
     }
     else {
       Object.values(commands).forEach(command => {
+        let original_command = command;
         command = module.exports.removeTabsAndNewlines(command);
-        command = module.exports.handleReruns(command);
         let fp = eval(utils + command);
+        module.exports.addAnyHooks(fp, hook_mode, original_command);
         if ( fp.skipped === true || typeof fp == 'undefined' ) {
           // do nothing
         }
         else {
           module.exports.initFacetDestination(module.exports.facets, fp.name);
           module.exports.facets[fp.name]['data'] = fp.data;
-          module.exports.addAnyHooks(fp, hook_mode, command);
           module.exports.storeAnyPatterns(fp);
           for (const [key, value] of Object.entries(module.exports.facets)) {
             for (const [k, facet_data] of Object.entries(value)) {
