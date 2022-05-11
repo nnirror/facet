@@ -215,6 +215,11 @@ new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume
 	- example:
 		- `new $('example').ramp(1,0,1000).log(100); // a logarithmic curve from 1 to 0`
 ---
+- **lpf** ( _cutoff_ )
+	- applies a simple low pass filter to the FacetPattern.
+	- example:
+		- `new $('example').noise(44100).lpf(random(1,1000)); // low-passed noise`
+---
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.
 	- example:

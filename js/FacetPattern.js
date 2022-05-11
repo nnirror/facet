@@ -764,6 +764,28 @@ class FacetPattern {
       return this;
   }
 
+  lpf (cutoff) {
+    // copy-modded from: https://github.com/rochars/low-pass-filter/blob/master/index.js
+    let numChannels = 1;
+    let rc = 1.0 / (cutoff * 2 * Math.PI);
+    let dt = 1.0 / 44100;
+    let alpha = dt / (rc + dt);
+    let last_val = [];
+    let offset;
+    for (let i=0; i<numChannels; i++) {
+        last_val[i] = this.data[i];
+    }
+    for (let i=0; i<this.data.length; i++) {
+      for (let j=0; j< numChannels; j++) {
+          offset = (i * numChannels) + j;
+          last_val[j] =
+              last_val[j] + (alpha * (this.data[offset] - last_val[j]));
+          this.data[offset] = last_val[j];
+      }
+    }
+    return this;
+  }
+
   lt (amt) {
     let lt_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
