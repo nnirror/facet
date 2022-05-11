@@ -80,6 +80,10 @@ Both `mousex` and `mousey`, as floating-point number representations of your cur
 new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume every time the code runs
 ```
 
+## NFTs
+
+Anyone who creates a NFT to sell media created with Facet will be cursed.
+
 ## Command reference
 
 ### Single number generators
