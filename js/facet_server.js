@@ -56,15 +56,6 @@ module.exports = {
      return user_input.trim().split(';').filter(Boolean);
   },
 
-  // returns the maximum number of sub-steps in a given pattern.
-  // needed to calculate the resolution of a given row sequence when converting from
-  // multi-dimensional array to wavetable buffer
-  getMaximumSubSteps: (sequence) => {
-    return Array.isArray(sequence) ?
-      1 + Math.max(...sequence.map(module.exports.getMaximumSubSteps)) :
-      0;
-  },
-
   hooks: {},
 
   initFacetDestination: (facets, destination) => {
@@ -103,13 +94,11 @@ module.exports = {
   },
 
   runCode: (code, hook_mode = false) => {
-    let commands = [], destination, property, statement, ops_string,
-    operations = [], max_sub_steps, flat_sequence, sequence_msg, current_command;
     // parse user input into individual operations on data.
     // run those operations, scale and flatten the resulting array,
     // and send that data into Max so it can go in a buffer wavetable
     user_input = commentStripper.stripComments(code);
-    commands = module.exports.getCommands(code);
+    let commands = module.exports.getCommands(code);
     if (commands[0] == 'mute()') {
       Max.outlet(`global mute`);
     }
@@ -123,34 +112,20 @@ module.exports = {
           // do nothing
         }
         else {
-          module.exports.initFacetDestination(module.exports.facets, fp.name);
-          module.exports.facets[fp.name]['data'] = fp.data;
           module.exports.storeAnyPatterns(fp);
-          for (const [key, value] of Object.entries(module.exports.facets)) {
-            for (const [k, facet_data] of Object.entries(value)) {
-              let wav = new WaveFile();
-              let data;
-              // first check if a speed file exists - if not, create it
-              wav.fromScratch(1, 44100, '32f', fp.phasor_speed);
-              fs.writeFile(`../tmp/${key}_speed.wav`, wav.toBuffer(),(err) => {
-                if (err) throw err;
-                Max.outlet(`speed ${key}`);
-              });
-              // now create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
-              for (var i = 0; i < facet_data.length; i++) {
-                // convert every number in the wav buffer to 32-bit floating point. these numbers are allowed to be outside the [1.0 - -1.0] boundary
-                facet_data[i] = Math.fround(parseFloat(facet_data[i]));
-              }
-              wav.fromScratch(1, 44100, '32f', facet_data);
-              // store the wav in /tmp/ for access in Max
-              fs.writeFile(`../tmp/${key}_${k}.wav`, wav.toBuffer(),(err) => {
-                if (err) throw err;
-                // file written successfully - send an update/speed command out so the facet_param object can read the new data for this dest/prop
-                Max.outlet(`speed ${fp.name}`);
-                Max.outlet(`update ${key}_data`);
-              });
-            }
-          }
+          let s_wav = new WaveFile();
+          let a_wav = new WaveFile();
+          // first check if a speed file exists - if not, create it
+          s_wav.fromScratch(1, 44100, '32f', fp.phasor_speed);
+          fs.writeFile(`../tmp/${fp.name}_speed.wav`, s_wav.toBuffer(),(err) => {});
+          // now create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
+          a_wav.fromScratch(1, 44100, '32f', fp.data);
+          // store the wav in /tmp/ for access in Max
+          fs.writeFile(`../tmp/${fp.name}_data.wav`, a_wav.toBuffer(),(err) => {
+            // file written successfully - send an update/speed command out so the facet_param object can read the new data for this dest/prop
+            Max.outlet(`update ${fp.name}_data`);
+            Max.outlet(`speed ${fp.name}`);
+          });
         }
       });
     }
