@@ -46,24 +46,11 @@ module.exports = {
     });
   },
 
-  facetInit: () => {
-    return {};
-  },
-
-  facets: {},
-
   getCommands: (user_input) => {
      return user_input.trim().split(';').filter(Boolean);
   },
 
   hooks: {},
-
-  initFacetDestination: (facets, destination) => {
-    if ( !facets[destination] ) {
-      facets[destination] = {};
-    }
-    return facets;
-  },
 
   setPID: () => {
     find('port', 1123)
@@ -129,7 +116,6 @@ module.exports = {
         }
       });
     }
-    module.exports.facets = {};
   },
 
   storeAnyPatterns: (fp) => {
@@ -179,7 +165,6 @@ Max.addHandlers(handlers);
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
 
-module.exports.facetInit();
 module.exports.initStore();
 
 // make the ../tmp/ directory if it doesn't exist
