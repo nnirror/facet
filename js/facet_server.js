@@ -95,7 +95,7 @@ module.exports = {
         command = module.exports.removeTabsAndNewlines(command);
         let fp = eval(utils + command);
         module.exports.addAnyHooks(fp, hook_mode, original_command);
-        if ( fp.skipped === true || typeof fp == 'undefined' ) {
+        if ( fp.skipped === true ) {
           // do nothing
         }
         else {

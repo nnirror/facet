@@ -2,7 +2,7 @@
 const fs = require('fs');
 const wav = require('node-wav');
 const curve_calc = require('./lib/curve_calc.js');
-const fftjs = require('./lib/fft.js');
+const FFT = require('./lib/fft.js');
 const http = require('http');
 
 class FacetPattern {
@@ -382,8 +382,11 @@ class FacetPattern {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
-    var al = this.data.length;
-    var wl = sequence2.data.length;
+    this.reduce(88200);
+    sequence2.reduce(88200);
+    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
+    var al = same_size_arrays[0].data.length;
+    var wl = same_size_arrays[1].data.length;
     var offset = ~~(wl / 2);
     var output = new Array(al);
     for (var i = 0; i < al; i++) {
@@ -391,7 +394,7 @@ class FacetPattern {
       var kmax = (i + offset < al) ? wl - 1 : al - 1 - i + offset;
       output[i] = 0;
       for (var k = kmin; k <= kmax; k++)
-        output[i] += this.data[i - offset + k] * sequence2.data[k];
+        output[i] += same_size_arrays[0].data[i - offset + k] * same_size_arrays[1].data[k];
     }
     this.data = output;
     return this;
@@ -499,27 +502,12 @@ class FacetPattern {
   }
 
   fft () {
-    let fft_sequence = [];
-    let complex_fft_sequence = [];
-    let next_power_of_2 = this.nextPowerOf2(this.data.length);
-    let power2_sequence = new Array(next_power_of_2);
-    for (var i = 0; i < power2_sequence.length; i++) {
-      if ( this.data[i] ) {
-        power2_sequence[i] = this.data[i];
-      }
-      else {
-        power2_sequence[i] = 0;
-      }
-    }
-    complex_fft_sequence = fftjs.cfft(power2_sequence);
-    for (var i = 0; i < complex_fft_sequence.length; i++) {
-      let n = complex_fft_sequence[i].re;
-      if ( isNaN(n)) {
-        n = 0;
-      }
-      fft_sequence.push(n);
-    }
-    this.data = fft_sequence;
+    this.reduce(this.prevPowerOf2(this.data.length));
+    let f = new FFT(this.data.length);
+    let out = f.createComplexArray();
+    f.realTransform(out, this.data);
+    this.data = out;
+    this.reduce(this.data.length * 0.5);
     return this;
   }
 
@@ -661,6 +649,17 @@ class FacetPattern {
       }
     }
     this.data = harmonics_sequence;
+    return this;
+  }
+
+  ifft () {
+    this.reduce(this.prevPowerOf2(this.data.length));
+    let f = new FFT(this.data.length);
+    let data = f.toComplexArray(this.data);
+    let out = f.createComplexArray();
+    f.inverseTransform(out, data);
+    this.data = out;
+    this.reduce(this.data.length * 0.5);
     return this;
   }
 
@@ -1258,7 +1257,6 @@ class FacetPattern {
       }
     }
     this.data = slewed_sequence;
-    this.reduce(initial_size);
     return this;
   }
 
@@ -1695,10 +1693,14 @@ class FacetPattern {
     else if ( times > 128 ) {
       times = 128;
     }
+    if ( typeof command != 'function' ) {
+      throw `3rd argument must be a function, type found: ${typeof command}`;
+    }
+    command = command.toString();
+    command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     for (var i = 0; i < times; i++) {
       if ( Math.random() < prob ) {
-        let current_iteration = eval(this.utils + ' this.' + command);
-        this.data = current_iteration.data;
+        eval(this.utils + command);
       }
     }
     return this;
@@ -1721,9 +1723,6 @@ class FacetPattern {
     let foreach_sequence = [];
     if ( num_slices == 0 ) {
       return sequence;
-    }
-    else if ( num_slices > 32 ) {
-      num_slices = 32;
     }
     let calc_slice_size = Math.round(this.data.length / num_slices);
     let slice_start_pos, slice_end_pos;
@@ -1815,8 +1814,8 @@ class FacetPattern {
     return [sequence1, sequence2];
   }
 
-  nextPowerOf2 (n) {
-      var count = 0;
+  prevPowerOf2 (n) {
+      var count = -1;
       if ( n && ! ( n & ( n - 1 ))) {
         return n;
       }

@@ -162,16 +162,20 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 	- example:
 		- `new $('example').phasor(1,1000).fracture(100); // the phasor has shattered into 100 pieces!`
 ---
+- **ifft** ( )
+	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
+	- example:
+		- `_.randsamp().set('p');new $('a').iter(6,1,()=>{this.get('p').fft().shift(0.4).ifft().normalize().set('p')}); // iterative bin shifting`
+---
 - **invert** ( )
 	- computes the `minimum` and `maximum` values in the FacetPattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
 	- example:
 		- `new $('example').from([0,0.1,0.5,0.667,1]).invert(); // 1 0.9 0.5 0.333 0`
 ---
-- **iter** ( _num_times_, _prob_, _commands_ )
+- **iter** ( _num_times_, _prob_, _commands_ = function() )
 	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
 	- example:
-		- `new $('example').randsamp().iter(6,1,'comb(random(1,200))'); // six random comb filters in series`
-		- `new $('example').randsamp().iter(6,0.5,'comb(random(1,200))'); // anywhere from 0 - 6 comb filters in series`
+		- `new $('a').randsamp().iter(3,1,()=>{this.echo(random(1,30,1),1.2)}).scale(-1,1).lpf(2400); // dubby feedback`
 ---
 - **fade** ( )
 	- applies a crossfade window to the FacetPattern, so the beginning and end are faded out.
