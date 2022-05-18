@@ -505,9 +505,9 @@ class FacetPattern {
     this.reduce(this.prevPowerOf2(this.data.length));
     let f = new FFT(this.data.length);
     let out = f.createComplexArray();
-    f.realTransform(out, this.data);
-    this.data = out;
-    this.reduce(this.data.length * 0.5);
+    let data = f.toComplexArray(this.data);
+    f.transform(out, data);
+    this.data = f.fromComplexArray(out);
     return this;
   }
 
@@ -658,8 +658,7 @@ class FacetPattern {
     let data = f.toComplexArray(this.data);
     let out = f.createComplexArray();
     f.inverseTransform(out, data);
-    this.data = out;
-    this.reduce(this.data.length * 0.5);
+    this.data = f.fromComplexArray(out);
     return this;
   }
 
@@ -1724,6 +1723,12 @@ class FacetPattern {
     if ( num_slices == 0 ) {
       return sequence;
     }
+    if ( typeof command != 'function' ) {
+      throw `3rd argument must be a function, type found: ${typeof command}`;
+    }
+    command = command.toString();
+    command = command.replace(/this./g, 'current_slice.');
+    command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     let calc_slice_size = Math.round(this.data.length / num_slices);
     let slice_start_pos, slice_end_pos;
     let current_slice;
@@ -1732,7 +1737,7 @@ class FacetPattern {
       slice_end_pos = slice_start_pos + calc_slice_size;
       current_slice = new FacetPattern().from(this.data).range(slice_start_pos/this.data.length, slice_end_pos/this.data.length);
       if ( Math.random() < prob ) {
-        current_slice = eval(this.utils + 'current_slice.' + command);
+        current_slice = eval(this.utils + command);
       }
       out.push(current_slice.data);
     }

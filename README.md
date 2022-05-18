@@ -165,7 +165,7 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 - **ifft** ( )
 	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
 	- example:
-		- `_.randsamp().set('p');new $('a').iter(6,1,()=>{this.get('p').fft().shift(0.4).ifft().normalize().set('p')}); // iterative bin shifting`
+		- `_.randsamp().set('p');new $('example').iter(6,1,()=>{this.get('p').fft().shift(0.4).ifft().normalize().set('p')}); // iterative bin shifting`
 ---
 - **invert** ( )
 	- computes the `minimum` and `maximum` values in the FacetPattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
@@ -175,7 +175,7 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 - **iter** ( _num_times_, _prob_, _commands_ = function() )
 	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
 	- example:
-		- `new $('a').randsamp().iter(3,1,()=>{this.echo(random(1,30,1),1.2)}).scale(-1,1).lpf(2400); // dubby feedback`
+		- `new $('example').randsamp().iter(3,1,()=>{this.echo(random(1,30,1),1.2)}).scale(-1,1).lpf(2400); // dubby feedback`
 ---
 - **fade** ( )
 	- applies a crossfade window to the FacetPattern, so the beginning and end are faded out.
@@ -333,10 +333,10 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 	- example:
 		- `new $('example').from([0,0.5,0.9,0.1]).slew(25,0,1) // the first three numbers will jump immediately because upwards slew is 0. then it will slew from 0.9 to 0.1 over the course of the entire depth range`
 ---
-- **slices** ( _num_slices_, _prob_, _commands_ )
+- **slices** ( _num_slices_, _prob_, _commands_ = function )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together.
 	- example:
-		- `new $('example').ramp(0,1,16).slices(16,1,'append(ramp(0.5,1,3))'); // ramps within ramps over 64 values`
+		- `new $('example').randsamp().slices(32,1,()=>{this.fft().shift(random()).ifft()});`
 ---
 - **smooth** ( )
 	- interpolates each value so it falls exactly between the values that precede and follow it.
