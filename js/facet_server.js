@@ -35,13 +35,15 @@ module.exports = {
 
   checkIfOverloaded: () => {
     exec(`ps -p ${module.exports.pid} -o %cpu`, (error, stdout, stderr) => {
-      let percent_cpu = Number(stdout.split('\n')[1].trim());
-      osc.send(new OSC.Message('/cpu', percent_cpu));
-      if ( percent_cpu > 70 ) {
-        module.exports.isOverloaded = true;
-      }
-      else {
-        module.exports.isOverloaded = false;
+      if ( typeof stdout == 'string' ) {
+        let percent_cpu = Number(stdout.split('\n')[1].trim());
+        osc.send(new OSC.Message('/cpu', percent_cpu));
+        if ( percent_cpu > 70 ) {
+          module.exports.isOverloaded = true;
+        }
+        else {
+          module.exports.isOverloaded = false;
+        }
       }
     });
   },
