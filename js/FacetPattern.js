@@ -1,6 +1,7 @@
 "use strict";
 const fs = require('fs');
 const wav = require('node-wav');
+const WaveFile = require('wavefile').WaveFile;
 const curve_calc = require('./lib/curve_calc.js');
 const FFT = require('./lib/fft.js');
 const http = require('http');
@@ -1696,6 +1697,7 @@ class FacetPattern {
       throw `3rd argument must be a function, type found: ${typeof command}`;
     }
     command = command.toString();
+    command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     for (var i = 0; i < times; i++) {
       if ( Math.random() < prob ) {
@@ -1707,6 +1709,13 @@ class FacetPattern {
 
   on (hook) {
     this.hooks.push(hook);
+    return this;
+  }
+
+  saveAs (filename) {
+    let a_wav = new WaveFile();
+    a_wav.fromScratch(1, 44100, '32f', this.data);
+    fs.writeFile(`../samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 

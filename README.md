@@ -173,7 +173,7 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 		- `new $('example').from([0,0.1,0.5,0.667,1]).invert(); // 1 0.9 0.5 0.333 0`
 ---
 - **iter** ( _num_times_, _prob_, _commands_ = function() )
-	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
+	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs. You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
 	- example:
 		- `new $('example').randsamp().iter(3,1,()=>{this.echo(random(1,30,1),1.2)}).scale(-1,1).lpf(2400); // dubby feedback`
 ---
@@ -307,6 +307,11 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 	- example:
 		- `new $('example').phasor(1,20).gain(10).saturate(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
 ---
+- **saveAs** ( _filename_ )
+	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. **NOTE**: the directory must already exist.
+	- example:
+		- `new $('example').iter(6,1,()=>{this.append(_.sine(random(1,40,1),100)).saveAs(\`/myNoiseStuff/${Date.now()}\`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp`
+---
 - **scale** ( _new_min_, _new_max_ )
 	- moves the FacetPattern to a new range, from `new_min` to `new_max`. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
 	- example:
@@ -334,7 +339,7 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 		- `new $('example').from([0,0.5,0.9,0.1]).slew(25,0,1) // the first three numbers will jump immediately because upwards slew is 0. then it will slew from 0.9 to 0.1 over the course of the entire depth range`
 ---
 - **slices** ( _num_slices_, _prob_, _commands_ = function )
-	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together.
+	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
 	- example:
 		- `new $('example').randsamp().slices(32,1,()=>{this.fft().shift(random()).ifft()});`
 ---
