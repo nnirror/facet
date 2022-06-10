@@ -1,7 +1,6 @@
 const { exec } = require('child_process');
 const find = require('find-process');
 const path = require('path');
-const Max = require('max-api');
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
@@ -12,12 +11,130 @@ const WaveFile = require('wavefile').WaveFile;
 const wav = require('node-wav');
 const commentStripper = require('./lib/strip_comments.js');
 const FacetPattern = require('./FacetPattern.js')
+const easymidi = require('easymidi');
+const sound = require('sound-play');
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
 });
 osc.open();
 let utils = fs.readFileSync('utils.js', 'utf8', (err, data) => {return data});
+
+// TODO let user select midi output in UI. add an endpoint, let user select each time they load for now.
+let midioutput = new easymidi.Output('IAC Driver Bus 1');
+let bpm = 90;
+let steps = 32;
+let current_step = 1;
+let global_speed = (60000 / bpm) / steps;
+let speed = global_speed;
+repeater = setInterval(repeaterFn, global_speed);
+
+function noteoff(note,channel) {
+  midioutput.send('noteoff', {
+    note: note,
+    velocity: 0,
+    channel: channel
+  });
+}
+
+function scalePatternToSteps(pattern,steps) {
+  let fp = new FacetPattern();
+  // scale note pattern onto a bar of length _steps_.
+  if (pattern.length < steps ) {
+    // upscale
+    let upscaled_data = new Array(steps).fill(-1);
+    for (var n = 0; n < pattern.length; n++) {
+      let relative_index = n/(pattern.length-1);
+      if (isNaN(relative_index)) {
+        relative_index = 0;
+      }
+      upscaled_data[Math.floor(relative_index * steps)] = pattern[n];
+    }
+    fp.from(upscaled_data).reduce(steps);
+  }
+  else {
+    // downscale
+    fp.from(pattern).reduce(steps);
+  }
+  return fp;
+}
+function repeaterFn() {
+  // main stepping loop
+  if ( module.exports.hooks[current_step] && module.exports.muteHooks == false ) {
+    for (var i = 0; i < module.exports.hooks[current_step].length; i++) {
+      module.exports.runCode(module.exports.hooks[current_step][i],true);
+    }
+  }
+
+  // begin looping through all facet patterns, looking for wavs/notes/CCs to play
+  Object.values(module.exports.facet_patterns).forEach(fp => {
+    for (var j = 0; j < fp.sequence_data.length; j++) {
+      // sequence data is from 0-1 so it gets scaled into the step range at run time.
+      let sequence_step = Math.floor(fp.sequence_data[j] * steps);
+      if (current_step == sequence_step) {
+        sound.play(`/Users/cella/Sites/facet/tmp/${fp.name}.wav`);
+      }
+    }
+
+    // MIDI note logic
+    for (var j = 0; j < fp.notes.length; j++) {
+      let note = fp.notes[j];
+      let note_fp = scalePatternToSteps(note.data,steps);
+      let velocity_fp = scalePatternToSteps(note.velocity.data,steps);
+      let duration_fp = scalePatternToSteps(note.duration.data,steps);
+      for (var i = 0; i < note_fp.data.length; i++) {
+        if ( current_step == i+1 ) {
+          // make note for this step
+          if ( note_fp.data[i] == -1 || isNaN(note_fp.data[i])) {
+            continue;
+          }
+          let n = note_fp.data[i];
+          let v = velocity_fp.data[i];
+          let d = duration_fp.data[i];
+          let c = note.channel;
+          midioutput.send('noteon', {
+            note:n,
+            velocity:v,
+            channel:c
+          });
+          setTimeout(() => {
+            noteoff(n,c);
+          },d);
+        }
+      }
+    }
+
+    // MIDI CC logic
+    for (var j = 0; j < fp.cc_data.length; j++) {
+      let cc = fp.cc_data[j];
+      // convert cc steps to positions based on global step resolution
+      let cc_fp = scalePatternToSteps(cc.data,steps);
+      for (var i = 0; i < cc_fp.data.length; i++) {
+        if ( current_step == i+1 ) {
+          let value = cc_fp.data[i];
+          midioutput.send('cc', {
+            controller: cc.controller,
+            value: value,
+            channel: 0
+          })
+        }
+      }
+    }
+  });
+
+  if ( current_step >= steps ) {
+    current_step = 1;
+  }
+  else {
+    current_step++;
+  }
+  global_speed = (60000 / bpm) / steps;
+  if ( speed != global_speed ) {
+   clearInterval(repeater);
+   speed = global_speed;
+   repeater = setInterval(repeaterFn, global_speed);
+  }
+}
 
 module.exports = {
   addAnyHooks: (fp, hook_mode, command) => {
@@ -47,6 +164,8 @@ module.exports = {
       }
     });
   },
+
+  facet_patterns: {},
 
   getCommands: (user_input) => {
      return user_input.trim().split(';').filter(Boolean);
@@ -88,36 +207,25 @@ module.exports = {
     // and send that data into Max so it can go in a buffer wavetable
     user_input = commentStripper.stripComments(code);
     let commands = module.exports.getCommands(code);
-    if (commands[0] == 'mute()') {
-      Max.outlet(`global mute`);
-    }
-    else {
-      Object.values(commands).forEach(command => {
-        let original_command = command;
-        command = module.exports.removeTabsAndNewlines(command);
-        let fp = eval(utils + command);
+    Object.values(commands).forEach(command => {
+      let original_command = command;
+      command = module.exports.removeTabsAndNewlines(command);
+      let fp = eval(utils + command);
+      if ( typeof fp == 'object' && fp.constructor.name == 'FacetPattern' ) {
         module.exports.addAnyHooks(fp, hook_mode, original_command);
-        if ( fp.skipped === true ) {
-          // do nothing
-        }
-        else {
+        if ( fp.skipped !== true ) {
+          // create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
           module.exports.storeAnyPatterns(fp);
-          let s_wav = new WaveFile();
           let a_wav = new WaveFile();
-          // first check if a speed file exists - if not, create it
-          s_wav.fromScratch(1, 44100, '32f', fp.phasor_speed);
-          fs.writeFile(`../tmp/${fp.name}_speed.wav`, s_wav.toBuffer(),(err) => {});
-          // now create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
           a_wav.fromScratch(1, 44100, '32f', fp.data);
           // store the wav in /tmp/ for access in Max
-          fs.writeFile(`../tmp/${fp.name}_data.wav`, a_wav.toBuffer(),(err) => {
-            // file written successfully - send an update/speed command out so the facet_param object can read the new data for this dest/prop
-            Max.outlet(`update ${fp.name}_data`);
-            Max.outlet(`speed ${fp.name}`);
+          fs.writeFile(`../tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+            // add to list of available samples for sequencing
+            module.exports.facet_patterns[fp.name] = fp;
           });
         }
-      });
-    }
+      }
+    });
   },
 
   storeAnyPatterns: (fp) => {
@@ -162,8 +270,6 @@ const handlers = {
   }
 };
 
-Max.addHandlers(handlers);
-
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
 
@@ -191,7 +297,7 @@ app.post('/', (req, res) => {
 
 // global mute request via ctrl+m in the browser
 app.post('/mute', (req, res) => {
-  Max.outlet(`global mute`);
+  module.exports.facet_patterns = {};
   res.sendStatus(200);
 });
 

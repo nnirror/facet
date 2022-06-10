@@ -9,15 +9,22 @@ const http = require('http');
 class FacetPattern {
   constructor (name) {
     this.name = name;
+    this.cc_data = [];
     this.data = [];
     this.history = '';
     this.hooks = [];
+    this.notes = [];
     this.phasor_speed = [1];
+    this.sequence_data = [];
     this.skipped = false;
     this.store = [];
     this.stored_patterns = JSON.parse(this.getPatterns());
     this.utils = this.getUtils();
   }
+
+  // TODO calculate .speed() on audio data by extending etc.
+  // TODO: all seq args use relative positions instead of exact? i.e, 0-1 instead of [1,32] etc.  then youd need to map it onto a global steps/resolution
+  // which would also need to be set via command.
 
   // BEGIN generator operations
   chaos (length, x, y) {
@@ -48,6 +55,9 @@ class FacetPattern {
   }
 
   from (list) {
+    if ( typeof list == 'number' ) {
+      list = [list];
+    }
     this.data = list;
     return this;
   }
@@ -1593,7 +1603,7 @@ class FacetPattern {
     let chunk = [];
     let pre_chunk = [];
     let post_chunk = [];
-    let window_size = chunked_sequence[0].post.length;
+    let window_size = 128;
     let window_amts = new FacetPattern().sine(1,window_size*2).range(0,0.5).reverse().data;
     let calc_chunk_index;
     for (var i = 0; i < chunks; i++) {
@@ -1707,8 +1717,54 @@ class FacetPattern {
     return this;
   }
 
+  cc (controller = 70, channel = 0) {
+    this.cc_data.push({
+      data:this.data,
+      controller:controller,
+      channel:channel
+    });
+    return this;
+  }
+
+  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 0) {
+    if ( !this.isFacetPattern(velocity) ) {
+      throw `velocity must be a FacetPattern object; type found: ${typeof velocity}`;
+    }
+    if ( !this.isFacetPattern(duration) ) {
+      throw `velocity must be a FacetPattern object; type found: ${typeof duration}`;
+    }
+    this.notes.push({
+      data:this.data,
+      velocity:velocity,
+      duration:duration,
+      channel:channel
+    });
+    return this;
+  }
+
   on (hook) {
-    this.hooks.push(hook);
+    if ( typeof hook == 'number' ) {
+      hook = [hook];
+    }
+    if ( this.isFacetPattern(hook) ) {
+      throw `input to .on() must be an array; type found: ${typeof hook}`;
+    }
+    Object.values(hook).forEach(h => {
+      this.hooks.push(h);
+    });
+    return this;
+  }
+
+  seq (sequence) {
+    if ( typeof sequence == 'number' ) {
+      sequence = [sequence];
+    }
+    if ( this.isFacetPattern(sequence) ) {
+      throw `input to .seq() must be an array; type found: ${typeof sequence}`;
+    }
+    Object.values(sequence).forEach(s => {
+      this.sequence_data.push(s);
+    });
     return this;
   }
 

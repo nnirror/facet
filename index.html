@@ -143,6 +143,7 @@
         let commands = code.trim().split(';').filter(Boolean);
         $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
           if ( data.success == true ) {
+            // load wav file and play it.
             $.growl.notice({ message: 'success:<br/>' + code });
           }
           else if ( data.error )  {
@@ -154,7 +155,7 @@
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 
-      connectToMaxOscServer();
+      connectToOscServer();
 
       osc.on('/cpu', message => {
         let cpu_percent = parseFloat(message.args[0]).toFixed(1);
@@ -162,17 +163,14 @@
       });
 
       osc.on('/hook', message => {
-        // $.growl.notice({ message: 'hook ran successfully:<br/>' + message.args[0] });
       });
 
-      function connectToMaxOscServer() {
+      function connectToOscServer() {
         let connected = false;
-        let connection_status_change = false;
-        let message = '';
         let interval = setInterval( () => {
           osc.open();
           setTimeout( () => {
-            if ( osc.status() == 1 ) {
+            if ( osc.status() > 0 ) {
               setStatus(`connected`);
             }
             else {
