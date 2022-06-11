@@ -351,10 +351,8 @@ Anyone who creates a NFT to sell media created with Facet will be cursed.
 - **sometimes** (_prob_, _operations_)
 	- runs a chain of operations only some of the time, at a probability set by `prob`.
 ```
-new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,'reverse()');
+new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 // half the time, pattern goes up; half the time, it goes down
-new $('example').drunk(16,0.1).sometimes(0.5,'sort().palindrome()');
-// run a sequence that sometimes is random and sometimes goes up and down
 ```
 ---
 - **sort** ( )

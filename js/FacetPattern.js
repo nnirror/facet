@@ -22,10 +22,6 @@ class FacetPattern {
     this.utils = this.getUtils();
   }
 
-  // TODO calculate .speed() on audio data by extending etc.
-  // TODO: all seq args use relative positions instead of exact? i.e, 0-1 instead of [1,32] etc.  then youd need to map it onto a global steps/resolution
-  // which would also need to be set via command.
-
   // BEGIN generator operations
   chaos (length, x, y) {
     // takes a complex number (x,y). squares x, adds y... repeat.
@@ -131,7 +127,7 @@ class FacetPattern {
 
   randsamp (dir) {
     if (!dir) {
-      dir = `../samples/`;
+      dir = `./samples/`;
     }
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];
@@ -170,7 +166,7 @@ class FacetPattern {
 
   sample (file_name) {
     try {
-      let buffer = fs.readFileSync(`../samples/${file_name}`);
+      let buffer = fs.readFileSync(`./samples/${file_name}`);
       let decodedAudio = wav.decode(buffer);
       this.data = Array.from(decodedAudio.channelData[0]);
       return this;
@@ -1689,6 +1685,21 @@ class FacetPattern {
   // END audio operations
 
   // BEGIN special operations
+  cc (controller = 70, channel = 0) {
+    if ( typeof controller != 'number' ) {
+      throw `.cc() 1st argument: controller must be a number; type found: ${typeof controller}`;
+    }
+    if ( typeof channel != 'number' ) {
+      throw `.cc() 2nd argument: channel must be a number; type found: ${typeof channel}`;
+    }
+    this.cc_data.push({
+      data:this.data,
+      controller:controller,
+      channel:channel
+    });
+    return this;
+  }
+
   get (varname) {
     this.data = this.stored_patterns[varname];
     return this;
@@ -1717,21 +1728,15 @@ class FacetPattern {
     return this;
   }
 
-  cc (controller = 70, channel = 0) {
-    this.cc_data.push({
-      data:this.data,
-      controller:controller,
-      channel:channel
-    });
-    return this;
-  }
-
   note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 0) {
-    if ( !this.isFacetPattern(velocity) ) {
-      throw `velocity must be a FacetPattern object; type found: ${typeof velocity}`;
+    if ( typeof velocity == 'number' || Array.isArray(velocity) === true ) {
+      velocity = new FacetPattern().from(velocity);
     }
-    if ( !this.isFacetPattern(duration) ) {
-      throw `velocity must be a FacetPattern object; type found: ${typeof duration}`;
+    if ( typeof duration == 'number' || Array.isArray(duration) === true ) {
+      duration = new FacetPattern().from(duration);
+    }
+    if ( typeof channel != 'number' ) {
+      throw `.note() 3rd argument: channel must be a number; type found: ${typeof channel}`;
     }
     this.notes.push({
       data:this.data,
@@ -1746,7 +1751,10 @@ class FacetPattern {
     if ( typeof hook == 'number' ) {
       hook = [hook];
     }
-    if ( this.isFacetPattern(hook) ) {
+    if ( !this.name ) {
+      throw `the .on() function requires a named FacetPattern. No FacetPattern name found.`;
+    }
+    if ( Array.isArray(hook) === false ) {
       throw `input to .on() must be an array; type found: ${typeof hook}`;
     }
     Object.values(hook).forEach(h => {
@@ -1755,23 +1763,23 @@ class FacetPattern {
     return this;
   }
 
+  saveAs (filename) {
+    let a_wav = new WaveFile();
+    a_wav.fromScratch(1, 44100, '32f', this.data);
+    fs.writeFile(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
+    return this;
+  }
+
   seq (sequence) {
     if ( typeof sequence == 'number' ) {
       sequence = [sequence];
     }
-    if ( this.isFacetPattern(sequence) ) {
-      throw `input to .seq() must be an array; type found: ${typeof sequence}`;
+    if ( Array.isArray(sequence) === false ) {
+      throw `input to .seq() must be an array or number; type found: ${typeof sequence}`;
     }
     Object.values(sequence).forEach(s => {
       this.sequence_data.push(s);
     });
-    return this;
-  }
-
-  saveAs (filename) {
-    let a_wav = new WaveFile();
-    a_wav.fromScratch(1, 44100, '32f', this.data);
-    fs.writeFile(`../samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 
@@ -1811,18 +1819,23 @@ class FacetPattern {
   }
 
   sometimes (prob, command) {
+    if ( typeof command != 'function' ) {
+      throw `2nd argument must be a function, type found: ${typeof command}`;
+    }
+    command = command.toString();
+    command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     prob = Math.abs(Number(prob));
     if ( Math.random() < prob ) {
-      eval(this.utils + ' this.' + command);
+      eval(this.utils + command);
     }
     return this;
   }
 
   speed (s) {
-    if ( !this.isFacetPattern(s) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof s}`;
+    if ( typeof s != 'number' ) {
+      throw `1st argument to .speed() must be a number, type found: ${typeof s}`;
     }
-    this.phasor_speed = s.data;
+    this.phasor_speed = s;
     return this;
   }
   // END special operations
@@ -1845,13 +1858,13 @@ class FacetPattern {
   }
 
   getPatterns() {
-    return fs.readFileSync('stored.json', 'utf8', (err, data) => {
+    return fs.readFileSync('js/stored.json', 'utf8', (err, data) => {
       return data;
     });
   }
 
   getUtils() {
-    return fs.readFileSync('utils.js', 'utf8', (err, data) => {
+    return fs.readFileSync('js/utils.js', 'utf8', (err, data) => {
       return data;
     });
   }

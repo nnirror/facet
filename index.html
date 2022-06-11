@@ -40,6 +40,13 @@
         overflow: scroll;
         width: 80%;
       }
+      #midi {
+        float: right;
+      }
+      #midi_refresh {
+        background-color: green;
+        color: white;
+      }
       .error {
         background-color: rgba(204, 0, 0, 0.5);
       }
@@ -152,6 +159,39 @@
         });
       }
 
+      let midi_outs;
+      $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+        // create select with this -- check every 2 seconds, store in memory, if changed update select
+        //#midi_outs add option
+        if (data.data != midi_outs) {
+          midi_outs = data.data;
+          for (var i = 0; i < midi_outs.length; i++) {
+            let midi_out = midi_outs[i];
+            $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
+          }
+        }
+      });
+
+      $('body').on('change', '#midi_outs', function() {
+        $.post('http://127.0.0.1:1123/midi_select', {output:this.value}).done(function( data, status ) {
+
+        });
+      });
+
+      $('#midi_refresh').on('click', function() {
+        $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+          // TODO midi refreshed confirmation. make this work well
+          //  along with BPM and steps visualization..??
+          // create select with this -- check every 2 seconds, store in memory, if changed update select
+          //#midi_outs add option
+          $('#midi_outs').html('');
+          for (var i = 0; i < data.data.length; i++) {
+            let midi_out = data.data[i];
+            $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
+          }
+        });
+      });
+
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 
@@ -197,6 +237,12 @@
     </script>
     <div id="status">status: initializing...</div>
     <div id="cpu"></div>
-    <div id="notifications"></div>
+    <div id="notifications">
+      <div id="midi">MIDI out
+        <button type="button" id="midi_refresh">refresh</button>
+        <select id="midi_outs">
+          <option value="">--MIDI outputs--</option>
+        </select>
+    </div>
   </body>
 </html>

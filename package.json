@@ -18,14 +18,14 @@
     "node-wav": "^0.0.2",
     "osc-js": "^2.3.2",
     "request": "^2.88.2",
-    "sound-play": "^1.1.0",
     "sync-request": "^6.1.0",
     "wavefile": "^11.0.0",
     "ws": "^8.5.0"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "facet": "node --stack-size=32000 js/facet_server.js"
   },
   "repository": {
     "type": "git",

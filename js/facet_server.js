@@ -12,16 +12,13 @@ const wav = require('node-wav');
 const commentStripper = require('./lib/strip_comments.js');
 const FacetPattern = require('./FacetPattern.js')
 const easymidi = require('easymidi');
-const sound = require('sound-play');
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
 });
 osc.open();
-let utils = fs.readFileSync('utils.js', 'utf8', (err, data) => {return data});
-
-// TODO let user select midi output in UI. add an endpoint, let user select each time they load for now.
-let midioutput = new easymidi.Output('IAC Driver Bus 1');
+let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
+let midioutput = easymidi.getOutputs()[0];
 let bpm = 90;
 let steps = 32;
 let current_step = 1;
@@ -70,36 +67,56 @@ function repeaterFn() {
   Object.values(module.exports.facet_patterns).forEach(fp => {
     for (var j = 0; j < fp.sequence_data.length; j++) {
       // sequence data is from 0-1 so it gets scaled into the step range at run time.
-      let sequence_step = Math.floor(fp.sequence_data[j] * steps);
+      let sequence_step = Math.floor(fp.sequence_data[j] * (steps-1)) + 1;
       if (current_step == sequence_step) {
-        sound.play(`/Users/cella/Sites/facet/tmp/${fp.name}.wav`);
+        exec(`afplay tmp/${fp.name}.wav -r ${fp.phasor_speed} -q 1`);
       }
     }
 
     // MIDI note logic
+    let prev_velocity, prev_duration;
     for (var j = 0; j < fp.notes.length; j++) {
       let note = fp.notes[j];
       let note_fp = scalePatternToSteps(note.data,steps);
-      let velocity_fp = scalePatternToSteps(note.velocity.data,steps);
-      let duration_fp = scalePatternToSteps(note.duration.data,steps);
+      let velocity_fp, duration_fp;
+
+      if (note.velocity.data.length == 1 ) {
+        // if velocity is a single number, make all velocities that number
+        velocity_fp = new FacetPattern().from(new Array(steps).fill(note.velocity.data[0]));
+      }
+      else {
+        // otherwise scale the velocity FacetPattern to match the number of global steps
+        velocity_fp = scalePatternToSteps(note.velocity.data,steps);
+      }
+      if (note.duration.data.length == 1 ) {
+        // if duration is a single number, make all durations that number
+        duration_fp = new FacetPattern().from(new Array(steps).fill(note.duration.data[0]));
+      }
+      else {
+        // otherwise scale the duration FacetPattern to match the number of global steps
+        duration_fp = scalePatternToSteps(note.duration.data,steps);
+      }
+
       for (var i = 0; i < note_fp.data.length; i++) {
         if ( current_step == i+1 ) {
-          // make note for this step
           if ( note_fp.data[i] == -1 || isNaN(note_fp.data[i])) {
             continue;
           }
+          // generate MIDI note on/off pair for this step
           let n = note_fp.data[i];
           let v = velocity_fp.data[i];
           let d = duration_fp.data[i];
           let c = note.channel;
-          midioutput.send('noteon', {
-            note:n,
-            velocity:v,
-            channel:c
-          });
-          setTimeout(() => {
-            noteoff(n,c);
-          },d);
+          try {
+            midioutput.send('noteon', {
+              note:n,
+              velocity:v,
+              channel:c
+            });
+            setTimeout(() => {
+              noteoff(n,c);
+            },d);
+          } catch (e) {}
         }
       }
     }
@@ -185,7 +202,7 @@ module.exports = {
   },
 
   initStore: () => {
-    fs.writeFileSync('stored.json', '{}');
+    fs.writeFileSync('js/stored.json', '{}');
   },
 
   isOverloaded: false,
@@ -219,7 +236,7 @@ module.exports = {
           let a_wav = new WaveFile();
           a_wav.fromScratch(1, 44100, '32f', fp.data);
           // store the wav in /tmp/ for access in Max
-          fs.writeFile(`../tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+          fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
             // add to list of available samples for sequencing
             module.exports.facet_patterns[fp.name] = fp;
           });
@@ -232,7 +249,7 @@ module.exports = {
     if ( fp.store.length > 0 ) {
       for (var i = 0; i < fp.store.length; i++) {
         module.exports.stored[fp.store[i]] = fp.data;
-        fs.writeFileSync('stored.json', JSON.stringify(module.exports.stored));
+        fs.writeFileSync('js/stored.json', JSON.stringify(module.exports.stored));
       }
     }
   },
@@ -276,8 +293,8 @@ app.use(cors());
 module.exports.initStore();
 
 // make the ../tmp/ directory if it doesn't exist
-if ( !fs.existsSync('../tmp/')) {
-    fs.mkdirSync('../tmp/');
+if ( !fs.existsSync('tmp/')) {
+    fs.mkdirSync('tmp/');
 };
 
 // receive and run commands via HTTP POST
@@ -293,6 +310,17 @@ app.post('/', (req, res) => {
       error: `${e}, command: ${req.body.code}`
     });
   }
+});
+
+app.post('/midi', (req, res) => {
+  res.send({
+    data:easymidi.getOutputs()
+  });
+});
+
+app.post('/midi_select', (req, res) => {
+  midioutput = new easymidi.Output(req.body.output);
+  res.sendStatus(200);
 });
 
 // global mute request via ctrl+m in the browser
