@@ -35,8 +35,8 @@
         float: left;
       }
       #notifications {
-        float: left;
-        padding-left: 1%;
+        float: right;
+        padding-right: 1%;
         overflow: scroll;
         width: 80%;
       }
@@ -180,8 +180,7 @@
 
       $('#midi_refresh').on('click', function() {
         $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
-          // TODO midi refreshed confirmation. make this work well
-          //  along with BPM and steps visualization..??
+          //  TODO: update this endpoint to include other metadata, such as BPM and steps
           // create select with this -- check every 2 seconds, store in memory, if changed update select
           //#midi_outs add option
           $('#midi_outs').html('');
@@ -238,11 +237,6 @@
     <div id="status">status: initializing...</div>
     <div id="cpu"></div>
     <div id="notifications">
-      <div id="midi">MIDI out
-        <button type="button" id="midi_refresh">refresh</button>
-        <select id="midi_outs">
-          <option value="">--MIDI outputs--</option>
-        </select>
-    </div>
+      <div id="midi">MIDI out&nbsp;<select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">refresh</button></div>
   </body>
 </html>

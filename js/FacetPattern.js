@@ -1289,11 +1289,8 @@ class FacetPattern {
   speed (ratio) {
     // hard clamp stretch ratio between 0.02083 (48x) and 12
     ratio = Math.abs(Number(ratio));
-    if ( ratio < 0.02083 ) {
+    if ( ratio < 0.000001 ) {
       ratio = 0.02083;
-    }
-    else if ( ratio > 12 ) {
-      ratio = 12;
     }
     let upscaled_data = [];
     let new_samps = Math.floor(ratio * this.data.length);
@@ -1770,8 +1767,6 @@ class FacetPattern {
     return this;
   }
 
-  // TODO: consider whether hooks here should be relative to the steps. I think this is probably necessary
-  // right now they are absolute. but if hooks are relative it becomes really tricky  if you define ones higher up they wuld oly run some of the time. and how to handle custom hooks?  should i just abandon that? lol
   on (hook) {
     if ( typeof hook == 'number' ) {
       hook = [hook];
@@ -1896,20 +1891,12 @@ class FacetPattern {
   }
 
   makePatternsTheSameSize (sequence1, sequence2) {
-    // first, make both arrays as big as possible in relation to each other while preserving all values & scale
-    // so if one array was 100 and the other 250, this would convert them to 200 and 250
+    // make whichever one is smaller, fit the larger one's size.
     if ( sequence1.data.length > sequence2.data.length ) {
-      sequence2.data = this.scaleThePattern(sequence2.data, parseInt(sequence1.data.length / sequence2.data.length));
+      sequence2 = sequence2.speed((sequence1.data.length / sequence2.data.length));
     }
     else if ( sequence2.data.length > sequence1.data.length ) {
-      sequence1.data = this.scaleThePattern(sequence1.data, parseInt(sequence2.data.length / sequence1.data.length));
-    }
-    // then reduce the bigger array to smaller one's size
-    if ( sequence1.data.length > sequence2.data.length ) {
-      sequence1 = sequence1.reduce(sequence2.data.length);
-    }
-    else if ( sequence2.data.length > sequence1.data.length ) {
-      sequence2 = sequence2.reduce(sequence1.data.length);
+      sequence1 = sequence1.speed((sequence2.data.length / sequence1.data.length));
     }
     return [sequence1, sequence2];
   }

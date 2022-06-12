@@ -81,6 +81,7 @@ function scalePatternToSteps(pattern,steps) {
 
 function repeaterFn() {
   // main stepping loop
+  // TODO: (i think() loop through hooks. run Math.round(key * steps). if equals current step, run
   if ( module.exports.hooks[current_step] && module.exports.muteHooks == false ) {
     for (var i = 0; i < module.exports.hooks[current_step].length; i++) {
       module.exports.runCode(module.exports.hooks[current_step][i],true);
@@ -228,6 +229,7 @@ module.exports = {
   },
 
   runCode: (code, hook_mode = false) => {
+    // TODO: spawn new process each time???
     // parse user input into individual operations on data.
     // run those operations, scale and flatten the resulting array,
     // and send that data into Max so it can go in a buffer wavetable
@@ -266,42 +268,12 @@ module.exports = {
   stored: {}
 }
 
-const handlers = {
-  hook: (...args) => {
-    if (!module.exports.isOverloaded===true) {
-      if ( module.exports.hooks[args[0]] && module.exports.muteHooks == false ) {
-        for (var i = 0; i < module.exports.hooks[args[0]].length; i++) {
-          module.exports.runCode(module.exports.hooks[args[0]][i],true);
-          osc.send(new OSC.Message('/hook', module.exports.hooks[args[0]][i]));
-        }
-      }
-    }
-  },
-  set: (...args) => {
-    global[args[0]] = args[1];
-  },
-  close: (...args) => {
-      // remove all files in the facet/tmp/ directory on close of facet_server max object.
-      let directory = '../tmp/';
-      fs.readdir(directory, (err, files) => {
-        if (err) throw err;
-        for (const file of files) {
-          fs.unlink(path.join(directory, file), err => {
-            if (err) throw err;
-          });
-        }
-      });
-      // clear any stored patterns
-      module.exports.initStore();
-  }
-};
-
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
 
 module.exports.initStore();
 
-// make the ../tmp/ directory if it doesn't exist
+// make the tmp/ directory if it doesn't exist
 if ( !fs.existsSync('tmp/')) {
     fs.mkdirSync('tmp/');
 };
@@ -360,7 +332,7 @@ app.post('/hooks/clear', (req, res) => {
 });
 
 // run the server
-app.listen(1123);
+const server = app.listen(1123);
 // find its PID
 module.exports.setPID();
 // check that every 500ms it's not overloaded - so that superfluous hook events can be prevented from stacking up
