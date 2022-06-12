@@ -14,7 +14,6 @@ class FacetPattern {
     this.history = '';
     this.hooks = [];
     this.notes = [];
-    this.phasor_speed = [1];
     this.sequence_data = [];
     this.skipped = false;
     this.store = [];
@@ -1287,6 +1286,30 @@ class FacetPattern {
     return this;
   }
 
+  speed (ratio) {
+    // hard clamp stretch ratio between 0.02083 (48x) and 12
+    ratio = Math.abs(Number(ratio));
+    if ( ratio < 0.02083 ) {
+      ratio = 0.02083;
+    }
+    else if ( ratio > 12 ) {
+      ratio = 12;
+    }
+    let upscaled_data = [];
+    let new_samps = Math.floor(ratio * this.data.length);
+    let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
+    for (var n = 0; n < this.data.length; n++) {
+      let i = 0;
+      while (i < copies_of_each_value) {
+        upscaled_data.push(this.data[n]);
+        i++;
+      }
+    }
+    this.data = upscaled_data;
+    this.reduce(new_samps);
+    return this;
+  }
+
   sort () {
     let sorted_sequence = [];
     sorted_sequence = this.data.sort(function(a, b) { return a - b; });
@@ -1747,6 +1770,8 @@ class FacetPattern {
     return this;
   }
 
+  // TODO: consider whether hooks here should be relative to the steps. I think this is probably necessary
+  // right now they are absolute. but if hooks are relative it becomes really tricky  if you define ones higher up they wuld oly run some of the time. and how to handle custom hooks?  should i just abandon that? lol
   on (hook) {
     if ( typeof hook == 'number' ) {
       hook = [hook];
@@ -1828,14 +1853,6 @@ class FacetPattern {
     if ( Math.random() < prob ) {
       eval(this.utils + command);
     }
-    return this;
-  }
-
-  speed (s) {
-    if ( typeof s != 'number' ) {
-      throw `1st argument to .speed() must be a number, type found: ${typeof s}`;
-    }
-    this.phasor_speed = s;
     return this;
   }
   // END special operations

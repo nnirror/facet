@@ -9,6 +9,7 @@ const OSC = require('osc-js');
 const fs = require('fs');
 const WaveFile = require('wavefile').WaveFile;
 const wav = require('node-wav');
+const sound = require('sound-play');
 const commentStripper = require('./lib/strip_comments.js');
 const FacetPattern = require('./FacetPattern.js')
 const easymidi = require('easymidi');
@@ -34,12 +35,12 @@ function noteoff(note,channel) {
   });
 }
 
-function scalePatternToSteps(pattern,steps) {
+function scaleNotePatternToSteps(pattern,steps) {
   let fp = new FacetPattern();
   // scale note pattern onto a bar of length _steps_.
   if (pattern.length < steps ) {
     // upscale
-    let upscaled_data = new Array(steps).fill(-1);
+    let upscaled_data = new Array(steps).fill('skip');
     for (var n = 0; n < pattern.length; n++) {
       let relative_index = n/(pattern.length-1);
       if (isNaN(relative_index)) {
@@ -55,6 +56,29 @@ function scalePatternToSteps(pattern,steps) {
   }
   return fp;
 }
+
+function scalePatternToSteps(pattern,steps) {
+  let fp = new FacetPattern();
+  // scale note pattern onto a bar of length _steps_.
+  if (pattern.length < steps ) {
+    let upscaled_data = [];
+    let copies_of_each_value = Math.floor(steps/pattern.length) + 1;
+    for (var n = 0; n < pattern.length; n++) {
+      let i = 0;
+      while (i < copies_of_each_value) {
+        upscaled_data.push(pattern[n]);
+        i++;
+      }
+    }
+    fp.from(upscaled_data).reduce(steps);
+  }
+  else {
+    // downscale
+    fp.from(pattern).reduce(steps);
+  }
+  return fp;
+}
+
 function repeaterFn() {
   // main stepping loop
   if ( module.exports.hooks[current_step] && module.exports.muteHooks == false ) {
@@ -69,7 +93,7 @@ function repeaterFn() {
       // sequence data is from 0-1 so it gets scaled into the step range at run time.
       let sequence_step = Math.floor(fp.sequence_data[j] * (steps-1)) + 1;
       if (current_step == sequence_step) {
-        exec(`afplay tmp/${fp.name}.wav -r ${fp.phasor_speed} -q 1`);
+        sound.play(`tmp/${fp.name}.wav`);
       }
     }
 
@@ -77,25 +101,10 @@ function repeaterFn() {
     let prev_velocity, prev_duration;
     for (var j = 0; j < fp.notes.length; j++) {
       let note = fp.notes[j];
-      let note_fp = scalePatternToSteps(note.data,steps);
+      let note_fp = scaleNotePatternToSteps(note.data,steps);
       let velocity_fp, duration_fp;
-
-      if (note.velocity.data.length == 1 ) {
-        // if velocity is a single number, make all velocities that number
-        velocity_fp = new FacetPattern().from(new Array(steps).fill(note.velocity.data[0]));
-      }
-      else {
-        // otherwise scale the velocity FacetPattern to match the number of global steps
-        velocity_fp = scalePatternToSteps(note.velocity.data,steps);
-      }
-      if (note.duration.data.length == 1 ) {
-        // if duration is a single number, make all durations that number
-        duration_fp = new FacetPattern().from(new Array(steps).fill(note.duration.data[0]));
-      }
-      else {
-        // otherwise scale the duration FacetPattern to match the number of global steps
-        duration_fp = scalePatternToSteps(note.duration.data,steps);
-      }
+      velocity_fp = scalePatternToSteps(note.velocity.data,steps);
+      duration_fp = scalePatternToSteps(note.duration.data,steps);
 
       for (var i = 0; i < note_fp.data.length; i++) {
         if ( current_step == i+1 ) {
