@@ -1,4 +1,6 @@
 const { exec } = require('child_process');
+const {Worker} = require('worker_threads');
+const { spawn } = require('child_process');
 const find = require('find-process');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -10,7 +12,6 @@ const fs = require('fs');
 const WaveFile = require('wavefile').WaveFile;
 const wav = require('node-wav');
 const sound = require('sound-play');
-const commentStripper = require('./lib/strip_comments.js');
 const FacetPattern = require('./FacetPattern.js')
 const easymidi = require('easymidi');
 const osc = new OSC({
@@ -18,14 +19,15 @@ const osc = new OSC({
   plugin: new OSC.WebsocketServerPlugin()
 });
 osc.open();
-let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
-let midioutput = easymidi.getOutputs()[0];
+let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
 let bpm = 90;
 let steps = 32;
 let current_step = 1;
 let global_speed = (60000 / bpm) / steps;
 let speed = global_speed;
 repeater = setInterval(repeaterFn, global_speed);
+
+const child = spawn('pwd');
 
 function noteoff(note,channel) {
   midioutput.send('noteoff', {
@@ -81,10 +83,10 @@ function scalePatternToSteps(pattern,steps) {
 
 function repeaterFn() {
   // main stepping loop
-  // TODO: (i think() loop through hooks. run Math.round(key * steps). if equals current step, run
+  // TODO: (i think() relative hooks... run Math.round(key * steps). if equals current step, run
   if ( module.exports.hooks[current_step] && module.exports.muteHooks == false ) {
     for (var i = 0; i < module.exports.hooks[current_step].length; i++) {
-      module.exports.runCode(module.exports.hooks[current_step][i],true);
+      module.exports.run(module.exports.hooks[current_step][i],true);
     }
   }
 
@@ -97,21 +99,20 @@ function repeaterFn() {
         sound.play(`tmp/${fp.name}.wav`);
       }
     }
-
     // MIDI note logic
     let prev_velocity, prev_duration;
     for (var j = 0; j < fp.notes.length; j++) {
       let note = fp.notes[j];
+      if (!note) { continue; }
       let note_fp = scaleNotePatternToSteps(note.data,steps);
-      let velocity_fp, duration_fp;
-      velocity_fp = scalePatternToSteps(note.velocity.data,steps);
-      duration_fp = scalePatternToSteps(note.duration.data,steps);
-
       for (var i = 0; i < note_fp.data.length; i++) {
         if ( current_step == i+1 ) {
-          if ( note_fp.data[i] == -1 || isNaN(note_fp.data[i])) {
+          if ( note_fp.data[i] == 'skip' || isNaN(note_fp.data[i])) {
             continue;
           }
+          let velocity_fp, duration_fp;
+          velocity_fp = scalePatternToSteps(note.velocity.data,steps);
+          duration_fp = scalePatternToSteps(note.duration.data,steps);
           // generate MIDI note on/off pair for this step
           let n = note_fp.data[i];
           let v = velocity_fp.data[i];
@@ -126,7 +127,9 @@ function repeaterFn() {
             setTimeout(() => {
               noteoff(n,c);
             },d);
-          } catch (e) {}
+          } catch (e) {
+            throw e
+          }
         }
       }
     }
@@ -182,21 +185,11 @@ module.exports = {
       if ( typeof stdout == 'string' ) {
         let percent_cpu = Number(stdout.split('\n')[1].trim());
         osc.send(new OSC.Message('/cpu', percent_cpu));
-        if ( percent_cpu > 70 ) {
-          module.exports.isOverloaded = true;
-        }
-        else {
-          module.exports.isOverloaded = false;
-        }
       }
     });
   },
 
   facet_patterns: {},
-
-  getCommands: (user_input) => {
-     return user_input.trim().split(';').filter(Boolean);
-  },
 
   hooks: {},
 
@@ -215,44 +208,33 @@ module.exports = {
     fs.writeFileSync('js/stored.json', '{}');
   },
 
-  isOverloaded: false,
-
   muteHooks: false,
 
   pid: '',
 
-  removeTabsAndNewlines: (user_input) => {
-    user_input = user_input.replace(/\s\s+/g, '');
-    user_input = user_input.replace(/\'/g, '"');
-    user_input = user_input.replace(/;/g, ';\n');
-    return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
-  },
-
-  runCode: (code, hook_mode = false) => {
-    // TODO: spawn new process each time???
-    // parse user input into individual operations on data.
-    // run those operations, scale and flatten the resulting array,
-    // and send that data into Max so it can go in a buffer wavetable
-    user_input = commentStripper.stripComments(code);
-    let commands = module.exports.getCommands(code);
-    Object.values(commands).forEach(command => {
-      let original_command = command;
-      command = module.exports.removeTabsAndNewlines(command);
-      let fp = eval(utils + command);
-      if ( typeof fp == 'object' && fp.constructor.name == 'FacetPattern' ) {
-        module.exports.addAnyHooks(fp, hook_mode, original_command);
-        if ( fp.skipped !== true ) {
-          // create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
-          module.exports.storeAnyPatterns(fp);
-          let a_wav = new WaveFile();
-          a_wav.fromScratch(1, 44100, '32f', fp.data);
-          // store the wav in /tmp/ for access in Max
-          fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
-            // add to list of available samples for sequencing
-            module.exports.facet_patterns[fp.name] = fp;
-          });
-        }
-      }
+  run: (code, hook_mode) => {
+    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode}});
+    worker.once("message", fps => {
+        Object.values(fps).forEach(fp => {
+          if ( typeof fp == 'object' ) {
+            module.exports.addAnyHooks(fp, hook_mode, fp.original_command);
+            if ( fp.skipped !== true ) {
+              // create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
+              module.exports.storeAnyPatterns(fp);
+              let a_wav = new WaveFile();
+              a_wav.fromScratch(1, 44100, '32f', fp.data);
+              // store the wav in /tmp/ for access in Max
+              fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+                // add to list of available samples for sequencing
+                module.exports.facet_patterns[fp.name] = fp;
+              });
+            }
+          }
+        });
+    });
+    worker.on("error", error => {
+      // TODO route back to UI etc
+        console.log(error);
     });
   },
 
@@ -260,7 +242,7 @@ module.exports = {
     if ( fp.store.length > 0 ) {
       for (var i = 0; i < fp.store.length; i++) {
         module.exports.stored[fp.store[i]] = fp.data;
-        fs.writeFileSync('js/stored.json', JSON.stringify(module.exports.stored));
+        fs.writeFile('js/stored.json', JSON.stringify(module.exports.stored),()=> {});
       }
     }
   },
@@ -281,7 +263,7 @@ if ( !fs.existsSync('tmp/')) {
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
   try {
-    module.exports.runCode(req.body.code);
+    module.exports.run(req.body.code, false);
     res.send({
       success: true
     });
@@ -301,6 +283,16 @@ app.post('/midi', (req, res) => {
 
 app.post('/midi_select', (req, res) => {
   midioutput = new easymidi.Output(req.body.output);
+  res.sendStatus(200);
+});
+
+app.post('/bpm', (req, res) => {
+  bpm = Math.abs(Number(req.body.bpm));
+  res.sendStatus(200);
+});
+
+app.post('/steps', (req, res) => {
+  steps = Math.abs(Number(req.body.steps));
   res.sendStatus(200);
 });
 

@@ -17,7 +17,7 @@ class FacetPattern {
     this.sequence_data = [];
     this.skipped = false;
     this.store = [];
-    this.stored_patterns = JSON.parse(this.getPatterns());
+    this.stored_patterns = this.getPatterns();
     this.utils = this.getUtils();
   }
 
@@ -1790,12 +1790,12 @@ class FacetPattern {
     return this;
   }
 
-  seq (sequence) {
+  play (sequence) {
     if ( typeof sequence == 'number' ) {
       sequence = [sequence];
     }
     if ( Array.isArray(sequence) === false ) {
-      throw `input to .seq() must be an array or number; type found: ${typeof sequence}`;
+      throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
     Object.values(sequence).forEach(s => {
       this.sequence_data.push(s);
@@ -1870,9 +1870,13 @@ class FacetPattern {
   }
 
   getPatterns() {
-    return fs.readFileSync('js/stored.json', 'utf8', (err, data) => {
-      return data;
-    });
+    try {
+      return JSON.parse(fs.readFileSync('js/stored.json', 'utf8', (err, data) => {
+        return data
+      }));
+    } catch (e) {
+      return {};
+    }
   }
 
   getUtils() {

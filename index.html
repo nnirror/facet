@@ -22,33 +22,52 @@
         height: 95vh;
         font-size: 2em;
       }
-      #status, #notifications, #cpu {
+      #status, #notifications, #cpu, #midi {
         height: 5vh;
         max-height: 5vh;
         padding-top: 1.5vh;
         padding-left: 0.5em;
-        font-size: 1.667vh;
         display: inline-block;
         vertical-align: middle;
       }
       #status, #cpu {
         float: left;
       }
+      #cpu {
+        width: 5%;
+      }
       #notifications {
         float: right;
         padding-right: 1%;
         overflow: scroll;
-        width: 80%;
+        width: 50%;
       }
       #midi {
         float: right;
+        margin-right: 1%;
       }
       #midi_refresh {
         background-color: green;
         color: white;
+        min-width: 30px;
+        height: 2em;
       }
       .error {
         background-color: rgba(204, 0, 0, 0.5);
+      }
+      .slider {
+        width: 30% !important;
+        display: inline;
+        float: right;
+      }
+      .fader {
+        padding-left: 2%;
+        padding-right: 2%;
+        display:inline;
+        float:right;
+      }
+      output {
+        padding-top: 0px !important;
       }
     </style>
   </head>
@@ -180,7 +199,7 @@
 
       $('#midi_refresh').on('click', function() {
         $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
-          //  TODO: update this endpoint to include other metadata, such as BPM and steps
+          //  TODO: update this endpoint to include other metadata, such as BPM and steps visualization..??
           // create select with this -- check every 2 seconds, store in memory, if changed update select
           //#midi_outs add option
           $('#midi_outs').html('');
@@ -198,7 +217,7 @@
 
       osc.on('/cpu', message => {
         let cpu_percent = parseFloat(message.args[0]).toFixed(1);
-        $('#cpu').html(cpu_percent + '% CPU');
+        $('#cpu').html(cpu_percent + '%&nbsp;cpu');
       });
 
       osc.on('/hook', message => {
@@ -222,21 +241,49 @@
       function setStatus(status) {
         let colored_span = '';
         if ( status == 'connected' ) {
-          colored_span = `status: <span style="color:green;"">${status}</span>`;
+          colored_span = `<span style="color:green;"">◍</span>`;
         }
         else if ( status == 'processing' ) {
-          colored_span = `status: <span style="color:green;"">${status}</span>`;
+          colored_span = `<span style="color:green;"">◍</span>`;
         }
         else if ( status == 'disconnected' ) {
-          colored_span = `status: <span style="color:red;"">${status}</span>`;
+          colored_span = `<span style="color:red;"">◍</span>`;
         }
         $('#status').html(colored_span);
       }
       // end OSC
     </script>
-    <div id="status">status: initializing...</div>
+    <div id="status">◍...</div>
     <div id="cpu"></div>
+    <div id="midi">MIDI out&nbsp;<select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
     <div id="notifications">
-      <div id="midi">MIDI out&nbsp;<select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">refresh</button></div>
+      <input type="range" class="slider" min="1" max="256" value="32" id="steps" step="1">
+      <output class="fader" id="steps_out">32 steps</output>
+      <input type="range" class="slider" min="1" max="256" value="90" id="fader" step="1">
+      <output class="fader" id="intensity">90 bpm</output>
+    </div>
   </body>
+
 </html>
+
+<script type="text/javascript">
+let bpm=90;
+let steps=32;
+// check every 100ms for bpm change and send if changed
+setInterval(function () {
+  prev_bpm = bpm;
+  bpm = $('#fader').val();
+  if (bpm != prev_bpm) {
+    $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {});
+    $('#intensity').val($('#fader').val() + ' bpm');
+  }
+
+  prev_steps = steps;
+  steps = $('#steps').val();
+  if (steps != prev_steps) {
+    $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {});
+    $('#steps_out').val($('#steps').val() + ' steps');
+  }
+
+}, 100);
+</script>
