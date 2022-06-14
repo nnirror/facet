@@ -83,11 +83,14 @@ function scalePatternToSteps(pattern,steps) {
 
 function repeaterFn() {
   // main stepping loop
-  // TODO: (i think() relative hooks... run Math.round(key * steps). if equals current step, run
-  if ( module.exports.hooks[current_step] && module.exports.muteHooks == false ) {
-    for (var i = 0; i < module.exports.hooks[current_step].length; i++) {
-      module.exports.run(module.exports.hooks[current_step][i],true);
-    }
+  let prev_step = current_step-1;
+  for (const [hook_key, hook_code] of Object.entries(module.exports.hooks)) {
+      if ( (Number(hook_key) >= ((prev_step) / steps) && Number(hook_key) < ((current_step+1) / steps))
+        &&  module.exports.muteHooks == false ) {
+        hook_code.forEach(hook => {
+          module.exports.run(hook,true);
+        });
+      }
   }
 
   // begin looping through all facet patterns, looking for wavs/notes/CCs to play
@@ -96,7 +99,10 @@ function repeaterFn() {
       // sequence data is from 0-1 so it gets scaled into the step range at run time.
       let sequence_step = Math.floor(fp.sequence_data[j] * (steps-1)) + 1;
       if (current_step == sequence_step) {
-        sound.play(`tmp/${fp.name}.wav`);
+        try {
+          sound.play(`tmp/${fp.name}.wav`);
+        } catch (error) {
+        }
       }
     }
     // MIDI note logic
@@ -232,10 +238,7 @@ module.exports = {
           }
         });
     });
-    worker.on("error", error => {
-      // TODO route back to UI etc
-        console.log(error);
-    });
+    worker.on("error", error => {throw error});
   },
 
   storeAnyPatterns: (fp) => {
@@ -264,13 +267,15 @@ if ( !fs.existsSync('tmp/')) {
 app.post('/', (req, res) => {
   try {
     module.exports.run(req.body.code, false);
-    res.send({
-      success: true
-    });
   } catch (e) {
     res.send({
       status: 400,
-      error: `${e}, command: ${req.body.code}`
+      error: error_message
+    });
+  }
+  finally {
+    res.send({
+      status: 200,
     });
   }
 });

@@ -1767,7 +1767,7 @@ class FacetPattern {
     return this;
   }
 
-  on (hook) {
+  on (hook = 0) {
     if ( typeof hook == 'number' ) {
       hook = [hook];
     }
@@ -1790,9 +1790,12 @@ class FacetPattern {
     return this;
   }
 
-  play (sequence) {
+  play (sequence = 0) {
     if ( typeof sequence == 'number' ) {
       sequence = [sequence];
+    }
+    else if ( this.isFacetPattern(sequence) ) {
+      sequence = sequence.data;
     }
     if ( Array.isArray(sequence) === false ) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;

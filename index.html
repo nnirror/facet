@@ -14,7 +14,7 @@
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
     <script src="js/jquery.growl.js" type="text/javascript"></script>
     <link href="css/jquery.growl.css" rel="stylesheet" type="text/css" />
-    <style media="screen">
+    <style>
       html {
         height: 1000px;
       }
@@ -33,18 +33,27 @@
       #status, #cpu {
         float: left;
       }
+      #status {
+        width: 2%;
+      }
       #cpu {
-        width: 5%;
+        width: 9%;
+        margin-right: 1%;
+        min-width: 66px;
       }
       #notifications {
-        float: right;
+        float: left;
         padding-right: 1%;
         overflow: scroll;
-        width: 50%;
+        width: 55%;
       }
       #midi {
-        float: right;
-        margin-right: 1%;
+        float: left;
+        position: relative;
+        top: -5px;
+        width: 19%;
+        min-width: 225px;
+        padding-left:0;
       }
       #midi_refresh {
         background-color: green;
@@ -58,13 +67,13 @@
       .slider {
         width: 30% !important;
         display: inline;
-        float: right;
+        float: left;
       }
       .fader {
         padding-left: 2%;
         padding-right: 2%;
         display:inline;
-        float:right;
+        float:left;
       }
       output {
         padding-top: 0px !important;
@@ -199,9 +208,6 @@
 
       $('#midi_refresh').on('click', function() {
         $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
-          //  TODO: update this endpoint to include other metadata, such as BPM and steps visualization..??
-          // create select with this -- check every 2 seconds, store in memory, if changed update select
-          //#midi_outs add option
           $('#midi_outs').html('');
           for (var i = 0; i < data.data.length; i++) {
             let midi_out = data.data[i];
@@ -216,7 +222,7 @@
       connectToOscServer();
 
       osc.on('/cpu', message => {
-        let cpu_percent = parseFloat(message.args[0]).toFixed(1);
+        let cpu_percent = parseFloat(message.args[0]).toFixed(2).substring(0,4);
         $('#cpu').html(cpu_percent + '%&nbsp;cpu');
       });
 
@@ -241,27 +247,27 @@
       function setStatus(status) {
         let colored_span = '';
         if ( status == 'connected' ) {
-          colored_span = `<span style="color:green;"">◍</span>`;
+          colored_span = `<span style="color:green;"">●</span>`;
         }
         else if ( status == 'processing' ) {
-          colored_span = `<span style="color:green;"">◍</span>`;
+          colored_span = `<span style="color:green;"">●</span>`;
         }
         else if ( status == 'disconnected' ) {
-          colored_span = `<span style="color:red;"">◍</span>`;
+          colored_span = `<span style="color:red;"">●</span>`;
         }
         $('#status').html(colored_span);
       }
       // end OSC
     </script>
-    <div id="status">◍...</div>
-    <div id="cpu"></div>
-    <div id="midi">MIDI out&nbsp;<select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
+    <div id="status">●</div>
+    <div id="cpu">0.0% cpu</div>
     <div id="notifications">
       <input type="range" class="slider" min="1" max="256" value="32" id="steps" step="1">
       <output class="fader" id="steps_out">32 steps</output>
       <input type="range" class="slider" min="1" max="256" value="90" id="fader" step="1">
       <output class="fader" id="intensity">90 bpm</output>
     </div>
+    <div id="midi">MIDI out&nbsp;<select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>
 
 </html>
