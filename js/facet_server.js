@@ -22,6 +22,7 @@ osc.open();
 let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
 let bpm = 90;
 let steps = 32;
+let transport_on = true;
 let current_step = 1;
 let global_speed = (60000 / bpm) / steps;
 let speed = global_speed;
@@ -82,93 +83,95 @@ function scalePatternToSteps(pattern,steps) {
 }
 
 function repeaterFn() {
-  // main stepping loop
-  let prev_step = current_step-1;
-  for (const [hook_key, hook_code] of Object.entries(module.exports.hooks)) {
-      if ( (Number(hook_key) >= ((prev_step) / steps) && Number(hook_key) < ((current_step+1) / steps))
-        &&  module.exports.muteHooks == false ) {
-        hook_code.forEach(hook => {
-          module.exports.run(hook,true);
-        });
-      }
-  }
-
-  // begin looping through all facet patterns, looking for wavs/notes/CCs to play
-  Object.values(module.exports.facet_patterns).forEach(fp => {
-    for (var j = 0; j < fp.sequence_data.length; j++) {
-      // sequence data is from 0-1 so it gets scaled into the step range at run time.
-      let sequence_step = Math.floor(fp.sequence_data[j] * (steps-1)) + 1;
-      if (current_step == sequence_step) {
-        try {
-          sound.play(`tmp/${fp.name}.wav`);
-        } catch (error) {
+  if ( transport_on !== false) {
+    // main stepping loop
+    let prev_step = current_step-1;
+    for (const [hook_key, hook_code] of Object.entries(module.exports.hooks)) {
+        if ( (Number(hook_key) >= ((prev_step) / steps) && Number(hook_key) < ((current_step+1) / steps))
+          &&  module.exports.muteHooks == false ) {
+          hook_code.forEach(hook => {
+            module.exports.run(hook,true);
+          });
         }
-      }
     }
-    // MIDI note logic
-    let prev_velocity, prev_duration;
-    for (var j = 0; j < fp.notes.length; j++) {
-      let note = fp.notes[j];
-      if (!note) { continue; }
-      let note_fp = scaleNotePatternToSteps(note.data,steps);
-      for (var i = 0; i < note_fp.data.length; i++) {
-        if ( current_step == i+1 ) {
-          if ( note_fp.data[i] == 'skip' || isNaN(note_fp.data[i])) {
-            continue;
-          }
-          let velocity_fp, duration_fp;
-          velocity_fp = scalePatternToSteps(note.velocity.data,steps);
-          duration_fp = scalePatternToSteps(note.duration.data,steps);
-          // generate MIDI note on/off pair for this step
-          let n = note_fp.data[i];
-          let v = velocity_fp.data[i];
-          let d = duration_fp.data[i];
-          let c = note.channel;
+
+    // begin looping through all facet patterns, looking for wavs/notes/CCs to play
+    Object.values(module.exports.facet_patterns).forEach(fp => {
+      for (var j = 0; j < fp.sequence_data.length; j++) {
+        // sequence data is from 0-1 so it gets scaled into the step range at run time.
+        let sequence_step = Math.floor(fp.sequence_data[j] * (steps-1)) + 1;
+        if (current_step == sequence_step) {
           try {
-            midioutput.send('noteon', {
-              note:n,
-              velocity:v,
-              channel:c
-            });
-            setTimeout(() => {
-              noteoff(n,c);
-            },d);
-          } catch (e) {
-            throw e
+            sound.play(`tmp/${fp.name}.wav`);
+          } catch (error) {
           }
         }
       }
-    }
-
-    // MIDI CC logic
-    for (var j = 0; j < fp.cc_data.length; j++) {
-      let cc = fp.cc_data[j];
-      // convert cc steps to positions based on global step resolution
-      let cc_fp = scalePatternToSteps(cc.data,steps);
-      for (var i = 0; i < cc_fp.data.length; i++) {
-        if ( current_step == i+1 ) {
-          let value = cc_fp.data[i];
-          midioutput.send('cc', {
-            controller: cc.controller,
-            value: value,
-            channel: 0
-          })
+      // MIDI note logic
+      let prev_velocity, prev_duration;
+      for (var j = 0; j < fp.notes.length; j++) {
+        let note = fp.notes[j];
+        if (!note) { continue; }
+        let note_fp = scaleNotePatternToSteps(note.data,steps);
+        for (var i = 0; i < note_fp.data.length; i++) {
+          if ( current_step == i+1 ) {
+            if ( note_fp.data[i] == 'skip' || isNaN(note_fp.data[i])) {
+              continue;
+            }
+            let velocity_fp, duration_fp;
+            velocity_fp = scalePatternToSteps(note.velocity.data,steps);
+            duration_fp = scalePatternToSteps(note.duration.data,steps);
+            // generate MIDI note on/off pair for this step
+            let n = note_fp.data[i];
+            let v = velocity_fp.data[i];
+            let d = duration_fp.data[i];
+            let c = note.channel;
+            try {
+              midioutput.send('noteon', {
+                note:n,
+                velocity:v,
+                channel:c
+              });
+              setTimeout(() => {
+                noteoff(n,c);
+              },d);
+            } catch (e) {
+              throw e
+            }
+          }
         }
       }
-    }
-  });
 
-  if ( current_step >= steps ) {
-    current_step = 1;
-  }
-  else {
-    current_step++;
-  }
-  global_speed = (60000 / bpm) / steps;
-  if ( speed != global_speed ) {
-   clearInterval(repeater);
-   speed = global_speed;
-   repeater = setInterval(repeaterFn, global_speed);
+      // MIDI CC logic
+      for (var j = 0; j < fp.cc_data.length; j++) {
+        let cc = fp.cc_data[j];
+        // convert cc steps to positions based on global step resolution
+        let cc_fp = scalePatternToSteps(cc.data,steps);
+        for (var i = 0; i < cc_fp.data.length; i++) {
+          if ( current_step == i+1 ) {
+            let value = cc_fp.data[i];
+            midioutput.send('cc', {
+              controller: cc.controller,
+              value: value,
+              channel: 0
+            })
+          }
+        }
+      }
+    });
+
+    if ( current_step >= steps ) {
+      current_step = 1;
+    }
+    else {
+      current_step++;
+    }
+    global_speed = (60000 / bpm) / steps;
+    if ( speed != global_speed ) {
+     clearInterval(repeater);
+     speed = global_speed;
+     repeater = setInterval(repeaterFn, global_speed);
+    }
   }
 }
 
@@ -186,7 +189,7 @@ module.exports = {
     }
   },
 
-  // TODO this doesnt work on windows -- would need to differentiate user OS and
+  // TODO this doesnt work on windows- would need to differentiate user OS and
   // check PID in windows commands
   checkIfOverloaded: () => {
     exec(`ps -p ${module.exports.pid} -o %cpu`, (error, stdout, stderr) => {
@@ -313,7 +316,13 @@ app.post('/steps', (req, res) => {
 
 // global mute request via ctrl+m in the browser
 app.post('/mute', (req, res) => {
+  transport_on = false;
   module.exports.facet_patterns = {};
+  res.sendStatus(200);
+});
+
+app.post('/play', (req, res) => {
+  transport_on = true;
   res.sendStatus(200);
 });
 

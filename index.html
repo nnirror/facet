@@ -22,13 +22,42 @@
         height: 95vh;
         font-size: 2em;
       }
-      #status, #notifications, #cpu, #midi {
+      #status, #notifications, #cpu, #midi, #transport {
         height: 5vh;
         max-height: 5vh;
         padding-top: 1.5vh;
         padding-left: 0.5em;
         display: inline-block;
         vertical-align: middle;
+      }
+      #transport {
+        font-size: 4vh;
+        padding-top: 0;
+        float: right;
+      }
+      #transport span {
+        cursor: pointer;
+      }
+      #transport span:hover {
+        color: #f7d952;
+      }
+      #clear {
+        position: relative;
+        top: -8px;
+        left: -10px;
+      }
+      #stop {
+        position: relative;
+        top: -9px;
+      }
+      #play {
+        font-size: 2.5vh;
+        position: relative;
+        top: -6px;
+      }
+      #rerun {
+        position: relative;
+        left: -4px;
       }
       #status, #cpu {
         float: left;
@@ -45,27 +74,32 @@
         float: left;
         padding-right: 1%;
         overflow: scroll;
-        width: 55%;
+        width: 40%;
       }
       #midi {
-        float: left;
+        float: right;
         position: relative;
-        top: -5px;
+        top: -3px;
         width: 19%;
-        min-width: 225px;
+        display: inline-table;
         padding-left:0;
+        min-width: 130px;
       }
       #midi_refresh {
         background-color: green;
         color: white;
-        min-width: 30px;
+        min-width: 20px;
         height: 2em;
+      }
+      #midi_refresh:hover {
+        background-color: forestgreen;
       }
       .error {
         background-color: rgba(204, 0, 0, 0.5);
       }
       .slider {
-        width: 30% !important;
+        width: 28% !important;
+        padding-left: 1%;
         display: inline;
         float: left;
       }
@@ -77,6 +111,89 @@
       }
       output {
         padding-top: 0px !important;
+      }
+      #midi_label {
+        display: inline;
+      }
+      @media screen and (max-width: 1200px) {
+        #midi_label {
+          display: none;
+        }
+        #midi_outs {
+          font-size: 0.7em;
+        }
+        #cpu {
+          font-size: 0.9em;
+          position: relative;
+          top: 1px;
+        }
+        .slider {
+          position: relative;
+          top: 3px;
+        }
+      }
+      @media screen and (max-width: 700px) {
+        #notifications {
+          width: 36% !important;
+        }
+        #midi_refresh {
+          font-size: 0.5em;
+          height: auto;
+        }
+        .fader {
+          font-size: 0.6em;
+          position: relative;
+          top: 5px;
+        }
+        .slider {
+          width: 25% !important;
+          position: relative;
+          top: 3px;
+        }
+        #cpu {
+          font-size: 0.7em;
+          position: relative;
+          top: 3px;
+          left: 5px;
+          margin-right: 0;
+        }
+        #midi_outs {
+          font-size: 0.8em;
+          position: relative;
+          top: 2px;
+        }
+        #transport {
+          font-size: 3vh;
+        }
+        #play {
+          top: 2px;
+        }
+        #stop {
+          top: -2px;
+        }
+        #rerun {
+          top: 6px;
+        }
+        #clear {
+          top: -1px;
+        }
+      }
+      @media screen and (max-width: 600px) {
+        #notifications {
+          width: 34% !important;
+        }
+        #midi {
+          min-width: 110px;
+        }
+        #midi_outs {
+          font-size: 0.6em;
+          position: relative;
+          top: 3px;
+        }
+        #midi_refresh {
+          position: relative;
+          top: 2px;
+        }
       }
     </style>
   </head>
@@ -222,6 +339,34 @@
         });
       });
 
+      $('body').on('click', '#play', function() {
+        $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'Transport could not be started... is the server running?' });
+          }
+        });
+      });
+
+      $('body').on('click', '#stop', function() {
+        $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {})
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'Transport could not be stopped... is the server running?' });
+          }
+        });
+      });
+
+      $('body').on('click', '#clear', function() {
+        $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+      });
+
+      $('body').on('click', '#rerun', function() {
+        $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {
+        })
+        runFacet();
+      });
+
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 
@@ -268,20 +413,25 @@
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
     <div id="notifications">
-      <input type="range" class="slider" min="1" max="1024" value="90" id="bpm" step="1">
+      <input type="range" class="slider" min="1" max="200" value="90" id="bpm" step="1">
       <output class="fader" id="intensity">90 bpm</output>
-      <input type="range" class="slider" min="1" max="256" value="32" id="steps" step="1">
+      <input type="range" class="slider" min="1" max="1000" value="606" id="steps" step="1">
       <output class="fader" id="steps_out">32 steps</output>
     </div>
-    <div id="midi">MIDI out&nbsp;<select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
+    <div id="transport">
+      <span id="play">▶</span>
+      <span id="stop">■</span>
+      <span id="rerun">↵</span>
+      <span id="clear">⊖</span>
+    </div>
+    <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>
-
 </html>
 
 <script type="text/javascript">
 let bpm=90;
 let steps=32;
-// check every 100ms for bpm change and send if changed
+// check every 250ms for bpm change and send if changed
 setInterval(function () {
   prev_bpm = bpm;
   bpm = $('#bpm').val();
@@ -289,17 +439,29 @@ setInterval(function () {
     $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'BPM could not be set... is the server running?' });
     });
-    $('#intensity').val($('#bpm').val() + ' bpm');
+    $('#intensity').val(bpm + ' bpm');
   }
 
   prev_steps = steps;
-  steps = $('#steps').val();
+  steps = Math.round(logslider($('#steps').val(),1,96));
   if (steps != prev_steps) {
     $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'steps could not be set... is the server running?' });
     });
-    $('#steps_out').val($('#steps').val() + ' steps');
+    $('#steps_out').val(steps + ' steps');
   }
 
 }, 100);
+
+
+function logslider(input, out_min, out_max) {
+  var minp = 1;
+  var maxp = 1000;
+  var minv = Math.log(out_min);
+  var maxv = Math.log(out_max);
+  // calculate adjustment factor
+  var scale = (maxv-minv) / (maxp-minp);
+
+  return Math.exp(minv + scale*(input-minp)).toFixed(2);
+}
 </script>
