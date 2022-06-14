@@ -206,12 +206,18 @@
         });
       });
 
-      $('#midi_refresh').on('click', function() {
+      $('body').on('click', '#midi_refresh', function() {
         $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
           $('#midi_outs').html('');
           for (var i = 0; i < data.data.length; i++) {
             let midi_out = data.data[i];
             $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
+          }
+          $.growl.notice({ message: 'MIDI outputs refreshed' });
+        })
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'MIDI outputs could not be refreshed... is the server running?' });
           }
         });
       });
@@ -262,10 +268,10 @@
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
     <div id="notifications">
+      <input type="range" class="slider" min="1" max="1024" value="90" id="bpm" step="1">
+      <output class="fader" id="intensity">90 bpm</output>
       <input type="range" class="slider" min="1" max="256" value="32" id="steps" step="1">
       <output class="fader" id="steps_out">32 steps</output>
-      <input type="range" class="slider" min="1" max="256" value="90" id="fader" step="1">
-      <output class="fader" id="intensity">90 bpm</output>
     </div>
     <div id="midi">MIDI out&nbsp;<select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>
@@ -278,16 +284,20 @@ let steps=32;
 // check every 100ms for bpm change and send if changed
 setInterval(function () {
   prev_bpm = bpm;
-  bpm = $('#fader').val();
+  bpm = $('#bpm').val();
   if (bpm != prev_bpm) {
-    $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {});
-    $('#intensity').val($('#fader').val() + ' bpm');
+    $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
+      $.growl.error({ message: 'BPM could not be set... is the server running?' });
+    });
+    $('#intensity').val($('#bpm').val() + ' bpm');
   }
 
   prev_steps = steps;
   steps = $('#steps').val();
   if (steps != prev_steps) {
-    $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {});
+    $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
+      $.growl.error({ message: 'steps could not be set... is the server running?' });
+    });
     $('#steps_out').val($('#steps').val() + ' steps');
   }
 

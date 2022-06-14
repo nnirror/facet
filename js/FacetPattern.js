@@ -1783,13 +1783,6 @@ class FacetPattern {
     return this;
   }
 
-  saveAs (filename) {
-    let a_wav = new WaveFile();
-    a_wav.fromScratch(1, 44100, '32f', this.data);
-    fs.writeFile(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
-    return this;
-  }
-
   play (sequence = 0) {
     if ( typeof sequence == 'number' ) {
       sequence = [sequence];
@@ -1800,9 +1793,19 @@ class FacetPattern {
     if ( Array.isArray(sequence) === false ) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
+    if (sequence.length > 128 ) {
+      throw `input to .play() cannot exceed 128 values; total length: ${sequence.length}`;
+    }
     Object.values(sequence).forEach(s => {
       this.sequence_data.push(s);
     });
+    return this;
+  }
+
+  saveAs (filename) {
+    let a_wav = new WaveFile();
+    a_wav.fromScratch(1, 44100, '32f', this.data);
+    fs.writeFile(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 

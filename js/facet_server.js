@@ -186,6 +186,8 @@ module.exports = {
     }
   },
 
+  // TODO this doesnt work on windows -- would need to differentiate user OS and
+  // check PID in windows commands
   checkIfOverloaded: () => {
     exec(`ps -p ${module.exports.pid} -o %cpu`, (error, stdout, stderr) => {
       if ( typeof stdout == 'string' ) {
@@ -238,7 +240,7 @@ module.exports = {
           }
         });
     });
-    worker.on("error", error => {throw error});
+    worker.on("error", error => {});
   },
 
   storeAnyPatterns: (fp) => {
@@ -265,6 +267,7 @@ if ( !fs.existsSync('tmp/')) {
 
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
+  // TODO not passing success/error messages back to UI
   try {
     module.exports.run(req.body.code, false);
   } catch (e) {
@@ -287,8 +290,15 @@ app.post('/midi', (req, res) => {
 });
 
 app.post('/midi_select', (req, res) => {
-  midioutput = new easymidi.Output(req.body.output);
-  res.sendStatus(200);
+  try {
+    midioutput = new easymidi.Output(req.body.output);
+    res.sendStatus(200);
+  } catch (e) {
+    res.send({
+      status: 400,
+      error: e
+    });
+  }
 });
 
 app.post('/bpm', (req, res) => {
