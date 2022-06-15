@@ -37,6 +37,7 @@
       }
       #transport span {
         cursor: pointer;
+        user-select: none;
       }
       #transport span:hover {
         color: #f7d952;
@@ -369,30 +370,29 @@
 
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
+      osc.open();
 
-      connectToOscServer();
+      checkStatus();
 
       osc.on('/cpu', message => {
         let cpu_percent = parseFloat(message.args[0]).toFixed(2).substring(0,4);
         $('#cpu').html(cpu_percent + '%&nbsp;cpu');
       });
 
-      osc.on('/hook', message => {
+      osc.on('/errors', message => {
+        $.growl.error({ message: message.args[0] });
       });
 
-      function connectToOscServer() {
+      function checkStatus() {
         let connected = false;
         let interval = setInterval( () => {
-          osc.open();
-          setTimeout( () => {
-            if ( osc.status() > 0 ) {
-              setStatus(`connected`);
-            }
-            else {
-              setStatus(`disconnected`);
-            }
-          }, 1000);
-        }, 3000);
+          $.post('http://127.0.0.1:1123/status', {}).done(function( data, status ) {
+            setStatus(`connected`);
+          })
+          .fail(function(data) {
+            setStatus(`disconnected`);
+          });
+        }, 1000);
       }
 
       function setStatus(status) {
@@ -452,8 +452,6 @@ setInterval(function () {
   }
 
 }, 100);
-
-
 function logslider(input, out_min, out_max) {
   var minp = 1;
   var maxp = 1000;
@@ -461,7 +459,6 @@ function logslider(input, out_min, out_max) {
   var maxv = Math.log(out_max);
   // calculate adjustment factor
   var scale = (maxv-minv) / (maxp-minp);
-
   return Math.exp(minv + scale*(input-minp)).toFixed(2);
 }
 </script>

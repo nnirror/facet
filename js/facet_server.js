@@ -243,7 +243,9 @@ module.exports = {
           }
         });
     });
-    worker.on("error", error => {});
+    worker.on("error", error => {
+      osc.send(new OSC.Message('/errors', error.toString()));
+    });
   },
 
   storeAnyPatterns: (fp) => {
@@ -270,20 +272,10 @@ if ( !fs.existsSync('tmp/')) {
 
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
-  // TODO not passing success/error messages back to UI
-  try {
-    module.exports.run(req.body.code, false);
-  } catch (e) {
-    res.send({
-      status: 400,
-      error: error_message
-    });
-  }
-  finally {
-    res.send({
-      status: 200,
-    });
-  }
+  module.exports.run(req.body.code, false);
+  res.send({
+    status: 200,
+  });
 });
 
 app.post('/midi', (req, res) => {
@@ -318,6 +310,10 @@ app.post('/steps', (req, res) => {
 app.post('/mute', (req, res) => {
   transport_on = false;
   module.exports.facet_patterns = {};
+  res.sendStatus(200);
+});
+
+app.post('/status', (req, res) => {
   res.sendStatus(200);
 });
 

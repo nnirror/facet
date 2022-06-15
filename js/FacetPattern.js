@@ -1735,7 +1735,7 @@ class FacetPattern {
       times = 128;
     }
     if ( typeof command != 'function' ) {
-      throw `3rd argument must be a function, type found: ${typeof command}`;
+      throw `3rd argument to .iter() must be a function, type found: ${typeof command}`;
     }
     command = command.toString();
     command = command.replace(/current_slice./g, 'this.');
@@ -1756,7 +1756,7 @@ class FacetPattern {
       duration = new FacetPattern().from(duration);
     }
     if ( typeof channel != 'number' ) {
-      throw `.note() 3rd argument: channel must be a number; type found: ${typeof channel}`;
+      throw `3rd argument to .note(): channel must be a number; type found: ${typeof channel}`;
     }
     this.notes.push({
       data:this.data,
@@ -1771,11 +1771,11 @@ class FacetPattern {
     if ( typeof hook == 'number' ) {
       hook = [hook];
     }
+    else if ( this.isFacetPattern(hook) ) {
+      hook = hook.data;
+    }
     if ( !this.name ) {
       throw `the .on() function requires a named FacetPattern. No FacetPattern name found.`;
-    }
-    if ( Array.isArray(hook) === false ) {
-      throw `input to .on() must be an array; type found: ${typeof hook}`;
     }
     Object.values(hook).forEach(h => {
       this.hooks.push(h);
