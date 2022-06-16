@@ -14,7 +14,7 @@
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
     <script src="js/jquery.growl.js" type="text/javascript"></script>
     <link href="css/jquery.growl.css" rel="stylesheet" type="text/css" />
-    <style media="screen">
+    <style>
       html {
         height: 1000px;
       }
@@ -22,26 +22,179 @@
         height: 95vh;
         font-size: 2em;
       }
-      #status, #notifications, #cpu {
+      #status, #notifications, #cpu, #midi, #transport {
         height: 5vh;
         max-height: 5vh;
         padding-top: 1.5vh;
         padding-left: 0.5em;
-        font-size: 1.667vh;
         display: inline-block;
         vertical-align: middle;
+      }
+      #transport {
+        font-size: 4vh;
+        padding-top: 0;
+        float: right;
+      }
+      #transport span {
+        cursor: pointer;
+        user-select: none;
+      }
+      #transport span:hover {
+        color: #f7d952;
+      }
+      #clear {
+        position: relative;
+        top: -8px;
+        left: -10px;
+      }
+      #stop {
+        position: relative;
+        top: -9px;
+      }
+      #play {
+        font-size: 2.5vh;
+        position: relative;
+        top: -6px;
+      }
+      #rerun {
+        position: relative;
+        left: -4px;
       }
       #status, #cpu {
         float: left;
       }
+      #status {
+        width: 2%;
+      }
+      #cpu {
+        width: 9%;
+        margin-right: 1%;
+        min-width: 66px;
+      }
       #notifications {
         float: left;
-        padding-left: 1%;
+        padding-right: 1%;
         overflow: scroll;
-        width: 80%;
+        width: 40%;
+      }
+      #midi {
+        float: right;
+        position: relative;
+        top: -3px;
+        width: 19%;
+        display: inline-table;
+        padding-left:0;
+        min-width: 130px;
+      }
+      #midi_refresh {
+        background-color: green;
+        color: white;
+        min-width: 20px;
+        height: 2em;
+      }
+      #midi_refresh:hover {
+        background-color: forestgreen;
       }
       .error {
         background-color: rgba(204, 0, 0, 0.5);
+      }
+      .slider {
+        width: 28% !important;
+        padding-left: 1%;
+        display: inline;
+        float: left;
+      }
+      .fader {
+        padding-left: 2%;
+        padding-right: 2%;
+        display:inline;
+        float:left;
+      }
+      output {
+        padding-top: 0px !important;
+      }
+      #midi_label {
+        display: inline;
+      }
+      @media screen and (max-width: 1200px) {
+        #midi_label {
+          display: none;
+        }
+        #midi_outs {
+          font-size: 0.7em;
+        }
+        #cpu {
+          font-size: 0.9em;
+          position: relative;
+          top: 1px;
+        }
+        .slider {
+          position: relative;
+          top: 3px;
+        }
+      }
+      @media screen and (max-width: 700px) {
+        #notifications {
+          width: 36% !important;
+        }
+        #midi_refresh {
+          font-size: 0.5em;
+          height: auto;
+        }
+        .fader {
+          font-size: 0.6em;
+          position: relative;
+          top: 5px;
+        }
+        .slider {
+          width: 25% !important;
+          position: relative;
+          top: 3px;
+        }
+        #cpu {
+          font-size: 0.7em;
+          position: relative;
+          top: 3px;
+          left: 5px;
+          margin-right: 0;
+        }
+        #midi_outs {
+          font-size: 0.8em;
+          position: relative;
+          top: 2px;
+        }
+        #transport {
+          font-size: 3vh;
+        }
+        #play {
+          top: 2px;
+        }
+        #stop {
+          top: -2px;
+        }
+        #rerun {
+          top: 6px;
+        }
+        #clear {
+          top: -1px;
+        }
+      }
+      @media screen and (max-width: 600px) {
+        #notifications {
+          width: 34% !important;
+        }
+        #midi {
+          min-width: 110px;
+        }
+        #midi_outs {
+          font-size: 0.6em;
+          position: relative;
+          top: 3px;
+        }
+        #midi_refresh {
+          position: relative;
+          top: 2px;
+        }
       }
     </style>
   </head>
@@ -54,6 +207,12 @@
         theme: "mbo",
         lineWrapping: true
       });
+
+      let mousex = 1, mousey = 1;
+      onmousemove = function(e) {
+        mousex = e.clientX/window.innerWidth;
+        mousey = Math.abs(1-(e.clientY/window.innerHeight));
+      }
 
       function getFirstLineOfBlock(initial_line) {
         // true if line above is empty or the line number gets to 0
@@ -102,6 +261,7 @@
       $(document).keydown(function(e) {
         // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
         if ( e.ctrlKey && e.keyCode == 13 ) {
+          $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
           runFacet();
         }
         else if ( e.ctrlKey && e.keyCode == 67 ) {
@@ -143,6 +303,7 @@
         let commands = code.trim().split(';').filter(Boolean);
         $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
           if ( data.success == true ) {
+            // load wav file and play it.
             $.growl.notice({ message: 'success:<br/>' + code });
           }
           else if ( data.error )  {
@@ -151,54 +312,163 @@
         });
       }
 
+      let midi_outs;
+      $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+        // create select with this -- check every 2 seconds, store in memory, if changed update select
+        //#midi_outs add option
+        if (data.data != midi_outs) {
+          midi_outs = data.data;
+          for (var i = 0; i < midi_outs.length; i++) {
+            let midi_out = midi_outs[i];
+            $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
+          }
+        }
+      });
+
+      $('body').on('change', '#midi_outs', function() {
+        $.post('http://127.0.0.1:1123/midi_select', {output:this.value}).done(function( data, status ) {
+
+        });
+      });
+
+      $('body').on('click', '#midi_refresh', function() {
+        $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+          $('#midi_outs').html('');
+          for (var i = 0; i < data.data.length; i++) {
+            let midi_out = data.data[i];
+            $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
+          }
+          $.growl.notice({ message: 'MIDI outputs refreshed' });
+        })
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          }
+        });
+      });
+
+      $('body').on('click', '#play', function() {
+        $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          }
+        });
+      });
+
+      $('body').on('click', '#stop', function() {
+        $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {})
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          }
+        });
+      });
+
+      $('body').on('click', '#clear', function() {
+        $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+      });
+
+      $('body').on('click', '#rerun', function() {
+        $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {
+        })
+        runFacet();
+      });
+
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 
-      connectToMaxOscServer();
+      checkStatus();
 
       osc.on('/cpu', message => {
-        let cpu_percent = parseFloat(message.args[0]).toFixed(1);
-        $('#cpu').html(cpu_percent + '% CPU');
+        let cpu_percent = parseFloat(message.args[0]).toFixed(2).substring(0,4);
+        $('#cpu').html(cpu_percent + '%&nbsp;cpu');
       });
 
-      osc.on('/hook', message => {
-        // $.growl.notice({ message: 'hook ran successfully:<br/>' + message.args[0] });
+      osc.on('/errors', message => {
+        $.growl.error({ message: message.args[0] });
       });
 
-      function connectToMaxOscServer() {
+      function checkStatus() {
         let connected = false;
-        let connection_status_change = false;
-        let message = '';
         let interval = setInterval( () => {
           osc.open();
-          setTimeout( () => {
-            if ( osc.status() == 1 ) {
-              setStatus(`connected`);
-            }
-            else {
-              setStatus(`disconnected`);
-            }
-          }, 1000);
-        }, 3000);
+          $.post('http://127.0.0.1:1123/status', {
+            mousex:mousex,
+            mousey:mousey,
+          }).done(function( data, status ) {
+            setStatus(`connected`);
+          })
+          .fail(function(data) {
+            setStatus(`disconnected`);
+          });
+        }, 250);
       }
 
       function setStatus(status) {
         let colored_span = '';
         if ( status == 'connected' ) {
-          colored_span = `status: <span style="color:green;"">${status}</span>`;
+          colored_span = `<span style="color:green;"">●</span>`;
         }
         else if ( status == 'processing' ) {
-          colored_span = `status: <span style="color:green;"">${status}</span>`;
+          colored_span = `<span style="color:green;"">●</span>`;
         }
         else if ( status == 'disconnected' ) {
-          colored_span = `status: <span style="color:red;"">${status}</span>`;
+          colored_span = `<span style="color:red;"">●</span>`;
         }
         $('#status').html(colored_span);
       }
       // end OSC
     </script>
-    <div id="status">status: initializing...</div>
-    <div id="cpu"></div>
-    <div id="notifications"></div>
+    <div id="status">●</div>
+    <div id="cpu">0.0% cpu</div>
+    <div id="notifications">
+      <input type="range" class="slider" min="1" max="240" value="90" id="bpm" step="1">
+      <output class="fader" id="intensity">90 bpm</output>
+      <input type="range" class="slider" min="1" max="128" value="16" id="steps" step="1">
+      <output class="fader" id="steps_out">16 steps</output>
+    </div>
+    <div id="transport">
+      <span id="play">▶</span>
+      <span id="stop">■</span>
+      <span id="rerun">↵</span>
+      <span id="clear">⊖</span>
+    </div>
+    <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>
 </html>
+
+<script type="text/javascript">
+let bpm=90;
+let steps=16;
+// check every 250ms for bpm change and send if changed
+setInterval(function () {
+  prev_bpm = bpm;
+  bpm = $('#bpm').val();
+  if (bpm != prev_bpm) {
+    $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+    $('#intensity').val(bpm + ' bpm');
+  }
+
+  prev_steps = steps;
+  steps = $('#steps').val();
+  if (steps != prev_steps) {
+    $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+    $('#steps_out').val(steps + ' steps');
+  }
+
+}, 100);
+function logslider(input, out_min, out_max) {
+  var minp = 1;
+  var maxp = 1000;
+  var minv = Math.log(out_min);
+  var maxv = Math.log(out_max);
+  // calculate adjustment factor
+  var scale = (maxv-minv) / (maxp-minp);
+  return Math.exp(minv + scale*(input-minp)).toFixed(2);
+}
+</script>

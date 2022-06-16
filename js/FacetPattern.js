@@ -9,13 +9,16 @@ const http = require('http');
 class FacetPattern {
   constructor (name) {
     this.name = name;
+    this.cc_data = [];
     this.data = [];
     this.history = '';
     this.hooks = [];
-    this.phasor_speed = [1];
+    this.notes = [];
+    this.pitchbend_data = [];
+    this.sequence_data = [];
     this.skipped = false;
     this.store = [];
-    this.stored_patterns = JSON.parse(this.getPatterns());
+    this.stored_patterns = this.getPatterns();
     this.utils = this.getUtils();
   }
 
@@ -25,6 +28,9 @@ class FacetPattern {
     // the best values for x are within -0.8 and 0.25
     // the best values for y are within -0.8 0.8
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     x = Number(x);
     y = Number(y);
     let chaos_sequence = [];
@@ -40,6 +46,9 @@ class FacetPattern {
   cosine (periods, length) {
     let cosine_sequence = [];
     periods = Math.round(Math.abs(Number(periods)));
+    if ( periods < 1 ) {
+      periods = 1;
+    }
     length =Math.round(Math.abs(Number(length)));
     // apply a 0.25 phase shift to a sine
     this.sine(periods, length);
@@ -48,6 +57,9 @@ class FacetPattern {
   }
 
   from (list) {
+    if ( typeof list == 'number' ) {
+      list = [list];
+    }
     this.data = list;
     return this;
   }
@@ -55,6 +67,10 @@ class FacetPattern {
   drunk (length, intensity) {
     let drunk_sequence = [];
     let d = Math.random();
+    length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     for (var i = 0; i < length; i++) {
       let amount_to_add = Math.random() * Number(intensity);
       if ( Math.random() < 0.5 ) {
@@ -75,6 +91,10 @@ class FacetPattern {
 
   noise (length) {
     let noise_sequence = [];
+    length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     for (var i = 0; i < length; i++) {
       noise_sequence[i] = Math.random();
     }
@@ -97,6 +117,9 @@ class FacetPattern {
   phasor (periods, length) {
     periods = Math.abs(Number(periods));
     length = Math.abs(Number(length));
+    if ( length < 1 ) {
+      length = 1;
+    }
     let phasor_sequence = this.ramp(0,1,length).dup(periods-1);
     this.data = phasor_sequence.data;
     return this;
@@ -107,6 +130,9 @@ class FacetPattern {
     from = Number(from);
     to = Number(to);
     size = Math.abs(Number(size));
+    if ( size < 1 ) {
+      size = 1;
+    }
     let amount_to_add = parseFloat(Math.abs(to - from) / size);
     if ( to < from ) {
       amount_to_add *= -1;
@@ -121,7 +147,7 @@ class FacetPattern {
 
   randsamp (dir) {
     if (!dir) {
-      dir = `../samples/`;
+      dir = `./samples/`;
     }
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];
@@ -160,11 +186,19 @@ class FacetPattern {
 
   sample (file_name) {
     try {
-      let buffer = fs.readFileSync(`../samples/${file_name}`);
+      let buffer = fs.readFileSync(`./samples/${file_name}`);
       let decodedAudio = wav.decode(buffer);
       this.data = Array.from(decodedAudio.channelData[0]);
       return this;
     } catch (e) {
+      try {
+        let buffer = fs.readFileSync(`${file_name}`);
+        let decodedAudio = wav.decode(buffer);
+        this.data = Array.from(decodedAudio.channelData[0]);
+        return this;
+      } catch (err) {
+        throw err;
+      }
       throw(e);
     }
   }
@@ -172,6 +206,9 @@ class FacetPattern {
   sine (periods, length) {
     let sine_sequence = [];
     periods = Math.round(Math.abs(Number(periods)));
+    if ( periods < 1 ) {
+      periods = 1;
+    }
     length = Math.round(Math.abs(Number(length)));
     for (var a = 0; a < periods; a++) {
       for (var i = 0; i < length; i++) {
@@ -190,6 +227,9 @@ class FacetPattern {
     let spiral_sequence = [], i = 1, angle = 360 * angle_phase_offset;
     angle_degrees = Math.abs(Number(angle_degrees));
     length = Math.abs(Number(length));
+    if ( length < 1 ) {
+      length = 1;
+    }
     while ( i <= length ) {
       angle += angle_degrees;
       if (angle > 359) {
@@ -207,6 +247,9 @@ class FacetPattern {
     let square_sequence = [];
     periods = Math.abs(Number(periods));
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     for (var a = 0; a < periods; a++) {
       for (var i = 0; i < length; i++) {
         let num_scaled = 0;
@@ -224,6 +267,9 @@ class FacetPattern {
     let tri_sequence = [];
     periods = Math.abs(Number(periods));
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     // create a ramp from 0 to 1
     for (var i = 0; i <= (length - 1); i++) {
       let num_scaled = i / (length - 1);
@@ -247,6 +293,9 @@ class FacetPattern {
 
   turing (length) {
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     let turing_sequence = this.noise(length).round();
     this.data = turing_sequence.data;
     return this;
@@ -1281,6 +1330,30 @@ class FacetPattern {
     return this;
   }
 
+  speed (ratio) {
+    // hard clamp stretch ratio between 0.02083 (48x) and 8
+    ratio = Math.abs(Number(ratio));
+    if ( ratio < 0.000001 ) {
+      ratio = 0.02083;
+    }
+    if (ratio > 8) {
+      ratio = 8;
+    }
+    let upscaled_data = [];
+    let new_samps = Math.floor(ratio * this.data.length);
+    let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
+    for (var n = 0; n < this.data.length; n++) {
+      let i = 0;
+      while (i < copies_of_each_value) {
+        upscaled_data.push(this.data[n]);
+        i++;
+      }
+    }
+    this.data = upscaled_data;
+    this.reduce(new_samps);
+    return this;
+  }
+
   sort () {
     let sorted_sequence = [];
     sorted_sequence = this.data.sort(function(a, b) { return a - b; });
@@ -1593,7 +1666,7 @@ class FacetPattern {
     let chunk = [];
     let pre_chunk = [];
     let post_chunk = [];
-    let window_size = chunked_sequence[0].post.length;
+    let window_size = 128;
     let window_amts = new FacetPattern().sine(1,window_size*2).range(0,0.5).reverse().data;
     let calc_chunk_index;
     for (var i = 0; i < chunks; i++) {
@@ -1679,6 +1752,22 @@ class FacetPattern {
   // END audio operations
 
   // BEGIN special operations
+  cc (controller = 70, channel = 0) {
+    if ( typeof controller != 'number' ) {
+      throw `.cc() 1st argument: controller must be a number; type found: ${typeof controller}`;
+    }
+    if ( typeof channel != 'number' ) {
+      throw `.cc() 2nd argument: channel must be a number; type found: ${typeof channel}`;
+    }
+    this.scale(Math.min(...this.data)*127,Math.max(...this.data) * 127);
+    this.cc_data.push({
+      data:this.data,
+      controller:controller,
+      channel:channel
+    });
+    return this;
+  }
+
   get (varname) {
     this.data = this.stored_patterns[varname];
     return this;
@@ -1694,7 +1783,7 @@ class FacetPattern {
       times = 128;
     }
     if ( typeof command != 'function' ) {
-      throw `3rd argument must be a function, type found: ${typeof command}`;
+      throw `3rd argument to .iter() must be a function, type found: ${typeof command}`;
     }
     command = command.toString();
     command = command.replace(/current_slice./g, 'this.');
@@ -1707,15 +1796,76 @@ class FacetPattern {
     return this;
   }
 
-  on (hook) {
-    this.hooks.push(hook);
+  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 0) {
+    if ( typeof velocity == 'number' || Array.isArray(velocity) === true ) {
+      velocity = new FacetPattern().from(velocity);
+    }
+    if ( typeof duration == 'number' || Array.isArray(duration) === true ) {
+      duration = new FacetPattern().from(duration);
+    }
+    if ( typeof channel != 'number' ) {
+      throw `3rd argument to .note(): channel must be a number; type found: ${typeof channel}`;
+    }
+    this.notes.push({
+      data:this.data,
+      velocity:velocity,
+      duration:duration,
+      channel:channel
+    });
+    return this;
+  }
+
+  on (hook = 0) {
+    if ( typeof hook == 'number' ) {
+      hook = [hook];
+    }
+    else if ( this.isFacetPattern(hook) ) {
+      hook = hook.data;
+    }
+    if ( !this.name ) {
+      throw `the .on() function requires a named FacetPattern. No FacetPattern name found.`;
+    }
+    Object.values(hook).forEach(h => {
+      this.hooks.push(h);
+    });
+    return this;
+  }
+
+  pitchbend (channel = 0) {
+    if ( typeof channel != 'number' ) {
+      throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
+    }
+    this.scale(Math.min(...this.data)*16384,Math.max(...this.data) * 16384).round();
+    this.pitchbend_data.push({
+      data:this.data,
+      channel:channel
+    });
+    return this;
+  }
+
+  play (sequence = 0) {
+    if ( typeof sequence == 'number' ) {
+      sequence = [sequence];
+    }
+    else if ( this.isFacetPattern(sequence) ) {
+      sequence = sequence.data;
+    }
+    if ( Array.isArray(sequence) === false ) {
+      throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
+    }
+    if (sequence.length > 128 ) {
+      throw `input to .play() cannot exceed 128 values; total length: ${sequence.length}`;
+    }
+    Object.values(sequence).forEach(s => {
+      this.sequence_data.push(s);
+    });
     return this;
   }
 
   saveAs (filename) {
     let a_wav = new WaveFile();
     a_wav.fromScratch(1, 44100, '32f', this.data);
-    fs.writeFile(`../samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
+    fs.writeFile(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 
@@ -1755,18 +1905,15 @@ class FacetPattern {
   }
 
   sometimes (prob, command) {
+    if ( typeof command != 'function' ) {
+      throw `2nd argument must be a function, type found: ${typeof command}`;
+    }
+    command = command.toString();
+    command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     prob = Math.abs(Number(prob));
     if ( Math.random() < prob ) {
-      eval(this.utils + ' this.' + command);
+      eval(this.utils + command);
     }
-    return this;
-  }
-
-  speed (s) {
-    if ( !this.isFacetPattern(s) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof s}`;
-    }
-    this.phasor_speed = s.data;
     return this;
   }
   // END special operations
@@ -1789,13 +1936,17 @@ class FacetPattern {
   }
 
   getPatterns() {
-    return fs.readFileSync('stored.json', 'utf8', (err, data) => {
-      return data;
-    });
+    try {
+      return JSON.parse(fs.readFileSync('js/stored.json', 'utf8', (err, data) => {
+        return data
+      }));
+    } catch (e) {
+      return {};
+    }
   }
 
   getUtils() {
-    return fs.readFileSync('utils.js', 'utf8', (err, data) => {
+    return fs.readFileSync('js/utils.js', 'utf8', (err, data) => {
       return data;
     });
   }
@@ -1810,20 +1961,12 @@ class FacetPattern {
   }
 
   makePatternsTheSameSize (sequence1, sequence2) {
-    // first, make both arrays as big as possible in relation to each other while preserving all values & scale
-    // so if one array was 100 and the other 250, this would convert them to 200 and 250
+    // make whichever one is smaller, fit the larger one's size.
     if ( sequence1.data.length > sequence2.data.length ) {
-      sequence2.data = this.scaleThePattern(sequence2.data, parseInt(sequence1.data.length / sequence2.data.length));
+      sequence2 = sequence2.speed((sequence1.data.length / sequence2.data.length));
     }
     else if ( sequence2.data.length > sequence1.data.length ) {
-      sequence1.data = this.scaleThePattern(sequence1.data, parseInt(sequence2.data.length / sequence1.data.length));
-    }
-    // then reduce the bigger array to smaller one's size
-    if ( sequence1.data.length > sequence2.data.length ) {
-      sequence1 = sequence1.reduce(sequence2.data.length);
-    }
-    else if ( sequence2.data.length > sequence1.data.length ) {
-      sequence2 = sequence2.reduce(sequence1.data.length);
+      sequence1 = sequence1.speed((sequence2.data.length / sequence1.data.length));
     }
     return [sequence1, sequence2];
   }
