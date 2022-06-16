@@ -21,10 +21,10 @@ const osc = new OSC({
 osc.open();
 let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
 let bpm = 90;
-let steps = 32;
+let steps = 16;
 let transport_on = true;
 let current_step = 1;
-let global_speed = (60000 / bpm) / steps;
+let global_speed = ((60000 / bpm) / steps) * 4;
 let speed = global_speed;
 let mousex = 1;
 let mousey = 1;
@@ -184,7 +184,7 @@ function repeaterFn() {
     else {
       current_step++;
     }
-    global_speed = (60000 / bpm) / steps;
+    global_speed = ((60000 / bpm) / steps) * 4;
     if ( speed != global_speed ) {
      clearInterval(repeater);
      speed = global_speed;

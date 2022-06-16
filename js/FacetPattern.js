@@ -191,6 +191,14 @@ class FacetPattern {
       this.data = Array.from(decodedAudio.channelData[0]);
       return this;
     } catch (e) {
+      try {
+        let buffer = fs.readFileSync(`${file_name}`);
+        let decodedAudio = wav.decode(buffer);
+        this.data = Array.from(decodedAudio.channelData[0]);
+        return this;
+      } catch (err) {
+        throw err;
+      }
       throw(e);
     }
   }
@@ -1323,10 +1331,13 @@ class FacetPattern {
   }
 
   speed (ratio) {
-    // hard clamp stretch ratio between 0.02083 (48x) and 12
+    // hard clamp stretch ratio between 0.02083 (48x) and 8
     ratio = Math.abs(Number(ratio));
     if ( ratio < 0.000001 ) {
       ratio = 0.02083;
+    }
+    if (ratio > 8) {
+      ratio = 8;
     }
     let upscaled_data = [];
     let new_samps = Math.floor(ratio * this.data.length);

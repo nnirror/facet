@@ -1,25 +1,27 @@
-# Facet: live coding for Max in the browser
+# Facet: live coding software for music
 
 ## Overview
 
-Facet is a JavaScript-based live coding system for Max. Using a code editor in the browser, you can build and transmit commands to algorithmically generate and manipulate multiple channels of audio and control data in real-time.
-
-The language is similar to other live coding environments like [TidalCycles](https://tidalcycles.org/Welcome) and [Hydra](https://hydra.ojack.xyz/) where simple commands are chained together to create complex patterns of data. The patterns can be scaled, offset, modulated, shuffled, duplicated, and more into any range or scale.
-
-Facet runs as a NodeJS server on your local machine, with minimal CPU overhead in Max. It allows for sample-accurate DSP from 1 sample up to multiple seconds of audio. It also can incorporate variables from your Max patcher as if they were global variables in your code, and you can attach commands to event "hooks" so they automatically rerun when a certain event occurs in Max.
+Facet is an open-source live coding system for algorithmic music. Using a code editor in your browser and a NodeJS server running locally on your machine, Facet can generate and sequence audio and MIDI data in real-time.
 
 ## Getting started
 
-1. Make sure you a running Max 8.0+. Facet will not work with previous versions.
-2. Download Node.js and npm: https://www.npmjs.com/get-npm
-3. In a terminal, while in the root of the facet repo, run `npm install`
-4. In a browser, open the index.html page. A blank code editor should appear.
+1. Download Node.js and npm: https://www.npmjs.com/get-npm
+2. Download the Facet repo. In a terminal, while in the root of the facet repo, run `npm install`
+3. Still in the terminal, run `npm run facet`. You should see something like this, indicating that the server is now running:
 
-Alternatively, you can install the Facet repo as part of your localhost web server, so that you don't need to navigate to the `index.html` page. For example, on my machine (OSX Catalina), I run Facet from http://127.0.0.1/~cella/facet/.
+```
+facet@0.4.0 facet /Users/cella/Sites/facet
+> node --stack-size=32000 js/facet_server.js
+```
 
-5. In Max, add the Facet repo and all subdirectories to your file preferences.
-6. In Max, open `examples/facet_helloworld.maxpat`.
-7. Copy this command into the code editor in the browser: `new $('helloworld').sine(60,10).gain(0.1123);` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave.
+3. In a browser, open the index.html page. A blank code editor should appear.
+
+If you want, you can install the Facet repo as part of your localhost web server, so that you don't need to navigate to the `index.html` page. For example, on my machine (OSX Catalina), I run Facet from http://127.0.0.1/~cella/facet/.
+
+4. Copy this command into the code editor in the browser: `_.sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran.
+
+You should hear a sine wave playing out of your computer's default sound card.
 
 ## Facet commands
 
@@ -45,44 +47,36 @@ Finally, there are shorthands to improve syntax and legibility. The rest of this
 
 [This overview video](https://youtu.be/8ngD7rWFlOc) has more details on writing commands.
 
-### How to run
+### UI controls
+
+Apart from the text editor, there are several UI elements and controls in the browser. Moving from left to right, they are:
+
+- Server connection status indicator (green = online; red = offline)
+- CPU% indicator
+- Slider for setting global transport BPM
+- Slider for setting steps per whole note (sequence resolution)
+- MIDI output selector / refresh
+- ▶ = start transport
+- ■ = stop transport
+- ↵ = rerun the block of code wherever the cursor is
+- ⊖ = clear all event hooks. More information on event hooks is in the `.on()` function documentation below.
+
+### Keyboard shortcuts
 
 - Run command(s): `[ctrl + enter]`. All commands not separated by multiple newlines will run together.
-- Clear all `facet` objects in Max (effectively a global mute): `[ctrl + m]`
-
-## Connecting to Max
-
-In order to receive commands from the browser, all Max patches must have **one and only one** instance of a `facet_server` object. This will load an ExpressJS server via a node.script object behind the scenes. It will listen for HTTP POSTs, parse the commands, and  automatically update any `facet` objects in your patch with an identical name to the FacetPattern's name.
-
-Create a `facet` object in Max, matching the FacetPattern's name in your code:
-
-```
-// browser code
-new $('example').noise(10000).times(_.ramp(1,0,10000).log(100));
-
-// max object
-|=============|
-|facet example|
-|=============|
-```
-
-The `facet example` Max object will now be emitting a signal with whatever data you attach to it when you run commands. Voila!
+- Stop the transport and clear all hooks (effectively a global mute): `[ctrl + m]`
+- Clear all hooks, but continue the transport: `[ctrl + c]`
+- Mute/unmute hooks: `[ctrl + f]`
 
 ### Variables
 
-You can send variables from Max into Facet to incorporate in your code. The right inlet of the `facet_server` Max object will take custom variables in this format: `foo $1`.
-
 #### mousex / mousey
 
-Both `mousex` and `mousey`, as floating-point number representations of your cursor's position on your screen, are available for use in commands, e.g.:
+Both `mousex` and `mousey`, as floating-point number representations of your cursor's position _in the browser window_, are available for use in commands, e.g.:
 
 ```
-new $('example').sine(1,1000).gain(mousey); // cursor y position controls volume every time the code runs
+new $('example').sine(100,200).gain(mousey); // cursor y position controls volume every time the code runs
 ```
-
-## NFTs
-
-Anyone who creates a NFT to sell media created with Facet will be cursed.
 
 ## Command reference
 
@@ -360,6 +354,12 @@ new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.r
 	- example:
 		- `new $('example').sine(1,100).sort(); // a nice smoothing envelope from 0 to 1`
 ---
+- **speed** ( _amt_ )
+	- increases or decreases the playback speed of the FacetPattern, similar to transposing audio samples up or down. _amt_ values less than 1 speed up; _amt_ values greater than 1 slow down. _amt_ is clamped between 0.02083 and 8.
+	- example
+		- `new $('example').randsamp().speed(0.2); // fast sample`
+		- `new $('example').randsamp().speed(1.5); // slow sample`
+---
 - **sticky** ( _amt_ )
 	- samples and holds values in the FacetPattern based on probability. `amt` (float 0-1) sets the likelihood of each value being sampled and held.
 	- example
@@ -512,95 +512,64 @@ new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.r
 ---
 ### Audio-rate operations
 
-Facet can load audio samples as FacetPatterns and run arbitrary operations on them, but this comes with the caveat that Facet is limited to the CPU power of a single thread on your machine. One idea for future development is to make it so that each command spawns its own sub-process on the machine. I think this would open up more CPU power on multi-core machines. However, in the meantime, there is a CPU% indicator in the bottom window of the browser that can be helpful when running audio operations to see when you are running out of resources.
+Facet can load audio samples as FacetPatterns and run arbitrary operations on them.
 
- To prevent humongous computations, there are some guardrails for certain functions, but not too much. This software is experimental, and it is possible that you accidentally run a command that uses too much computing power. (It happened to me once in a while during development). In that case, you need to kill the node process running in the background. Find the `node` process ID (I use top) and run:
-
-`kill -9 pid_goes_here`
+ To prevent humongous computations, there are some guardrails for certain functions, but not too much. This software is experimental, and it is possible that you accidentally run a command that uses too much computing power. In that case, simply stop and restart the node server in your terminal.
 
 - **audio** ( )
 	- scales any FacetPattern to {-1,1} and normalizes it. Useful for preparing FacetPattern for audio output. For example, `sine()` by default returns in a range {0,1}. `audio()` would change that to a bipolar, {-1,1} range.
 	- example:
-		- `new $('example').randsamp().times(_.noise(4)).audio();`
+		- `new $('example').randsamp().times(_.noise(4)).audio().play();`
 - **comb** ( _ms_ )
 	- generates a comb filtered version of the input FacetPattern, with a delay of `ms` milliseconds.
 	- example:
-		- `new $('example').randsamp().comb(random(40,100));`
+		- `new $('example').randsamp().comb(random(40,100)).play();`
 - **convolve** ( _FacetPattern_ )
 	- computes the convolution between the two FacetPatterns.
 	- example:
-		- `new $('example').randsamp().convolve(_.randsamp());	// convolving random samples`
+		- `new $('example').randsamp().convolve(_.randsamp()).play();	// convolving random samples`
 - **dilate** ( _FacetPattern_ )
 	- warps the playback speed of the input FacetPattern according to the second lookup FacetPattern. A value of `1` in the lookup sequence will mean the corresponding portion in the playback buffer will play at "regular" speed. Values lower than 1 will play faster, and values higher than 1 will play slower. The second FacetPattern will always be scaled between 0.5 and 1.5 before playing, so that some values are slower and the rest are faster.
 	- example:
-		- `new $('example').randsamp().dilate(_.sine(30,20).audio());;	// wobbling random samples`
+		- `new $('example').randsamp().dilate(_.sine(30,20).audio()).play();	// wobbling random samples`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
 	- example:
-		- `new $('example').randsamp().mutechunks(16,0.33);	// 33% of 16 audio slices muted`
+		- `new $('example').randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
+
+- **play** ( _FacetPattern_ )
+	- plays the FacetPattern as audio to your computer's default sound card.
+	- example:
+		- `new $('example').randsamp().play();	// `
 - **suspend** ( _start_pos_, _end_pos_ )
 	- surrounds the FacetPattern with silence, so that the entire input FacetPattern still occurs, but only for a fraction of the overall resulting FacetPattern. The smallest possible fraction is 1/8 of the input FacetPattern, to safeguard against generating humongous and almost entirely empty wav files.
 	- example:
-		- `new $('example').randsamp().suspend(0.25,0.75);	// the input pattern is now squished into the middle 50% of the buffer`
+		- `new $('example').randsamp().suspend(0.25,0.75).play();	// the input pattern is now squished into the middle 50% of the buffer`
 - **randsamp** ( _dir_ = `../samples/` )
 	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument. Just make sure that directory is available in the Max File Preferences.
 	- example:
-		- `new $('example').randsamp().reverse(); // random backwards sample`
+		- `new $('example').randsamp().reverse().play(); // random backwards sample`
 - **ichunk** ( _FacetPattern_ )
 	- slices the input into `FacetPattern.length` windowed chunks (to avoid audible clicks). Loops through every value of `FacetPattern` as a lookup table, determining which ordered chunk of audio from the input sequence it corresponds to, and appends that window to the output buffer.
 	- example:
-		- `new $('example').randsamp().ichunk(_.ramp(0,0.5,256)); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
-		- `new $('example').noise(4096).sort().ichunk(_.noise(256).sort()); // structuring noise with noise`
+		- `new $('example').randsamp().ichunk(_.ramp(0,0.5,256)).play(); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
+		- `new $('example').noise(4096).sort().ichunk(_.noise(256).sort()).play(); // structuring noise with noise`
 - **harmonics** ( _FacetPattern_, _amplitude=0.9_  )
 	- superimposes `FacetPattern.length` copies of the input FacetPattern onto the output. Each number in `FacetPattern` corresponds to the frequency of the harmonic, which is a copy of the input signal playing at a different speed. Each harmonic _n_ in the output sequence is slightly lower in level, by 0.9^_n_. Allows for all sorts of crazy sample-accurate polyphony.
 	- example:
-		- `new $('example').randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
-		- `new $('example').randsamp().harmonics(_.map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)) // add 3 harmonics at geometric ratios`
+		- `new $('example').randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)).play(); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
+		- `new $('example').randsamp().harmonics(_.map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)).play(); // add 3 harmonics at geometric ratios`
 - **sample** ( _filename_ )
-	- loads a wav file from the `../samples/` directory into memory. You can specify subdirectories of `../samples/`.
+	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well.
 	- example:
-		- `new $('example').sample('1234.wav'); // if 1234.wav is in the samples directory, you're good to go`
-		- `new $('example').sample('../../anydir/goes/here/myfile.wav'); // or point to the file with a relative path`
+		- `new $('example').sample('1234.wav').play(); // if 1234.wav is in the samples directory, you're good to go`
+		- `new $('example').sample('myfolder/myfile.wav'); // or point to the file with a relative path`
 
 ### Hooks
 
-- **on** ( _hook_ )
-	- Reruns the command Whenever an event with name `hook` is sent as a message to the left inlet of the `facet_server` object in Max.
-	- By default, every 32nd note of the Max global transport there is a hook that you can automatically use via, e.g.: `.on(6)`. This would mean the command reruns on the 6th 32nd note of each whole note.
+- **on** ( _FacetPattern_ = 0 )
+	- Reruns the command at however many positions are specified in _FacetPattern_, over the course of a whole note.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
+	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
 	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
-
-### Speed
-
-- **speed** ( _FacetPattern_ )
-	- changes the amount of time that it takes to scan through every value in `FacetPattern`. There are 14 possible phasor speeds to choose from, all of which are in 1:n or n:1 relations with the global transport tempo in Max. (So all the `facet` objects are synced with each other):
-
--8 = completes pattern over 8 whole notes
-
--7 = completes pattern over 7 whole notes
-
--6 = completes pattern over 6 whole notes
-
--5 = completes pattern over 5 whole notes
-
--4 = completes pattern over 4 whole notes
-
--3 = completes pattern over 3 whole notes
-
--2 = completes pattern over 2 whole notes
-
--1 / 0 / 1 = default, completes pattern over 1 whole note
-
-2 = completes pattern over 1/2 whole note
-
-3 = completes pattern over 1/3 whole note
-
-4 = completes pattern over 1/4 whole note
-
-5 = completes pattern over 1/5 whole note
-
-6 = completes pattern over 1/6 whole note
-
-7 = completes pattern over 1/7 whole note
-
-8 = completes pattern over 1/8 whole note

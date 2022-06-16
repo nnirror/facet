@@ -377,6 +377,7 @@
 
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
+      osc.open();
 
       checkStatus();
 
@@ -392,7 +393,6 @@
       function checkStatus() {
         let connected = false;
         let interval = setInterval( () => {
-          osc.open();
           $.post('http://127.0.0.1:1123/status', {
             mousex:mousex,
             mousey:mousey,
@@ -423,10 +423,10 @@
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
     <div id="notifications">
-      <input type="range" class="slider" min="1" max="200" value="90" id="bpm" step="1">
+      <input type="range" class="slider" min="1" max="240" value="90" id="bpm" step="1">
       <output class="fader" id="intensity">90 bpm</output>
-      <input type="range" class="slider" min="1" max="1000" value="606" id="steps" step="1">
-      <output class="fader" id="steps_out">32 steps</output>
+      <input type="range" class="slider" min="1" max="128" value="16" id="steps" step="1">
+      <output class="fader" id="steps_out">16 steps</output>
     </div>
     <div id="transport">
       <span id="play">▶</span>
@@ -440,7 +440,7 @@
 
 <script type="text/javascript">
 let bpm=90;
-let steps=32;
+let steps=16;
 // check every 250ms for bpm change and send if changed
 setInterval(function () {
   prev_bpm = bpm;
@@ -453,7 +453,7 @@ setInterval(function () {
   }
 
   prev_steps = steps;
-  steps = Math.round(logslider($('#steps').val(),1,96));
+  steps = $('#steps').val();
   if (steps != prev_steps) {
     $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'steps could not be set... is the server running?' });
