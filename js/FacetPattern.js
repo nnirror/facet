@@ -1759,6 +1759,7 @@ class FacetPattern {
     if ( typeof channel != 'number' ) {
       throw `.cc() 2nd argument: channel must be a number; type found: ${typeof channel}`;
     }
+    this.scale(Math.min(...this.data)*127,Math.max(...this.data) * 127);
     this.cc_data.push({
       data:this.data,
       controller:controller,
@@ -1834,7 +1835,7 @@ class FacetPattern {
     if ( typeof channel != 'number' ) {
       throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
     }
-    this.scale(this.sort().data[0] * 16384,this.sort().reverse().data[0] * 16384).round();
+    this.scale(Math.min(...this.data)*16384,Math.max(...this.data) * 16384).round();
     this.pitchbend_data.push({
       data:this.data,
       channel:channel

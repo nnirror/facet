@@ -512,9 +512,9 @@ new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.r
 ---
 ### Audio-rate operations
 
-Facet can load audio samples as FacetPatterns and run arbitrary operations on them.
+Facet can load audio samples (currently only .wav files) as FacetPatterns and run arbitrary operations on them.
 
- To prevent humongous computations, there are some guardrails for certain functions, but not too much. This software is experimental, and it is possible that you accidentally run a command that uses too much computing power. In that case, simply stop and restart the node server in your terminal.
+ To prevent humongous computations, there are some guardrails, but even so, audio processing can increase your computer's CPU load quite a bit, and it is possible that you accidentally run a command that requires more computing power than your computer can handle in real(ish) time. Of course, if you're just running the command for sound design or testing purposes, you can just wait for it to complete and hear what it comes up with. But if the CPU% indicator goes way up, or the server seems to not be responding, just stop and restart the node server in your terminal, and try tailoring the audio commands so they are within the limitations of your machine.
 
 - **audio** ( )
 	- scales any FacetPattern to {-1,1} and normalizes it. Useful for preparing FacetPattern for audio output. For example, `sine()` by default returns in a range {0,1}. `audio()` would change that to a bipolar, {-1,1} range.
@@ -538,9 +538,13 @@ Facet can load audio samples as FacetPatterns and run arbitrary operations on th
 		- `new $('example').randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
 
 - **play** ( _FacetPattern_ )
-	- plays the FacetPattern as audio to your computer's default sound card.
+	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
+	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- example:
-		- `new $('example').randsamp().play();	// `
+		- `new $('example').randsamp().play();	// plays at beginning of loop`
+		- `new $('example').randsamp().play(0.5);	// plays at middle point`
+		- `new $('example').randsamp().play(_.noise(4));	// plays at 4 random steps`
 - **suspend** ( _start_pos_, _end_pos_ )
 	- surrounds the FacetPattern with silence, so that the entire input FacetPattern still occurs, but only for a fraction of the overall resulting FacetPattern. The smallest possible fraction is 1/8 of the input FacetPattern, to safeguard against generating humongous and almost entirely empty wav files.
 	- example:
@@ -565,10 +569,32 @@ Facet can load audio samples as FacetPatterns and run arbitrary operations on th
 		- `new $('example').sample('1234.wav').play(); // if 1234.wav is in the samples directory, you're good to go`
 		- `new $('example').sample('myfolder/myfile.wav'); // or point to the file with a relative path`
 
+### MIDI
+
+- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 0 )
+	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
+	- The VelocityPattern and DurationPatterns will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
+	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- example:
+		- `new $('example').sine(1,32).scale(36,90).round().note();`
+		- `new $('example').sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note().on();`
+- **cc** ( _controller_number_ = 70, _channel_ = 0 )
+	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
+	- _Note_: This function is automatically scaled into cc data, so you can supply it a FacetPattern between 0 and 1.
+	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- example:
+		- `new $('example').drunk(64,mousey).cc().on();`
+- **pitchbend** ( _channel_ = 0 )
+- sends a MIDI pitch bend event for every value in the FacetPattern's data.
+- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+- _Note_: This function is automatically scaled into pitch bend data, so you can supply it a FacetPattern between 0 and 1.
+- example:
+	- `new $('example').pitchbend(64,random()).scale(0,127).cc();`
+
 ### Hooks
 
 - **on** ( _FacetPattern_ = 0 )
-	- Reruns the command at however many positions are specified in _FacetPattern_, over the course of a whole note.
+	- Reruns the command at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.

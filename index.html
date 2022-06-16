@@ -342,7 +342,7 @@
         })
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
-            $.growl.error({ message: 'MIDI outputs could not be refreshed... is the server running?' });
+            $.growl.error({ message: 'no connection to the Facet server' });
           }
         });
       });
@@ -351,7 +351,7 @@
         $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
-            $.growl.error({ message: 'Transport could not be started... is the server running?' });
+            $.growl.error({ message: 'no connection to the Facet server' });
           }
         });
       });
@@ -360,7 +360,7 @@
         $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
-            $.growl.error({ message: 'Transport could not be stopped... is the server running?' });
+            $.growl.error({ message: 'no connection to the Facet server' });
           }
         });
       });
@@ -447,7 +447,7 @@ setInterval(function () {
   bpm = $('#bpm').val();
   if (bpm != prev_bpm) {
     $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'BPM could not be set... is the server running?' });
+      $.growl.error({ message: 'no connection to the Facet server' });
     });
     $('#intensity').val(bpm + ' bpm');
   }
@@ -456,7 +456,7 @@ setInterval(function () {
   steps = $('#steps').val();
   if (steps != prev_steps) {
     $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'steps could not be set... is the server running?' });
+      $.growl.error({ message: 'no connection to the Facet server' });
     });
     $('#steps_out').val(steps + ' steps');
   }
