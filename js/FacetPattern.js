@@ -27,6 +27,9 @@ class FacetPattern {
     // the best values for x are within -0.8 and 0.25
     // the best values for y are within -0.8 0.8
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     x = Number(x);
     y = Number(y);
     let chaos_sequence = [];
@@ -42,6 +45,9 @@ class FacetPattern {
   cosine (periods, length) {
     let cosine_sequence = [];
     periods = Math.round(Math.abs(Number(periods)));
+    if ( periods < 1 ) {
+      periods = 1;
+    }
     length =Math.round(Math.abs(Number(length)));
     // apply a 0.25 phase shift to a sine
     this.sine(periods, length);
@@ -60,6 +66,10 @@ class FacetPattern {
   drunk (length, intensity) {
     let drunk_sequence = [];
     let d = Math.random();
+    length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     for (var i = 0; i < length; i++) {
       let amount_to_add = Math.random() * Number(intensity);
       if ( Math.random() < 0.5 ) {
@@ -80,6 +90,10 @@ class FacetPattern {
 
   noise (length) {
     let noise_sequence = [];
+    length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     for (var i = 0; i < length; i++) {
       noise_sequence[i] = Math.random();
     }
@@ -102,6 +116,9 @@ class FacetPattern {
   phasor (periods, length) {
     periods = Math.abs(Number(periods));
     length = Math.abs(Number(length));
+    if ( length < 1 ) {
+      length = 1;
+    }
     let phasor_sequence = this.ramp(0,1,length).dup(periods-1);
     this.data = phasor_sequence.data;
     return this;
@@ -112,6 +129,9 @@ class FacetPattern {
     from = Number(from);
     to = Number(to);
     size = Math.abs(Number(size));
+    if ( size < 1 ) {
+      size = 1;
+    }
     let amount_to_add = parseFloat(Math.abs(to - from) / size);
     if ( to < from ) {
       amount_to_add *= -1;
@@ -177,6 +197,9 @@ class FacetPattern {
   sine (periods, length) {
     let sine_sequence = [];
     periods = Math.round(Math.abs(Number(periods)));
+    if ( periods < 1 ) {
+      periods = 1;
+    }
     length = Math.round(Math.abs(Number(length)));
     for (var a = 0; a < periods; a++) {
       for (var i = 0; i < length; i++) {
@@ -195,6 +218,9 @@ class FacetPattern {
     let spiral_sequence = [], i = 1, angle = 360 * angle_phase_offset;
     angle_degrees = Math.abs(Number(angle_degrees));
     length = Math.abs(Number(length));
+    if ( length < 1 ) {
+      length = 1;
+    }
     while ( i <= length ) {
       angle += angle_degrees;
       if (angle > 359) {
@@ -212,6 +238,9 @@ class FacetPattern {
     let square_sequence = [];
     periods = Math.abs(Number(periods));
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     for (var a = 0; a < periods; a++) {
       for (var i = 0; i < length; i++) {
         let num_scaled = 0;
@@ -229,6 +258,9 @@ class FacetPattern {
     let tri_sequence = [];
     periods = Math.abs(Number(periods));
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     // create a ramp from 0 to 1
     for (var i = 0; i <= (length - 1); i++) {
       let num_scaled = i / (length - 1);
@@ -252,6 +284,9 @@ class FacetPattern {
 
   turing (length) {
     length = Math.abs(Number(length));
+    if (length < 1 ) {
+      length = 1;
+    }
     let turing_sequence = this.noise(length).round();
     this.data = turing_sequence.data;
     return this;

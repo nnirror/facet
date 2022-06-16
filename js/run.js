@@ -4,10 +4,12 @@ const fs = require('fs');
 const FacetPattern = require('./FacetPattern.js')
 let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
 
-parentPort.postMessage(runCode(workerData.code, workerData.hook_mode));
+parentPort.postMessage(runCode(workerData.code, workerData.hook_mode, workerData.vars));
 
-function runCode (code, hook_mode = false) {
+function runCode (code, hook_mode = false, vars) {
   let fps = [];
+  let mousex = vars.mousex;
+  let mousey = vars.mousey;
   user_input = commentStripper.stripComments(code);
   let commands = user_input.trim().split(';').filter(Boolean);
   // might be good to see if this could be made more efficient in the future...

@@ -208,6 +208,12 @@
         lineWrapping: true
       });
 
+      let mousex = 1, mousey = 1;
+      onmousemove = function(e) {
+        mousex = e.clientX/window.innerWidth;
+        mousey = Math.abs(1-(e.clientY/window.innerHeight));
+      }
+
       function getFirstLineOfBlock(initial_line) {
         // true if line above is empty or the line number gets to 0
         let above_line_is_empty = false;
@@ -255,6 +261,7 @@
       $(document).keydown(function(e) {
         // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
         if ( e.ctrlKey && e.keyCode == 13 ) {
+          $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
           runFacet();
         }
         else if ( e.ctrlKey && e.keyCode == 67 ) {
@@ -370,7 +377,6 @@
 
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
-      osc.open();
 
       checkStatus();
 
@@ -386,13 +392,17 @@
       function checkStatus() {
         let connected = false;
         let interval = setInterval( () => {
-          $.post('http://127.0.0.1:1123/status', {}).done(function( data, status ) {
+          osc.open();
+          $.post('http://127.0.0.1:1123/status', {
+            mousex:mousex,
+            mousey:mousey,
+          }).done(function( data, status ) {
             setStatus(`connected`);
           })
           .fail(function(data) {
             setStatus(`disconnected`);
           });
-        }, 1000);
+        }, 250);
       }
 
       function setStatus(status) {

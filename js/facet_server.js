@@ -26,6 +26,8 @@ let transport_on = true;
 let current_step = 1;
 let global_speed = (60000 / bpm) / steps;
 let speed = global_speed;
+let mousex = 1;
+let mousey = 1;
 repeater = setInterval(repeaterFn, global_speed);
 
 const child = spawn('pwd');
@@ -224,7 +226,7 @@ module.exports = {
   pid: '',
 
   run: (code, hook_mode) => {
-    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode}});
+    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {mousex:mousex,mousey:mousey}}});
     worker.once("message", fps => {
         Object.values(fps).forEach(fp => {
           if ( typeof fp == 'object' ) {
@@ -314,6 +316,8 @@ app.post('/mute', (req, res) => {
 });
 
 app.post('/status', (req, res) => {
+  mousex = req.body.mousex;
+  mousey = req.body.mousey;
   res.sendStatus(200);
 });
 
