@@ -27,7 +27,7 @@ You should hear a sine wave playing out of your computer's default sound card.
 
 ### Structure
 
-Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. When constructed, you can give the FacetPattern a name, e.g.: `new FacetPattern('example');`. **A FacetPattern must have a name if you want to use it in Max.**
+Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. When constructed, you can give the FacetPattern a name, e.g.: `new FacetPattern('example');`. **A FacetPattern must have a name if you want it to regenerate automatically with the .on() command.**
 
 The FacetPattern has no data when it initializes, so first, we need to generate and attach some data. (The `FacetPattern generators` section of the command reference below has a list of all generators).
 
@@ -37,7 +37,7 @@ Next, translate that data somehow. (The `FacetPattern modulators` section of the
 
 `new FacetPattern('example').from([1,1,2,3]).palindrome();`
 
-However, not all FacetPatterns need to be "findable" to Max. For example, if you are adding two FacetPatterns together, and you only care about the sum, then you can leave empty the name of the second FacetPattern. Note how only the first FacetPattern has a name: `new FacetPattern('example_name').noise(128).add(new FacetPattern().sine(1,128));`
+However, not all FacetPatterns need a name. For example, if you are adding two FacetPatterns together, and you only care about the sum, then you can leave empty the name of the second FacetPattern. Note how only the first FacetPattern has a name: `new FacetPattern('example_name').noise(128).add(new FacetPattern().sine(1,128));`
 
 Finally, there are shorthands to improve syntax and legibility. The rest of this document will use these shorthands.
 
