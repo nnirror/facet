@@ -377,7 +377,6 @@
 
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
-      osc.open();
 
       checkStatus();
 
@@ -393,6 +392,7 @@
       function checkStatus() {
         let connected = false;
         let interval = setInterval( () => {
+          osc.open();
           $.post('http://127.0.0.1:1123/status', {
             mousex:mousex,
             mousey:mousey,
