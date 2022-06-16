@@ -377,7 +377,7 @@
 
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
-
+      osc.open();
       checkStatus();
 
       osc.on('/cpu', message => {

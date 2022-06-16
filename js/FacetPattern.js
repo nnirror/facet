@@ -64,7 +64,7 @@ class FacetPattern {
     return this;
   }
 
-  drunk (length, intensity) {
+  drunk (length, intensity = 0.1 ) {
     let drunk_sequence = [];
     let d = Math.random();
     length = Math.abs(Number(length));
