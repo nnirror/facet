@@ -6,6 +6,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
+const frontEndWebApp = express()
 const cors = require('cors');
 const OSC = require('osc-js');
 const fs = require('fs');
@@ -14,6 +15,7 @@ const wav = require('node-wav');
 const sound = require('sound-play');
 const FacetPattern = require('./FacetPattern.js')
 const easymidi = require('easymidi');
+const open = require('open')
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
@@ -369,3 +371,9 @@ const server = app.listen(1123);
 module.exports.setPID();
 // check that every 500ms it's not overloaded - so that superfluous hook events can be prevented from stacking up
 setInterval(module.exports.checkIfOverloaded, 500);
+
+frontEndWebApp.use(express.static(path.join(__dirname, '../')))
+
+const frontEndServer = frontEndWebApp.listen(1124)
+
+open('http://localhost:1124/');
