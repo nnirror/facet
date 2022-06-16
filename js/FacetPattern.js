@@ -14,6 +14,7 @@ class FacetPattern {
     this.history = '';
     this.hooks = [];
     this.notes = [];
+    this.pitchbend_data = [];
     this.sequence_data = [];
     this.skipped = false;
     this.store = [];
@@ -1814,6 +1815,18 @@ class FacetPattern {
     }
     Object.values(hook).forEach(h => {
       this.hooks.push(h);
+    });
+    return this;
+  }
+
+  pitchbend (channel = 0) {
+    if ( typeof channel != 'number' ) {
+      throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
+    }
+    this.scale(this.sort().data[0] * 16384,this.sort().reverse().data[0] * 16384).round();
+    this.pitchbend_data.push({
+      data:this.data,
+      channel:channel
     });
     return this;
   }

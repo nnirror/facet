@@ -155,8 +155,24 @@ function repeaterFn() {
             midioutput.send('cc', {
               controller: cc.controller,
               value: value,
-              channel: 0
+              channel: cc.channel
             })
+          }
+        }
+      }
+
+      // MIDI pitchbend logic
+      for (var j = 0; j < fp.pitchbend_data.length; j++) {
+        let pb = fp.pitchbend_data[j];
+        // convert cc steps to positions based on global step resolution
+        let pb_fp = scalePatternToSteps(pb.data,steps);
+        for (var i = 0; i < pb_fp.data.length; i++) {
+          if ( current_step == i+1 ) {
+            let value = pb_fp.data[i];
+            midioutput.send('pitch', {
+              value:value,
+              channel:pb.channel
+            });
           }
         }
       }
