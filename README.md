@@ -7,19 +7,19 @@ Facet is an open-source live coding system for algorithmic music. Using a code e
 ## Getting started
 
 1. Download Node.js and npm: https://www.npmjs.com/get-npm
-2. Download the Facet repo. In a terminal, while in the root of the facet repo, run `npm install`
-3. Still in the terminal, run `npm run facet`. You should see something like this, indicating that the server is now running:
+2. Download the Facet repo.
+3. Configure your machine so it can run a local web server. Install the Facet repo as a subdirectory in your local web server.
+4. In a terminal, while in the root of the facet repo, run `npm install`
+5. Still in the terminal, run `npm run facet`. The terminal output should indicate that the server is now running:
 
 ```
 facet@0.4.0 facet /Users/cella/Sites/facet
 > node --stack-size=32000 js/facet_server.js
 ```
 
-3. In a browser, open the index.html page. A blank code editor should appear.
+It should also automatically open up a new browser window with the code editor.
 
-If you want, you can install the Facet repo as part of your localhost web server, so that you don't need to navigate to the `index.html` page. For example, on my machine (OSX Catalina), I run Facet from http://127.0.0.1/~cella/facet/.
-
-4. Copy this command into the code editor in the browser: `_.sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran.
+6. Copy this command into the code editor in the browser: `_.sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran.
 
 You should hear a sine wave playing out of your computer's default sound card.
 
