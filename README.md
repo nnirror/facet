@@ -45,8 +45,6 @@ Finally, there are shorthands to improve syntax and legibility. The rest of this
 
 `new FacetPattern() == _;                    // shorthand for FacetPattern with no name`
 
-[This overview video](https://youtu.be/8ngD7rWFlOc) has more details on writing commands.
-
 ### UI controls
 
 Apart from the text editor, there are several UI elements and controls in the browser. Moving from left to right, they are:
@@ -90,6 +88,67 @@ new $('example').sine(100,200).gain(mousey); // cursor y position controls volum
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
 	- example:
 		- `new $('example').sine(random(1,100,1),40) // a sine wave with 1 - 100 cycles`
+---
+### FacetPattern generators
+- **chaos** ( _length_, _x_, _y_)
+	- over _length_ iterations, computes `x = (x*x)+y`. Returns the series of all `x` values computed over time. NOTE: iterative functions can have both stable and unstable results ( hello... Mandelbrot set... :D ). However in a musical context, there is not much use for an unstable result which would endlessly grow to infinity. So this function clips between -1 and 1, and there is no danger of sending humongous numbers to Max. For stable results, the best x values are within -0.8 and 0.25, and the best y values are within -0.8 and 0.8.
+	- example:
+		- `new $('example').chaos(16,(random()-0.5),(random()-0.5)); // 16 values somewhere between -1 and 1, moving upwards, downwards, or finding stability`
+---
+- **cosine** ( _periods_, _length_ )
+	- generates a cosine for `periods` periods, each period having `length` values.
+	- example:
+		- `new $('example').cosine(2,30); // 2 cycles, 30 values each`
+---
+- **from** ( _pattern_ )
+	- allows the user to specify their own pattern. **Note the array syntax!**
+	- example:
+		- `new $('example').from([1,2,3,4]);`
+---
+- **drunk** ( _length_, _intensity_ )
+	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
+	- example:
+		- `new $('example').drunk(16,0.1); // slight random movement`
+---
+- **noise** ( _length_ )
+	- generates a random series of values between9 0 and 1 for `length`.
+	- example:
+		- `new $('example').noise(1024); // lots of randomness`
+---
+- **phasor** ( _periods_, _length_ )
+	- ramps from 0 to 1 for `periods` periods, each period having length `length`.
+	- example:
+		- `new $('example').phasor(10,100); // 10 ramps`
+---
+- **ramp** ( _from_, _to_, _size_ )
+	- moves from `from` to `to` over `size` values.
+	- example:
+		- `new $('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
+---
+- **sine** ( _periods_, _length_ )
+	- generates a cosine for `periods` periods, each period having `length` values.
+	- example:
+		- `new $('example').cosine(2,30); // 2 cycles, 30 values each`
+---
+- **spiral** ( _length_, _degrees_ = 137.5 )
+	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to 137.5 which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
+	- example:
+		- `new $('example').sine(1,1000).times(_.spiral(1000,random(1,360))); // an interesting, modulated sine wave`
+		- `new $('example').spiral(100); // defaults to a Fibonacci leaf spiral`
+---
+- **square** ( _periods_, _length_ )
+	- generates a square wave (all 0 and 1 values) for `periods` periods, each period having `length` values.
+	- example:
+		- `new $('example').square(5,6); // 5 cycles, 6 values each`
+---
+- **turing** ( _length_ )
+	- generates a pattern of length `length` with random 1s and 0s.
+	- example:
+		- `new $('example').turing(64); // instant rhythmic triggers`
+- **tri** ( _periods_, _length_ )
+- generates a triangle wave for `periods` periods, each period having `length` values.
+	- example:
+		- `new $('example').triangle(30,33); // 30 cycles, 33 values each`
 ---
 ### FacetPattern modulators
 - **abs** ( )
@@ -447,69 +506,6 @@ new $('example').phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.r
 	- example:
 		- `new $('example').sine(1,100).times(_.from([0.5,0.25,0.1,1]));`
 ---
-### FacetPattern generators
-- **chaos** ( _length_, _x_, _y_)
-	- over _length_ iterations, computes `x = (x*x)+y`. Returns the series of all `x` values computed over time. NOTE: iterative functions can have both stable and unstable results ( hello... Mandelbrot set... :D ). However in a musical context, there is not much use for an unstable result which would endlessly grow to infinity. So this function clips between -1 and 1, and there is no danger of sending humongous numbers to Max. For stable results, the best x values are within -0.8 and 0.25, and the best y values are within -0.8 and 0.8.
-	- example:
-		- ```
-			new $('example').chaos(16,(random()-0.5),(random()-0.5)); // 16 values somewhere between -1 and 1, moving upwards, downwards, or finding stability
-		```
----
-- **cosine** ( _periods_, _length_ )
-	- generates a cosine for `periods` periods, each period having `length` values.
-	- example:
-		- `new $('example').cosine(2,30); // 2 cycles, 30 values each`
----
-- **from** ( _pattern_ )
-	- allows the user to specify their own pattern. **Note the array syntax!**
-	- example:
-		- `new $('example').from([1,2,3,4]);`
----
-- **drunk** ( _length_, _intensity_ )
-	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
-	- example:
-		- `new $('example').drunk(16,0.1); // slight random movement`
----
-- **noise** ( _length_ )
-	- generates a random series of values between9 0 and 1 for `length`.
-	- example:
-		- `new $('example').noise(1024); // lots of randomness`
----
-- **phasor** ( _periods_, _length_ )
-	- ramps from 0 to 1 for `periods` periods, each period having length `length`.
-	- example:
-		- `new $('example').phasor(10,100); // 10 ramps`
----
-- **ramp** ( _from_, _to_, _size_ )
-	- moves from `from` to `to` over `size` values.
-	- example:
-		- `new $('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
----
-- **sine** ( _periods_, _length_ )
-	- generates a cosine for `periods` periods, each period having `length` values.
-	- example:
-		- `new $('example').cosine(2,30); // 2 cycles, 30 values each`
----
-- **spiral** ( _length_, _degrees_ = 137.5 )
-	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to 137.5 which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
-	- example:
-		- `new $('example').sine(1,1000).times(_.spiral(1000,random(1,360))); // an interesting, modulated sine wave`
-		- `new $('example').spiral(100); // defaults to a Fibonacci leaf spiral`
----
-- **square** ( _periods_, _length_ )
-	- generates a square wave (all 0 and 1 values) for `periods` periods, each period having `length` values.
-	- example:
-		- `new $('example').square(5,6); // 5 cycles, 6 values each`
----
-- **turing** ( _length_ )
-	- generates a pattern of length `length` with random 1s and 0s.
-	- example:
-		- `new $('example').turing(64); // instant rhythmic triggers`
-- **tri** ( _periods_, _length_ )
-- generates a triangle wave for `periods` periods, each period having `length` values.
-	- example:
-		- `new $('example').triangle(30,33); // 30 cycles, 33 values each`
----
 ### Audio-rate operations
 
 Facet can load audio samples (currently only .wav files) as FacetPatterns and run arbitrary operations on them.
@@ -520,23 +516,38 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 	- scales any FacetPattern to {-1,1} and normalizes it. Useful for preparing FacetPattern for audio output. For example, `sine()` by default returns in a range {0,1}. `audio()` would change that to a bipolar, {-1,1} range.
 	- example:
 		- `new $('example').randsamp().times(_.noise(4)).audio().play();`
+---
 - **comb** ( _ms_ )
 	- generates a comb filtered version of the input FacetPattern, with a delay of `ms` milliseconds.
 	- example:
 		- `new $('example').randsamp().comb(random(40,100)).play();`
+---
 - **convolve** ( _FacetPattern_ )
 	- computes the convolution between the two FacetPatterns.
 	- example:
 		- `new $('example').randsamp().convolve(_.randsamp()).play();	// convolving random samples`
+---
 - **dilate** ( _FacetPattern_ )
 	- warps the playback speed of the input FacetPattern according to the second lookup FacetPattern. A value of `1` in the lookup sequence will mean the corresponding portion in the playback buffer will play at "regular" speed. Values lower than 1 will play faster, and values higher than 1 will play slower. The second FacetPattern will always be scaled between 0.5 and 1.5 before playing, so that some values are slower and the rest are faster.
 	- example:
 		- `new $('example').randsamp().dilate(_.sine(30,20).audio()).play();	// wobbling random samples`
+---
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
 	- example:
 		- `new $('example').randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
-
+---
+- **on** ( _FacetPattern_ = 0 )
+	- Reruns the command at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
+	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
+	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
+	- example:
+		- `new $('example').randsamp().play().on() // play new sample at the beginning of every whole note`
+		- `new $('example').randsamp().play().on(_.noise(4)) // play new sample at 4 random times throughrought every whole note`
+		- `new $('example').randsamp().play().on(_.choose(0,0.125,0.25,0.375,0.5,0.625,0.75,0.875)) // play new sample at 8 geometrically related times throughout every note`
+---
 - **play** ( _FacetPattern_ )
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
@@ -545,32 +556,36 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 		- `new $('example').randsamp().play();	// plays at beginning of loop`
 		- `new $('example').randsamp().play(0.5);	// plays at middle point`
 		- `new $('example').randsamp().play(_.noise(4));	// plays at 4 random steps`
+---
 - **suspend** ( _start_pos_, _end_pos_ )
 	- surrounds the FacetPattern with silence, so that the entire input FacetPattern still occurs, but only for a fraction of the overall resulting FacetPattern. The smallest possible fraction is 1/8 of the input FacetPattern, to safeguard against generating humongous and almost entirely empty wav files.
 	- example:
 		- `new $('example').randsamp().suspend(0.25,0.75).play();	// the input pattern is now squished into the middle 50% of the buffer`
+---
 - **randsamp** ( _dir_ = `../samples/` )
 	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument. Just make sure that directory is available in the Max File Preferences.
 	- example:
 		- `new $('example').randsamp().reverse().play(); // random backwards sample`
+---
 - **ichunk** ( _FacetPattern_ )
 	- slices the input into `FacetPattern.length` windowed chunks (to avoid audible clicks). Loops through every value of `FacetPattern` as a lookup table, determining which ordered chunk of audio from the input sequence it corresponds to, and appends that window to the output buffer.
 	- example:
 		- `new $('example').randsamp().ichunk(_.ramp(0,0.5,256)).play(); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
 		- `new $('example').noise(4096).sort().ichunk(_.noise(256).sort()).play(); // structuring noise with noise`
+---
 - **harmonics** ( _FacetPattern_, _amplitude=0.9_  )
 	- superimposes `FacetPattern.length` copies of the input FacetPattern onto the output. Each number in `FacetPattern` corresponds to the frequency of the harmonic, which is a copy of the input signal playing at a different speed. Each harmonic _n_ in the output sequence is slightly lower in level, by 0.9^_n_. Allows for all sorts of crazy sample-accurate polyphony.
 	- example:
 		- `new $('example').randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)).play(); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
 		- `new $('example').randsamp().harmonics(_.map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)).play(); // add 3 harmonics at geometric ratios`
+---
 - **sample** ( _filename_ )
 	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well.
 	- example:
 		- `new $('example').sample('1234.wav').play(); // if 1234.wav is in the samples directory, you're good to go`
 		- `new $('example').sample('myfolder/myfile.wav'); // or point to the file with a relative path`
-
+---
 ### MIDI
-
 - **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 0 )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
 	- The VelocityPattern and DurationPatterns will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
@@ -578,24 +593,17 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 	- example:
 		- `new $('example').sine(1,32).scale(36,90).round().note();`
 		- `new $('example').sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note().on();`
+---
 - **cc** ( _controller_number_ = 70, _channel_ = 0 )
 	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
 	- _Note_: This function is automatically scaled into cc data, so you can supply it a FacetPattern between 0 and 1.
 	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
 	- example:
 		- `new $('example').drunk(64,mousey).cc().on();`
+---
 - **pitchbend** ( _channel_ = 0 )
-- sends a MIDI pitch bend event for every value in the FacetPattern's data.
-- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
-- _Note_: This function is automatically scaled into pitch bend data, so you can supply it a FacetPattern between 0 and 1.
-- example:
-	- `new $('example').pitchbend(64,random()).scale(0,127).cc();`
-
-### Hooks
-
-- **on** ( _FacetPattern_ = 0 )
-	- Reruns the command at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
-	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
-	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
-	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
-	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
+	- sends a MIDI pitch bend event for every value in the FacetPattern's data.
+	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- _Note_: This function is automatically scaled into pitch bend data, so you can supply it a FacetPattern between 0 and 1.
+	- example:
+		- `new $('example').pitchbend(64,random()).scale(0,127).cc();`
