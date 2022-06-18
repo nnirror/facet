@@ -14,7 +14,7 @@ Facet is an open-source live coding system for algorithmic music. Using a code e
 
 ### Structure
 
-Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. When constructed, you can give the FacetPattern a name, e.g.: `new FacetPattern('example');`. **A FacetPattern must have a name if you want it to regenerate automatically with the .on() command.**
+Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. When constructed, you can give the FacetPattern a name, e.g.: `new FacetPattern('example');`.
 
 The FacetPattern has no data when it initializes, so first, we need to generate and attach some data. (The `FacetPattern generators` section of the command reference below has a list of all generators).
 
