@@ -573,6 +573,9 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 		- `new $('example').sample('myfolder/myfile.wav'); // or point to the file with a relative path`
 ---
 ### MIDI
+
+You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install midi driver {your OS goes here}" for more information.
+
 - **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 0 )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
 	- The VelocityPattern and DurationPatterns will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
