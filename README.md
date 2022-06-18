@@ -1,4 +1,4 @@
-# Facet: live coding software for music
+# Facet
 
 ## Overview
 
