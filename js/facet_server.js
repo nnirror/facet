@@ -35,11 +35,13 @@ repeater = setInterval(repeaterFn, global_speed);
 const child = spawn('pwd');
 
 function noteoff(note,channel) {
-  midioutput.send('noteoff', {
-    note: note,
-    velocity: 0,
-    channel: channel
-  });
+  if ( typeof midioutput !== 'undefined' ) {
+    midioutput.send('noteoff', {
+      note: note,
+      velocity: 0,
+      channel: channel
+    });
+  }
 }
 
 function scaleNotePatternToSteps(pattern,steps) {
@@ -131,11 +133,13 @@ function repeaterFn() {
             let d = duration_fp.data[i];
             let c = note.channel;
             try {
-              midioutput.send('noteon', {
-                note:n,
-                velocity:v,
-                channel:c
-              });
+              if ( typeof midioutput !== 'undefined' ) {
+                midioutput.send('noteon', {
+                  note:n,
+                  velocity:v,
+                  channel:c
+                });
+              }
               setTimeout(() => {
                 noteoff(n,c);
               },d);
@@ -154,11 +158,13 @@ function repeaterFn() {
         for (var i = 0; i < cc_fp.data.length; i++) {
           if ( current_step == i+1 ) {
             let value = cc_fp.data[i];
-            midioutput.send('cc', {
-              controller: cc.controller,
-              value: value,
-              channel: cc.channel
-            })
+            if ( typeof midioutput !== 'undefined' ) {
+              midioutput.send('cc', {
+                controller: cc.controller,
+                value: value,
+                channel: cc.channel
+              });
+            }
           }
         }
       }
@@ -171,10 +177,12 @@ function repeaterFn() {
         for (var i = 0; i < pb_fp.data.length; i++) {
           if ( current_step == i+1 ) {
             let value = pb_fp.data[i];
-            midioutput.send('pitch', {
-              value:value,
-              channel:pb.channel
-            });
+            if ( typeof midioutput !== 'undefined' ) {
+              midioutput.send('pitch', {
+                value:value,
+                channel:pb.channel
+              });
+            }
           }
         }
       }
