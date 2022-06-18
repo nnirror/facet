@@ -1,5 +1,3 @@
-# Facet
-
 ## Overview
 
 Facet is an open-source live coding system for algorithmic music. Using a code editor in your browser and a NodeJS server running locally on your machine, Facet can generate and sequence audio and MIDI data in real-time.
