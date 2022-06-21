@@ -1014,13 +1014,7 @@ class FacetPattern {
       max = parseInt(Number(new_min) * this.data.length);;
       min = parseInt(Number(new_max) * this.data.length);;
     }
-    let range_sequence = [];
-    for (const [key, step] of Object.entries(this.data)) {
-      if ( Number(key) >= min && Number(key) <= max ) {
-        range_sequence.push(step);
-      }
-    }
-    this.data = range_sequence;
+    this.data = this.data.slice(min,max);
     return this;
   }
 
