@@ -1869,7 +1869,7 @@ class FacetPattern {
   saveAs (filename) {
     let a_wav = new WaveFile();
     a_wav.fromScratch(1, 44100, '32f', this.data);
-    fs.writeFile(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
+    fs.writeFileSync(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 
