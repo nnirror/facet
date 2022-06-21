@@ -6,16 +6,16 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const express = require('express');
 const app = express();
-const frontEndWebApp = express()
+const frontEndWebApp = express();
 const cors = require('cors');
 const OSC = require('osc-js');
 const fs = require('fs');
 const WaveFile = require('wavefile').WaveFile;
 const wav = require('node-wav');
-const sound = require('sound-play');
-const FacetPattern = require('./FacetPattern.js')
+const sound = require('./lib/play_sound.js');
+const FacetPattern = require('./FacetPattern.js');
 const easymidi = require('easymidi');
-const open = require('open')
+const open = require('open');
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
@@ -105,12 +105,11 @@ function repeaterFn() {
     Object.values(module.exports.facet_patterns).forEach(fp => {
       for (var j = 0; j < fp.sequence_data.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
-        let sequence_step = Math.floor(fp.sequence_data[j] * (steps-1)) + 1;
+        let sequence_step = Math.round(fp.sequence_data[j] * (steps-1)) + 1;
         if (current_step == sequence_step) {
           try {
             sound.play(`tmp/${fp.name}.wav`);
-          } catch (error) {
-          }
+          } catch (e) {}
         }
       }
       // MIDI note logic
@@ -280,7 +279,7 @@ module.exports = {
     if ( fp.store.length > 0 ) {
       for (var i = 0; i < fp.store.length; i++) {
         module.exports.stored[fp.store[i]] = fp.data;
-        fs.writeFile('js/stored.json', JSON.stringify(module.exports.stored),()=> {});
+        fs.writeFileSync('js/stored.json', JSON.stringify(module.exports.stored),()=> {});
       }
     }
   },
@@ -385,3 +384,9 @@ frontEndWebApp.use(express.static(path.join(__dirname, '../')))
 const frontEndServer = frontEndWebApp.listen(1124)
 
 open('http://localhost:1124/');
+
+//do something when app is closing
+process.on('exit', ()=>{fs.writeFileSync('js/stored.json', '{}');process.exit()});
+
+//catches ctrl+c event
+process.on('SIGINT', ()=>{fs.writeFileSync('js/stored.json', '{}');process.exit()});

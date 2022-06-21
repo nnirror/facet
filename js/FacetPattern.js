@@ -1769,11 +1769,15 @@ class FacetPattern {
   }
 
   get (varname) {
+    if ( typeof this.stored_patterns[varname] == 'undefined') {
+      throw `No pattern found with name: ${varname}. Patterns must be created with .set() in a prior command before running .get()`;
+    }
     this.data = this.stored_patterns[varname];
     return this;
   }
 
   iter (times, prob, command) {
+    // TODO: environment variables such as mousex and mousey are not working inside this scope.
     prob = Math.abs(Number(prob));
     times = Math.abs(Math.round(Number(times)));
     if ( times == 0 ) {
@@ -1875,6 +1879,7 @@ class FacetPattern {
   }
 
   slices (num_slices, prob, command) {
+    // TODO: environment variables such as mousex and mousey are not working inside this scope.
     let out = [];
     prob = Math.abs(Number(eval(prob)));
     num_slices = Math.abs(Math.round(Number(eval(num_slices))));
@@ -1905,6 +1910,7 @@ class FacetPattern {
   }
 
   sometimes (prob, command) {
+    // TODO: environment variables such as mousex and mousey are not working inside this scope.
     if ( typeof command != 'function' ) {
       throw `2nd argument must be a function, type found: ${typeof command}`;
     }

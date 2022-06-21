@@ -12,10 +12,6 @@ function runCode (code, hook_mode = false, vars) {
   let mousey = vars.mousey;
   user_input = commentStripper.stripComments(code);
   let commands = user_input.trim().split(';').filter(Boolean);
-  // might be good to see if this could be made more efficient in the future...
-  // by splitting each the entire command from the HTTP request before it comes in here.
-  // this would mean more worker threads, each one for a smaller piece of work.
-  // it could mess up .set() / .get() retrieval of set patterns (although that would probably only be for the first .get() call)
   Object.values(commands).forEach(command => {
     let original_command = command;
     command = removeTabsAndNewlines(command);

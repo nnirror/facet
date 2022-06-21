@@ -19,7 +19,6 @@
     "open": "^8.4.0",
     "osc-js": "^2.3.2",
     "request": "^2.88.2",
-    "sound-play": "^1.1.0",
     "sync-request": "^6.1.0",
     "wavefile": "^11.0.0",
     "ws": "^8.8.0"

@@ -233,6 +233,13 @@ new $('example').sine(100,200).gain(mousey); // cursor y position controls volum
 		- `new $('example').from([0,1,2]).gain(100); // 0 100 200`
 		- `new $('example').from([0,1,2]).gain(0.5); // 0 0.5 1`
 ---
+- **get** ( _name_ )
+	- retrieves a FacetPattern previously stored in memory by a `.set()` command. **NOTE**: You cannot run `.get()` in the same block of commands where the pattern was initially stored via `.set()`.
+		- example:
+		- `new $('example').randsamp().set('my_pattern'); // first, set a random sample, in a separate command`
+		- `new $('example1').get('my_pattern').dup(1).play() // then in a new command, run these two together`
+		- `new $('example2').get('my_pattern').dup(3).play() // to play the same sample 2 and 4 times simultaneously`
+---
 - **gt** ( _amt_ )
 	- returns `1` for every value in the FacetPattern greater than `amt` and `0` for all other values.
 	- example:
@@ -356,6 +363,11 @@ new $('example').sine(100,200).gain(mousey); // cursor y position controls volum
 	- moves the FacetPattern to a new range, from `new_min` to `new_max`. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
 	- example:
 		- `new $('example').sine(10,100).scale(-1,1); // bipolar signal`
+---
+- **set** ( _name_ )
+	- stores a FacetPattern in memory for temporary reference in future operations. **NOTE**: You cannot run `.get()` in the same block of commands where the pattern was initially stored via `.set()`. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+		- example:
+		- `new $('example').noise(32).set('my_pattern');`
 ---
 - **shift** ( _amt_ )
 	- moves the FacetPattern to the left or the right. `amt` gets wrapped to values between -1 and 1, since you can't shift more than 100% left or 100% right.
