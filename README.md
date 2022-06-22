@@ -536,10 +536,11 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 	- example:
 		- `new $('example').randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
 ---
-- **on** ( _FacetPattern_ = 0 )
+- **on** ( _FacetPattern_ = 0, _every_n_times_ = 1 )
 	- Reruns the command at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
-	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- With no first argument, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the first argument.
+	- With no second argument, the command will regenerate at the beginning of each whole note. When a second argument is present, the command will only regenerate every `n` whole notes.
 	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
 	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
 	- example:

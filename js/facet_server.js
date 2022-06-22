@@ -26,6 +26,7 @@ let bpm = 90;
 let steps = 16;
 let transport_on = true;
 let current_step = 1;
+let cycles_elapsed = 0;
 let global_speed = ((60000 / bpm) / steps) * 4;
 let speed = global_speed;
 let mousex = 1;
@@ -92,11 +93,14 @@ function repeaterFn() {
   if ( transport_on !== false) {
     // main stepping loop
     let prev_step = current_step-1;
-    for (const [hook_key, hook_code] of Object.entries(module.exports.hooks)) {
+    for (const [hook_key, hook] of Object.entries(module.exports.hooks)) {
         if ( (Number(hook_key) >= ((prev_step) / steps) && Number(hook_key) < ((current_step+1) / steps))
           &&  module.exports.muteHooks == false ) {
-          hook_code.forEach(hook => {
-            module.exports.run(hook,true);
+          hook.forEach(h => {
+            // only run hook when cycles_elapsed % every == 0
+            if ( cycles_elapsed % h.every == 0 ) {
+              module.exports.run(h.command,true);
+            }
           });
         }
     }
@@ -189,6 +193,7 @@ function repeaterFn() {
 
     if ( current_step >= steps ) {
       current_step = 1;
+      cycles_elapsed++;
     }
     else {
       current_step++;
@@ -208,9 +213,9 @@ module.exports = {
       if ( fp.hooks.length > 0 ) {
         for (var i = 0; i < fp.hooks.length; i++) {
           if ( !module.exports.hooks[fp.hooks[i]] ) {
-            module.exports.hooks[fp.hooks[i]] = [];
+            module.exports.hooks[fp.hooks[i][0]] = [];
           }
-          module.exports.hooks[fp.hooks[i]].push(command);
+          module.exports.hooks[fp.hooks[i][0]].push({command:command,every:fp.hooks[i][1]});
         }
       }
     }

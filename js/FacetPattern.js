@@ -1813,7 +1813,7 @@ class FacetPattern {
     return this;
   }
 
-  on (hook = 0) {
+  on (hook = 0, every = 1) {
     if ( typeof hook == 'number' ) {
       hook = [hook];
     }
@@ -1823,8 +1823,11 @@ class FacetPattern {
     if ( !this.name ) {
       throw `the .on() function requires a named FacetPattern. No FacetPattern name found.`;
     }
+    if ( typeof every != 'number' ) {
+      throw `2nd argument to .on() must be a number; type found : ${typeof every}`;
+    }
     Object.values(hook).forEach(h => {
-      this.hooks.push(h);
+      this.hooks.push([h,every]);
     });
     return this;
   }
