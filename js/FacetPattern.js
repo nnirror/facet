@@ -13,6 +13,7 @@ class FacetPattern {
     this.data = [];
     this.history = '';
     this.hooks = [];
+    this.looped = false;
     this.notes = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
@@ -360,8 +361,8 @@ class FacetPattern {
   }
 
   audio () {
-    this.normalize();
-    this.scale(-1,1);
+    // hi pass filter to prevent DC ofsset
+    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
     return this;
   }
 
@@ -412,8 +413,31 @@ class FacetPattern {
     return this;
   }
 
-  comb (ms) {
-    let samples = Math.round(Math.abs(Number(ms)) * 44.1);
+  mix ( wet_amt, command) {
+    // TODO: environment variables such as mousex and mousey are not working inside this scope.
+    if ( typeof command != 'function' ) {
+      throw `2nd argument must be a function, type found: ${typeof command}`;
+    }
+    let mix_out = [];
+    command = command.toString();
+    command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+    let dry = new FacetPattern().from(this.data);
+    wet_amt = Math.abs(Number(wet_amt));
+    let dry_amt = Math.abs(1 - wet_amt);
+    eval(this.utils + command);
+    let same_size_arrays = this.makePatternsTheSameSize(this, dry);
+    this.data = same_size_arrays[0].data;
+    let dry_data = same_size_arrays[1].data;
+    for (const [key, step] of Object.entries(this.data)) {
+      mix_out[key] = (this.data[key] * wet_amt) + (dry_data[key] * dry_amt);
+    }
+    this.data = mix_out;
+    return this;
+  }
+
+  delay (samples, feedback = 1) {
+    samples = Math.round(Math.abs(Number(samples)));
+    feedback = Number(feedback);
     let shift_percentage = samples / this.data.length;
     let comb_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
@@ -422,7 +446,7 @@ class FacetPattern {
     // now add a shifted sequence on top, average the two copies
     this.shift(shift_percentage);
     for (const [key, step] of Object.entries(this.data)) {
-      comb_sequence[key] = (step + comb_sequence[key]) * 0.5;
+      comb_sequence[key] = ((step * feedback) + comb_sequence[key]) * 0.5;
     }
     this.data = comb_sequence;
     return this;
@@ -500,6 +524,7 @@ class FacetPattern {
   }
 
   echo (num, feedback) {
+    // TODO: this function seems inefficient
     num = Math.round(Math.abs(Number(num)));
     feedback = Number(feedback);
     if ( !feedback ) {
@@ -512,9 +537,9 @@ class FacetPattern {
       return this;
     }
     let quality_reduction = 1 / num;
-    if (this.data.length * num > 88200 ) {
-      this.reduce(Math.round(quality_reduction * this.data.length));
-    }
+    // if (this.data.length * num > 88200 ) {
+    //   this.reduce(Math.round(quality_reduction * this.data.length));
+    // }
     let original_step_length = this.data.length;
     this.dup(num);
     let amplitude = 1;
@@ -810,6 +835,82 @@ class FacetPattern {
   log (base, rotation = 1) {
       this.warp(base, rotation);
       return this;
+  }
+
+  biquad(a,b,c,d,e) {
+    // implemented based on: https://docs.cycling74.com/max7/tutorials/08_filterchapter02
+    a = Number(a);
+    b = Number(b);
+    c = Number(c);
+    d = Number(d);
+    e = Number(e);
+    let filter_out = [];
+    for (var i = 0; i < this.data.length; i++) {
+      let prev_step = i-1,prev2_step = i-2;
+      if (i == 0) {
+        prev_step = this.data.length-1;
+        prev2_step = this.data.length-2;
+      }
+      else if (i == 1) {
+        prev_step = 0;
+        prev2_step = this.data.length-1;
+      }
+
+      if (filter_out.length >= 2) {
+        filter_out.push(
+            (this.data[i]*a)
+          + (this.data[prev_step]*b)
+          + (this.data[prev2_step]*c)
+          - (filter_out[i-1]*d)
+          - (filter_out[i-2]*e)
+        );
+      }
+      else if (filter_out.length == 1) {
+        filter_out.push(
+            (this.data[i]*a)
+          + (this.data[prev_step]*b)
+          + (this.data[prev2_step]*c)
+          - (filter_out[i-1]*d)
+        );
+      }
+      else {
+        filter_out.push(
+            (this.data[i]*a)
+          + (this.data[prev_step]*b)
+          + (this.data[prev2_step]*c)
+        );
+      }
+    }
+    this.data = filter_out;
+    return this;
+  }
+
+  allpass (a = 1) {
+    a = Number(a);
+    let filter_out = [];
+    for (var i = 0; i < this.data.length; i++) {
+      let prev_step;
+      if (i == 0) {
+        prev_step = this.data.length-1;
+      }
+      else {
+        prev_step = i-1;
+      }
+      if (i == 0) {
+        filter_out.push(
+            (this.data[i]*a)
+        );
+      }
+      else {
+        filter_out.push(
+            (this.data[i]*a)
+          + (this.data[prev_step])
+          - (filter_out[prev_step]*a)
+        );
+      }
+    }
+    this.data = filter_out;
+    return this;
   }
 
   lpf (cutoff) {
@@ -1583,109 +1684,24 @@ class FacetPattern {
   // END WINDOW operations. shimmed from https://github.com/scijs/window-function
 
   // BEGIN audio operations
-  dilate (sequence2) {
-    if ( !this.isFacetPattern(sequence2) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
-    }
-    sequence2.scale(0.5,1.5);
-    let dilate_amt, slice, dilate_sequence = [];
-    let chunked_sequence = this.getchunks(sequence2.data.length).data;
-    for (var i = 0; i < chunked_sequence.length; i++) {
-      slice = chunked_sequence[i].chunk;
-      dilate_amt = sequence2.data[i];
-      if ( dilate_amt < 1 ) {
-        // shrink
-        slice = new FacetPattern().from(slice).reduce(slice.length * dilate_amt).data;
-      }
-      else {
-        // stretch
-        slice = new FacetPattern().from(slice).ichunk(new FacetPattern().ramp(0,1,256)).reduce(slice.length * dilate_amt).data;
-      }
-      dilate_sequence.push(slice);
-    }
-    this.data = dilate_sequence;
-    this.flatten();
-    return this;
-  }
-
-  getchunks (num_chunks) {
-    let chunk_size = this.data.length / parseInt(num_chunks);
-    let window_size = parseInt((this.data.length / num_chunks) * 0.04);
-    let chunked_sequence = [];
-    let chunk_obj = {
-      pre: [],
-      chunk: [],
-      post: []
-    };
-    for (var i = 0; i < this.data.length; i++) {
-      chunk_obj.chunk.push(this.data[i]);
-      if ( ( chunk_obj.chunk.length >= chunk_size ) || (i == (this.data.length - 1)) ) {
-        // pre should always start at window_size before
-        let pre = i - window_size;
-        if ( pre < 0 ) {
-          pre = chunk_obj.chunk.length + pre;
-        }
-        let v = 0;
-        while ( v < window_size ) {
-          chunk_obj.pre.push(this.data[pre+v]);
-          v++;
-        }
-        for (var x = i; x < i + window_size; x++) {
-          let calc_x = x;
-          if (calc_x >= this.data.length ) {
-            calc_x = Math.abs(calc_x - this.data.length);
-          }
-          chunk_obj.post.push(this.data[calc_x]);
-        }
-        chunked_sequence.push(chunk_obj);
-        chunk_obj = {
-          pre: [],
-          chunk: [],
-          post: []
-        };
-      }
-    }
-    this.data = chunked_sequence;
-    return this;
-  }
-
   ichunk (sequence2) {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
-    sequence2.reduce(512);
-    let chunks = sequence2.data.length;
-    let chunked_sequence = this.getchunks(chunks).data;
-    let ichunk_sequence = [];
-    let chunk = [];
-    let pre_chunk = [];
-    let post_chunk = [];
-    let window_size = 128;
-    let window_amts = new FacetPattern().sine(1,window_size*2).range(0,0.5).reverse().data;
-    let calc_chunk_index;
-    for (var i = 0; i < chunks; i++) {
-      calc_chunk_index = Math.floor(sequence2.data[i] * (chunks - 1));
-      if (!chunked_sequence[calc_chunk_index]) {
-        continue;
+    let out = [];
+    let chunk_length = Math.floor(this.data.length / sequence2.data.length);
+    for (var i = 0; i < sequence2.data.length; i++) {
+      let chunk_start_index = Math.floor(sequence2.data[i] * this.data.length);
+      let chunk_end_index = chunk_start_index + chunk_length;
+      let chunk = [];
+      for (var a = chunk_start_index; a < chunk_end_index; a++) {
+        chunk.push(this.data[a]);
       }
-      if (!chunked_sequence[i]) {
-        continue;
-      }
-      chunk = chunked_sequence[calc_chunk_index].chunk;
-      let next = i+1 >= chunked_sequence.length ? 0 : i+1;
-      pre_chunk = chunked_sequence[next].pre;
-
-      post_chunk = chunked_sequence[i].post;
-      for (var a = 0; a < (chunk.length - window_size); a++) {
-        ichunk_sequence.push(chunk[a]);
-      }
-      for (var a = 0; a < post_chunk.length; a++) {
-        let post_window_mix = parseFloat(window_amts[a]);
-        let pre_window_mix = Math.abs(1-post_window_mix);
-        ichunk_sequence.push(((post_chunk[a] * post_window_mix)) + ((pre_chunk[a] * pre_window_mix)));
-      }
+      let chunk_fp = new FacetPattern().from(chunk).fade();
+      out.push(chunk_fp.data);
     }
-    this.data = ichunk_sequence;
+    this.data = out;
+    this.flatten();
     return this;
   }
 
@@ -1696,51 +1712,23 @@ class FacetPattern {
     if ( !prob ) {
       prob = 0.75;
     }
-    let mutechunk_sequence = this.getchunks(parseInt(chunks)).data;
-    let window_size = mutechunk_sequence[0].post.length;
+    let chunk_length = Math.floor(this.data.length / chunks);
     let out = [];
-    let window_amts = new FacetPattern().sine(1,window_size*2).range(0,0.5).reverse().data;
-    let chunk;
-    let pre_chunk;
-    let post_chunk;
-    // first loop through and "fade" some by setting their pre/chunk/post to 0
-    for (var i = 0; i < mutechunk_sequence.length; i++) {
-      chunk = mutechunk_sequence[i].chunk;
-      pre_chunk = mutechunk_sequence[i].pre;
-      post_chunk = mutechunk_sequence[i].post;
-      if ( Math.random() < parseFloat(prob) ) {
-        mutechunk_sequence[i].pre = [];
-        mutechunk_sequence[i].chunk = [];
-        mutechunk_sequence[i].post = [];
-        for (var a = 0; a < pre_chunk.length; a++) {
-          mutechunk_sequence[i].pre.push(0);
-        }
-        for (var a = 0; a < chunk.length; a++) {
-          mutechunk_sequence[i].chunk.push(0);
-        }
-        for (var a = 0; a < post_chunk.length; a++) {
-          mutechunk_sequence[i].post.push(0);
-        }
+    let min, max;
+    for (var i = 0; i < chunks; i++) {
+      let chunk_fp;
+      min = i * chunk_length;
+      max = min + chunk_length;
+      if ( Math.random() < prob ) {
+        chunk_fp = new FacetPattern().from(0).dup(chunk_length-1).fade();
       }
-    }
-    // then loop through to interp out
-    for (var i = 0; i < mutechunk_sequence.length; i++) {
-      chunk = mutechunk_sequence[i].chunk;
-      let next = i >= (mutechunk_sequence.length - 1) ? 0 : i + 1;
-      pre_chunk = mutechunk_sequence[next].pre;
-      post_chunk = mutechunk_sequence[i].post;
-      for (var a = 0; a < (chunk.length - window_size); a++) {
-        out.push(chunk[a]);
+      else {
+        chunk_fp = new FacetPattern().from(this.data.slice(min,max)).fade();
       }
-      for (var a = 0; a < post_chunk.length; a++) {
-        let post_window_mix = parseFloat(window_amts[a]);
-        let pre_window_mix = Math.abs(1-post_window_mix);
-        out.push(parseFloat((post_chunk[a] * post_window_mix)) + parseFloat((pre_chunk[a] * pre_window_mix)));
-      }
+      out.push(chunk_fp.data);
     }
     this.data = out;
-    // phase rotate to handle windows
-    this.shift(window_size / this.data.length);
+    this.flatten();
     return this;
   }
   // END audio operations
@@ -1844,7 +1832,7 @@ class FacetPattern {
     return this;
   }
 
-  play (sequence = 0) {
+  play (sequence = 0 ) {
     if ( typeof sequence == 'number' ) {
       sequence = [sequence];
     }
@@ -1860,6 +1848,24 @@ class FacetPattern {
     Object.values(sequence).forEach(s => {
       this.sequence_data.push(s);
     });
+    return this;
+  }
+
+  repeat (sequence = 0) {
+    if ( typeof sequence == 'number' ) {
+      sequence = [sequence];
+    }
+    else if ( this.isFacetPattern(sequence) ) {
+      sequence = sequence.data;
+    }
+    if ( Array.isArray(sequence) === false ) {
+      throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
+    }
+    if (sequence.length > 128 ) {
+      throw `input to .play() cannot exceed 128 values; total length: ${sequence.length}`;
+    }
+    this.looped = true;
+    this.play(sequence);
     return this;
   }
 

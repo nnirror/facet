@@ -106,14 +106,18 @@ function repeaterFn() {
     }
 
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
-    Object.values(module.exports.facet_patterns).forEach(fp => {
+    for (const [k, fp] of Object.entries(module.exports.facet_patterns)) {
       for (var j = 0; j < fp.sequence_data.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
         let sequence_step = Math.round(fp.sequence_data[j] * (steps-1)) + 1;
         if (current_step == sequence_step) {
           try {
-            sound.play(`tmp/${fp.name}.wav`);
+            sound.play(`tmp/${fp.name}.wav`,1);
           } catch (e) {}
+          if ( fp.looped === false ) {
+            // delete sequences set via .play() instead of .repeat(), after one time
+            delete module.exports.facet_patterns[k];
+          }
         }
       }
       // MIDI note logic
@@ -189,7 +193,7 @@ function repeaterFn() {
           }
         }
       }
-    });
+    }
 
     if ( current_step >= steps ) {
       current_step = 1;
@@ -212,7 +216,7 @@ module.exports = {
     if (!hook_mode) {
       if ( fp.hooks.length > 0 ) {
         for (var i = 0; i < fp.hooks.length; i++) {
-          if ( !module.exports.hooks[fp.hooks[i]] ) {
+          if ( !module.exports.hooks[fp.hooks[i][0]] ) {
             module.exports.hooks[fp.hooks[i][0]] = [];
           }
           module.exports.hooks[fp.hooks[i][0]].push({command:command,every:fp.hooks[i][1]});
