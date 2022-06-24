@@ -363,6 +363,7 @@ class FacetPattern {
   audio () {
     // hi pass filter to prevent DC ofsset
     this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
+    this.scale(-1,1);
     return this;
   }
 
@@ -439,16 +440,16 @@ class FacetPattern {
     samples = Math.round(Math.abs(Number(samples)));
     feedback = Number(feedback);
     let shift_percentage = samples / this.data.length;
-    let comb_sequence = [];
+    let delay_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
-      comb_sequence[key] = step;
+      delay_sequence[key] = step;
     }
     // now add a shifted sequence on top, average the two copies
     this.shift(shift_percentage);
     for (const [key, step] of Object.entries(this.data)) {
-      comb_sequence[key] = ((step * feedback) + comb_sequence[key]) * 0.5;
+      delay_sequence[key] = ((step * feedback) + delay_sequence[key]) * 0.5;
     }
-    this.data = comb_sequence;
+    this.data = delay_sequence;
     return this;
   }
 

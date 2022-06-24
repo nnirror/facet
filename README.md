@@ -511,20 +511,25 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 
  To prevent humongous computations, there are some guardrails, but even so, audio processing can increase your computer's CPU load quite a bit, and it is possible that you accidentally run a command that requires more computing power than your computer can handle in real(ish) time. Of course, if you're just running the command for sound design or testing purposes, you can just wait for it to complete and hear what it comes up with. But if the CPU% indicator goes way up, or the server seems to not be responding, just stop and restart the node server in your terminal, and try tailoring the audio commands so they are within the limitations of your machine.
 
+ - **allpass** ( )
+ 	- runs the audio through an allpass filter.
+ 	- example:
+ 		- `new $('example').randsamp().iter(12,1,()=>{this.allpass().delay(random(1,6000))}).scale(-1,1).play(); // reverb :)`
+ ---
 - **audio** ( )
-	- scales any FacetPattern to {-1,1} and normalizes it. Useful for preparing FacetPattern for audio output. For example, `sine()` by default returns in a range {0,1}. `audio()` would change that to a bipolar, {-1,1} range.
+	- scales any FacetPattern to {-1,1} and removes any DC offset. Useful for preparing FacetPattern for audio output. For example, `sine()` by default returns in a range {0,1}. `audio()` would change that to a bipolar, {-1,1} range.
 	- example:
 		- `new $('example').randsamp().times(_.noise(4)).audio().play();`
----
-- **comb** ( _ms_ )
-	- generates a comb filtered version of the input FacetPattern, with a delay of `ms` milliseconds.
-	- example:
-		- `new $('example').randsamp().comb(random(40,100)).play();`
 ---
 - **convolve** ( _FacetPattern_ )
 	- computes the convolution between the two FacetPatterns.
 	- example:
 		- `new $('example').randsamp().convolve(_.randsamp()).play();	// convolving random samples`
+---
+- **delay** ( _samples_ )
+	- delays the input FacetPattern by `samples` samples.
+	- example:
+		- `new $('example').randsamp().delay(random(1700,10000)).play();`
 ---
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
@@ -547,10 +552,21 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- Whereas `repeat()` will continually loop playback, `play()` only runs a single time.
 	- example:
-		- `new $('example').randsamp().play();	// plays at beginning of loop`
-		- `new $('example').randsamp().play(0.5);	// plays at middle point`
-		- `new $('example').randsamp().play(_.noise(4));	// plays at 4 random steps`
+		- `new $('example').randsamp().play();	// plays once at beginning of loop`
+		- `new $('example').randsamp().play(0.5);	// plays once at middle point`
+		- `new $('example').randsamp().play(_.noise(4));	// plays once at 4 random steps`
+---
+---
+- **repeat** ( _FacetPattern_ )
+	- continually plays the sequence at whatever positions were specified, each time the transport moves through a whole note.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
+	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- example:
+	- `new $('example').randsamp().repeat();	// repeats, starting at beginning of loop`
+	- `new $('example').randsamp().repeat(0.5);	// repeats, starting at middle point`
+	- `new $('example').randsamp().repeat(_.noise(4));	// repeats, starting at 4 random steps`
 ---
 - **suspend** ( _start_pos_, _end_pos_ )
 	- surrounds the FacetPattern with silence, so that the entire input FacetPattern still occurs, but only for a fraction of the overall resulting FacetPattern. The smallest possible fraction is 1/8 of the input FacetPattern, to safeguard against generating humongous and almost entirely empty wav files.
