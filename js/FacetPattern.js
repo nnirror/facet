@@ -8,7 +8,7 @@ const http = require('http');
 
 class FacetPattern {
   constructor (name) {
-    this.name = name;
+    this.name = name ? name : Math.random();
     this.cc_data = [];
     this.data = [];
     this.history = '';
@@ -363,7 +363,6 @@ class FacetPattern {
   audio () {
     // hi pass filter to prevent DC ofsset
     this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
-    this.scale(-1,1);
     return this;
   }
 
@@ -525,7 +524,6 @@ class FacetPattern {
   }
 
   echo (num, feedback) {
-    // TODO: this function seems inefficient
     num = Math.round(Math.abs(Number(num)));
     feedback = Number(feedback);
     if ( !feedback ) {
@@ -537,24 +535,15 @@ class FacetPattern {
     if ( num === 0 ) {
       return this;
     }
-    let quality_reduction = 1 / num;
-    // if (this.data.length * num > 88200 ) {
-    //   this.reduce(Math.round(quality_reduction * this.data.length));
-    // }
-    let original_step_length = this.data.length;
-    this.dup(num);
-    let amplitude = 1;
-    let count = 1;
-    let out = [];
-    for (const [key, step] of Object.entries(this.data)) {
-      if ( count >= original_step_length ) {
-        amplitude *= feedback;
-        count = 0;
+    let original_copy = this.data;
+    let original_feedback = feedback;
+    for (var x = 0; x < num; x++) {
+      this.append(new FacetPattern().from(original_copy).gain(feedback));
+      feedback *= feedback;
+      if ( Math.abs(feedback) > 4 ) {
+        feedback = original_feedback;
       }
-      out.push(amplitude * step);
-      count++;
     }
-    this.data = out;
     return this;
   }
 
@@ -890,16 +879,10 @@ class FacetPattern {
     a = Number(a);
     let filter_out = [];
     for (var i = 0; i < this.data.length; i++) {
-      let prev_step;
-      if (i == 0) {
-        prev_step = this.data.length-1;
-      }
-      else {
-        prev_step = i-1;
-      }
+      let prev_step = i-1;
       if (i == 0) {
         filter_out.push(
-            (this.data[i]*a)
+          (this.data[i]*a)
         );
       }
       else {
@@ -1885,8 +1868,8 @@ class FacetPattern {
   slices (num_slices, prob, command) {
     // TODO: environment variables such as mousex and mousey are not working inside this scope.
     let out = [];
-    prob = Math.abs(Number(eval(prob)));
-    num_slices = Math.abs(Math.round(Number(eval(num_slices))));
+    prob = Math.abs(Number(prob));
+    num_slices = Math.abs(Math.round(Number(num_slices)));
     let foreach_sequence = [];
     if ( num_slices == 0 ) {
       return sequence;
