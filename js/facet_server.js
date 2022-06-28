@@ -111,13 +111,10 @@ function repeaterFn() {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
         let sequence_step = Math.round(fp.sequence_data[j] * (steps-1)) + 1;
         if (current_step == sequence_step) {
+          // console.log(fp.sequence_data[j]+ ': ' + fp.name);
           try {
             sound.play(`tmp/${fp.name}.wav`,1);
           } catch (e) {}
-          if ( fp.looped === false ) {
-            // delete sequences set via .play() instead of .repeat(), after one time
-            delete module.exports.facet_patterns[k];
-          }
         }
       }
       // MIDI note logic
@@ -197,6 +194,13 @@ function repeaterFn() {
 
     if ( current_step >= steps ) {
       current_step = 1;
+      for (const [k, fp] of Object.entries(module.exports.facet_patterns)) {
+        if ( fp.loop_has_occurred === true ) {
+          // delete sequences set via .play() instead of .repeat(), after one cycle
+          delete module.exports.facet_patterns[k];
+        }
+        fp.loop_has_occurred = true;
+      }
       cycles_elapsed++;
     }
     else {
