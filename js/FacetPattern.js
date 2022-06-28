@@ -21,6 +21,7 @@ class FacetPattern {
     this.store = [];
     this.stored_patterns = this.getPatterns();
     this.utils = this.getUtils();
+    this.loop_has_occurred = false;
   }
 
   // BEGIN generator operations
