@@ -111,7 +111,6 @@ function repeaterFn() {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
         let sequence_step = Math.round(fp.sequence_data[j] * (steps-1)) + 1;
         if (current_step == sequence_step) {
-          // console.log(fp.sequence_data[j]+ ': ' + fp.name);
           try {
             sound.play(`tmp/${fp.name}.wav`,1);
           } catch (e) {}
