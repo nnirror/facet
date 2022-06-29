@@ -194,7 +194,7 @@ function repeaterFn() {
     if ( current_step >= steps ) {
       current_step = 1;
       for (const [k, fp] of Object.entries(module.exports.facet_patterns)) {
-        if ( fp.loop_has_occurred === true ) {
+        if ( fp.loop_has_occurred === true && fp.looped === false ) {
           // delete sequences set via .play() instead of .repeat(), after one cycle
           delete module.exports.facet_patterns[k];
         }
