@@ -362,7 +362,18 @@ class FacetPattern {
   }
 
   audio () {
-    // hi pass filter to prevent DC ofsset
+    this.scale(1);
+    // fade on first 1024 samples or first half of data, whichever is larger
+    let fade_samples = 1024 > Math.ceil(this.data.length * 0.5) ? 1024 : Math.ceil(this.data.length * 0.5);
+    let fade = new FacetPattern().sine(1,fade_samples*2).range(0,0.5);
+    for (var i = 0; i < fade.data.length; i++) {
+      this.data[i] *= fade.data[i];
+    }
+    this.reverse();
+    for (var i = 0; i < fade.data.length; i++) {
+      this.data[i] *= fade.data[i];
+    }
+    this.reverse();
     this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
     return this;
   }
@@ -1023,6 +1034,10 @@ class FacetPattern {
 
   pong (min, max) {
     min = Number(min);
+    if (!max) {
+      max = min;
+      min *= -1;
+    }
     max = Number(max);
     let range = [min, max];
     let sorted_range = range.sort(function(a,b) { return a - b;});
@@ -1213,6 +1228,10 @@ class FacetPattern {
     // first determine existing range
     let min = Math.min.apply(Math, this.data);
     let max = Math.max.apply(Math, this.data);
+    if (!new_max) {
+      new_max = new_min;
+      new_min *= -1;
+    }
     // now scale each value based on new_min, new_max
     let scaled_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {

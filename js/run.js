@@ -14,7 +14,7 @@ function runCode (code, hook_mode = false, vars) {
   let commands = user_input.trim().split(';').filter(Boolean);
   Object.values(commands).forEach(command => {
     let original_command = command;
-    command = removeTabsAndNewlines(command);
+    command = formatCode(command);
     let fp = eval(utils + command);
     fp.original_command = original_command;
     fps.push(fp);
@@ -22,9 +22,11 @@ function runCode (code, hook_mode = false, vars) {
   return fps;
 }
 
-function removeTabsAndNewlines (user_input) {
+function formatCode (user_input) {
   user_input = user_input.replace(/\s\s+/g, '');
   user_input = user_input.replace(/\'/g, '"');
   user_input = user_input.replace(/;/g, ';\n');
+  // FacetPattern instantiation via "_." shorthand
+  user_input = user_input.replace(/_./g, '$().');
   return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
 }
