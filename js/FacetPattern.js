@@ -25,26 +25,6 @@ class FacetPattern {
   }
 
   // BEGIN generator operations
-  chaos (length, x, y) {
-    // takes a complex number (x,y). squares x, adds y... repeat.
-    // the best values for x are within -0.8 and 0.25
-    // the best values for y are within -0.8 0.8
-    length = Math.abs(Number(length));
-    if (length < 1 ) {
-      length = 1;
-    }
-    x = Number(x);
-    y = Number(y);
-    let chaos_sequence = [];
-    for (var i = 0; i < length; i++) {
-      chaos_sequence.push(x);
-      x = (x*x) + y;
-    }
-    this.data = chaos_sequence;
-    this.clip(-1, 1);
-    return this;
-  }
-
   cosine (periods, length) {
     let cosine_sequence = [];
     periods = Math.round(Math.abs(Number(periods)));
@@ -362,9 +342,10 @@ class FacetPattern {
   }
 
   audio () {
-    this.scale(1);
-    // fade on first 1024 samples or first half of data, whichever is larger
-    let fade_samples = 1024 > Math.ceil(this.data.length * 0.5) ? 1024 : Math.ceil(this.data.length * 0.5);
+    // HPF at ~0hz
+    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
+    // fade first/last 256 samples
+    let fade_samples = 256 > Math.floor(this.data.length * 0.5) ? Math.ceil(this.data.length * 0.5) : 256;
     let fade = new FacetPattern().sine(1,fade_samples*2).range(0,0.5);
     for (var i = 0; i < fade.data.length; i++) {
       this.data[i] *= fade.data[i];
@@ -374,7 +355,6 @@ class FacetPattern {
       this.data[i] *= fade.data[i];
     }
     this.reverse();
-    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
     return this;
   }
 
@@ -400,6 +380,35 @@ class FacetPattern {
     }
     this.data = changed_sequence;
     return this;
+  }
+
+  chaos (sequence2, iterations = 100, cx = 0, cy = 0) {
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
+    let out = [];
+    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
+    for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
+      out[key] = this.chaosInner(same_size_arrays[0].data[key],same_size_arrays[1].data[key],cx,cy,iterations);
+    }
+    this.data = out;
+    return this;
+  }
+
+  chaosInner (zx,zy,cx,cy,iterations) {
+    let n = 0, px = 0, py = 0, d = 0;
+    while (n < iterations) {
+      px = (zx*zx) - (zy*zy);
+      py = 2 * zx * zy;
+      zx = px + cx;
+      zy = py + cy;
+      d = Math.sqrt((zx*zx)+(zy*zy));
+      if ( d > 2 ) {
+        break;
+      }
+      n += 1;
+    }
+    return Math.abs(1 - (n/iterations));
   }
 
   clip (min, max) {
@@ -460,6 +469,8 @@ class FacetPattern {
     for (const [key, step] of Object.entries(this.data)) {
       delay_sequence[key] = ((step * feedback) + delay_sequence[key]) * 0.5;
     }
+    // TODO: this function wraps around the supplied pattern via .shift() instead of a "true" delay
+    // which means that the delayed copy of the end of the sample plays at the beginning, instead of afterwards.
     this.data = delay_sequence;
     return this;
   }
@@ -774,7 +785,7 @@ class FacetPattern {
       return this;
   }
 
-  interp (prob, sequence2) {
+  interp (prob = 0.5, sequence2) {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }

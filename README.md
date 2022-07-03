@@ -77,11 +77,6 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 		- `_.sine(random(1,100,1),40) // a sine wave with 1 - 100 cycles`
 ---
 ### FacetPattern generators
-- **chaos** ( _length_, _x_, _y_)
-	- over _length_ iterations, computes `x = (x*x)+y`. Returns the series of all `x` values computed over time. NOTE: iterative functions can have both stable and unstable results ( hello... Mandelbrot set... :D ). However in a musical context, there is not much use for an unstable result which would endlessly grow to infinity. So this function clips between -1 and 1, and there is no danger of sending humongous numbers to Max. For stable results, the best x values are within -0.8 and 0.25, and the best y values are within -0.8 and 0.8.
-	- example:
-		- `_.chaos(16,(random()-0.5),(random()-0.5)); // 16 values somewhere between -1 and 1, moving upwards, downwards, or finding stability`
----
 - **cosine** ( _periods_, _length_ )
 	- generates a cosine for `periods` periods, each period having `length` values.
 	- example:
@@ -153,6 +148,11 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- returns a 1 or 0 for each value in the FacetPattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the FacetPattern.)
 	- example:
 		- `_.from([1,1,3,4]).changed(); // 1 0 1 1`
+---
+- **chaos** ( _FacetPattern_, _iterations_ = 100, _cx_ = 0, _cy_ = 0)
+	- each piece of data in the FacetPattern is paired with the corresponding value in the second FacetPattern. The resulting complex number x,y coordinate is run through a function: f(x) = x2 + c, over `iterations` iterations. The output is a value between 0 and 1, which corresponds to how stable or unstable that particular point is in the complex number plane.
+	- By default, both cx and cy are set to 0 (Mandelbrot set). But you can set them to other values from -1 to 1, which can produce all sorts of Julia set variations.
+	- example: `_.sine(44,1000).chaos(_.drunk(44100,0.01)).play()`
 ---
 - **clip** ( _min_, _max_ )
 	- clips any numbers in the FacetPattern to a `min` and `max` range.
@@ -249,6 +249,12 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- returns `1` for every value in the FacetPattern greater than or equal to `amt` and `0` for all other values.
 	- example:
 		- `_.from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
+---
+- **interp** ( _weight_ = 0.5, _name_ )
+	- interpolates the FacetPattern with a FacetPattern previously stored in memory by a `.set()` command. A weight of 0.5 gives equal weight to both patterns. **NOTE**: You cannot run `.interp()` in the same block of commands where the pattern was initially stored via `.set()`.
+		- example:
+		- `_.randsamp().set('mypattern');  // first in one command, set a random sample`
+		- `_.sine(100,350).interp(0.5,_.get('mypattern')).play(); // then in a second command, 50% interpolate with a sine wave`
 ---
 - **jam** ( _prob_, _amt_ )
 	- changes values in the FacetPattern.  `prob` (float 0-1) sets the likelihood of each value changing. `amt` is how much bigger or smaller the changed values can be. If `amt` is set to 2, and `prob` is set to 0.5 half the values could have any number between 2 and -2 added to them.
