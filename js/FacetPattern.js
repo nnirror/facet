@@ -459,19 +459,19 @@ class FacetPattern {
   delay (samples, feedback = 1) {
     samples = Math.round(Math.abs(Number(samples)));
     feedback = Number(feedback);
-    let shift_percentage = samples / this.data.length;
-    let delay_sequence = [];
-    for (const [key, step] of Object.entries(this.data)) {
-      delay_sequence[key] = step;
+    let copy = new FacetPattern().from(0).dup(samples-1).append(new FacetPattern().from(this.data)).gain(feedback);
+    let delay_out = [];
+    let original_value;
+    for (var i = 0; i < copy.data.length; i++) {
+      if ( i >= this.data.length) {
+        original_value = 0;
+      }
+      else {
+        original_value = this.data[i];
+      }
+      delay_out[i] = (original_value + copy.data[i]) * 0.5;
     }
-    // now add a shifted sequence on top, average the two copies
-    this.shift(shift_percentage);
-    for (const [key, step] of Object.entries(this.data)) {
-      delay_sequence[key] = ((step * feedback) + delay_sequence[key]) * 0.5;
-    }
-    // TODO: this function wraps around the supplied pattern via .shift() instead of a "true" delay
-    // which means that the delayed copy of the end of the sample plays at the beginning, instead of afterwards.
-    this.data = delay_sequence;
+    this.data = delay_out;
     return this;
   }
 
