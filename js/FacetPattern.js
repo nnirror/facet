@@ -11,6 +11,7 @@ class FacetPattern {
     this.name = name ? name : Math.random();
     this.cc_data = [];
     this.data = [];
+    this.env = this.getEnv();
     this.history = '';
     this.hooks = [];
     this.looped = false;
@@ -20,7 +21,7 @@ class FacetPattern {
     this.skipped = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
-    this.utils = this.getUtils();
+    this.utils = this.env + this.getUtils();
     this.loop_has_occurred = false;
   }
 
@@ -435,7 +436,6 @@ class FacetPattern {
   }
 
   mix ( wet_amt, command) {
-    // TODO: environment variables such as mousex and mousey are not working inside this scope.
     if ( typeof command != 'function' ) {
       throw `2nd argument must be a function, type found: ${typeof command}`;
     }
@@ -1774,7 +1774,6 @@ class FacetPattern {
   }
 
   iter (times, prob, command) {
-    // TODO: environment variables such as mousex and mousey are not working inside this scope.
     prob = Math.abs(Number(prob));
     times = Math.abs(Math.round(Number(times)));
     if ( times == 0 ) {
@@ -1791,7 +1790,7 @@ class FacetPattern {
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     for (var i = 0; i < times; i++) {
       if ( Math.random() < prob ) {
-        eval(this.utils + command);
+        eval(this.env + this.utils + command);
       }
     }
     return this;
@@ -1897,7 +1896,6 @@ class FacetPattern {
   }
 
   slices (num_slices, prob, command) {
-    // TODO: environment variables such as mousex and mousey are not working inside this scope.
     let out = [];
     prob = Math.abs(Number(prob));
     num_slices = Math.abs(Math.round(Number(num_slices)));
@@ -1928,7 +1926,6 @@ class FacetPattern {
   }
 
   sometimes (prob, command) {
-    // TODO: environment variables such as mousex and mousey are not working inside this scope.
     if ( typeof command != 'function' ) {
       throw `2nd argument must be a function, type found: ${typeof command}`;
     }
@@ -1957,6 +1954,12 @@ class FacetPattern {
     });
     this.data = out;
     return this;
+  }
+
+  getEnv() {
+    return fs.readFileSync('js/env.js', 'utf8', (err, data) => {
+      return data;
+    });
   }
 
   getPatterns() {

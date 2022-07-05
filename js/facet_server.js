@@ -29,8 +29,6 @@ let current_step = 1;
 let cycles_elapsed = 0;
 let global_speed = ((60000 / bpm) / steps) * 4;
 let speed = global_speed;
-let mousex = 1;
-let mousey = 1;
 repeater = setInterval(repeaterFn, global_speed);
 
 const child = spawn('pwd');
@@ -254,6 +252,10 @@ module.exports = {
       });
   },
 
+  initEnv: () => {
+    fs.writeFileSync('js/env.js', '');
+  },
+
   initStore: () => {
     fs.writeFileSync('js/stored.json', '{}');
   },
@@ -263,7 +265,7 @@ module.exports = {
   pid: '',
 
   run: (code, hook_mode) => {
-    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {mousex:mousex,mousey:mousey}}});
+    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {}}});
     worker.once("message", fps => {
         Object.values(fps).forEach(fp => {
           if ( typeof fp == 'object' ) {
@@ -302,6 +304,7 @@ module.exports = {
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
 
+module.exports.initEnv();
 module.exports.initStore();
 
 // make the tmp/ directory if it doesn't exist
@@ -353,8 +356,9 @@ app.post('/mute', (req, res) => {
 });
 
 app.post('/status', (req, res) => {
-  mousex = req.body.mousex;
-  mousey = req.body.mousey;
+  // stores any environment variables that might be needed in any future eval statements in a file that is loaded into the FacetPattern
+  // instance when it's constructed
+  fs.writeFileSync('js/env.js', `var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,()=> {});
   res.sendStatus(200);
 });
 
@@ -398,7 +402,7 @@ const frontEndServer = frontEndWebApp.listen(1124)
 open('http://localhost:1124/');
 
 //do something when app is closing
-process.on('exit', ()=>{fs.writeFileSync('js/stored.json', '{}');process.exit()});
+process.on('exit', ()=>{fs.writeFileSync('js/stored.json', '{}');fs.writeFileSync('js/env.js', '');process.exit()});
 
 //catches ctrl+c event
-process.on('SIGINT', ()=>{fs.writeFileSync('js/stored.json', '{}');process.exit()});
+process.on('SIGINT', ()=>{fs.writeFileSync('js/stored.json', '{}');fs.writeFileSync('js/env.js', '');process.exit()});
