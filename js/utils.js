@@ -10,5 +10,11 @@ function choose (list) {
   return list[Math.floor(Math.random()*list.length)];
 }
 
-var $ = FacetPattern;
-var _ = new $();
+function $ (n) {
+  if (!n) {
+    return new FacetPattern(Math.random());
+  }
+  else {
+    return new FacetPattern(n);
+  }
+}

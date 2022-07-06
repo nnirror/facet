@@ -29,8 +29,6 @@ let current_step = 1;
 let cycles_elapsed = 0;
 let global_speed = ((60000 / bpm) / steps) * 4;
 let speed = global_speed;
-let mousex = 1;
-let mousey = 1;
 repeater = setInterval(repeaterFn, global_speed);
 
 const child = spawn('pwd');
@@ -106,13 +104,13 @@ function repeaterFn() {
     }
 
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
-    Object.values(module.exports.facet_patterns).forEach(fp => {
+    for (const [k, fp] of Object.entries(module.exports.facet_patterns)) {
       for (var j = 0; j < fp.sequence_data.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
         let sequence_step = Math.round(fp.sequence_data[j] * (steps-1)) + 1;
         if (current_step == sequence_step) {
           try {
-            sound.play(`tmp/${fp.name}.wav`);
+            sound.play(`tmp/${fp.name}.wav`,1);
           } catch (e) {}
         }
       }
@@ -189,10 +187,17 @@ function repeaterFn() {
           }
         }
       }
-    });
+    }
 
     if ( current_step >= steps ) {
       current_step = 1;
+      for (const [k, fp] of Object.entries(module.exports.facet_patterns)) {
+        if ( fp.loop_has_occurred === true && fp.looped === false ) {
+          // delete sequences set via .play() instead of .repeat(), after one cycle
+          delete module.exports.facet_patterns[k];
+        }
+        fp.loop_has_occurred = true;
+      }
       cycles_elapsed++;
     }
     else {
@@ -212,7 +217,7 @@ module.exports = {
     if (!hook_mode) {
       if ( fp.hooks.length > 0 ) {
         for (var i = 0; i < fp.hooks.length; i++) {
-          if ( !module.exports.hooks[fp.hooks[i]] ) {
+          if ( !module.exports.hooks[fp.hooks[i][0]] ) {
             module.exports.hooks[fp.hooks[i][0]] = [];
           }
           module.exports.hooks[fp.hooks[i][0]].push({command:command,every:fp.hooks[i][1]});
@@ -247,6 +252,10 @@ module.exports = {
       });
   },
 
+  initEnv: () => {
+    fs.writeFileSync('js/env.js', '');
+  },
+
   initStore: () => {
     fs.writeFileSync('js/stored.json', '{}');
   },
@@ -256,7 +265,7 @@ module.exports = {
   pid: '',
 
   run: (code, hook_mode) => {
-    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {mousex:mousex,mousey:mousey}}});
+    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {}}});
     worker.once("message", fps => {
         Object.values(fps).forEach(fp => {
           if ( typeof fp == 'object' ) {
@@ -295,6 +304,7 @@ module.exports = {
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
 
+module.exports.initEnv();
 module.exports.initStore();
 
 // make the tmp/ directory if it doesn't exist
@@ -346,8 +356,9 @@ app.post('/mute', (req, res) => {
 });
 
 app.post('/status', (req, res) => {
-  mousex = req.body.mousex;
-  mousey = req.body.mousey;
+  // stores any environment variables that might be needed in any future eval statements in a file that is loaded into the FacetPattern
+  // instance when it's constructed
+  fs.writeFileSync('js/env.js', `var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,()=> {});
   res.sendStatus(200);
 });
 
@@ -391,7 +402,7 @@ const frontEndServer = frontEndWebApp.listen(1124)
 open('http://localhost:1124/');
 
 //do something when app is closing
-process.on('exit', ()=>{fs.writeFileSync('js/stored.json', '{}');process.exit()});
+process.on('exit', ()=>{fs.writeFileSync('js/stored.json', '{}');fs.writeFileSync('js/env.js', '');process.exit()});
 
 //catches ctrl+c event
-process.on('SIGINT', ()=>{fs.writeFileSync('js/stored.json', '{}');process.exit()});
+process.on('SIGINT', ()=>{fs.writeFileSync('js/stored.json', '{}');fs.writeFileSync('js/env.js', '');process.exit()});
