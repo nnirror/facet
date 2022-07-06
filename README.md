@@ -1,13 +1,13 @@
 ## Overview
 
-Facet is an open-source live coding system for algorithmic music. Using a code editor in your browser and a NodeJS server running locally on your machine, Facet can generate and sequence audio and MIDI data in real-time.
+Facet is an open-source live coding system for algorithmic music. With a code editor in the browser and a NodeJS server running locally on your machine, Facet can generate and sequence audio and MIDI data in real-time.
 
 ## Getting started
 
 1. Install Node.js and npm: https://www.npmjs.com/get-npm
 2. Download the Facet repo.
-3. In a terminal, while in the root of the facet repo, run `npm install`
-4. Still in the terminal, run `npm run facet`. The server should start running and open up a new browser window with the code editor.
+3. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
+4. After the previous command completes, run `npm run facet`. The server should start running, and it should open up a new browser window with the code editor.
 5. Copy this command into the code editor in the browser: `_.sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
 
 ## Facet commands
@@ -22,7 +22,7 @@ There is a shorthand for creating a new instance of a `FacetPattern`:
 
 `_.sine(100,200).play();`
 
-Next, you can translate that data:
+Next, translate that data:
 
 `_.sine(100,200).gain(random()).play();`
 `// each time you run ^, the same sine wave at a different volume`
@@ -34,15 +34,15 @@ Certain operations (e.g. `sometimes()`, `iter()`, `slices()`) allow you to suppl
 
 ### UI controls in the browser
 
-Below the text editor, several UI elements control the Facet server running in the background. Moving from left to right:
+Below the text editor, there are several UI elements which control the Facet server running in the background. Moving from left to right:
 
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
-- Slider for setting global transport BPM
-- Slider for setting steps per whole note (sequence resolution)
-- MIDI output selector / refresh
-- ▶ = start transport
-- ■ = stop transport
+- Slider for setting the BPM of the global transport
+- Slider for setting the number of steps in a whole note
+- MIDI output selector / refresh button
+- ▶ = start global transport
+- ■ = stop global transport
 - ↵ = rerun the block of code wherever the cursor is
 - ⊖ = clear all event hooks. More information on event hooks is in the `.on()` function documentation below.
 
