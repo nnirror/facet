@@ -16,17 +16,21 @@
     <link href="css/jquery.growl.css" rel="stylesheet" type="text/css" />
     <style>
       html {
-        height: 1000px;
+        height: 100%;
+      }
+      body {
+        height: 100%;
       }
       .CodeMirror {
-        height: 95vh;
+        height: calc(100% - 50px);
         font-size: 2em;
       }
       #status, #notifications, #cpu, #midi, #transport {
-        height: 5vh;
-        max-height: 5vh;
-        padding-top: 1.5vh;
-        padding-left: 0.5em;
+        height: 50px;
+        min-height: 50px;
+        padding-top: 14px;
+        padding-left: 0.25em;
+        margin-right: 0.25em;
         display: inline-block;
         vertical-align: middle;
       }
@@ -42,23 +46,15 @@
       #transport span:hover {
         color: #f7d952;
       }
-      #clear {
+      #play, #stop, #rerun, #clear {
+        font-size: 28px;
         position: relative;
-        top: -8px;
-        left: -10px;
-      }
-      #stop {
-        position: relative;
-        top: -9px;
       }
       #play {
-        font-size: 2.5vh;
-        position: relative;
-        top: -7px;
+        top: 4px;
       }
       #rerun {
-        position: relative;
-        left: -4px;
+        top: 4px;
       }
       #status, #cpu {
         float: left;
@@ -162,21 +158,6 @@
           font-size: 0.8em;
           position: relative;
           top: 2px;
-        }
-        #transport {
-          font-size: 3vh;
-        }
-        #play {
-          top: 2px;
-        }
-        #stop {
-          top: -2px;
-        }
-        #rerun {
-          top: 6px;
-        }
-        #clear {
-          top: -1px;
         }
       }
       @media screen and (max-width: 600px) {
