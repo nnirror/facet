@@ -65,6 +65,65 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 
 ## Command reference
 
+### Rerunning commands
+- **on** ( _FacetPattern_ = 0, _every_n_times_ = 1 )
+	- Reruns the command at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
+	- With no first argument, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the first argument.
+	- With no second argument, the command will regenerate at the beginning of each whole note. When a second argument is present, the command will only regenerate every `n` whole notes.
+	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
+	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
+	- example:
+		- `_.randsamp().play().on() // play new sample at the beginning of every whole note`
+		- `_.randsamp().play().on(_.noise(4)) // play new sample at 4 random times throughrought every whole note`
+		- `_.randsamp().play().on(_.choose(0,0.125,0.25,0.375,0.5,0.625,0.75,0.875)) // play new sample at 8 geometrically related times throughout every note`
+---
+
+### Audio output
+- **play** ( _FacetPattern_ )
+	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
+	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- Whereas `repeat()` will continually loop playback, `play()` only runs a single time.
+	- example:
+		- `_.randsamp().play();	// plays once at beginning of loop`
+		- `_.randsamp().play(0.5);	// plays once at middle point`
+		- `_.randsamp().play(_.noise(4));	// plays once at 4 random steps`
+---
+- **repeat** ( _FacetPattern_ )
+	- continually plays the sequence at whatever positions were specified, each time the transport moves through a whole note.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
+	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- example:
+	- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
+	- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
+	- `_.randsamp().repeat(_.noise(4));	// repeats, starting at 4 random steps`
+
+### MIDI output
+You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install midi driver {your OS goes here}" for more information.
+
+- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 0 )
+	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
+	- The VelocityPattern and DurationPatterns will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
+	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- example:
+		- `_.sine(1,32).scale(36,90).round().note();`
+		- `_.sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note().on();`
+---
+- **cc** ( _controller_number_ = 70, _channel_ = 0 )
+	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
+	- _Note_: This function is automatically scaled into cc data, so you can supply it a FacetPattern between 0 and 1.
+	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- example:
+		- `_.drunk(64,mousey).cc().on();`
+---
+- **pitchbend** ( _channel_ = 0 )
+	- sends a MIDI pitch bend event for every value in the FacetPattern's data.
+	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- _Note_: This function is automatically scaled into pitch bend data, so you can supply it a FacetPattern between 0 and 1.
+	- example:
+		- `_.pitchbend(64,random()).scale(0,127).cc();`
+
 ### Single number generators
 - **choose** ( _pattern_ )
 	- returns a randomly selected value from a supplied array.
@@ -82,15 +141,15 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- example:
 		- `_.cosine(2,30); // 2 cycles, 30 values each`
 ---
-- **from** ( _pattern_ )
-	- allows the user to specify their own pattern. **Note the array syntax!**
-	- example:
-		- `_.from([1,2,3,4]);`
----
 - **drunk** ( _length_, _intensity_ )
 	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
 	- example:
 		- `_.drunk(16,0.1); // slight random movement`
+---
+- **from** ( _pattern_ )
+	- allows the user to specify their own pattern. **Note the array syntax!**
+	- example:
+		- `_.from([1,2,3,4]);`
 ---
 - **noise** ( _length_ )
 	- generates a random series of values between9 0 and 1 for `length`.
@@ -128,7 +187,7 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- example:
 		- `_.turing(64); // instant rhythmic triggers`
 - **tri** ( _periods_, _length_ )
-- generates a triangle wave for `periods` periods, each period having `length` values.
+	- generates a triangle wave for `periods` periods, each period having `length` values.
 	- example:
 		- `_.triangle(30,33); // 30 cycles, 33 values each`
 ---
@@ -148,11 +207,6 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- returns a 1 or 0 for each value in the FacetPattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the FacetPattern.)
 	- example:
 		- `_.from([1,1,3,4]).changed(); // 1 0 1 1`
----
-- **chaos** ( _FacetPattern_, _iterations_ = 100, _cx_ = 0, _cy_ = 0)
-	- each piece of data in the FacetPattern is paired with the corresponding value in the second FacetPattern. The resulting complex number x,y coordinate is run through a function: f(x) = x2 + c, over `iterations` iterations. The output is a value between 0 and 1, which corresponds to how stable or unstable that particular point is in the complex number plane.
-	- By default, both cx and cy are set to 0 (Mandelbrot set). But you can set them to other values from -1 to 1, which can produce all sorts of Julia set variations.
-	- example: `_.sine(44,1000).chaos(_.drunk(44100,0.01)).play()`
 ---
 - **clip** ( _min_, _max_ )
 	- clips any numbers in the FacetPattern to a `min` and `max` range.
@@ -182,6 +236,16 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 		- `_.from([1]).echo(5); // 1 0.666 0.4435 0.29540 0.19674 0.13103`
 		- `_.phasor(5,20).echo(8); // phasor decreases after each 5 cycles `
 ---
+- **fade** ( )
+	- applies a crossfade window to the FacetPattern, so the beginning and end are faded out.
+	- example:
+		- `_.noise(1024).fade();`
+---
+- **fft** ( )
+	- computes the FFT of the FacetPattern, translating the FacetPattern data into "phase data" that could theoretically reconstruct it using sine waves.
+	- example:
+		- `_.from([1,0,1,1]).fft(); // 3 0 0 1 1 0 0 -1`
+---
 - **flipAbove** ( _maximum_ )
 	- for all values above `maximum`, it returns `maximum` minus how far above the value was.
 	- example:
@@ -192,40 +256,15 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- example:
 		- `_.sine(1,1000).flipBelow(0.2); // inverse wonky sine`
 ---
-- **fft** ( )
-	- computes the FFT of the FacetPattern, translating the FacetPattern data into "phase data" that could theoretically reconstruct it using sine waves.
+- **flattop** ( )
+	- applies a flat top window to the FacetPattern, which a different flavor of fade.
 	- example:
-		- `_.from([1,0,1,1]).fft(); // 3 0 0 1 1 0 0 -1`
+		- `_.noise(1024).flattop();`
 ---
 - **fracture** ( _pieces_ )
 	- divides and scrambles the FacetPattern into `pieces` pieces.
 	- example:
 		- `_.phasor(1,1000).fracture(100); // the phasor has shattered into 100 pieces!`
----
-- **ifft** ( )
-	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
-	- example:
-		- `_.randsamp().set('p');_.iter(6,1,()=>{this.get('p').fft().shift(0.4).ifft().normalize().set('p')}); // iterative bin shifting`
----
-- **invert** ( )
-	- computes the `minimum` and `maximum` values in the FacetPattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
-	- example:
-		- `_.from([0,0.1,0.5,0.667,1]).invert(); // 1 0.9 0.5 0.333 0`
----
-- **iter** ( _num_times_, _prob_, _commands_ = function() )
-	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs. You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
-	- example:
-		- `_.randsamp().iter(3,1,()=>{this.echo(random(1,30,1),1.2)}).scale(-1,1).lpf(2400); // dubby feedback`
----
-- **fade** ( )
-	- applies a crossfade window to the FacetPattern, so the beginning and end are faded out.
-	- example:
-		- `_.noise(1024).fade();`
----
-- **flattop** ( )
-	- applies a flat top window to the FacetPattern, which a different flavor of fade.
-	- example:
-		- `_.noise(1024).flattop();`
 ---
 - **gain** ( _amt_ )
 	- multiplies every value in the FacetPattern by a number.
@@ -250,11 +289,26 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- example:
 		- `_.from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
 ---
+- **ifft** ( )
+	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
+	- example:
+		- `_.randsamp().set('p');_.iter(6,1,()=>{this.get('p').fft().shift(0.4).ifft().normalize().set('p')}); // iterative bin shifting`
+---
 - **interp** ( _weight_ = 0.5, _name_ )
 	- interpolates the FacetPattern with a FacetPattern previously stored in memory by a `.set()` command. A weight of 0.5 gives equal weight to both patterns. **NOTE**: You cannot run `.interp()` in the same block of commands where the pattern was initially stored via `.set()`.
 		- example:
 		- `_.randsamp().set('mypattern');  // first in one command, set a random sample`
 		- `_.sine(100,350).interp(0.5,_.get('mypattern')).play(); // then in a second command, 50% interpolate with a sine wave`
+---
+- **invert** ( )
+	- computes the `minimum` and `maximum` values in the FacetPattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
+	- example:
+		- `_.from([0,0.1,0.5,0.667,1]).invert(); // 1 0.9 0.5 0.333 0`
+---
+- **iter** ( _num_times_, _prob_, _commands_ = function() )
+	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs. You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
+	- example:
+		- `_.randsamp().iter(3,1,()=>{this.echo(random(1,30,1),1.2)}).scale(-1,1).lpf(2400); // dubby feedback`
 ---
 - **jam** ( _prob_, _amt_ )
 	- changes values in the FacetPattern.  `prob` (float 0-1) sets the likelihood of each value changing. `amt` is how much bigger or smaller the changed values can be. If `amt` is set to 2, and `prob` is set to 0.5 half the values could have any number between 2 and -2 added to them.
@@ -529,6 +583,11 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 	- example:
 		- `_.randsamp().times(_.noise(4)).audio().play();`
 ---
+- **chaos** ( _FacetPattern_, _iterations_ = 100, _cx_ = 0, _cy_ = 0)
+	- each piece of data in the FacetPattern is paired with the corresponding value in the second FacetPattern. The resulting complex number x,y coordinate is run through a function: f(x) = x2 + c, over `iterations` iterations. The output is a value between 0 and 1, which corresponds to how stable or unstable that particular point is in the complex number plane.
+	- By default, both cx and cy are set to 0 (Mandelbrot set). But you can set them to other values from -1 to 1, which can produce all sorts of Julia set variations.
+	- example: `_.sine(44,1000).chaos(_.drunk(44100,0.01)).play()`
+---
 - **convolve** ( _FacetPattern_ )
 	- computes the convolution between the two FacetPatterns.
 	- example:
@@ -539,52 +598,11 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 	- example:
 		- `_.randsamp().delay(random(1700,10000)).play();`
 ---
-- **mutechunks** ( _chunks_, _prob_ )
-	- slices the input FacetPattern into `chunks` windowed chunks (to avoid audible clicks) and mutes `prob` percent of them.
+- **harmonics** ( _FacetPattern_, _amplitude=0.9_  )
+	- superimposes `FacetPattern.length` copies of the input FacetPattern onto the output. Each number in `FacetPattern` corresponds to the frequency of the harmonic, which is a copy of the input signal playing at a different speed. Each harmonic _n_ in the output sequence is slightly lower in level, by 0.9^_n_. Allows for all sorts of crazy sample-accurate polyphony.
 	- example:
-		- `_.randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
----
-- **on** ( _FacetPattern_ = 0, _every_n_times_ = 1 )
-	- Reruns the command at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
-	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
-	- With no first argument, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the first argument.
-	- With no second argument, the command will regenerate at the beginning of each whole note. When a second argument is present, the command will only regenerate every `n` whole notes.
-	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
-	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
-	- example:
-		- `_.randsamp().play().on() // play new sample at the beginning of every whole note`
-		- `_.randsamp().play().on(_.noise(4)) // play new sample at 4 random times throughrought every whole note`
-		- `_.randsamp().play().on(_.choose(0,0.125,0.25,0.375,0.5,0.625,0.75,0.875)) // play new sample at 8 geometrically related times throughout every note`
----
-- **play** ( _FacetPattern_ )
-	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
-	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
-	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
-	- Whereas `repeat()` will continually loop playback, `play()` only runs a single time.
-	- example:
-		- `_.randsamp().play();	// plays once at beginning of loop`
-		- `_.randsamp().play(0.5);	// plays once at middle point`
-		- `_.randsamp().play(_.noise(4));	// plays once at 4 random steps`
----
----
-- **repeat** ( _FacetPattern_ )
-	- continually plays the sequence at whatever positions were specified, each time the transport moves through a whole note.
-	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
-	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
-	- example:
-	- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
-	- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
-	- `_.randsamp().repeat(_.noise(4));	// repeats, starting at 4 random steps`
----
-- **suspend** ( _start_pos_, _end_pos_ )
-	- surrounds the FacetPattern with silence, so that the entire input FacetPattern still occurs, but only for a fraction of the overall resulting FacetPattern. The smallest possible fraction is 1/8 of the input FacetPattern, to safeguard against generating humongous and almost entirely empty wav files.
-	- example:
-		- `_.randsamp().suspend(0.25,0.75).play();	// the input pattern is now squished into the middle 50% of the buffer`
----
-- **randsamp** ( _dir_ = `../samples/` )
-	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument. Just make sure that directory is available in the Max File Preferences.
-	- example:
-		- `_.randsamp().reverse().play(); // random backwards sample`
+		- `_.randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)).play(); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
+		- `_.randsamp().harmonics(_.map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)).play(); // add 3 harmonics at geometric ratios`
 ---
 - **ichunk** ( _FacetPattern_ )
 	- slices the input into `FacetPattern.length` windowed chunks (to avoid audible clicks). Loops through every value of `FacetPattern` as a lookup table, determining which ordered chunk of audio from the input sequence it corresponds to, and appends that window to the output buffer.
@@ -592,11 +610,15 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 		- `_.randsamp().ichunk(_.ramp(0,0.5,256)).play(); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
 		- `_.noise(4096).sort().ichunk(_.noise(256).sort()).play(); // structuring noise with noise`
 ---
-- **harmonics** ( _FacetPattern_, _amplitude=0.9_  )
-	- superimposes `FacetPattern.length` copies of the input FacetPattern onto the output. Each number in `FacetPattern` corresponds to the frequency of the harmonic, which is a copy of the input signal playing at a different speed. Each harmonic _n_ in the output sequence is slightly lower in level, by 0.9^_n_. Allows for all sorts of crazy sample-accurate polyphony.
+- **mutechunks** ( _chunks_, _prob_ )
+	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them.
 	- example:
-		- `_.randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)).play(); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
-		- `_.randsamp().harmonics(_.map([0,0.5,0.666,0.75,1,1.25,1.3333,1.5,1.6667,2,2.5,3],module.exports.noise(3)).play(); // add 3 harmonics at geometric ratios`
+		- `_.randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
+---
+- **randsamp** ( _dir_ = `../samples/` )
+	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument.
+	- example:
+		- `_.randsamp().reverse().play(); // random backwards sample`
 ---
 - **sample** ( _filename_ )
 	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well.
@@ -604,28 +626,7 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 		- `_.sample('1234.wav').play(); // if 1234.wav is in the samples directory, you're good to go`
 		- `_.sample('myfolder/myfile.wav'); // or point to the file with a relative path`
 ---
-### MIDI
-
-You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install midi driver {your OS goes here}" for more information.
-
-- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 0 )
-	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
-	- The VelocityPattern and DurationPatterns will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
-	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+- **suspend** ( _start_pos_, _end_pos_ )
+	- surrounds the FacetPattern with silence, so that the entire input FacetPattern still occurs, but only for a fraction of the overall resulting FacetPattern. The smallest possible fraction is 1/8 of the input FacetPattern, to safeguard against generating humongous and almost entirely empty wav files.
 	- example:
-		- `_.sine(1,32).scale(36,90).round().note();`
-		- `_.sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note().on();`
----
-- **cc** ( _controller_number_ = 70, _channel_ = 0 )
-	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
-	- _Note_: This function is automatically scaled into cc data, so you can supply it a FacetPattern between 0 and 1.
-	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
-	- example:
-		- `_.drunk(64,mousey).cc().on();`
----
-- **pitchbend** ( _channel_ = 0 )
-	- sends a MIDI pitch bend event for every value in the FacetPattern's data.
-	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
-	- _Note_: This function is automatically scaled into pitch bend data, so you can supply it a FacetPattern between 0 and 1.
-	- example:
-		- `_.pitchbend(64,random()).scale(0,127).cc();`
+		- `_.randsamp().suspend(0.25,0.75).play();	// the input pattern is now squished into the middle 50% of the buffer`
