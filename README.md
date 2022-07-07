@@ -18,9 +18,10 @@ Facet commands are based entirely around JavaScript, using a custom class called
 
 `new FacetPattern().sine(100,200).play();`
 
-There is a shorthand for creating a new instance of a `FacetPattern`:
+There are two shorthands for creating a new instance of a `FacetPattern`:
 
-`_.sine(100,200).play();`
+`new $('my_sine').sine(100,200).play(); // named my_sine`
+`_.sine(100,200).play();								// no name	                 `
 
 Next, translate that data:
 
@@ -94,10 +95,11 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- continually plays the sequence at whatever positions were specified, each time the transport moves through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- **Note:** if you want to use `on()` with `repeat()`, you will need to give your FacetPattern a name, e.g. `new $('name_goes here')`.
 	- example:
 	- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
 	- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
-	- `_.randsamp().repeat(_.noise(4));	// repeats, starting at 4 random steps`
+	- `new $('name_goes_here').randsamp().repeat(_.noise(4)).on();	// note how the FacetPattern is named`
 
 ### MIDI output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install midi driver {your OS goes here}" for more information.

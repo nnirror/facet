@@ -130,13 +130,13 @@ class FacetPattern {
 
   randsamp (dir) {
     if (!dir) {
-      dir = `./samples/`;
+      dir = `./samples`;
     }
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];
     let buffer, decodedAudio;
     try {
-      buffer = fs.readFileSync(`${dir}${chosenFile}`);
+      buffer = fs.readFileSync(`${dir}/${chosenFile}`);
       decodedAudio = wav.decode(buffer);
       // this is a bit hacky - ideally if it fails loading the wav file, it would try again
       // in the directory until it finds one.. or until it has tried as many files as are in the directory.
@@ -144,12 +144,12 @@ class FacetPattern {
     } catch (e) {
       try {
         chosenFile = files[Math.floor(Math.random() * files.length)];
-        buffer = fs.readFileSync(`${dir}${chosenFile}`);
+        buffer = fs.readFileSync(`${dir}/${chosenFile}`);
         decodedAudio = wav.decode(buffer);
       } catch (er) {
         try {
           chosenFile = files[Math.floor(Math.random() * files.length)];
-          buffer = fs.readFileSync(`${dir}${chosenFile}`);
+          buffer = fs.readFileSync(`${dir}/${chosenFile}`);
           decodedAudio = wav.decode(buffer);
         } catch (err) {
           throw(err);
@@ -479,8 +479,6 @@ class FacetPattern {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
-    this.reduce(88200);
-    sequence2.reduce(88200);
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     var al = same_size_arrays[0].data.length;
     var wl = same_size_arrays[1].data.length;
@@ -1720,13 +1718,9 @@ class FacetPattern {
     return this;
   }
 
-  mutechunks (chunks, prob) {
-    if ( !chunks ) {
-      chunks = 16;
-    }
-    if ( !prob ) {
-      prob = 0.75;
-    }
+  mutechunks (chunks = 16, prob = 0.75) {
+    chunks = Math.round(Number(chunks));
+    prob = Math.abs(Number(prob));
     let chunk_length = Math.floor(this.data.length / chunks);
     let out = [];
     let min, max;

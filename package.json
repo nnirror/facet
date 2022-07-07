@@ -1,6 +1,6 @@
 {
   "name": "facet",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Facet is a flexible live coding system for controlling and applying synchronized algorithmic transformations to a Max patcher from a web browser.",
   "main": "index.js",
   "directories": {
