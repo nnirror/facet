@@ -26,7 +26,7 @@
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "facet": "node --stack-size=32000 js/facet_server.js"
+    "facet": "node js/facet_server.js"
   },
   "repository": {
     "type": "git",

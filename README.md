@@ -294,7 +294,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **ifft** ( )
 	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
 	- example:
-		- `_.randsamp().set('p');_.iter(6,1,()=>{this.get('p').fft().shift(0.4).ifft().normalize().set('p')}); // iterative bin shifting`
+		- `_.randsamp().set('p');_.iter(6,()=>{this.get('p').fft().shift(0.4).ifft().normalize().set('p')}); // iterative bin shifting`
 ---
 - **interp** ( _weight_ = 0.5, _name_ )
 	- interpolates the FacetPattern with a FacetPattern previously stored in memory by a `.set()` command. A weight of 0.5 gives equal weight to both patterns. **NOTE**: You cannot run `.interp()` in the same block of commands where the pattern was initially stored via `.set()`.
@@ -307,7 +307,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `_.from([0,0.1,0.5,0.667,1]).invert(); // 1 0.9 0.5 0.333 0`
 ---
-- **iter** ( _num_times_, _prob_, _commands_ = function() )
+- **iter** ( _num_times_, _commands_ = function(), _prob_ = 1 )
 	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs. You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
 	- example:
 		- `_.randsamp().iter(3,1,()=>{this.echo(random(1,30,1),1.2)}).scale(-1,1).lpf(2400); // dubby feedback`
@@ -454,7 +454,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `_.from([0,0.5,0.9,0.1]).slew(25,0,1) // the first three numbers will jump immediately because upwards slew is 0. then it will slew from 0.9 to 0.1 over the course of the entire depth range`
 ---
-- **slices** ( _num_slices_, _prob_, _commands_ = function )
+- **slices** ( _num_slices_, _commands_ = function, _prob_ = 1 )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
 	- example:
 		- `_.randsamp().slices(32,1,()=>{this.fft().shift(random()).ifft()});`
@@ -595,8 +595,8 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 	- example:
 		- `_.randsamp().convolve(_.randsamp()).play();	// convolving random samples`
 ---
-- **delay** ( _samples_ )
-	- delays the input FacetPattern by `samples` samples.
+- **delay** ( _samples_, _wet_ = 0.5 )
+	- delays the input FacetPattern by `samples` samples. You can crossfade between the original and delayed copies with `wet`.
 	- example:
 		- `_.randsamp().delay(random(1700,10000)).play();`
 ---

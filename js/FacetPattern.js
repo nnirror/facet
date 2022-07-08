@@ -446,20 +446,15 @@ class FacetPattern {
     wet_amt = Math.abs(Number(wet_amt));
     let dry_amt = Math.abs(1 - wet_amt);
     eval(this.utils + command);
-    let same_size_arrays = this.makePatternsTheSameSize(this, dry);
-    this.data = same_size_arrays[0].data;
-    let dry_data = same_size_arrays[1].data;
-    for (const [key, step] of Object.entries(this.data)) {
-      mix_out[key] = (this.data[key] * wet_amt) + (dry_data[key] * dry_amt);
-    }
-    this.data = mix_out;
+    this.gain(wet_amt).add(dry.gain(dry_amt));
     return this;
   }
 
-  delay (samples, feedback = 1) {
+  delay (samples, wet = 0.5) {
     samples = Math.round(Math.abs(Number(samples)));
-    feedback = Number(feedback);
-    let copy = new FacetPattern().from(0).dup(samples-1).append(new FacetPattern().from(this.data)).gain(feedback);
+    wet = Number(wet);
+    let dry = Math.abs(wet-1);
+    let copy = new FacetPattern().noise(samples-1).gain(0).append(new FacetPattern().from(this.data));
     let delay_out = [];
     let original_value;
     for (var i = 0; i < copy.data.length; i++) {
@@ -469,9 +464,9 @@ class FacetPattern {
       else {
         original_value = this.data[i];
       }
-      delay_out[i] = (original_value + copy.data[i]) * 0.5;
+      delay_out[i] = (original_value + copy.data[i]);
     }
-    this.data = delay_out;
+    this.gain(dry).add(new FacetPattern().from(delay_out).gain(wet));
     return this;
   }
 
@@ -1767,7 +1762,7 @@ class FacetPattern {
     return this;
   }
 
-  iter (times, prob, command) {
+  iter (times, command, prob = 1) {
     prob = Math.abs(Number(prob));
     times = Math.abs(Math.round(Number(times)));
     if ( times == 0 ) {
@@ -1889,7 +1884,7 @@ class FacetPattern {
     return this;
   }
 
-  slices (num_slices, prob, command) {
+  slices (num_slices, command, prob = 1) {
     let out = [];
     prob = Math.abs(Number(prob));
     num_slices = Math.abs(Math.round(Number(num_slices)));
