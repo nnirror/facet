@@ -300,9 +300,25 @@ class FacetPattern {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
     let out = [];
-    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
-      out[key] = same_size_arrays[0].data[key] + same_size_arrays[1].data[key];
+    if (this.data.length >= sequence2.data.length) {
+      for (const [key, step] of Object.entries(this.data)) {
+        if (isNaN(sequence2.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step + sequence2.data[key];
+        }
+      }
+    }
+    else {
+      for (const [key, step] of Object.entries(sequence2.data)) {
+        if (isNaN(this.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step + this.data[key];
+        }
+      }
     }
     this.data = out;
     return this;
@@ -312,19 +328,28 @@ class FacetPattern {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
-    let and_sequence = [];
-    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    let sequence1 = same_size_arrays[0];
-    sequence2 = same_size_arrays[1];
-    for (const [key, step] of Object.entries(sequence1.data)) {
-      if ( step != 0 && sequence2.data[key] != 0 ) {
-        and_sequence[key] = 1;
-      }
-      else {
-        and_sequence[key] = 0;
+    let out = [];
+    if (this.data.length >= sequence2.data.length) {
+      for (const [key, step] of Object.entries(this.data)) {
+        if (isNaN(sequence2.data[key])) {
+          out[key] = (step != 0);
+        }
+        else {
+          out[key] = (step != 0) && (sequence2.data[key] != 0);
+        }
       }
     }
-    this.data = and_sequence;
+    else {
+      for (const [key, step] of Object.entries(sequence2.data)) {
+        if (isNaN(this.data[key])) {
+          out[key] = (step != 0);
+        }
+        else {
+          out[key] = (step != 0) && (this.data[key] != 0);
+        }
+      }
+    }
+    this.data = out;
     return this;
   }
 
@@ -435,18 +460,19 @@ class FacetPattern {
     return this;
   }
 
-  mix ( wet_amt, command) {
+  mix ( wet, command) {
     if ( typeof command != 'function' ) {
       throw `2nd argument must be a function, type found: ${typeof command}`;
     }
-    let mix_out = [];
     command = command.toString();
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
-    let dry = new FacetPattern().from(this.data);
-    wet_amt = Math.abs(Number(wet_amt));
-    let dry_amt = Math.abs(1 - wet_amt);
+    wet = Math.abs(Number(wet));
+    let dry = Math.abs(wet-1);
+    let dry_data = new FacetPattern().from(this.data).gain(dry);
     eval(this.utils + command);
-    this.gain(wet_amt).add(dry.gain(dry_amt));
+    let wet_data = new FacetPattern().from(this.data).gain(wet);
+    let mixed_data = dry_data.add(wet_data);
+    this.data = mixed_data.data;
     return this;
   }
 
@@ -454,7 +480,7 @@ class FacetPattern {
     samples = Math.round(Math.abs(Number(samples)));
     wet = Number(wet);
     let dry = Math.abs(wet-1);
-    let copy = new FacetPattern().noise(samples-1).gain(0).append(new FacetPattern().from(this.data));
+    let copy = new FacetPattern().noise(samples).gain(0).append(new FacetPattern().from(this.data));
     let delay_out = [];
     let original_value;
     for (var i = 0; i < copy.data.length; i++) {
@@ -464,9 +490,9 @@ class FacetPattern {
       else {
         original_value = this.data[i];
       }
-      delay_out[i] = (original_value + copy.data[i]);
+      delay_out[i] = ((original_value*dry) + (copy.data[i]*wet));
     }
-    this.gain(dry).add(new FacetPattern().from(delay_out).gain(wet));
+    this.data = delay_out;
     return this;
   }
 
@@ -526,9 +552,25 @@ class FacetPattern {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
     let out = [];
-    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
-      out[key] = same_size_arrays[0].data[key] / same_size_arrays[1].data[key];
+    if (this.data.length >= sequence2.data.length) {
+      for (const [key, step] of Object.entries(this.data)) {
+        if (isNaN(sequence2.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step / sequence2.data[key];
+        }
+      }
+    }
+    else {
+      for (const [key, step] of Object.entries(sequence2.data)) {
+        if (isNaN(this.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step / this.data[key];
+        }
+      }
     }
     this.data = out;
     return this;
@@ -567,18 +609,28 @@ class FacetPattern {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
-    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    let sequence1 = same_size_arrays[0];
-    sequence2 = same_size_arrays[1];
-    for (const [key, step] of Object.entries(sequence1.data)) {
-      if ( step == sequence2.data[key] ) {
-        sequence1.data[key] = 1;
-      }
-      else {
-        sequence1.data[key] = 0;
+    let out = [];
+    if (this.data.length >= sequence2.data.length) {
+      for (const [key, step] of Object.entries(this.data)) {
+        if (isNaN(sequence2.data[key])) {
+          out[key] = 0;
+        }
+        else {
+          out[key] = step == sequence2.data[key];
+        }
       }
     }
-    this.data = sequence1.data;
+    else {
+      for (const [key, step] of Object.entries(sequence2.data)) {
+        if (isNaN(this.data[key])) {
+          out[key] = 0;
+        }
+        else {
+          out[key] = step == this.data[key];
+        }
+      }
+    }
+    this.data = out;
     return this;
   }
 
@@ -1015,19 +1067,28 @@ class FacetPattern {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
-    let or_sequence = [];
-    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    let sequence1 = same_size_arrays[0];
-    sequence2 = same_size_arrays[1];
-    for (const [key, step] of Object.entries(sequence1.data)) {
-      if ( step != 0 || sequence2.data[key] != 0 ) {
-        or_sequence[key] = 1;
-      }
-      else {
-        or_sequence[key] = 0;
+    let out = [];
+    if (this.data.length >= sequence2.data.length) {
+      for (const [key, step] of Object.entries(this.data)) {
+        if (isNaN(sequence2.data[key])) {
+          out[key] = (step != 0);
+        }
+        else {
+          out[key] = (step != 0) || (sequence2.data[key] != 0);
+        }
       }
     }
-    this.data = or_sequence;
+    else {
+      for (const [key, step] of Object.entries(sequence2.data)) {
+        if (isNaN(this.data[key])) {
+          out[key] = (step != 0);
+        }
+        else {
+          out[key] = (step != 0) || (this.data[key] != 0);
+        }
+      }
+    }
+    this.data = out;
     return this;
   }
 
@@ -1515,9 +1576,25 @@ class FacetPattern {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
     let out = [];
-    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
-      out[key] = same_size_arrays[0].data[key] - same_size_arrays[1].data[key];
+    if (this.data.length >= sequence2.data.length) {
+      for (const [key, step] of Object.entries(this.data)) {
+        if (isNaN(sequence2.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step - sequence2.data[key];
+        }
+      }
+    }
+    else {
+      for (const [key, step] of Object.entries(sequence2.data)) {
+        if (isNaN(this.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step - this.data[key];
+        }
+      }
     }
     this.data = out;
     return this;
@@ -1569,9 +1646,25 @@ class FacetPattern {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
     let out = [];
-    let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    for (const [key, step] of Object.entries(same_size_arrays[0].data)) {
-      out[key] = same_size_arrays[0].data[key] * same_size_arrays[1].data[key];
+    if (this.data.length >= sequence2.data.length) {
+      for (const [key, step] of Object.entries(this.data)) {
+        if (isNaN(sequence2.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step * sequence2.data[key];
+        }
+      }
+    }
+    else {
+      for (const [key, step] of Object.entries(sequence2.data)) {
+        if (isNaN(this.data[key])) {
+          out[key] = step;
+        }
+        else {
+          out[key] = step * this.data[key];
+        }
+      }
     }
     this.data = out;
     return this;

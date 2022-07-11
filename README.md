@@ -348,6 +348,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `_.sine(1,100).gain(4000).normalize(); // the gain is undone!`
 		- `_sine(1,100).scale(-1, 1).normalize(); // works with negative values`
 ---
+- **nonzero** ( )
+	- replaces all instances of 0 with the previous nonzero value. Useful after with probability controls, which by default will set some values to 0. Chaining a nonzero() after that would replace the 0s with the other values the pattern. Particularly in a MIDI context with .prob(), you probably don't want to send MIDI note values of 0, so this will effectively sample and hold each nonzero value, keeping the MIDI note values in the expected range.
+	- example:
+		- `_.from([1,2,3,4]).prob(0.5).nonzero(); // if 2 and 4 are set to 0 by prob(0.5), the output of .nonzero() would be 1 1 3 3`
+---
 - **offset** ( _amt_ )
 	- adds `amt` to each value in the FacetPattern.
 	- example:
@@ -543,11 +548,6 @@ _.phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 	- example:
 		- `_.from([1,2,3,4]).map([11,12,13,14]); // 11 11 11 11`
 		- `_.from([1,2,3,4]).scale(30,34).map(_.from([31,31.5,32,32.5])); // 31 31.5 32.5 32.5`
----
-- **nonzero** ( _FacetPattern_ )
-	- replaces all instances of 0 with the previous nonzero value. Useful after with probability controls, which by default will set some values to 0. Chaining a nonzero() after that would replace the 0s with the other values the pattern. Particularly in a MIDI context with .prob(), you probably don't want to send MIDI note values of 0, so this will effectively sample and hold each nonzero value, keeping the MIDI note values in the expected range.
-	- example:
-		- `_.from([1,2,3,4]).prob(0.5).nonzero(); // if 2 and 4 are set to 0 by prob(0.5), the output of .nonzero() would be 1 1 3 3`
 ---
 - **or** ( _FacetPattern_ )
 	- computes the logical OR of both FacetPattern, returning a 0 if both of the values are 0 and returning a 1 if either of the values are nonzero. If one FacetPattern is smaller, it will get scaled so both FacetPatterns equal each other in size prior to running the operation.

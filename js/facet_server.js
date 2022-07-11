@@ -111,6 +111,9 @@ function repeaterFn() {
         if (current_step == sequence_step) {
           try {
             sound.play(`tmp/${fp.name}.wav`,1);
+            if ( fp.sequence_data.length == 1 ) {
+              delete module.exports.facet_patterns[k];
+            }
           } catch (e) {}
         }
       }
