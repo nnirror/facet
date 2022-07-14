@@ -138,6 +138,13 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `_.sine(random(1,100,1),40) // a sine wave with 1 - 100 cycles`
 ---
 ### FacetPattern generators
+- **binary** ( _integer_, _length_)
+	- Computes the binary representation of `integer`. If `length` is not present, the output FacetPattern will be the actual length of the binary representation of `integer`.
+	- example:
+		- `_.binary(8); // 1000`
+		- `_.binary(490321,13); // 1110111101101: truncated at 13 values`
+		- `_.binary(8,12); // 000000001000: padded with 0s`
+---
 - **cosine** ( _periods_, _length_ )
 	- generates a cosine for `periods` periods, each period having `length` values.
 	- example:
@@ -514,12 +521,12 @@ _.phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 		- `_.from([0,1,2,0,1,0.5,2,0]).walk(0.25, 3); // a sequence for jamming`
 ---
 ### Pattern modulators with a second pattern as argument
-- **add** ( _FacetPattern_ )
-	- adds the first FacetPattern and the second FacetPattern.
+- **add** ( _FacetPattern_, _match_sizes_ = false )
+	- adds the first FacetPattern and the second FacetPattern. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.sine(1,100).add(_.from([0.5, 0.25, 0.1, 1]));`
-- **and** ( _FacetPattern_ )
-	- computes the logical AND of both FacetPattern, returning a 0 if one of the values is 0 and returning a 1 if both of the values are nonzero. If one FacetPattern is smaller, it will get scaled so both FacetPatterns equal each other in size prior to running the operation.
+- **and** ( _FacetPattern_, _match_sizes_ = false )
+	- computes the logical AND of both FacetPattern, returning a 0 if one of the values is 0 and returning a 1 if both of the values are nonzero. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.from([1,0,1,0]).and(_.from([0,1])); // 0 0 1 0`
 ---
@@ -528,13 +535,13 @@ _.phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 	- example:
 		- `_.sine(1,100).append(_.phasor(1,100)).append(_.from([1,2,3,4]));`
 ---
-- **divide** ( _FacetPattern_ )
-	- divides the first FacetPattern by the second.
+- **divide** ( _FacetPattern_, _match_sizes_ = false )
+	- divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.sine(1,100).divide(_.from([0.5,0.25,0.1,1]));`
 ---
-- **equals** ( _FacetPattern_ )
-	- computes the logical EQUALS of both FacetPattern, returning a 0 if the values don't equal each other and returning a 1 if they do. If one FacetPattern is smaller, it will get scaled so both FacetPatterns equal each other in size prior to running the operation.
+- **equals** ( _FacetPattern_, _match_sizes_ = false )
+	- computes the logical EQUALS of both FacetPattern, returning a 0 if the values don't equal each other and returning a 1 if they do. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.sine(1,100).equals(_.sine(2,100)); // two sine waves phasing`
 
@@ -549,8 +556,8 @@ _.phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 		- `_.from([1,2,3,4]).map([11,12,13,14]); // 11 11 11 11`
 		- `_.from([1,2,3,4]).scale(30,34).map(_.from([31,31.5,32,32.5])); // 31 31.5 32.5 32.5`
 ---
-- **or** ( _FacetPattern_ )
-	- computes the logical OR of both FacetPattern, returning a 0 if both of the values are 0 and returning a 1 if either of the values are nonzero. If one FacetPattern is smaller, it will get scaled so both FacetPatterns equal each other in size prior to running the operation.
+- **or** ( _FacetPattern_, _match_sizes_ = false )
+	- computes the logical OR of both FacetPattern, returning a 0 if both of the values are 0 and returning a 1 if either of the values are nonzero. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.from([1,0,1,0]).or(_.from([0,1])); // 1 0 1 1`
 ---
@@ -559,13 +566,13 @@ _.phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 	- example:
 		- `_.noise(1024).sieve(_.sine(10,1024)); // sieving noise with a sine wave into the audio rate :D`
 ---
-- **subtract** ( _FacetPattern_ )
-	- subtracts the second FacetPattern from the first.
+- **subtract** ( _FacetPattern_, _match_sizes_ = false )
+	- subtracts the second FacetPattern from the first. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.sine(1,100).subtract(_.from([0.5,0.25,0.1,1]));`
 ---
-- **times** ( _FacetPattern_ )
-	- multiplies the first FacetPattern by the second.
+- **times** ( _FacetPattern_, _match_sizes_ = false)
+	- multiplies the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.sine(1,100).times(_.from([0.5,0.25,0.1,1]));`
 ---
@@ -608,6 +615,12 @@ Facet can load audio samples (currently only .wav files) as FacetPatterns and ru
 ---
 - **ichunk** ( _FacetPattern_ )
 	- slices the input into `FacetPattern.length` windowed chunks (to avoid audible clicks). Loops through every value of `FacetPattern` as a lookup table, determining which ordered chunk of audio from the input sequence it corresponds to, and appends that window to the output buffer.
+	- example:
+		- `_.randsamp().ichunk(_.ramp(0,0.5,256)).play(); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
+		- `_.noise(4096).sort().ichunk(_.noise(256).sort()).play(); // structuring noise with noise`
+---
+- **mix** ( _wet_, _command_, _match_sizes_ = false )
+	- Mixes the input FacetPattern with a second FacetPattern generated by `command`. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.randsamp().ichunk(_.ramp(0,0.5,256)).play(); // play 256 slices between point 0 and 0.5 of randsamp()... timestretching :)`
 		- `_.noise(4096).sort().ichunk(_.noise(256).sort()).play(); // structuring noise with noise`
