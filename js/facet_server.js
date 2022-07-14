@@ -408,7 +408,17 @@ const frontEndServer = frontEndWebApp.listen(1124)
 open('http://localhost:1124/');
 
 //do something when app is closing
-process.on('exit', ()=>{fs.writeFileSync('js/stored.json', '{}');fs.writeFileSync('js/env.js', '');process.exit()});
+process.on('exit', () => {
+  fs.writeFileSync('js/stored.json', '{}');
+  fs.writeFileSync('js/env.js', '');
+  fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
+  process.exit()
+});
 
 //catches ctrl+c event
-process.on('SIGINT', ()=>{fs.writeFileSync('js/stored.json', '{}');fs.writeFileSync('js/env.js', '');process.exit()});
+process.on('SIGINT', () => {
+  fs.writeFileSync('js/stored.json', '{}');
+  fs.writeFileSync('js/env.js', '');
+  fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
+  process.exit()
+});
