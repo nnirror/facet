@@ -274,15 +274,18 @@ module.exports = {
           if ( typeof fp == 'object' ) {
             module.exports.addAnyHooks(fp, hook_mode, fp.original_command);
             if ( fp.skipped !== true ) {
-              // create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
-              module.exports.storeAnyPatterns(fp);
-              let a_wav = new WaveFile();
-              a_wav.fromScratch(1, 44100, '32f', fp.data);
-              // store the wav in /tmp/ for access in Max
-              fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
-                // add to list of available samples for sequencing
-                module.exports.facet_patterns[fp.name] = fp;
-              });
+              // if the data is somehow not numeric due to a bug, do not continue
+              if ( !isNaN(fp.data[0]) ) {
+                // create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
+                module.exports.storeAnyPatterns(fp);
+                let a_wav = new WaveFile();
+                a_wav.fromScratch(1, 44100, '32f', fp.data);
+                // store the wav in /tmp/ for access in Max
+                fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+                  // add to list of available samples for sequencing
+                  module.exports.facet_patterns[fp.name] = fp;
+                });
+              }
             }
           }
         });

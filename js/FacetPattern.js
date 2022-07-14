@@ -43,6 +43,10 @@ class FacetPattern {
         }
       }
     }
+    binary = binary.split('');
+    for (var i = 0; i < binary.length; i++) {
+      binary[i] = Number(binary[i]);
+    }
     this.data = binary;
     return this;
 }
