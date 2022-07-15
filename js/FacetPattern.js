@@ -1584,6 +1584,22 @@ class FacetPattern {
     return this;
   }
 
+  size (new_size) {
+    new_size = Math.round(Math.abs(Number(new_size)));
+    if (new_size == this.data.length ) {
+      return this;
+    }
+    else if (new_size < this.data.length ) {
+      // decrease size
+      this.reduce(new_size);
+    }
+    else {
+      // increase size
+      this.speed((new_size / this.data.length));
+    }
+    return this;
+  }
+
   sort () {
     let sorted_sequence = [];
     sorted_sequence = this.data.sort(function(a, b) { return a - b; });

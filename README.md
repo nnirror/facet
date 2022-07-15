@@ -462,6 +462,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `_.from([1,2,3,4]).shuffle(); // first time: 3 2 1 4`
 		- `_.from([1,2,3,4]).shuffle(); // second time: 1 3 4 2`
 ---
+- **size** ( _new_size_ )
+	- scales the FacetPattern, otherwise preserving its structure, to be `new_size` samples.
+	- example:
+		- `_.randsamp().size(200).dup(800).play(); // 800 copies of a random file that was then reduced to 200 samples`
+---
 - **skip** ( _prob_ )
 	- Sometimes, skip executing the command, as if it had never been attempted. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
 		- example:
