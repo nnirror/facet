@@ -81,6 +81,12 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 ---
 
 ### Audio output
+- **channel** ( _channels_ )
+	- Facet ultimately creates .wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto any channel(s) you specify in the `channels` input array. **NOTE:** as the total number of channels increases, CPU latency will also increase.
+	- example:
+		- `_.randsamp().channel([1]).play(); // first channel only`
+		- `_.randsamp().channel([2]).play(); // second channel only`
+		- `_.randsamp().channel(_.from([1,2,3,4,5,6,7,8]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 1-8`
 - **play** ( _FacetPattern_ )
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.

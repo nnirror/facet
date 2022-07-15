@@ -279,7 +279,27 @@ module.exports = {
                 // create a mono wave file, 44.1 kHz, 32-bit floating point, with the entire request body of numbers
                 module.exports.storeAnyPatterns(fp);
                 let a_wav = new WaveFile();
-                a_wav.fromScratch(1, 44100, '32f', fp.data);
+                let wav_channel_data = [];
+                let max_channel = fp.dacs.sort(function(a, b) {
+                  return a - b;
+                });
+
+                for (var i = 0; i < max_channel[max_channel.length-1]; i++) {
+                  // set data on matching channels
+                  if ( fp.dacs.includes(i+1) ) {
+                    wav_channel_data[i] = fp.data;
+                  }
+                  else {
+                  // fill with 0s otherwise
+                    wav_channel_data[i] = new Array(fp.data.length).fill(0);
+                  }
+                }
+                // create an explicitly left-only stereo file if 1 channel was explicitly assigned.
+                if ( max_channel == 1 ) {
+                  wav_channel_data[1] = new Array(fp.data.length).fill(0);
+                }
+
+                a_wav.fromScratch(wav_channel_data.length, 44100, '32f', wav_channel_data);
                 // store the wav in /tmp/ for access in Max
                 fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
                   // add to list of available samples for sequencing
