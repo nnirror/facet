@@ -241,17 +241,17 @@
       $(document).keydown(function(e) {
         // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
         if ( e.ctrlKey && e.keyCode == 13 ) {
-          $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+          $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
           runFacet();
         }
         else if ( e.ctrlKey && e.keyCode == 67 ) {
           // clear hooks: ctrl+c
-          $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'hooks cleared' });
         }
         else if ( e.ctrlKey && e.keyCode == 70 ) {
           // mute hooks: ctrl+f
-          $.post('http://127.0.0.1:1123/hooks/mute', {}).done(function( data, status ) {
+          $.post('http://127.0.0.1:3211/hooks/mute', {}).done(function( data, status ) {
             let msg = 'hooks running';
             if ( data.muted === true ) {
               msg = 'hooks muted';
@@ -261,8 +261,8 @@
         }
         else if ( e.ctrlKey && e.keyCode == 77 ) {
           // clear hooks and mute everything: ctrl+m
-          $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
-          $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:3211/mute', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'system muted' });
         }
       });
@@ -293,7 +293,7 @@
       }
 
       let midi_outs;
-      $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+      $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
         // create select with this -- check every 2 seconds, store in memory, if changed update select
         //#midi_outs add option
         if (data.data != midi_outs) {
@@ -306,13 +306,13 @@
       });
 
       $('body').on('change', '#midi_outs', function() {
-        $.post('http://127.0.0.1:1123/midi_select', {output:this.value}).done(function( data, status ) {
+        $.post('http://127.0.0.1:3211/midi_select', {output:this.value}).done(function( data, status ) {
 
         });
       });
 
       $('body').on('click', '#midi_refresh', function() {
-        $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+        $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
           $('#midi_outs').html('');
           for (var i = 0; i < data.data.length; i++) {
             let midi_out = data.data[i];
@@ -328,7 +328,7 @@
       });
 
       $('body').on('click', '#play', function() {
-        $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+        $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
             $.growl.error({ message: 'no connection to the Facet server' });
@@ -337,6 +337,12 @@
       });
 
       $('body').on('click', '#stop', function() {
+        $.post('http://127.0.0.1:3211/mute', {}).done(function( data, status ) {})
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          }
+        });
         $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
@@ -346,6 +352,7 @@
       });
 
       $('body').on('click', '#clear', function() {
+        $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
         $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
       });
 
@@ -426,7 +433,7 @@ setInterval(function () {
   prev_bpm = bpm;
   bpm = $('#bpm').val();
   if (bpm != prev_bpm) {
-    $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
+    $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
     $('#intensity').val(bpm + ' bpm');
@@ -435,7 +442,7 @@ setInterval(function () {
   prev_steps = steps;
   steps = $('#steps').val();
   if (steps != prev_steps) {
-    $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
+    $.post('http://127.0.0.1:3211/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
     $('#steps_out').val(steps + ' steps');

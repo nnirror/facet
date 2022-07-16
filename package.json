@@ -23,7 +23,6 @@
     "wavefile": "^11.0.0",
     "ws": "^8.8.0"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "facet": "node js/facet_server.js"
