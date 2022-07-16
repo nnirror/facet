@@ -8,78 +8,31 @@ const axios = require('axios');
 const app = express();
 const frontEndWebApp = express();
 const cors = require('cors');
-const OSC = require('osc-js');
 const fs = require('fs');
-const WaveFile = require('wavefile').WaveFile;
 const wav = require('node-wav');
-const FacetPattern = require('./FacetPattern.js');
 const easymidi = require('easymidi');
 const open = require('open');
+const OSC = require('osc-js');
+const WaveFile = require('wavefile').WaveFile;
+const FacetPattern = require('./FacetPattern.js');
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
 });
-osc.open();
+let pid;
+let stored = {};
+let facet_patterns = {};
+let hooks = {};
+let reruns = {};
 
 module.exports = {
-  addAnyHooks: (fp, hook_mode, command) => {
-    if (!hook_mode) {
-      if ( fp.hooks.length > 0 ) {
-        for (var i = 0; i < fp.hooks.length; i++) {
-          if ( !module.exports.hooks[fp.hooks[i][0]] ) {
-            module.exports.hooks[fp.hooks[i][0]] = [];
-          }
-          module.exports.hooks[fp.hooks[i][0]].push({command:command,every:fp.hooks[i][1]});
-        }
-      }
-    }
-  },
-
-  // TODO this doesnt work on windows- would need to differentiate user OS and
-  // check PID in windows commands
-  checkIfOverloaded: () => {
-    exec(`ps -p ${module.exports.pid} -o %cpu`, (error, stdout, stderr) => {
-      if ( typeof stdout == 'string' ) {
-        let percent_cpu = Number(stdout.split('\n')[1].trim());
-        osc.send(new OSC.Message('/cpu', percent_cpu));
-      }
-    });
-  },
-
-  facet_patterns: {},
-
-  hooks: {},
-
-  setPID: () => {
-    find('port', 1123)
-      .then(function (list) {
-        if (!list.length) {
-          // do nothing
-        } else {
-          module.exports.pid = list[0].pid;
-        }
-      });
-  },
-
-  initEnv: () => {
-    fs.writeFileSync('js/env.js', '');
-  },
-
-  initStore: () => {
-    fs.writeFileSync('js/stored.json', '{}');
-  },
-
-  pid: '',
-
   run: (code, hook_mode) => {
-    // TODO: consider this more carefully. resetting the hooks here means that all other hooks are wiped when a block runs. is that right? i think it is, and is wise, but i want to think about it more
-    // module.exports.hooks = {};
     const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {}}});
     worker.once("message", fps => {
         Object.values(fps).forEach(fp => {
           if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
             // create wav file, 44.1 kHz, 32-bit floating point
-            module.exports.storeAnyPatterns(fp);
+            storeAnyPatterns(fp);
             let a_wav = new WaveFile();
             let wav_channel_data = [];
             let max_channel = fp.dacs.sort(function(a, b) {
@@ -105,38 +58,27 @@ module.exports = {
             // store wav file in /tmp/
             fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
               // add to list of available samples for sequencing
-              module.exports.facet_patterns[fp.name] = fp;
+              facet_patterns[fp.name] = fp;
             });
-            module.exports.addAnyHooks(fp, hook_mode, fp.original_command);
+            addAnyHooks(fp, hook_mode, fp.original_command);
+            fs.writeFileSync('js/patterns.json', JSON.stringify(facet_patterns),()=> {});
+            fs.writeFileSync('js/hooks.json', JSON.stringify(hooks),()=> {});
           }
         });
-        fs.writeFileSync('js/patterns.json', JSON.stringify(module.exports.facet_patterns),()=> {});
-        fs.writeFileSync('js/hooks.json', JSON.stringify(module.exports.hooks),()=> {});
-        // ping the :3211 transport server to reload hooks and patterns
+        // tell the :3211 transport server to reload hooks and patterns
         axios.get('http://localhost:3211/update')
     });
     worker.on("error", error => {
       osc.send(new OSC.Message('/errors', error.toString()));
     });
-  },
-
-  storeAnyPatterns: (fp) => {
-    if ( fp.store.length > 0 ) {
-      for (var i = 0; i < fp.store.length; i++) {
-        module.exports.stored[fp.store[i]] = fp.data;
-        fs.writeFileSync('js/stored.json', JSON.stringify(module.exports.stored),()=> {});
-      }
-    }
-  },
-
-  stored: {}
+  }
 }
 
+osc.open();
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
-
-module.exports.initEnv();
-module.exports.initStore();
+initEnv();
+initStore();
 
 // make the tmp/ directory if it doesn't exist
 if ( !fs.existsSync('tmp/')) {
@@ -145,27 +87,27 @@ if ( !fs.existsSync('tmp/')) {
 
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
-  module.exports.run(req.body.code, false);
-  res.send({
-    status: 200,
-  });
-});
-
-// TODO: same situation as before but reversed: can't post the damn json to this server from the transport, so need to think of something
-app.post('/hook', (req, res) => {
-  // module.exports.run(req.body.code, true);
+  module.exports.run(req.body.code,false);
   res.send({
     status: 200,
   });
 });
 
 app.post('/hooks/clear', (req, res) => {
-  module.exports.hooks = {};
+  hooks = {};
+  res.sendStatus(200);
+});
+
+app.get('/reruns', (req, res) => {
+  reruns = getReruns();
+  for (var i = 0; i < reruns.length; i++) {
+    module.exports.run(reruns[i],true);
+  }
   res.sendStatus(200);
 });
 
 app.post('/mute', (req, res) => {
-  module.exports.facet_patterns = {};
+  facet_patterns = {};
   res.sendStatus(200);
 });
 
@@ -179,9 +121,9 @@ app.post('/status', (req, res) => {
 // run the server
 const server = app.listen(1123);
 // find its PID
-module.exports.setPID();
+setPID();
 // check that every 500ms it's not overloaded - so that superfluous hook events can be prevented from stacking up
-setInterval(module.exports.checkIfOverloaded, 500);
+setInterval(checkIfOverloaded, 500);
 
 frontEndWebApp.use(express.static(path.join(__dirname, '../')))
 
@@ -189,7 +131,7 @@ const frontEndServer = frontEndWebApp.listen(1124)
 
 open('http://localhost:1124/');
 
-//do something when app is closing
+// do stuff when app is closing
 process.on('exit', () => {
   fs.writeFileSync('js/stored.json', '{}');
   fs.writeFileSync('js/patterns.json', '{}');
@@ -199,7 +141,7 @@ process.on('exit', () => {
   process.exit()
 });
 
-//catches ctrl+c event
+// catches ctrl+c event
 process.on('SIGINT', () => {
   fs.writeFileSync('js/stored.json', '{}');
   fs.writeFileSync('js/patterns.json', '{}');
@@ -208,3 +150,74 @@ process.on('SIGINT', () => {
   fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   process.exit()
 });
+
+function addAnyHooks (fp, hook_mode, command) {
+  if (!hook_mode) {
+    if ( fp.hooks.length > 0 ) {
+      for (var i = 0; i < fp.hooks.length; i++) {
+        if ( !hooks[fp.hooks[i][0]] ) {
+          hooks[fp.hooks[i][0]] = [];
+        }
+        hooks[fp.hooks[i][0]].push({command:command,every:fp.hooks[i][1]});
+      }
+    }
+  }
+}
+
+// TODO I'm guessing this doesn't work on windows- would need to differentiate user OS and check PID in windows commands
+function checkIfOverloaded () {
+  exec(`ps -p ${pid} -o %cpu`, (error, stdout, stderr) => {
+    if ( typeof stdout == 'string' ) {
+      let percent_cpu = Number(stdout.split('\n')[1].trim());
+      osc.send(new OSC.Message('/cpu', percent_cpu));
+    }
+  });
+}
+
+function getPatterns() {
+  try {
+    return JSON.parse(fs.readFileSync('js/patterns.json', 'utf8', (err, data) => {
+      return data
+    }));
+  } catch (e) {
+    return {};
+  }
+}
+
+function getReruns() {
+  try {
+    return JSON.parse(fs.readFileSync('js/reruns.json', 'utf8', (err, data) => {
+      return data
+    }));
+  } catch (e) {
+    return {};
+  }
+}
+
+function initEnv () {
+  fs.writeFileSync('js/env.js', '');
+}
+
+function initStore () {
+  fs.writeFileSync('js/stored.json', '{}');
+}
+
+function setPID () {
+  find('port', 1123)
+    .then(function (list) {
+      if (!list.length) {
+        // do nothing
+      } else {
+        pid = list[0].pid;
+      }
+    });
+}
+
+function storeAnyPatterns (fp) {
+  if ( fp.store.length > 0 ) {
+    for (var i = 0; i < fp.store.length; i++) {
+      stored[fp.store[i]] = fp.data;
+      fs.writeFileSync('js/stored.json', JSON.stringify(stored),()=> {});
+    }
+  }
+}

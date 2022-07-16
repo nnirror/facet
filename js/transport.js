@@ -5,7 +5,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
-const request = require('request');
+const axios = require('axios');
 let cycles_elapsed = 0;
 let current_step = 1;
 let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
@@ -31,6 +31,7 @@ app.post('/midi', (req, res) => {
 app.get('/update', (req, res) => {
   hooks = getHooks();
   facet_patterns = getPatterns();
+  res.sendStatus(200);
 });
 
 app.post('/midi_select', (req, res) => {
@@ -102,13 +103,11 @@ function repeaterFn() {
           hook.forEach(h => {
             // only run hook when cycles_elapsed % every == 0
             if ( cycles_elapsed % h.every == 0 ) {
-              // post back to :1123 to rerun any hooks at this step
-              request({
-                  url: "http://localhost:1123/hook",
-                  method: "POST",
-                  body: h.command
-              }, function (error, response, body){
-              });
+              // regenerate the set of commands for the generation server to process, then ping it with a GET
+              let hooks_to_rerun = [];
+              hooks_to_rerun.push(h.command);
+              fs.writeFileSync('js/reruns.json', JSON.stringify(hooks_to_rerun),()=> {});
+              axios.get('http://localhost:1123/reruns');
             }
           });
         }
@@ -217,7 +216,7 @@ function repeaterFn() {
     else {
       current_step++;
     }
-    // todo fix bpm and steps here..
+
     global_speed = ((60000 / bpm) / steps) * 4;
     if ( speed != global_speed ) {
      clearInterval(repeater);
