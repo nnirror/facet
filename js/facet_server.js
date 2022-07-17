@@ -59,14 +59,16 @@ module.exports = {
             fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
               // add to list of available samples for sequencing
               facet_patterns[fp.name] = fp;
+              addAnyHooks(fp, hook_mode, fp.original_command);
+              fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {
+                fs.writeFile('js/hooks.json', JSON.stringify(hooks),()=> {
+                  axios.get('http://localhost:3211/update')
+                });
+              });
             });
-            addAnyHooks(fp, hook_mode, fp.original_command);
-            fs.writeFileSync('js/patterns.json', JSON.stringify(facet_patterns),()=> {});
-            fs.writeFileSync('js/hooks.json', JSON.stringify(hooks),()=> {});
           }
         });
         // tell the :3211 transport server to reload hooks and patterns
-        axios.get('http://localhost:3211/update')
     });
     worker.on("error", error => {
       osc.send(new OSC.Message('/errors', error.toString()));
@@ -95,6 +97,7 @@ app.post('/', (req, res) => {
 
 app.post('/hooks/clear', (req, res) => {
   hooks = {};
+  fs.writeFile('js/hooks.json', '{}',()=>{});
   res.sendStatus(200);
 });
 
@@ -108,6 +111,7 @@ app.get('/reruns', (req, res) => {
 
 app.post('/mute', (req, res) => {
   facet_patterns = {};
+  hooks = {};
   res.sendStatus(200);
 });
 
@@ -115,6 +119,11 @@ app.post('/status', (req, res) => {
   // stores any environment variables that might be needed in any future eval statements in a file that is loaded into the FacetPattern
   // instance when it's constructed
   fs.writeFileSync('js/env.js', `var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,()=> {});
+  res.sendStatus(200);
+});
+
+app.get('/update', (req, res) => {
+  facet_patterns = getPatterns();
   res.sendStatus(200);
 });
 
@@ -134,6 +143,7 @@ open('http://localhost:1124/');
 // do stuff when app is closing
 process.on('exit', () => {
   fs.writeFileSync('js/stored.json', '{}');
+  fs.writeFileSync('js/reruns.json', '{}');
   fs.writeFileSync('js/patterns.json', '{}');
   fs.writeFileSync('js/hooks.json', '{}');
   fs.writeFileSync('js/env.js', '');
@@ -144,6 +154,7 @@ process.on('exit', () => {
 // catches ctrl+c event
 process.on('SIGINT', () => {
   fs.writeFileSync('js/stored.json', '{}');
+  fs.writeFileSync('js/reruns.json', '{}');
   fs.writeFileSync('js/patterns.json', '{}');
   fs.writeFileSync('js/hooks.json', '{}');
   fs.writeFileSync('js/env.js', '');

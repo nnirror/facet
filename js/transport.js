@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
 const axios = require('axios');
+const FacetPattern = require('./FacetPattern.js');
 let cycles_elapsed = 0;
 let current_step = 1;
 let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
@@ -31,6 +32,7 @@ app.post('/midi', (req, res) => {
 app.get('/update', (req, res) => {
   hooks = getHooks();
   facet_patterns = getPatterns();
+  // the patterns are still aggregating in here somehow but otherwise this configuration is getting closer
   res.sendStatus(200);
 });
 
@@ -63,7 +65,8 @@ app.post('/play', (req, res) => {
 
 app.post('/mute', (req, res) => {
   facet_patterns = {};
-  fs.writeFileSync('js/patterns.json', '{}');
+  fs.writeFile('js/patterns.json', '{}',()=>{});
+  hooks = {};
   transport_on = false;
   res.sendStatus(200);
 });
@@ -84,14 +87,13 @@ app.post('/hooks/mute', (req, res) => {
 // clear all hooks request via ctrl+c in the browser
 app.post('/hooks/clear', (req, res) => {
   hooks = {};
-  fs.writeFileSync('js/hooks.json', '{}');
+  fs.writeFile('js/hooks.json', '{}', ()=>{});
   res.send({
     cleared: true
   });
 });
 
 const server = app.listen(3211);
-
 
 function repeaterFn() {
   if ( transport_on !== false) {
@@ -106,13 +108,11 @@ function repeaterFn() {
               // regenerate the set of commands for the generation server to process, then ping it with a GET
               let hooks_to_rerun = [];
               hooks_to_rerun.push(h.command);
-              fs.writeFileSync('js/reruns.json', JSON.stringify(hooks_to_rerun),()=> {});
-              axios.get('http://localhost:1123/reruns');
+              fs.writeFile('js/reruns.json', JSON.stringify(hooks_to_rerun),()=> {axios.get('http://localhost:1123/reruns')});
             }
           });
         }
     }
-
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(facet_patterns)) {
       for (var j = 0; j < fp.sequence_data.length; j++) {
@@ -121,8 +121,9 @@ function repeaterFn() {
         if (current_step == sequence_step) {
           try {
             sound.play(`tmp/${fp.name}.wav`,1);
-            if ( fp.sequence_data.length == 1 ) {
+            if ( fp.sequence_data.length == 1 && fp.looped === false ) {
               delete facet_patterns[k];
+              fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update');});
             }
           } catch (e) {}
         }
@@ -201,15 +202,17 @@ function repeaterFn() {
         }
       }
     }
-
     if ( current_step >= steps ) {
       current_step = 1;
       for (const [k, fp] of Object.entries(facet_patterns)) {
         if ( fp.loop_has_occurred === true && fp.looped === false ) {
           // delete sequences set via .play() instead of .repeat(), after one cycle
           delete facet_patterns[k];
+          fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update');});
         }
-        fp.loop_has_occurred = true;
+        else {
+          fp.loop_has_occurred = true;
+        }
       }
       cycles_elapsed++;
     }

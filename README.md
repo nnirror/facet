@@ -82,7 +82,7 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 
 ### Audio output
 - **channel** ( _channels_ )
-	- Facet ultimately creates .wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto any channel(s) you specify in the `channels` input array. **NOTE:** as the total number of channels increases, CPU latency will also increase.
+	- Facet ultimately creates .wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto any channel(s) you specify in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
 	- example:
 		- `_.randsamp().channel([1]).play(); // first channel only`
 		- `_.randsamp().channel([2]).play(); // second channel only`
