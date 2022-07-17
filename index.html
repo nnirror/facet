@@ -247,6 +247,7 @@
         else if ( e.ctrlKey && e.keyCode == 67 ) {
           // clear hooks: ctrl+c
           $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'hooks cleared' });
         }
         else if ( e.ctrlKey && e.keyCode == 70 ) {

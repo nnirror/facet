@@ -97,7 +97,7 @@ app.post('/', (req, res) => {
 
 app.post('/hooks/clear', (req, res) => {
   hooks = {};
-  fs.writeFile('js/hooks.json', '{}',()=>{});
+  fs.writeFile('js/hooks.json', '{}',()=>{axios.get('http://localhost:3211/update')});
   res.sendStatus(200);
 });
 

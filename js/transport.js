@@ -32,7 +32,6 @@ app.post('/midi', (req, res) => {
 app.get('/update', (req, res) => {
   hooks = getHooks();
   facet_patterns = getPatterns();
-  // the patterns are still aggregating in here somehow but otherwise this configuration is getting closer
   res.sendStatus(200);
 });
 
@@ -65,8 +64,7 @@ app.post('/play', (req, res) => {
 
 app.post('/mute', (req, res) => {
   facet_patterns = {};
-  fs.writeFile('js/patterns.json', '{}',()=>{});
-  hooks = {};
+  fs.writeFile('js/patterns.json', '{}',()=> {axios.get('http://localhost:1123/update');});
   transport_on = false;
   res.sendStatus(200);
 });
@@ -87,7 +85,6 @@ app.post('/hooks/mute', (req, res) => {
 // clear all hooks request via ctrl+c in the browser
 app.post('/hooks/clear', (req, res) => {
   hooks = {};
-  fs.writeFile('js/hooks.json', '{}', ()=>{});
   res.send({
     cleared: true
   });
@@ -105,7 +102,7 @@ function repeaterFn() {
           hook.forEach(h => {
             // only run hook when cycles_elapsed % every == 0
             if ( cycles_elapsed % h.every == 0 ) {
-              // regenerate the set of commands for the generation server to process, then ping it with a GET
+              // regenerate the set of commands for the generation server to process
               let hooks_to_rerun = [];
               hooks_to_rerun.push(h.command);
               fs.writeFile('js/reruns.json', JSON.stringify(hooks_to_rerun),()=> {axios.get('http://localhost:1123/reruns')});
@@ -123,7 +120,7 @@ function repeaterFn() {
             sound.play(`tmp/${fp.name}.wav`,1);
             if ( fp.sequence_data.length == 1 && fp.looped === false ) {
               delete facet_patterns[k];
-              fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update');});
+              fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
             }
           } catch (e) {}
         }
@@ -206,13 +203,11 @@ function repeaterFn() {
       current_step = 1;
       for (const [k, fp] of Object.entries(facet_patterns)) {
         if ( fp.loop_has_occurred === true && fp.looped === false ) {
-          // delete sequences set via .play() instead of .repeat(), after one cycle
+          // delete sequences set via .play() instead of .repeat(), at the end of one cycle
           delete facet_patterns[k];
           fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update');});
         }
-        else {
-          fp.loop_has_occurred = true;
-        }
+        fp.loop_has_occurred = true;
       }
       cycles_elapsed++;
     }
@@ -303,3 +298,25 @@ function getHooks() {
     return {};
   }
 }
+
+// do stuff when app is closing
+process.on('exit', () => {
+  fs.writeFileSync('js/stored.json', '{}');
+  fs.writeFileSync('js/reruns.json', '{}');
+  fs.writeFileSync('js/patterns.json', '{}');
+  fs.writeFileSync('js/hooks.json', '{}');
+  fs.writeFileSync('js/env.js', '');
+  fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
+  process.exit()
+});
+
+// catches ctrl+c event
+process.on('SIGINT', () => {
+  fs.writeFileSync('js/stored.json', '{}');
+  fs.writeFileSync('js/reruns.json', '{}');
+  fs.writeFileSync('js/patterns.json', '{}');
+  fs.writeFileSync('js/hooks.json', '{}');
+  fs.writeFileSync('js/env.js', '');
+  fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
+  process.exit()
+});
