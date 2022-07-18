@@ -34,27 +34,7 @@ module.exports = {
             // create wav file, 44.1 kHz, 32-bit floating point
             storeAnyPatterns(fp);
             let a_wav = new WaveFile();
-            let wav_channel_data = [];
-            let max_channel = fp.dacs.sort(function(a, b) {
-              return a - b;
-            });
-
-            for (var i = 0; i < max_channel[max_channel.length-1]; i++) {
-              // set data on matching channels
-              if ( fp.dacs.includes(i+1) ) {
-                wav_channel_data[i] = fp.data;
-              }
-              else {
-              // otherwise fill with 0s
-                wav_channel_data[i] = new Array(fp.data.length).fill(0);
-              }
-            }
-            // create an explicit left-only stereo file if channel 1 was explicitly assigned
-            if ( max_channel == 1 ) {
-              wav_channel_data[1] = new Array(fp.data.length).fill(0);
-            }
-
-            a_wav.fromScratch(wav_channel_data.length, 44100, '32f', wav_channel_data);
+            a_wav.fromScratch(1, 44100, '32f', fp.data);
             // store wav file in /tmp/
             fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
               // add to list of available samples for sequencing
@@ -62,13 +42,13 @@ module.exports = {
               addAnyHooks(fp, hook_mode, fp.original_command);
               fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {
                 fs.writeFile('js/hooks.json', JSON.stringify(hooks),()=> {
+                  // tell the :3211 transport server to reload hooks and patterns
                   axios.get('http://localhost:3211/update')
                 });
               });
             });
           }
         });
-        // tell the :3211 transport server to reload hooks and patterns
     });
     worker.on("error", error => {
       osc.send(new OSC.Message('/errors', error.toString()));
@@ -118,7 +98,7 @@ app.post('/mute', (req, res) => {
 app.post('/status', (req, res) => {
   // stores any environment variables that might be needed in any future eval statements in a file that is loaded into the FacetPattern
   // instance when it's constructed
-  fs.writeFile('js/env.js', `
+  fs.writeFileSync('js/env.js', `
     var bpm=${req.body.bpm};
     var mousex=${req.body.mousex};
     var mousey=${req.body.mousey};
