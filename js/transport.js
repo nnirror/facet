@@ -11,11 +11,11 @@ let cycles_elapsed = 0;
 let current_step = 1;
 let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
 let bpm = 90;
-let transport_on = true;
 let steps = 16;
-let global_speed = ((60000 / bpm) / steps) * 4;
-let speed = global_speed;
-let repeater = setInterval(repeaterFn, global_speed);
+let step_speed_ms = ((60000 / bpm) / steps) * 4;
+let step_speed_copy = step_speed_ms;
+let running_transport = setInterval(tick, step_speed_ms);
+let transport_on = true;
 let hooks_muted = false;
 let hooks = getHooks();
 let facet_patterns = getPatterns();
@@ -92,7 +92,7 @@ app.post('/hooks/clear', (req, res) => {
 
 const server = app.listen(3211);
 
-function repeaterFn() {
+function tick() {
   if ( transport_on !== false) {
     // main stepping loop
     let prev_step = current_step-1;
@@ -215,11 +215,11 @@ function repeaterFn() {
       current_step++;
     }
 
-    global_speed = ((60000 / bpm) / steps) * 4;
-    if ( speed != global_speed ) {
-     clearInterval(repeater);
-     speed = global_speed;
-     repeater = setInterval(repeaterFn, global_speed);
+    step_speed_ms = ((60000 / bpm) / steps) * 4;
+    if ( step_speed_copy != step_speed_ms ) {
+     clearInterval(running_transport);
+     step_speed_copy = step_speed_ms;
+     running_transport = setInterval(tick, step_speed_ms);
     }
   }
 }

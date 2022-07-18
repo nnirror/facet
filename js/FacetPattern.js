@@ -100,7 +100,7 @@ class FacetPattern {
 
   noise (length) {
     let noise_sequence = [];
-    length = Math.abs(Number(length));
+    length = Math.abs(Math.round(Number(length)));
     if (length < 1 ) {
       length = 1;
     }
@@ -396,6 +396,9 @@ class FacetPattern {
   }
 
   append (sequence2) {
+    if ( typeof sequence2 == 'number' || Array.isArray(sequence2) === true ) {
+      sequence2 = new FacetPattern().from(sequence2);
+    }
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }

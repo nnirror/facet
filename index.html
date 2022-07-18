@@ -384,6 +384,7 @@
           $.post('http://127.0.0.1:1123/status', {
             mousex:mousex,
             mousey:mousey,
+            bpm:bpm
           }).done(function( data, status ) {
             setStatus(`connected`);
           })
@@ -407,6 +408,39 @@
         $('#status').html(colored_span);
       }
       // end OSC
+
+      let bpm=90;
+      let steps=16;
+      // check every 250ms for bpm change and send if changed
+      setInterval(function () {
+        prev_bpm = bpm;
+        bpm = $('#bpm').val();
+        if (bpm != prev_bpm) {
+          $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          });
+          $('#intensity').val(bpm + ' bpm');
+        }
+
+        prev_steps = steps;
+        steps = $('#steps').val();
+        if (steps != prev_steps) {
+          $.post('http://127.0.0.1:3211/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          });
+          $('#steps_out').val(steps + ' steps');
+        }
+
+      }, 100);
+      function logslider(input, out_min, out_max) {
+        var minp = 1;
+        var maxp = 1000;
+        var minv = Math.log(out_min);
+        var maxv = Math.log(out_max);
+        // calculate adjustment factor
+        var scale = (maxv-minv) / (maxp-minp);
+        return Math.exp(minv + scale*(input-minp)).toFixed(2);
+      }
     </script>
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
@@ -425,38 +459,3 @@
     <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>
 </html>
-
-<script type="text/javascript">
-let bpm=90;
-let steps=16;
-// check every 250ms for bpm change and send if changed
-setInterval(function () {
-  prev_bpm = bpm;
-  bpm = $('#bpm').val();
-  if (bpm != prev_bpm) {
-    $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
-    $('#intensity').val(bpm + ' bpm');
-  }
-
-  prev_steps = steps;
-  steps = $('#steps').val();
-  if (steps != prev_steps) {
-    $.post('http://127.0.0.1:3211/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
-    $('#steps_out').val(steps + ' steps');
-  }
-
-}, 100);
-function logslider(input, out_min, out_max) {
-  var minp = 1;
-  var maxp = 1000;
-  var minv = Math.log(out_min);
-  var maxv = Math.log(out_max);
-  // calculate adjustment factor
-  var scale = (maxv-minv) / (maxp-minp);
-  return Math.exp(minv + scale*(input-minp)).toFixed(2);
-}
-</script>
