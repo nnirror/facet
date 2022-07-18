@@ -306,7 +306,6 @@ process.on('exit', () => {
   fs.writeFileSync('js/patterns.json', '{}');
   fs.writeFileSync('js/hooks.json', '{}');
   fs.writeFileSync('js/env.js', '');
-  fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   process.exit()
 });
 
@@ -317,6 +316,5 @@ process.on('SIGINT', () => {
   fs.writeFileSync('js/patterns.json', '{}');
   fs.writeFileSync('js/hooks.json', '{}');
   fs.writeFileSync('js/env.js', '');
-  fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   process.exit()
 });

@@ -1597,8 +1597,26 @@ class FacetPattern {
       this.reduce(new_size);
     }
     else {
-      // increase size
-      this.speed((new_size / this.data.length));
+      // increase size, more lenient about clamping
+      let ratio = Math.abs(Number((new_size / this.data.length)));
+      if ( ratio < 0.000001 ) {
+        ratio = 0.000001;
+      }
+      if (ratio > 100000) {
+        throw `cannot resize a FacetPattern by more than 100000x. Try running .size() with a smaller output or larger input`;
+      }
+      let upscaled_data = [];
+      let new_samps = Math.floor(ratio * this.data.length);
+      let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
+      for (var n = 0; n < this.data.length; n++) {
+        let i = 0;
+        while (i < copies_of_each_value) {
+          upscaled_data.push(this.data[n]);
+          i++;
+        }
+      }
+      this.data = upscaled_data;
+      this.reduce(new_samps);
     }
     return this;
   }
