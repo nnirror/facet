@@ -7,6 +7,7 @@ const cors = require('cors');
 const app = express();
 const axios = require('axios');
 const FacetPattern = require('./FacetPattern.js');
+const shared = require('./shared.js');
 let cycles_elapsed = 0;
 let current_step = 1;
 let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
@@ -15,10 +16,11 @@ let steps = 16;
 let step_speed_ms = ((60000 / bpm) / steps) * 4;
 let step_speed_copy = step_speed_ms;
 let running_transport = setInterval(tick, step_speed_ms);
+setInterval(handleBpmChange,100);
 let transport_on = true;
 let hooks_muted = false;
-let hooks = getHooks();
-let facet_patterns = getPatterns();
+let hooks = shared.getHooks();
+let facet_patterns = shared.getPatterns();
 
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
@@ -30,8 +32,8 @@ app.post('/midi', (req, res) => {
 });
 
 app.get('/update', (req, res) => {
-  hooks = getHooks();
-  facet_patterns = getPatterns();
+  hooks = shared.getHooks();
+  facet_patterns = shared.getPatterns();
   res.sendStatus(200);
 });
 
@@ -114,10 +116,10 @@ function tick() {
     for (const [k, fp] of Object.entries(facet_patterns)) {
       for (var j = 0; j < fp.sequence_data.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
-        let sequence_step = Math.round(fp.sequence_data[j] * (steps-1)) + 1;
+        let sequence_step = Math.round(fp.sequence_data[j] * (steps)) + 1;
         if (current_step == sequence_step) {
           try {
-            sound.play(`tmp/${fp.name}.wav`,1);
+            sound.play(`tmp/${fp.name}-out.wav`,1);
             if ( fp.sequence_data.length == 1 && fp.looped === false ) {
               delete facet_patterns[k];
               fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
@@ -201,29 +203,42 @@ function tick() {
     }
     if ( current_step >= steps ) {
       current_step = 1;
-      for (const [k, fp] of Object.entries(facet_patterns)) {
-        if ( fp.loop_has_occurred === true && fp.looped === false ) {
-          // delete sequences set via .play() instead of .repeat(), at the end of one cycle
-          delete facet_patterns[k];
-          fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update');});
-        }
-        fp.loop_has_occurred = true;
-      }
       cycles_elapsed++;
     }
     else {
       current_step++;
     }
 
-    step_speed_ms = ((60000 / bpm) / steps) * 4;
-    if ( step_speed_copy != step_speed_ms ) {
-     clearInterval(running_transport);
-     step_speed_copy = step_speed_ms;
-     running_transport = setInterval(tick, step_speed_ms);
+    if ( current_step == 2 || steps == 1 ) {
+      for (const [k, fp] of Object.entries(facet_patterns)) {
+        if ( fp.sequence_data.length > 1 && fp.looped === false ) {
+          // delete sequences set via .play() instead of .repeat(), at the end of one cycle
+          delete facet_patterns[k];
+          fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
+        }
+      }
     }
   }
 }
 
+function handleBpmChange() {
+  step_speed_ms = ((60000 / bpm) / steps) * 4;
+  if ( step_speed_copy != step_speed_ms ) {
+   clearInterval(running_transport);
+   step_speed_copy = step_speed_ms;
+   running_transport = setInterval(tick, step_speed_ms);
+  }
+}
+
+function noteoff(note,channel) {
+  if ( typeof midioutput !== 'undefined' ) {
+    midioutput.send('noteoff', {
+      note: note,
+      velocity: 0,
+      channel: channel
+    });
+  }
+}
 
 function scalePatternToSteps(pattern,steps) {
   let fp = new FacetPattern();
@@ -268,53 +283,3 @@ function scaleNotePatternToSteps(pattern,steps) {
   }
   return fp;
 }
-
-function noteoff(note,channel) {
-  if ( typeof midioutput !== 'undefined' ) {
-    midioutput.send('noteoff', {
-      note: note,
-      velocity: 0,
-      channel: channel
-    });
-  }
-}
-
-function getPatterns() {
-  try {
-    return JSON.parse(fs.readFileSync('js/patterns.json', 'utf8', (err, data) => {
-      return data
-    }));
-  } catch (e) {
-    return {};
-  }
-}
-
-function getHooks() {
-  try {
-    return JSON.parse(fs.readFileSync('js/hooks.json', 'utf8', (err, data) => {
-      return data
-    }));
-  } catch (e) {
-    return {};
-  }
-}
-
-// do stuff when app is closing
-process.on('exit', () => {
-  fs.writeFileSync('js/stored.json', '{}');
-  fs.writeFileSync('js/reruns.json', '{}');
-  fs.writeFileSync('js/patterns.json', '{}');
-  fs.writeFileSync('js/hooks.json', '{}');
-  fs.writeFileSync('js/env.js', '');
-  process.exit()
-});
-
-// catches ctrl+c event
-process.on('SIGINT', () => {
-  fs.writeFileSync('js/stored.json', '{}');
-  fs.writeFileSync('js/reruns.json', '{}');
-  fs.writeFileSync('js/patterns.json', '{}');
-  fs.writeFileSync('js/hooks.json', '{}');
-  fs.writeFileSync('js/env.js', '');
-  process.exit()
-});
