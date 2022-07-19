@@ -99,7 +99,7 @@ function tick() {
     // main stepping loop
     let prev_step = current_step-1;
     for (const [hook_key, hook] of Object.entries(hooks)) {
-        if ( (Number(hook_key) >= ((prev_step) / steps) && Number(hook_key) < ((current_step+1) / steps))
+        if ( (Number(hook_key) >= ((prev_step) / steps) && Number(hook_key) < ((current_step) / steps))
           &&  hooks_muted == false ) {
           hook.forEach(h => {
             // only run hook when cycles_elapsed % every == 0

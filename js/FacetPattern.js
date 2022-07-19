@@ -412,23 +412,6 @@ class FacetPattern {
     return this;
   }
 
-  audio () {
-    // HPF at ~0hz
-    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
-    // fade first/last 256 samples
-    let fade_samples = 256 > Math.floor(this.data.length * 0.5) ? Math.ceil(this.data.length * 0.5) : 256;
-    let fade = new FacetPattern().sine(1,fade_samples*2).range(0,0.5);
-    for (var i = 0; i < fade.data.length; i++) {
-      this.data[i] *= fade.data[i];
-    }
-    this.reverse();
-    for (var i = 0; i < fade.data.length; i++) {
-      this.data[i] *= fade.data[i];
-    }
-    this.reverse();
-    return this;
-  }
-
   changed () {
     let changed_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
@@ -1587,6 +1570,10 @@ class FacetPattern {
     return this;
   }
 
+  // TODO: this wastes a lot of CPU when upscaling small patterns to be a whole note length... :(
+  // i've tried a few ways here in the JS to upscale the data, but it's still pretty slow..
+  // I wonder if saving to wav and running an SoX command
+  // would help performance.
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
     if (new_size == this.data.length ) {
@@ -1602,20 +1589,13 @@ class FacetPattern {
       if ( ratio < 0.000001 ) {
         ratio = 0.000001;
       }
-      if (ratio > 100000) {
-        throw `cannot resize a FacetPattern by more than 100000x. Try running .size() with a smaller output or larger input`;
+      if (ratio > 200000) {
+        throw `cannot resize a FacetPattern by more than 200000x. Try running .size() with a smaller output or larger input`;
       }
       let upscaled_data = [];
       let new_samps = Math.floor(ratio * this.data.length);
       let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
-      for (var n = 0; n < this.data.length; n++) {
-        let i = 0;
-        while (i < copies_of_each_value) {
-          upscaled_data.push(this.data[n]);
-          i++;
-        }
-      }
-      this.data = upscaled_data;
+      this.scale1D(this.data,copies_of_each_value);
       this.reduce(new_samps);
     }
     return this;
@@ -1902,6 +1882,54 @@ class FacetPattern {
   // END WINDOW operations. shimmed from https://github.com/scijs/window-function
 
   // BEGIN audio operations
+  audio () {
+    // HPF at ~0hz
+    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
+    // fade first/last 256 samples
+    let fade_samples = 256 > Math.floor(this.data.length * 0.5) ? Math.ceil(this.data.length * 0.5) : 256;
+    let fade = new FacetPattern().sine(1,fade_samples*2).range(0,0.5);
+    for (var i = 0; i < fade.data.length; i++) {
+      this.data[i] *= fade.data[i];
+    }
+    this.reverse();
+    for (var i = 0; i < fade.data.length; i++) {
+      this.data[i] *= fade.data[i];
+    }
+    this.reverse();
+    return this;
+  }
+
+  channels (chans) {
+    this.dacs = '';
+    let output_channel_str = '';
+    if ( typeof chans == 'number' ) {
+      chans = [chans];
+    }
+    else if ( this.isFacetPattern(chans) ) {
+      chans = chans.data;
+    }
+    let max_channel = chans.sort(function(a, b) {
+      return a - b;
+    });
+    for (var i = 0; i < max_channel; i++) {
+      if ( chans.includes(i+1) ) {
+        this.dacs += '1 ';
+      }
+      else {
+        this.dacs += '0 ';
+      }
+    }
+    // remove last space
+    this.dacs = this.dacs.slice(0, -1);
+    return this;
+  }
+
+  // semantically useful if you forget when running with one channel
+  channel (chans) {
+    this.channels(chans);
+    return this;
+  }
+
   ichunk (sequence2) {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
@@ -2011,7 +2039,7 @@ class FacetPattern {
     return this;
   }
 
-  on (hook = 0, every = 1) {
+  on (hook = Math.random(), every = 1) {
     if ( typeof hook == 'number' ) {
       hook = [hook];
     }
@@ -2136,34 +2164,9 @@ class FacetPattern {
   // END special operations
 
   // BEGIN utility functions used in other methods
-  channels (chans) {
-    this.dacs = '';
-    let output_channel_str = '';
-    if ( typeof chans == 'number' ) {
-      chans = [chans];
-    }
-    else if ( this.isFacetPattern(chans) ) {
-      chans = chans.data;
-    }
-    let max_channel = chans.sort(function(a, b) {
-      return a - b;
-    });
-    for (var i = 0; i < max_channel; i++) {
-      if ( chans.includes(i+1) ) {
-        this.dacs += '1 ';
-      }
-      else {
-        this.dacs += '0 ';
-      }
-    }
-    // remove last space
-    this.dacs = this.dacs.slice(0, -1);
-    return this;
-  }
-  // semantically useful if you forget when running with one channel
-  channel (chans) {
-    this.channels(chans);
-    return this;
+  scale1D (arr, n) {
+    for (var i = arr.length *= n; i;)
+      arr[--i] = arr[i / n | 0]
   }
 
   flatten () {
