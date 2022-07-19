@@ -10,6 +10,7 @@ class FacetPattern {
   constructor (name) {
     this.name = name ? name : Math.random();
     this.cc_data = [];
+    this.dacs = '1 1';
     this.data = [];
     this.env = this.getEnv();
     this.history = '';
@@ -2135,6 +2136,36 @@ class FacetPattern {
   // END special operations
 
   // BEGIN utility functions used in other methods
+  channels (chans) {
+    this.dacs = '';
+    let output_channel_str = '';
+    if ( typeof chans == 'number' ) {
+      chans = [chans];
+    }
+    else if ( this.isFacetPattern(chans) ) {
+      chans = chans.data;
+    }
+    let max_channel = chans.sort(function(a, b) {
+      return a - b;
+    });
+    for (var i = 0; i < max_channel; i++) {
+      if ( chans.includes(i+1) ) {
+        this.dacs += '1 ';
+      }
+      else {
+        this.dacs += '0 ';
+      }
+    }
+    // remove last space
+    this.dacs = this.dacs.slice(0, -1);
+    return this;
+  }
+  // semantically useful if you forget when running with one channel
+  channel (chans) {
+    this.channels(chans);
+    return this;
+  }
+
   flatten () {
     let out = [];
     Object.values(this.data).forEach(step => {

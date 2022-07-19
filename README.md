@@ -4,7 +4,8 @@ Facet is an open-source live coding system for algorithmic music. With a code ed
 
 ## Getting started
 
-1. Install Node.js and npm: https://www.npmjs.com/get-npm
+1. Download and install Node.js and npm: https://www.npmjs.com/get-npm
+2. Download and install SoX: http://sox.sourceforge.net/
 2. Download the Facet repo.
 3. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
 4. After the previous command completes, run `npm run facet`. The server should start running, and it should open up a new browser window with the code editor.
@@ -81,6 +82,12 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 ---
 
 ### Audio output
+- **channel** ( _channels_ )
+	- Facet ultimately creates .wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto any channel(s) you specify in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
+	- example:
+		- `_.randsamp().channel(1).play(); // first channel only`
+		- `_.randsamp().channels([1,3]).play(); // second channel only`
+		- `_.randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 9-16`
 - **play** ( _FacetPattern_ )
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
