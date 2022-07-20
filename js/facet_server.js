@@ -39,7 +39,13 @@ module.exports = {
             // store wav file in /tmp/
             fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
               // remix onto whatever channels via SoX
-              exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav remix ${fp.dacs}`, (error, stdout, stderr) => {
+              let speed = 1;
+              if ( fp.output_size != -1 ) {
+                // if a .size() was specified, upscale or downscale the file
+                // to that number of samples via the SoX speed function
+                speed = fp.data.length / fp.output_size;
+              }
+              exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -v -L remix ${fp.dacs}`, (error, stdout, stderr) => {
                 facet_patterns[fp.name] = fp;
                 addAnyHooks(fp, hook_mode, fp.original_command);
                 // add to list of available samples for sequencing

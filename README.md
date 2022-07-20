@@ -104,9 +104,14 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- **Note:** if you want to use `on()` with `repeat()`, you will need to give your FacetPattern a name, e.g. `new $('name_goes here')`.
 	- example:
-	- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
-	- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
-	- `new $('name_goes_here').randsamp().repeat(_.noise(4)).on();	// note how the FacetPattern is named`
+		- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
+		- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
+		- `new $('name_goes_here').randsamp().repeat(_.noise(4)).on();	// note how the FacetPattern is named`
+---
+- **size** ( _new_size_ )
+	- upscales or downscales the FacetPattern prior to playback, so its length is `new_size` samples. The upscaling and downscaling happens in SoX after all other calculations are complete, when the .wav file is generating. This means you can place the `.size()` anywhere in a command, since it runs at the end of the chain of function calls, no matter what. This also means you can only use one `.size()` per command, and if you use more than one, it will default to the _last_ one in the command.
+	- example:
+		- `_.drunk(256,0.1).size(44100); // upscaling a 256-sample drunk walk to be 1 second`
 
 ### MIDI output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install midi driver {your OS goes here}" for more information.
@@ -143,7 +148,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
 	- example:
 		- `_.sine(random(1,100,1),40) // a sine wave with 1 - 100 cycles`
----
+
 ### FacetPattern generators
 - **binary** ( _integer_, _length_)
 	- Computes the binary representation of `integer`. If `length` is not present, the output FacetPattern will be the actual length of the binary representation of `integer`.
@@ -206,7 +211,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- generates a triangle wave for `periods` periods, each period having `length` values.
 	- example:
 		- `_.triangle(30,33); // 30 cycles, 33 values each`
----
+
 ### FacetPattern modulators
 - **abs** ( )
 	- returns the absolute value of all numbers in the FacetPattern.
@@ -463,11 +468,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `_.from([1,2,3,4]).shuffle(); // first time: 3 2 1 4`
 		- `_.from([1,2,3,4]).shuffle(); // second time: 1 3 4 2`
 ---
-- **size** ( _new_size_ )
-	- scales the FacetPattern, otherwise preserving its structure, to be `new_size` samples.
-	- example:
-		- `_.randsamp().size(200).dup(800).play(); // 800 copies of a random file that was then reduced to 200 samples`
----
 - **skip** ( _prob_ )
 	- Sometimes, skip executing the command, as if it had never been attempted. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
 		- example:
@@ -587,10 +587,10 @@ _.phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 	- multiplies the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.sine(1,100).times(_.from([0.5,0.25,0.1,1]));`
----
+
 ### Audio-rate operations
 
-Facet can load audio samples (currently only .wav files) as FacetPatterns and run arbitrary operations on them.
+Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary operations on them.
 
  To prevent humongous computations, there are some guardrails, but even so, audio processing can increase your computer's CPU load quite a bit, and it is possible that you accidentally run a command that requires more computing power than your computer can handle in real(ish) time. Of course, if you're just running the command for sound design or testing purposes, you can just wait for it to complete and hear what it comes up with. But if the CPU% indicator goes way up, or the server seems to not be responding, just stop and restart the node server in your terminal, and try tailoring the audio commands so they are within the limitations of your machine.
 

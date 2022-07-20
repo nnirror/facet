@@ -19,6 +19,7 @@ class FacetPattern {
     this.notes = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
+    this.output_size = -1;
     this.skipped = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
@@ -1570,34 +1571,9 @@ class FacetPattern {
     return this;
   }
 
-  // TODO: this wastes a lot of CPU when upscaling small patterns to be a whole note length... :(
-  // i've tried a few ways here in the JS to upscale the data, but it's still pretty slow..
-  // I wonder if saving to wav and running an SoX command
-  // would help performance.
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
-    if (new_size == this.data.length ) {
-      return this;
-    }
-    else if (new_size < this.data.length ) {
-      // decrease size
-      this.reduce(new_size);
-    }
-    else {
-      // increase size, more lenient about clamping
-      let ratio = Math.abs(Number((new_size / this.data.length)));
-      if ( ratio < 0.000001 ) {
-        ratio = 0.000001;
-      }
-      if (ratio > 200000) {
-        throw `cannot resize a FacetPattern by more than 200000x. Try running .size() with a smaller output or larger input`;
-      }
-      let upscaled_data = [];
-      let new_samps = Math.floor(ratio * this.data.length);
-      let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
-      this.scale1D(this.data,copies_of_each_value);
-      this.reduce(new_samps);
-    }
+    this.output_size = new_size;
     return this;
   }
 
