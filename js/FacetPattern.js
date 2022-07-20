@@ -185,7 +185,7 @@ class FacetPattern {
     } finally {
       if (!decodedAudio) {
         chosenFile = files[Math.floor(Math.random() * files.length)];
-        buffer = fs.readFileSync(`${dir}${chosenFile}`);
+        buffer = fs.readFileSync(`${dir}/${chosenFile}`);
         decodedAudio = wav.decode(buffer);
       }
       this.data = Array.from(decodedAudio.channelData[0]);
