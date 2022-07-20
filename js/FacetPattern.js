@@ -2015,7 +2015,7 @@ class FacetPattern {
     return this;
   }
 
-  on (hook = Math.random(), every = 1) {
+  on (hook = 0, every = 1) {
     if ( typeof hook == 'number' ) {
       hook = [hook];
     }
