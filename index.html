@@ -12,7 +12,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="node_modules/bootstrap-growl/bootstrap-notify.min.js"></script>
     <script type="text/javascript" src="node_modules/osc-js/lib/osc.min.js"></script>
-    <script src="js/jquery.growl.js" type="text/javascript"></script>
+    <script src="js/lib/jquery.growl.js" type="text/javascript"></script>
     <link href="css/jquery.growl.css" rel="stylesheet" type="text/css" />
     <style>
       html {
@@ -241,17 +241,18 @@
       $(document).keydown(function(e) {
         // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
         if ( e.ctrlKey && e.keyCode == 13 ) {
-          $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+          $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
           runFacet();
         }
         else if ( e.ctrlKey && e.keyCode == 67 ) {
           // clear hooks: ctrl+c
+          $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
           $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'hooks cleared' });
         }
         else if ( e.ctrlKey && e.keyCode == 70 ) {
           // mute hooks: ctrl+f
-          $.post('http://127.0.0.1:1123/hooks/mute', {}).done(function( data, status ) {
+          $.post('http://127.0.0.1:3211/hooks/mute', {}).done(function( data, status ) {
             let msg = 'hooks running';
             if ( data.muted === true ) {
               msg = 'hooks muted';
@@ -261,8 +262,8 @@
         }
         else if ( e.ctrlKey && e.keyCode == 77 ) {
           // clear hooks and mute everything: ctrl+m
-          $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
-          $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:3211/mute', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'system muted' });
         }
       });
@@ -293,7 +294,7 @@
       }
 
       let midi_outs;
-      $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+      $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
         // create select with this -- check every 2 seconds, store in memory, if changed update select
         //#midi_outs add option
         if (data.data != midi_outs) {
@@ -306,13 +307,13 @@
       });
 
       $('body').on('change', '#midi_outs', function() {
-        $.post('http://127.0.0.1:1123/midi_select', {output:this.value}).done(function( data, status ) {
+        $.post('http://127.0.0.1:3211/midi_select', {output:this.value}).done(function( data, status ) {
 
         });
       });
 
       $('body').on('click', '#midi_refresh', function() {
-        $.post('http://127.0.0.1:1123/midi', {}).done(function( data, status ) {
+        $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
           $('#midi_outs').html('');
           for (var i = 0; i < data.data.length; i++) {
             let midi_out = data.data[i];
@@ -328,7 +329,7 @@
       });
 
       $('body').on('click', '#play', function() {
-        $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+        $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
             $.growl.error({ message: 'no connection to the Facet server' });
@@ -337,6 +338,12 @@
       });
 
       $('body').on('click', '#stop', function() {
+        $.post('http://127.0.0.1:3211/mute', {}).done(function( data, status ) {})
+        .fail(function(data) {
+          if ( data.statusText == 'error' ) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          }
+        });
         $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
@@ -346,6 +353,7 @@
       });
 
       $('body').on('click', '#clear', function() {
+        $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
         $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
       });
 
@@ -376,6 +384,7 @@
           $.post('http://127.0.0.1:1123/status', {
             mousex:mousex,
             mousey:mousey,
+            bpm:bpm
           }).done(function( data, status ) {
             setStatus(`connected`);
           })
@@ -399,13 +408,46 @@
         $('#status').html(colored_span);
       }
       // end OSC
+
+      let bpm=90;
+      let steps=16;
+      // check every 250ms for bpm change and send if changed
+      setInterval(function () {
+        prev_bpm = bpm;
+        bpm = $('#bpm').val();
+        if (bpm != prev_bpm) {
+          $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          });
+          $('#intensity').val(bpm + ' bpm');
+        }
+
+        prev_steps = steps;
+        steps = $('#steps').val();
+        if (steps != prev_steps) {
+          $.post('http://127.0.0.1:3211/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          });
+          $('#steps_out').val(steps + ' steps');
+        }
+
+      }, 100);
+      function logslider(input, out_min, out_max) {
+        var minp = 1;
+        var maxp = 1000;
+        var minv = Math.log(out_min);
+        var maxv = Math.log(out_max);
+        // calculate adjustment factor
+        var scale = (maxv-minv) / (maxp-minp);
+        return Math.exp(minv + scale*(input-minp)).toFixed(2);
+      }
     </script>
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
     <div id="notifications">
       <input type="range" class="slider" min="1" max="1000" value="90" id="bpm" step="1">
       <output class="fader" id="intensity">90 bpm</output>
-      <input type="range" class="slider" min="1" max="128" value="16" id="steps" step="1">
+      <input type="range" class="slider" min="1" max="64" value="16" id="steps" step="1">
       <output class="fader" id="steps_out">16 steps</output>
     </div>
     <div id="transport">
@@ -417,38 +459,3 @@
     <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>
 </html>
-
-<script type="text/javascript">
-let bpm=90;
-let steps=16;
-// check every 250ms for bpm change and send if changed
-setInterval(function () {
-  prev_bpm = bpm;
-  bpm = $('#bpm').val();
-  if (bpm != prev_bpm) {
-    $.post('http://127.0.0.1:1123/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
-    $('#intensity').val(bpm + ' bpm');
-  }
-
-  prev_steps = steps;
-  steps = $('#steps').val();
-  if (steps != prev_steps) {
-    $.post('http://127.0.0.1:1123/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
-    $('#steps_out').val(steps + ' steps');
-  }
-
-}, 100);
-function logslider(input, out_min, out_max) {
-  var minp = 1;
-  var maxp = 1000;
-  var minv = Math.log(out_min);
-  var maxv = Math.log(out_max);
-  // calculate adjustment factor
-  var scale = (maxv-minv) / (maxp-minp);
-  return Math.exp(minv + scale*(input-minp)).toFixed(2);
-}
-</script>

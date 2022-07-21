@@ -4,7 +4,8 @@ Facet is an open-source live coding system for algorithmic music. With a code ed
 
 ## Getting started
 
-1. Install Node.js and npm: https://www.npmjs.com/get-npm
+1. Download and install Node.js and npm: https://www.npmjs.com/get-npm
+2. Download and install SoX: http://sox.sourceforge.net/
 2. Download the Facet repo.
 3. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
 4. After the previous command completes, run `npm run facet`. The server should start running, and it should open up a new browser window with the code editor.
@@ -81,6 +82,12 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 ---
 
 ### Audio output
+- **channel** ( _channels_ )
+	- Facet ultimately creates .wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto any channel(s) you specify in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
+	- example:
+		- `_.randsamp().channel(1).play(); // first channel only`
+		- `_.randsamp().channels([1,3]).play(); // second channel only`
+		- `_.randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 9-16`
 - **play** ( _FacetPattern_ )
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
@@ -97,14 +104,19 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- **Note:** if you want to use `on()` with `repeat()`, you will need to give your FacetPattern a name, e.g. `new $('name_goes here')`.
 	- example:
-	- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
-	- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
-	- `new $('name_goes_here').randsamp().repeat(_.noise(4)).on();	// note how the FacetPattern is named`
+		- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
+		- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
+		- `new $('name_goes_here').randsamp().repeat(_.noise(4)).on();	// note how the FacetPattern is named`
+---
+- **size** ( _new_size_ )
+	- upscales or downscales the FacetPattern prior to playback, so its length is `new_size` samples. The upscaling and downscaling happens in SoX after all other calculations are complete, when the .wav file is generating. This means you can place the `.size()` anywhere in a command, since it runs at the end of the chain of function calls, no matter what. This also means you can only use one `.size()` per command, and if you use more than one, it will default to the _last_ one in the command.
+	- example:
+		- `_.drunk(256,0.1).size(44100); // upscaling a 256-sample drunk walk to be 1 second`
 
 ### MIDI output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install midi driver {your OS goes here}" for more information.
 
-- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 0 )
+- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1 )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
 	- The VelocityPattern and DurationPatterns will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
 	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
@@ -112,14 +124,14 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `_.sine(1,32).scale(36,90).round().note();`
 		- `_.sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note().on();`
 ---
-- **cc** ( _controller_number_ = 70, _channel_ = 0 )
+- **cc** ( _controller_number_ = 70, _channel_ = 1 )
 	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
 	- _Note_: This function is automatically scaled into cc data, so you can supply it a FacetPattern between 0 and 1.
 	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
 	- example:
 		- `_.drunk(64,mousey).cc().on();`
 ---
-- **pitchbend** ( _channel_ = 0 )
+- **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitch bend event for every value in the FacetPattern's data.
 	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
 	- _Note_: This function is automatically scaled into pitch bend data, so you can supply it a FacetPattern between 0 and 1.
@@ -136,7 +148,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
 	- example:
 		- `_.sine(random(1,100,1),40) // a sine wave with 1 - 100 cycles`
----
+
 ### FacetPattern generators
 - **binary** ( _integer_, _length_)
 	- Computes the binary representation of `integer`. If `length` is not present, the output FacetPattern will be the actual length of the binary representation of `integer`.
@@ -199,7 +211,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- generates a triangle wave for `periods` periods, each period having `length` values.
 	- example:
 		- `_.triangle(30,33); // 30 cycles, 33 values each`
----
+
 ### FacetPattern modulators
 - **abs** ( )
 	- returns the absolute value of all numbers in the FacetPattern.
@@ -575,10 +587,10 @@ _.phasor(1,100).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());
 	- multiplies the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `_.sine(1,100).times(_.from([0.5,0.25,0.1,1]));`
----
+
 ### Audio-rate operations
 
-Facet can load audio samples (currently only .wav files) as FacetPatterns and run arbitrary operations on them.
+Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary operations on them.
 
  To prevent humongous computations, there are some guardrails, but even so, audio processing can increase your computer's CPU load quite a bit, and it is possible that you accidentally run a command that requires more computing power than your computer can handle in real(ish) time. Of course, if you're just running the command for sound design or testing purposes, you can just wait for it to complete and hear what it comes up with. But if the CPU% indicator goes way up, or the server seems to not be responding, just stop and restart the node server in your terminal, and try tailoring the audio commands so they are within the limitations of your machine.
 

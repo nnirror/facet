@@ -10,6 +10,7 @@ class FacetPattern {
   constructor (name) {
     this.name = name ? name : Math.random();
     this.cc_data = [];
+    this.dacs = '1 1';
     this.data = [];
     this.env = this.getEnv();
     this.history = '';
@@ -18,9 +19,11 @@ class FacetPattern {
     this.notes = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
+    this.output_size = -1;
     this.skipped = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
+    this.times_played = 0;
     this.utils = this.env + this.getUtils();
     this.loop_has_occurred = false;
   }
@@ -68,6 +71,9 @@ class FacetPattern {
     if ( typeof list == 'number' ) {
       list = [list];
     }
+    if (!list) {
+      list = [];
+    }
     this.data = list;
     return this;
   }
@@ -99,7 +105,7 @@ class FacetPattern {
 
   noise (length) {
     let noise_sequence = [];
-    length = Math.abs(Number(length));
+    length = Math.abs(Math.round(Number(length)));
     if (length < 1 ) {
       length = 1;
     }
@@ -183,11 +189,10 @@ class FacetPattern {
     } finally {
       if (!decodedAudio) {
         chosenFile = files[Math.floor(Math.random() * files.length)];
-        buffer = fs.readFileSync(`${dir}${chosenFile}`);
+        buffer = fs.readFileSync(`${dir}/${chosenFile}`);
         decodedAudio = wav.decode(buffer);
       }
       this.data = Array.from(decodedAudio.channelData[0]);
-      this.reduce(88200);
       return this;
     }
   }
@@ -395,6 +400,9 @@ class FacetPattern {
   }
 
   append (sequence2) {
+    if ( typeof sequence2 == 'number' || Array.isArray(sequence2) === true ) {
+      sequence2 = new FacetPattern().from(sequence2);
+    }
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
@@ -405,23 +413,6 @@ class FacetPattern {
   at (position, value) {
     let replace_position = Math.round(position * (this.data.length-1));
     this.data[replace_position] = value;
-    return this;
-  }
-
-  audio () {
-    // HPF at ~0hz
-    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
-    // fade first/last 256 samples
-    let fade_samples = 256 > Math.floor(this.data.length * 0.5) ? Math.ceil(this.data.length * 0.5) : 256;
-    let fade = new FacetPattern().sine(1,fade_samples*2).range(0,0.5);
-    for (var i = 0; i < fade.data.length; i++) {
-      this.data[i] *= fade.data[i];
-    }
-    this.reverse();
-    for (var i = 0; i < fade.data.length; i++) {
-      this.data[i] *= fade.data[i];
-    }
-    this.reverse();
     return this;
   }
 
@@ -1583,6 +1574,12 @@ class FacetPattern {
     return this;
   }
 
+  size (new_size) {
+    new_size = Math.round(Math.abs(Number(new_size)));
+    this.output_size = new_size;
+    return this;
+  }
+
   sort () {
     let sorted_sequence = [];
     sorted_sequence = this.data.sort(function(a, b) { return a - b; });
@@ -1864,6 +1861,51 @@ class FacetPattern {
   // END WINDOW operations. shimmed from https://github.com/scijs/window-function
 
   // BEGIN audio operations
+  audio () {
+    // HPF at ~0hz
+    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
+    // fade first/last 256 samples
+    let fade_samples = 256 > Math.floor(this.data.length * 0.5) ? Math.ceil(this.data.length * 0.5) : 256;
+    let fade = new FacetPattern().sine(1,fade_samples*2).range(0,0.5);
+    for (var i = 0; i < fade.data.length; i++) {
+      this.data[i] *= fade.data[i];
+    }
+    this.reverse();
+    for (var i = 0; i < fade.data.length; i++) {
+      this.data[i] *= fade.data[i];
+    }
+    this.reverse();
+    return this;
+  }
+
+  channels (chans) {
+    this.dacs = '';
+    let output_channel_str = '';
+    if ( typeof chans == 'number' ) {
+      chans = [chans];
+    }
+    else if ( this.isFacetPattern(chans) ) {
+      chans = chans.data;
+    }
+    for (var i = 0; i < Math.max(...chans); i++) {
+      if ( chans.includes(i+1) ) {
+        this.dacs += '1 ';
+      }
+      else {
+        this.dacs += '0 ';
+      }
+    }
+    // remove last space
+    this.dacs = this.dacs.slice(0, -1);
+    return this;
+  }
+
+  // semantically useful if you forget when running with one channel
+  channel (chans) {
+    this.channels(chans);
+    return this;
+  }
+
   ichunk (sequence2) {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
@@ -1910,7 +1952,7 @@ class FacetPattern {
   // END audio operations
 
   // BEGIN special operations
-  cc (controller = 70, channel = 0) {
+  cc (controller = 70, channel = 1) {
     if ( typeof controller != 'number' ) {
       throw `.cc() 1st argument: controller must be a number; type found: ${typeof controller}`;
     }
@@ -1921,7 +1963,7 @@ class FacetPattern {
     this.cc_data.push({
       data:this.data,
       controller:controller,
-      channel:channel
+      channel:channel-1
     });
     return this;
   }
@@ -1954,7 +1996,7 @@ class FacetPattern {
     return this;
   }
 
-  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 0) {
+  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 1) {
     if ( typeof velocity == 'number' || Array.isArray(velocity) === true ) {
       velocity = new FacetPattern().from(velocity);
     }
@@ -1968,7 +2010,7 @@ class FacetPattern {
       data:this.data,
       velocity:velocity,
       duration:duration,
-      channel:channel
+      channel:channel-1
     });
     return this;
   }
@@ -1992,14 +2034,14 @@ class FacetPattern {
     return this;
   }
 
-  pitchbend (channel = 0) {
+  pitchbend (channel = 1) {
     if ( typeof channel != 'number' ) {
       throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
     }
     this.scale(Math.min(...this.data)*16384,Math.max(...this.data) * 16384).round();
     this.pitchbend_data.push({
       data:this.data,
-      channel:channel
+      channel:channel-1
     });
     return this;
   }
@@ -2098,6 +2140,11 @@ class FacetPattern {
   // END special operations
 
   // BEGIN utility functions used in other methods
+  scale1D (arr, n) {
+    for (var i = arr.length *= n; i;)
+      arr[--i] = arr[i / n | 0]
+  }
+
   flatten () {
     let out = [];
     Object.values(this.data).forEach(step => {
