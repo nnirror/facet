@@ -65,6 +65,10 @@ Both `mousex` and `mousey`, as floating-point number representations of your cur
 _.sine(100,200).gain(mousey); // cursor y position controls volume every time the code runs
 ```
 
+#### notevalues
+
+There are 128 notevalues variables, corresponding to note divisions of 1 whole note. A whole note is n1, a half note is n2, etc... up to n128.
+
 ## Command reference
 
 ### Rerunning commands
