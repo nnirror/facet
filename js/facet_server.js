@@ -91,11 +91,8 @@ app.post('/hooks/clear', (req, res) => {
   res.sendStatus(200);
 });
 
-app.get('/reruns', (req, res) => {
-  reruns = shared.getReruns();
-  for (var i = 0; i < reruns.length; i++) {
-    module.exports.run(reruns[i],true);
-  }
+app.get('/rerun', (req, res) => {
+  module.exports.run(req.query.hook,true);
   res.sendStatus(200);
 });
 

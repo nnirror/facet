@@ -27,15 +27,6 @@ module.exports = {
       return {};
     }
   },
-  getReruns: () => {
-    try {
-      return JSON.parse(fs.readFileSync('js/reruns.json', 'utf8', (err, data) => {
-        return data
-      }));
-    } catch (e) {
-      return {};
-    }
-  },
   initEnv: () => {
     fs.writeFileSync('js/env.js', '');
   },

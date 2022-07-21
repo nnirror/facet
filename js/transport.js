@@ -104,13 +104,11 @@ function tick() {
           hook.forEach(h => {
             // only run hook when cycles_elapsed % every == 0
             if ( cycles_elapsed % h.every == 0 ) {
-              // regenerate the set of commands for the generation server to process
-              let hooks_to_rerun = [];
-              hooks_to_rerun.push(h.command);
-              fs.writeFile('js/reruns.json', JSON.stringify(hooks_to_rerun),()=> {axios.get('http://localhost:1123/reruns')});
+              // re-send the command to the server
+              axios.get(`http://localhost:1123/rerun`, {params:{hook:h.command}})
             }
-          });
-        }
+        });
+      }
     }
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(facet_patterns)) {
@@ -160,6 +158,11 @@ function tick() {
             } catch (e) {
               throw e
             }
+            // remove the note sequence once it's done playing
+            if ( i + 1 == note_fp.data.length ) {
+              delete facet_patterns[k];
+              fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
+            }
           }
         }
       }
@@ -180,6 +183,11 @@ function tick() {
               });
             }
           }
+          // remove the cc sequence once it's done playing
+          if ( j + 1 == cc_fp.data.length ) {
+            delete facet_patterns[k];
+            fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
+          }
         }
       }
 
@@ -197,6 +205,11 @@ function tick() {
                 channel:pb.channel
               });
             }
+          }
+          // remove the cc sequence once it's done playing
+          if ( j + 1 == pb_fp.data.length ) {
+            delete facet_patterns[k];
+            fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
           }
         }
       }
