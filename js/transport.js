@@ -159,8 +159,9 @@ function tick() {
             } catch (e) {
               throw e
             }
+            fp.times_played++;
             // remove the note sequence once it's done playing
-            if ( i + 1 == note_fp.data.length ) {
+            if ( fp.times_played == note_fp.data.length ) {
               delete facet_patterns[k];
               fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
             }
@@ -184,8 +185,9 @@ function tick() {
               });
             }
           }
+          fp.times_played++;
           // remove the cc sequence once it's done playing
-          if ( j + 1 == cc_fp.data.length ) {
+          if ( fp.times_played == cc_fp.data.length ) {
             delete facet_patterns[k];
             fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
           }
@@ -207,8 +209,9 @@ function tick() {
               });
             }
           }
-          // remove the cc sequence once it's done playing
-          if ( j + 1 == pb_fp.data.length ) {
+          fp.times_played++;
+          // remove the pitchbend sequence once it's done playing
+          if ( fp.times_played == pb_fp.data.length ) {
             delete facet_patterns[k];
             fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
           }
