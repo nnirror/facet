@@ -116,7 +116,7 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 ### MIDI output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install midi driver {your OS goes here}" for more information.
 
-- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 0 )
+- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1 )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
 	- The VelocityPattern and DurationPatterns will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
 	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
@@ -124,14 +124,14 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `_.sine(1,32).scale(36,90).round().note();`
 		- `_.sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note().on();`
 ---
-- **cc** ( _controller_number_ = 70, _channel_ = 0 )
+- **cc** ( _controller_number_ = 70, _channel_ = 1 )
 	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
 	- _Note_: This function is automatically scaled into cc data, so you can supply it a FacetPattern between 0 and 1.
 	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
 	- example:
 		- `_.drunk(64,mousey).cc().on();`
 ---
-- **pitchbend** ( _channel_ = 0 )
+- **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitch bend event for every value in the FacetPattern's data.
 	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
 	- _Note_: This function is automatically scaled into pitch bend data, so you can supply it a FacetPattern between 0 and 1.

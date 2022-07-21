@@ -71,6 +71,9 @@ class FacetPattern {
     if ( typeof list == 'number' ) {
       list = [list];
     }
+    if (!list) {
+      list = [];
+    }
     this.data = list;
     return this;
   }
@@ -190,7 +193,6 @@ class FacetPattern {
         decodedAudio = wav.decode(buffer);
       }
       this.data = Array.from(decodedAudio.channelData[0]);
-      this.reduce(88200);
       return this;
     }
   }
@@ -1885,10 +1887,7 @@ class FacetPattern {
     else if ( this.isFacetPattern(chans) ) {
       chans = chans.data;
     }
-    let max_channel = chans.sort(function(a, b) {
-      return a - b;
-    });
-    for (var i = 0; i < max_channel; i++) {
+    for (var i = 0; i < Math.max(...chans); i++) {
       if ( chans.includes(i+1) ) {
         this.dacs += '1 ';
       }
@@ -1953,7 +1952,7 @@ class FacetPattern {
   // END audio operations
 
   // BEGIN special operations
-  cc (controller = 70, channel = 0) {
+  cc (controller = 70, channel = 1) {
     if ( typeof controller != 'number' ) {
       throw `.cc() 1st argument: controller must be a number; type found: ${typeof controller}`;
     }
@@ -1964,7 +1963,7 @@ class FacetPattern {
     this.cc_data.push({
       data:this.data,
       controller:controller,
-      channel:channel
+      channel:channel-1
     });
     return this;
   }
@@ -1997,7 +1996,7 @@ class FacetPattern {
     return this;
   }
 
-  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 0) {
+  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 1) {
     if ( typeof velocity == 'number' || Array.isArray(velocity) === true ) {
       velocity = new FacetPattern().from(velocity);
     }
@@ -2011,7 +2010,7 @@ class FacetPattern {
       data:this.data,
       velocity:velocity,
       duration:duration,
-      channel:channel
+      channel:channel-1
     });
     return this;
   }
@@ -2035,14 +2034,14 @@ class FacetPattern {
     return this;
   }
 
-  pitchbend (channel = 0) {
+  pitchbend (channel = 1) {
     if ( typeof channel != 'number' ) {
       throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
     }
     this.scale(Math.min(...this.data)*16384,Math.max(...this.data) * 16384).round();
     this.pitchbend_data.push({
       data:this.data,
-      channel:channel
+      channel:channel-1
     });
     return this;
   }

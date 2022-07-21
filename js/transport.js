@@ -178,6 +178,7 @@ function tick() {
           if ( current_step == i+1 ) {
             let value = cc_fp.data[i];
             if ( typeof midioutput !== 'undefined' ) {
+              fp.times_played++;
               midioutput.send('cc', {
                 controller: cc.controller,
                 value: value,
@@ -185,7 +186,6 @@ function tick() {
               });
             }
           }
-          fp.times_played++;
           // remove the cc sequence once it's done playing
           if ( fp.times_played == cc_fp.data.length ) {
             delete facet_patterns[k];
@@ -203,13 +203,13 @@ function tick() {
           if ( current_step == i+1 ) {
             let value = pb_fp.data[i];
             if ( typeof midioutput !== 'undefined' ) {
+              fp.times_played++;
               midioutput.send('pitch', {
                 value:value,
                 channel:pb.channel
               });
             }
           }
-          fp.times_played++;
           // remove the pitchbend sequence once it's done playing
           if ( fp.times_played == pb_fp.data.length ) {
             delete facet_patterns[k];
