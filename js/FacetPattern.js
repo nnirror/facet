@@ -23,6 +23,7 @@ class FacetPattern {
     this.skipped = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
+    this.times_played = 0;
     this.utils = this.env + this.getUtils();
     this.loop_has_occurred = false;
   }

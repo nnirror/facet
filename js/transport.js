@@ -117,6 +117,7 @@ function tick() {
         let sequence_step = Math.round(fp.sequence_data[j] * (steps)) + 1;
         if (current_step == sequence_step) {
           try {
+            fp.times_played++;
             sound.play(`tmp/${fp.name}-out.wav`,1);
             if ( fp.sequence_data.length == 1 && fp.looped === false ) {
               delete facet_patterns[k];
@@ -221,14 +222,11 @@ function tick() {
     else {
       current_step++;
     }
-
-    if ( current_step == 2 || steps == 1 ) {
-      for (const [k, fp] of Object.entries(facet_patterns)) {
-        if ( fp.sequence_data.length > 1 && fp.looped === false ) {
-          // delete sequences set via .play() instead of .repeat(), at the end of one cycle
-          delete facet_patterns[k];
-          fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
-        }
+    for (const [k, fp] of Object.entries(facet_patterns)) {
+      if ( fp.sequence_data.length == fp.times_played && fp.looped === false ) {
+        // delete sequences set via .play() instead of .repeat(), after all
+        delete facet_patterns[k];
+        fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
       }
     }
   }
