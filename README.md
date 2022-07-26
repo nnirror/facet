@@ -11,6 +11,8 @@ Facet is an open-source live coding system for algorithmic music. With a code ed
 4. After the previous command completes, run `npm run facet`. The server should start running, and it should open up a new browser window with the code editor.
 5. Copy this command into the code editor in the browser: `_.sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
 
+For more information on getting started, check out this mini-tutorial on YouTube: https://www.youtube.com/watch?v=ceJbWjh8VOs
+
 ## Facet commands
 
 ### Syntax
