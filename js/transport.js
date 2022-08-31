@@ -174,18 +174,14 @@ function tick() {
         let cc = fp.cc_data[j];
         // convert cc steps to positions based on global step resolution
         let cc_fp = scalePatternToSteps(cc.data,steps);
-        for (var i = 0; i < cc_fp.data.length; i++) {
-          if ( current_step == i+1 ) {
-            let value = cc_fp.data[i];
-            if ( typeof midioutput !== 'undefined' ) {
-              fp.times_played++;
-              midioutput.send('cc', {
-                controller: cc.controller,
-                value: value,
-                channel: cc.channel
-              });
-            }
-          }
+        let value = cc_fp.data[current_step-1];
+        if ( typeof midioutput !== 'undefined' ) {
+          fp.times_played++;
+          midioutput.send('cc', {
+            controller: cc.controller,
+            value: value,
+            channel: cc.channel
+          });
           // remove the cc sequence once it's done playing
           if ( fp.times_played == cc_fp.data.length ) {
             delete facet_patterns[k];
@@ -199,17 +195,13 @@ function tick() {
         let pb = fp.pitchbend_data[j];
         // convert cc steps to positions based on global step resolution
         let pb_fp = scalePatternToSteps(pb.data,steps);
-        for (var i = 0; i < pb_fp.data.length; i++) {
-          if ( current_step == i+1 ) {
-            let value = pb_fp.data[i];
-            if ( typeof midioutput !== 'undefined' ) {
-              fp.times_played++;
-              midioutput.send('pitch', {
-                value:value,
-                channel:pb.channel
-              });
-            }
-          }
+        let value = pb_fp.data[current_step-1];
+        if ( typeof midioutput !== 'undefined' ) {
+          fp.times_played++;
+          midioutput.send('pitch', {
+            value:value,
+            channel:pb.channel
+          });
           // remove the pitchbend sequence once it's done playing
           if ( fp.times_played == pb_fp.data.length ) {
             delete facet_patterns[k];
