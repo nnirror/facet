@@ -1057,8 +1057,9 @@ class FacetPattern {
     if ( !this.isFacetPattern(fp) ) {
       throw `input must be a FacetPattern object; type found: ${typeof fp}`;
     }
+    // scale the data so it's in the range of the new_values
+    this.scale(Math.min.apply(Math, fp.data),Math.max.apply(Math, fp.data));
     // safeguard against mapping more than 48k samples to another pattern.
-    // otherwise it can be very cpu expensive!
     this.reduce(48000);
     let same_size_arrays = this.makePatternsTheSameSize(this, fp);
     let sequence = same_size_arrays[0];

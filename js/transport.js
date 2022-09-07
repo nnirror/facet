@@ -218,7 +218,7 @@ function tick() {
       current_step++;
     }
     for (const [k, fp] of Object.entries(facet_patterns)) {
-      if ( fp.sequence_data.length == fp.times_played && fp.looped === false ) {
+      if ( fp.sequence_data.length == fp.times_played && fp.looped === false && fp.times_played > 0 ) {
         // delete sequences set via .play() instead of .repeat(), after all
         delete facet_patterns[k];
         fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
