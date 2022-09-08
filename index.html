@@ -34,6 +34,13 @@
         display: inline-block;
         vertical-align: middle;
       }
+      #bpm {
+        width: 5em;
+        text-align: center;
+      }
+      #steps {
+        text-align: center;
+      }
       #transport {
         padding-top: 0;
         float: right;
@@ -93,21 +100,6 @@
       .error {
         background-color: rgba(204, 0, 0, 0.5);
       }
-      .slider {
-        width: 28% !important;
-        padding-left: 1%;
-        display: inline;
-        float: left;
-      }
-      .fader {
-        padding-left: 1%;
-        padding-right: 2%;
-        display:inline;
-        float:left;
-      }
-      output {
-        padding-top: 0px !important;
-      }
       #midi_label {
         display: inline;
       }
@@ -123,10 +115,6 @@
           position: relative;
           top: 1px;
         }
-        .slider {
-          position: relative;
-          top: 3px;
-        }
       }
       @media screen and (max-width: 700px) {
         #notifications {
@@ -135,16 +123,6 @@
         #midi_refresh {
           font-size: 0.5em;
           height: auto;
-        }
-        .fader {
-          font-size: 0.6em;
-          position: relative;
-          top: 5px;
-        }
-        .slider {
-          width: 25% !important;
-          position: relative;
-          top: 3px;
         }
         #cpu {
           font-size: 0.7em;
@@ -174,6 +152,12 @@
         #midi_refresh {
           position: relative;
           top: 2px;
+        }
+        .ui_label {
+          font-size: 0.6em;
+        }
+        #bpm, #steps {
+          font-size: 0.8em;
         }
       }
     </style>
@@ -415,40 +399,29 @@
       setInterval(function () {
         prev_bpm = bpm;
         bpm = $('#bpm').val();
-        if (bpm != prev_bpm) {
+        if (bpm != prev_bpm && !isNaN(bpm) && bpm >= 1) {
           $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
             $.growl.error({ message: 'no connection to the Facet server' });
           });
-          $('#intensity').val(bpm + ' bpm');
         }
 
         prev_steps = steps;
         steps = $('#steps').val();
         if (steps != prev_steps) {
-          $.post('http://127.0.0.1:3211/steps', {steps:steps}).done(function( data, status ) {}).fail(function(data) {
+          $.post('http://127.0.0.1:3211/steps', {steps:Math.round(steps)}).done(function( data, status ) {}).fail(function(data) {
             $.growl.error({ message: 'no connection to the Facet server' });
           });
-          $('#steps_out').val(steps + ' steps');
         }
 
-      }, 100);
-      function logslider(input, out_min, out_max) {
-        var minp = 1;
-        var maxp = 1000;
-        var minv = Math.log(out_min);
-        var maxv = Math.log(out_max);
-        // calculate adjustment factor
-        var scale = (maxv-minv) / (maxp-minp);
-        return Math.exp(minv + scale*(input-minp)).toFixed(2);
-      }
+      }, 250);
     </script>
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
     <div id="notifications">
-      <input type="range" class="slider" min="1" max="1000" value="90" id="bpm" step="1">
-      <output class="fader" id="intensity">90 bpm</output>
-      <input type="range" class="slider" min="1" max="128" value="16" id="steps" step="1">
-      <output class="fader" id="steps_out">16 steps</output>
+      <input type="number" id="bpm" name="tentacles" min="1" max="1000" value="90">
+      <span class="ui_label">bpm</span>
+      <input type="number" id="steps" name="tentacles" min="1" max="128" value="16">
+      <span class="ui_label">steps</span>
     </div>
     <div id="transport">
       <span id="play">▶</span>
