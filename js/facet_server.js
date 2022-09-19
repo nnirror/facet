@@ -114,7 +114,7 @@ app.post('/status', (req, res) => {
 });
 
 app.get('/update', (req, res) => {
-  facet_patterns = {};
+  facet_patterns = shared.getPatterns();
   res.sendStatus(200);
 });
 
