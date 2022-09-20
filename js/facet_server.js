@@ -45,6 +45,11 @@ module.exports = {
                 // to that number of samples via the SoX speed function
                 speed = fp.data.length / fp.output_size;
               }
+              if ( fp.dacs == '1' ) {
+                // by default, channels 1 and 2 are on. If _only_ channel 1 was
+                // specified via .channel(), turn off channel 2.
+                fp.dacs = '1 0';
+              }
               exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
                 facet_patterns[fp.name] = fp;
                 addAnyHooks(fp, hook_mode, fp.original_command);

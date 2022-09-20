@@ -105,10 +105,9 @@ There are 128 notevalues variables, corresponding to note divisions of 1 whole n
 		- `_.randsamp().play(_.noise(4));	// plays once at 4 random steps`
 ---
 - **repeat** ( _FacetPattern_ )
-	- continually plays the sequence at whatever positions were specified, each time the transport moves through a whole note.
+	- continually plays the FacetPattern at whatever positions were specified, each time the transport moves through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
-	- **Note:** if you want to use `on()` with `repeat()`, you will need to give your FacetPattern a name, e.g. `new $('name_goes here')`.
 	- example:
 		- `_.randsamp().repeat();	// repeats, starting at beginning of loop`
 		- `_.randsamp().repeat(0.5);	// repeats, starting at middle point`
@@ -266,7 +265,17 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **fade** ( )
 	- applies a crossfade window to the FacetPattern, so the beginning and end are faded out.
 	- example:
-		- `_.noise(1024).fade();`
+		- `_.noise(1024).fade().play();`
+---
+- **fadein** ( _fade_percent_ = 0.5 )
+	- applies a fade to the beginning of the FacetPattern, where `fade_percent` of the beginning is faded in.
+	- example:
+		- `_.noise(20000).fadein().play();`
+---
+- **fadeout** ( _fade_percent_ = 0.5 )
+	- applies a fade to the ending 50% of the FacetPattern, where `fade_percent` of the beginning is faded out.
+	- example:
+		- `_.noise(20000).fadeout().play();`
 ---
 - **fft** ( )
 	- computes the FFT of the FacetPattern, translating the FacetPattern data into "phase data" that could theoretically reconstruct it using sine waves.
@@ -475,7 +484,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `_.from([1,2,3,4]).shuffle(); // second time: 1 3 4 2`
 ---
 - **skip** ( _prob_ )
-	- Sometimes, skip executing the command, as if it had never been attempted. Useful if you only want to update the wavetable in Max some of the time, but otherwise want to preserve the previous data.
+	- Sometimes, skip executing the command, as if it had never been attempted. Useful if you only want to update the FacetPattern some of the time, but otherwise want to preserve the previous data.
 		- example:
 		- `_.spiral(16,random(1,360)).skip(0.95);	// only load data into the "new samples" wavetable 5% of the time when this command runs`
 ---

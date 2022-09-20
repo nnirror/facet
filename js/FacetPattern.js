@@ -1840,6 +1840,36 @@ class FacetPattern {
     return this;
   }
 
+  fadein(fade_percent = 0.5) {
+    fade_percent = Math.abs(Number(fade_percent));
+    if (fade_percent >= 1 || fade_percent <= 0 ) {
+      throw `fadein percentage must be between 0 and 1; value found: ${fade_percent}`;
+    }
+    let copy = new FacetPattern().from(this.data);
+    let out = copy.fade().range(0,1-fade_percent).append(this.range(1-fade_percent,1));
+    this.data = out.data;
+    // fade it twice
+    copy = new FacetPattern().from(this.data);
+    out = copy.fade().range(0,0.5).append(this.range(0.5,1));
+    this.data = out.data;
+    return this;
+  }
+
+  fadeout(fade_percent = 0.5) {
+    fade_percent = Math.abs(Number(fade_percent));
+    if (fade_percent >= 1 || fade_percent <= 0 ) {
+      throw `fadeout percentage must be between 0 and 1; value found: ${fade_percent}`;
+    }
+    let copy = new FacetPattern().from(this.data);
+    let out = this.range(0,1-fade_percent).append(copy.fade().range(1-fade_percent,1));
+    this.data = out.data;
+    // fade it twice
+    copy = new FacetPattern().from(this.data);
+    out = this.range(0,0.5).append(copy.fade().range(0.5,1));
+    this.data = out.data;
+    return this;
+  }
+
   flattop () {
     this.data = this.applyWindow(this.data, this.flatTopInner);
     return this;
