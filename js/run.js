@@ -25,7 +25,7 @@ function formatCode (user_input) {
   user_input = user_input.replace(/\s\s+/g, '');
   user_input = user_input.replace(/\'/g, '"');
   user_input = user_input.replace(/;/g, ';\n');
-  // FacetPattern instantiation via "_." shorthand
-  user_input = user_input.replace(/_./g, '$().');
+  // anyonymous FacetPattern instantiation via "_." shorthand
+  user_input = user_input.replace(/_\./g, '$().');
   return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
 }
