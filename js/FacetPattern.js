@@ -15,7 +15,6 @@ class FacetPattern {
     this.env = this.getEnv();
     this.history = '';
     this.hooks = [];
-    this.looped = false;
     this.notes = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
@@ -2078,6 +2077,9 @@ class FacetPattern {
   }
 
   play (sequence = 0 ) {
+    if ( typeof this.name == 'number')   {
+      throw `FacetPattern found without a name. All FacetPatterns for audio and MIDI output must be initialized via: $('name_here')`;
+    }
     if ( typeof sequence == 'number' ) {
       sequence = [sequence];
     }
@@ -2093,24 +2095,6 @@ class FacetPattern {
     Object.values(sequence).forEach(s => {
       this.sequence_data.push(s);
     });
-    return this;
-  }
-
-  repeat (sequence = 0) {
-    if ( typeof sequence == 'number' ) {
-      sequence = [sequence];
-    }
-    else if ( this.isFacetPattern(sequence) ) {
-      sequence = sequence.data;
-    }
-    if ( Array.isArray(sequence) === false ) {
-      throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
-    }
-    if (sequence.length > 128 ) {
-      throw `input to .play() cannot exceed 128 values; total length: ${sequence.length}`;
-    }
-    this.looped = true;
-    this.play(sequence);
     return this;
   }
 

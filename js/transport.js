@@ -16,7 +16,6 @@ let steps = 16;
 let step_speed_ms = ((60000 / bpm) / steps) * 4;
 let step_speed_copy = step_speed_ms;
 let running_transport = setInterval(tick, step_speed_ms);
-setInterval(handleBpmChange,100);
 let transport_on = true;
 let hooks_muted = false;
 let hooks = shared.getHooks();
@@ -33,7 +32,17 @@ app.post('/midi', (req, res) => {
 
 app.get('/update', (req, res) => {
   hooks = shared.getHooks();
-  facet_patterns = shared.getPatterns();
+  let facet_patterns_attempt = {};
+  try {
+    facet_patterns_attempt = shared.getPatterns();
+    if ( Object.entries(facet_patterns_attempt).length > 0 ) {
+      facet_patterns = facet_patterns_attempt;
+    }
+  } catch (e) {
+    // do nothing, preserve previous patterns.
+    // occasionally the facet_patterns JSON object just isn't read correctly
+    // from the file
+  }
   res.sendStatus(200);
 });
 
@@ -117,12 +126,7 @@ function tick() {
         let sequence_step = Math.round(fp.sequence_data[j] * (steps)) + 1;
         if (current_step == sequence_step) {
           try {
-            fp.times_played++;
             sound.play(`tmp/${fp.name}-out.wav`,1);
-            if ( fp.sequence_data.length == 1 && fp.looped === false ) {
-              delete facet_patterns[k];
-              fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
-            }
           } catch (e) {}
         }
       }
@@ -159,12 +163,6 @@ function tick() {
             } catch (e) {
               throw e
             }
-            fp.times_played++;
-            // remove the note sequence once it's done playing
-            if ( fp.times_played == note_fp.data.length ) {
-              delete facet_patterns[k];
-              fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
-            }
           }
         }
       }
@@ -176,17 +174,11 @@ function tick() {
         let cc_fp = scalePatternToSteps(cc.data,steps);
         let value = cc_fp.data[current_step-1];
         if ( typeof midioutput !== 'undefined' ) {
-          fp.times_played++;
           midioutput.send('cc', {
             controller: cc.controller,
             value: value,
             channel: cc.channel
           });
-          // remove the cc sequence once it's done playing
-          if ( fp.times_played == cc_fp.data.length ) {
-            delete facet_patterns[k];
-            fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
-          }
         }
       }
 
@@ -197,18 +189,15 @@ function tick() {
         let pb_fp = scalePatternToSteps(pb.data,steps);
         let value = pb_fp.data[current_step-1];
         if ( typeof midioutput !== 'undefined' ) {
-          fp.times_played++;
           midioutput.send('pitch', {
             value:value,
             channel:pb.channel
           });
-          // remove the pitchbend sequence once it's done playing
-          if ( fp.times_played == pb_fp.data.length ) {
-            delete facet_patterns[k];
-            fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
-          }
         }
       }
+    }
+    if ( current_step == 1 ) {
+      axios.get('http://localhost:1123/update');
     }
     if ( current_step >= steps ) {
       current_step = 1;
@@ -217,13 +206,7 @@ function tick() {
     else {
       current_step++;
     }
-    for (const [k, fp] of Object.entries(facet_patterns)) {
-      if ( fp.sequence_data.length == fp.times_played && fp.looped === false && fp.times_played > 0 ) {
-        // delete sequences set via .play() instead of .repeat(), after all
-        delete facet_patterns[k];
-        fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {axios.get('http://localhost:1123/update')});
-      }
-    }
+    handleBpmChange();
   }
 }
 

@@ -412,8 +412,9 @@
             $.growl.error({ message: 'no connection to the Facet server' });
           });
         }
+      }, 10);
 
-      }, 250);
+      $('#bpm').val(90);
     </script>
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
