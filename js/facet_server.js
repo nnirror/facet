@@ -21,7 +21,6 @@ const osc = new OSC({
 });
 let pid;
 let stored = {};
-let facet_patterns = {};
 let reruns = {};
 let percent_cpu = 0;
 
@@ -40,12 +39,13 @@ module.exports = {
   initStore: () => {
     fs.writeFileSync('js/stored.json', '{}');
   },
-  run: (code, hook_mode) => {
+  run: (code) => {
     if ( percent_cpu < 100 ) {
-      const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {}}});
+      const worker = new Worker("./js/run.js", {workerData: {code: code, vars: {}}});
       worker.once("message", fps => {
           Object.values(fps).forEach(fp => {
-            if ( hook_mode === false) {
+            if ( fp.do_not_regenerate === false ) {
+              // don't add to reruns if it's meant to not regenerate via .keep()
               reruns[fp.name] = code;
             }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
@@ -67,17 +67,16 @@ module.exports = {
                   // specified via .channel(), turn off channel 2.
                   fp.dacs = '1 0';
                 }
-                exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
-                  facet_patterns[fp.name] = fp;
-                  axios.post('http://localhost:3211/update',
-                    {
-                      facet_patterns: JSON.stringify(facet_patterns)
-                    }
-                  )
-                  .catch(function (error) {
-                    console.log(`error posting to transport server: ${error}`);
+
+                if ( fp.sequence_data.length > 0 ) {
+                  // run audio data through SoX, adding channels and potentially changing length
+                  exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
+                    postToTransport(fp);
                   });
-                });
+                }
+                else {
+                  postToTransport(fp);
+                }
               });
             }
           });
@@ -102,7 +101,7 @@ if ( !fs.existsSync('tmp/')) {
 
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
-  module.exports.run(req.body.code,false);
+  module.exports.run(req.body.code);
   res.send({
     status: 200,
   });
@@ -114,7 +113,6 @@ app.post('/hooks/clear', (req, res) => {
 });
 
 app.post('/stop', (req, res) => {
-  facet_patterns = {};
   reruns = {};
   res.sendStatus(200);
 });
@@ -132,7 +130,7 @@ app.post('/status', (req, res) => {
 
 app.get('/update', (req, res) => {
   for (const [fp_name, code] of Object.entries(reruns)) {
-    module.exports.run(code, true);
+    module.exports.run(code);
   }
   res.sendStatus(200);
 });
@@ -167,6 +165,17 @@ function getCpuUsage () {
       percent_cpu = Number(stdout.split('\n')[1].trim());
       osc.send(new OSC.Message('/cpu', percent_cpu));
     }
+  });
+}
+
+function postToTransport (fp) {
+  axios.post('http://localhost:3211/update',
+    {
+      pattern: JSON.stringify(fp)
+    }
+  )
+  .catch(function (error) {
+    console.log(`error posting to transport server: ${error}`);
   });
 }
 

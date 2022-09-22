@@ -125,6 +125,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `_.sine(choose([2,3,4]),40); // sine wave with either 2, 3, or 4 cycles`
 ---
+- **ms** ( _milliseconds_ )
+	- converts the supplied `milliseconds` value to samples, at the default 44.1Khz sample rate.
+	- example:
+		- `$('example').sine(50,40).size(ms(5)).play(); // 5ms sine wave`
+		- `$('example').sine(50,40).size(ms(50)).play(); // 50ms sine wave`
+---
 - **random** ( _min_ = 0, _max_ = 1, _int_mode_ = 0 )
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
 	- example:
@@ -147,6 +153,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
 	- example:
 		- `_.drunk(16,0.1); // slight random movement`
+---
+- **envelope** ( _values_ )
+	- Generates an envelope using the supplied array `values`, which must have a total number of entries equal to a multiple of 3. The numbers inside the `values` array should be continually ordered in groups of three: `from`, `to`, `size`, just like the `ramp()` function.
+	- example:
+		- ` $('test').noise(ms(500)).times(_.envelope([0,1,ms(10),1,0.1,ms(200),0.1,0,ms(290)])).play(); // transient noise burst`
 ---
 - **from** ( _pattern_ )
 	- allows the user to specify their own pattern. **Note the array syntax!**
@@ -301,6 +312,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `_.from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
 ---
+- **keep** (  )
+	- preserve the generated FacetPattern so that it plays each loop. Without using keep(), the FacetPattern will regenerate each loop.
+	- example:
+		- `$('test').sine(random(10,500,1),50).play().keep();`
+---
 - **ifft** ( )
 	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
 	- example:
@@ -362,6 +378,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- replaces all instances of 0 with the previous nonzero value. Useful after with probability controls, which by default will set some values to 0. Chaining a nonzero() after that would replace the 0s with the other values the pattern. Particularly in a MIDI context with .prob(), you probably don't want to send MIDI note values of 0, so this will effectively sample and hold each nonzero value, keeping the MIDI note values in the expected range.
 	- example:
 		- `_.from([1,2,3,4]).prob(0.5).nonzero(); // if 2 and 4 are set to 0 by prob(0.5), the output of .nonzero() would be 1 1 3 3`
+---
+- **once** ( )
+	- only play the FacetPattern one time.
+	- example:
+		- `$('test').randsamp().play().once();`
+---
 ---
 - **offset** ( _amt_ )
 	- adds `amt` to each value in the FacetPattern.

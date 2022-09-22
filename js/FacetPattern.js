@@ -12,6 +12,7 @@ class FacetPattern {
     this.cc_data = [];
     this.dacs = '1 1';
     this.data = [];
+    this.do_not_regenerate = false;
     this.env = this.getEnv();
     this.history = '';
     this.notes = [];
@@ -50,7 +51,26 @@ class FacetPattern {
     }
     this.data = binary;
     return this;
-}
+  }
+
+  envelope(env_data) {
+    if ( Array.isArray(env_data) === false ) {
+      throw `input to envelope must be an array; type found: ${typeof env_data}`;
+    }
+    if ( env_data.length % 3 != 0 ) {
+      throw `input to envelope must be an array evenly disible into groups of three; total length: ${typeof env_data.length}`;
+    }
+    let env_sequence = new FacetPattern();
+    let from, to, duration;
+    for (var i = 0; i < env_data.length; i+=3) {
+      from = Math.round(Math.abs(Number(env_data[i])));
+      to = Math.round(Math.abs(Number(env_data[i+1])));
+      duration = Math.round(Math.abs(Number(env_data[i+2])));
+      env_sequence.append(new FacetPattern().ramp(from,to,duration));
+    }
+    this.data = env_sequence.data;
+    return this;
+  }
 
   cosine (periods, length) {
     let cosine_sequence = [];
@@ -2022,6 +2042,11 @@ class FacetPattern {
         eval(this.env + this.utils + command);
       }
     }
+    return this;
+  }
+
+  keep () {
+    this.do_not_regenerate = true;
     return this;
   }
 
