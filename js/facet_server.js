@@ -15,7 +15,6 @@ const open = require('open');
 const OSC = require('osc-js');
 const WaveFile = require('wavefile').WaveFile;
 const FacetPattern = require('./FacetPattern.js');
-const shared = require('./shared.js');
 const osc = new OSC({
   discardLateMessages: false,
   plugin: new OSC.WebsocketServerPlugin()
@@ -23,14 +22,30 @@ const osc = new OSC({
 let pid;
 let stored = {};
 let facet_patterns = {};
-let hooks = {};
 let reruns = {};
 
 module.exports = {
+  cleanUp: () => {
+    fs.writeFileSync('js/stored.json', '{}');
+    fs.writeFileSync('js/reruns.json', '{}');
+    fs.writeFileSync('js/patterns.json', '{}');
+    fs.writeFileSync('js/hooks.json', '{}');
+    fs.writeFileSync('js/env.js', '');
+    fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
+  },
+  initEnv: () => {
+    fs.writeFileSync('js/env.js', '');
+  },
+  initStore: () => {
+    fs.writeFileSync('js/stored.json', '{}');
+  },
   run: (code, hook_mode) => {
     const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {}}});
     worker.once("message", fps => {
         Object.values(fps).forEach(fp => {
+          if ( hook_mode === false) {
+            reruns[fp.name] = code;
+          }
           if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
             // create wav file, 44.1 kHz, 32-bit floating point
             storeAnyPatterns(fp);
@@ -52,13 +67,13 @@ module.exports = {
               }
               exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
                 facet_patterns[fp.name] = fp;
-                addAnyHooks(fp, hook_mode, fp.original_command);
-                // add to list of available samples for sequencing
-                fs.writeFile('js/patterns.json', JSON.stringify(facet_patterns),()=> {
-                  fs.writeFile('js/hooks.json', JSON.stringify(hooks),()=> {
-                    // callbacks complete, ready to tell the :3211 transport server to reload hooks and patterns
-                    axios.get('http://localhost:3211/update')
-                  });
+                axios.post('http://localhost:3211/update',
+                  {
+                    facet_patterns: JSON.stringify(facet_patterns)
+                  }
+                )
+                .catch(function (error) {
+                  console.log(`error posting to transport server: ${error}`);
                 });
               });
             });
@@ -74,8 +89,8 @@ module.exports = {
 osc.open();
 app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(cors());
-shared.initEnv();
-shared.initStore();
+module.exports.initEnv();
+module.exports.initStore();
 
 // make the tmp/ directory if it doesn't exist
 if ( !fs.existsSync('tmp/')) {
@@ -91,19 +106,13 @@ app.post('/', (req, res) => {
 });
 
 app.post('/hooks/clear', (req, res) => {
-  hooks = {};
-  fs.writeFile('js/hooks.json', '{}',()=>{axios.get('http://localhost:3211/update')});
-  res.sendStatus(200);
-});
-
-app.get('/rerun', (req, res) => {
-  module.exports.run(req.query.hook,true);
+  reruns = {};
   res.sendStatus(200);
 });
 
 app.post('/mute', (req, res) => {
   facet_patterns = {};
-  hooks = {};
+  reruns = {};
   res.sendStatus(200);
 });
 
@@ -119,7 +128,9 @@ app.post('/status', (req, res) => {
 });
 
 app.get('/update', (req, res) => {
-  facet_patterns = shared.getPatterns();
+  for (const [fp_name, code] of Object.entries(reruns)) {
+    module.exports.run(code, true);
+  }
   res.sendStatus(200);
 });
 
@@ -136,28 +147,15 @@ open('http://localhost:1124/');
 
 // do stuff when app is closing
 process.on('exit', () => {
-  shared.cleanUp();
+  module.exports.cleanUp();
   process.exit()
 });
 
 // catches ctrl+c event
 process.on('SIGINT', () => {
-  shared.cleanUp();
+  module.exports.cleanUp();
   process.exit()
 });
-
-function addAnyHooks (fp, hook_mode, command) {
-  if (!hook_mode) {
-    if ( fp.hooks.length > 0 ) {
-      for (var i = 0; i < fp.hooks.length; i++) {
-        if ( !hooks[fp.hooks[i][0]] ) {
-          hooks[fp.hooks[i][0]] = [];
-        }
-        hooks[fp.hooks[i][0]].push({command:command,every:fp.hooks[i][1]});
-      }
-    }
-  }
-}
 
 // TODO I'm guessing this doesn't work on windows- would need to differentiate user OS and check PID in windows commands
 function getCpuUsage () {

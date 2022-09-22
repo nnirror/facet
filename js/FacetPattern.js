@@ -14,7 +14,6 @@ class FacetPattern {
     this.data = [];
     this.env = this.getEnv();
     this.history = '';
-    this.hooks = [];
     this.notes = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
@@ -2041,25 +2040,6 @@ class FacetPattern {
       velocity:velocity,
       duration:duration,
       channel:channel-1
-    });
-    return this;
-  }
-
-  on (hook = 0, every = 1) {
-    if ( typeof hook == 'number' ) {
-      hook = [hook];
-    }
-    else if ( this.isFacetPattern(hook) ) {
-      hook = hook.data;
-    }
-    if ( !this.name ) {
-      throw `the .on() function requires a named FacetPattern. No FacetPattern name found.`;
-    }
-    if ( typeof every != 'number' ) {
-      throw `2nd argument to .on() must be a number; type found : ${typeof every}`;
-    }
-    Object.values(hook).forEach(h => {
-      this.hooks.push([h,every]);
     });
     return this;
   }

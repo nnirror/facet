@@ -47,7 +47,6 @@ Below the text editor, there are several UI elements which control the Facet ser
 - MIDI output selector / refresh button
 - ▶ = start global transport
 - ■ = stop global transport
-- ↵ = rerun the block of code wherever the cursor is
 - ⊖ = clear all event hooks. More information on event hooks is in the `.on()` function documentation below.
 
 ### Keyboard shortcuts
@@ -72,20 +71,6 @@ _.sine(100,200).gain(mousey); // cursor y position controls volume every time th
 There are 128 notevalues variables, corresponding to note divisions of 1 whole note. A whole note is n1, a half note is n2, etc... up to n128.
 
 ## Command reference
-
-### Rerunning commands
-- **on** ( _FacetPattern_ = 0, _every_n_times_ = 1 )
-	- Reruns the command at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
-	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the code should rerun, given the number of steps.
-	- With no first argument, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the first argument.
-	- With no second argument, the command will regenerate at the beginning of each whole note. When a second argument is present, the command will only regenerate every `n` whole notes.
-	- Hit `[ctrl + c]` to delete all hooks. You should see a message indicate successful deletion in the browser.
-	- Hit `[ctrl + f]` to toggle between muting and un-muting all hooks. You should see a message indicating the current status in the browser.
-	- example:
-		- `_.randsamp().play().on() // play new sample at the beginning of every whole note`
-		- `_.randsamp().play().on(_.noise(4)) // play new sample at 4 random times throughrought every whole note`
-		- `_.randsamp().play().on(_.choose(0,0.125,0.25,0.375,0.5,0.625,0.75,0.875)) // play new sample at 8 geometrically related times throughout every note`
----
 
 ### Audio output
 - **channel** ( _channels_ )

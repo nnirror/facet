@@ -52,14 +52,11 @@
       #transport span:hover {
         color: #f7d952;
       }
-      #play, #stop, #rerun, #clear {
+      #play, #stop, #clear {
         font-size: 28px;
         position: relative;
       }
       #play {
-        top: 4px;
-      }
-      #rerun {
         top: 4px;
       }
       #status, #cpu {
@@ -230,23 +227,12 @@
         }
         else if ( e.ctrlKey && e.keyCode == 67 ) {
           // clear hooks: ctrl+c
-          $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
           $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'hooks cleared' });
         }
-        else if ( e.ctrlKey && e.keyCode == 70 ) {
-          // mute hooks: ctrl+f
-          $.post('http://127.0.0.1:3211/hooks/mute', {}).done(function( data, status ) {
-            let msg = 'hooks running';
-            if ( data.muted === true ) {
-              msg = 'hooks muted';
-            }
-            $.growl.notice({ message: msg });
-          });
-        }
         else if ( e.ctrlKey && e.keyCode == 77 ) {
           // clear hooks and mute everything: ctrl+m
-          $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {});
           $.post('http://127.0.0.1:3211/mute', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'system muted' });
         }
@@ -279,8 +265,8 @@
 
       let midi_outs;
       $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
-        // create select with this -- check every 2 seconds, store in memory, if changed update select
-        //#midi_outs add option
+        // create <select> dropdown with this -- check every 2 seconds, store
+        // in memory, if changed update select #midi_outs add option
         if (data.data != midi_outs) {
           midi_outs = data.data;
           for (var i = 0; i < midi_outs.length; i++) {
@@ -291,9 +277,7 @@
       });
 
       $('body').on('change', '#midi_outs', function() {
-        $.post('http://127.0.0.1:3211/midi_select', {output:this.value}).done(function( data, status ) {
-
-        });
+        $.post('http://127.0.0.1:3211/midi_select', {output:this.value}).done(function( data, status ) {});
       });
 
       $('body').on('click', '#midi_refresh', function() {
@@ -339,12 +323,6 @@
       $('body').on('click', '#clear', function() {
         $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
         $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
-      });
-
-      $('body').on('click', '#rerun', function() {
-        $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {
-        })
-        runFacet();
       });
 
       // begin OSC
@@ -427,7 +405,6 @@
     <div id="transport">
       <span id="play">▶</span>
       <span id="stop">■</span>
-      <span id="rerun">↵</span>
       <span id="clear">⊖</span>
     </div>
     <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
