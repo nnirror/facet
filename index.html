@@ -80,7 +80,6 @@
         float: right;
         position: relative;
         top: -3px;
-        width: 19%;
         display: inline-table;
         padding-left:0;
         min-width: 130px;
@@ -220,7 +219,7 @@
       }
 
       $(document).keydown(function(e) {
-        // [ctrl + enter] to select text and send to Max server (127.0.0.1:1123)
+        // [ctrl + enter] to select text and send to pattern server (127.0.0.1:1123)
         if ( e.ctrlKey && e.keyCode == 13 ) {
           $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
           runFacet();
@@ -232,9 +231,25 @@
         }
         else if ( e.ctrlKey && e.keyCode == 77 ) {
           // clear hooks and mute everything: ctrl+m
-          $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {});
-          $.post('http://127.0.0.1:3211/mute', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {});
+          $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {});
           $.growl.notice({ message: 'system muted' });
+        }
+
+        // set bpm & unfocus the #bpm input when user hits enter while focused on it
+        if ( $('#bpm').is(':focus') && e.keyCode == 13 ) {
+          $.post('http://127.0.0.1:3211/bpm', {bpm:$('#bpm').val()}).done(function( data, status ) {}).fail(function(data) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          });
+          $('#bpm').blur();
+        }
+
+        // set steps & unfocus the the #steps input when user hits enter while focused on it
+        if ( $('#steps').is(':focus') && e.keyCode == 13 ) {
+          $.post('http://127.0.0.1:3211/steps', {steps:Math.round($('#steps').val())}).done(function( data, status ) {}).fail(function(data) {
+            $.growl.error({ message: 'no connection to the Facet server' });
+          });
+          $('#steps').blur();
         }
       });
 
@@ -306,13 +321,13 @@
       });
 
       $('body').on('click', '#stop', function() {
-        $.post('http://127.0.0.1:3211/mute', {}).done(function( data, status ) {})
+        $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
             $.growl.error({ message: 'no connection to the Facet server' });
           }
         });
-        $.post('http://127.0.0.1:1123/mute', {}).done(function( data, status ) {})
+        $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {})
         .fail(function(data) {
           if ( data.statusText == 'error' ) {
             $.growl.error({ message: 'no connection to the Facet server' });
@@ -373,11 +388,12 @@
 
       let bpm=90;
       let steps=16;
-      // check every 250ms for bpm change and send if changed
+      // check every 10ms for bpm change and send if changed
       setInterval(function () {
         prev_bpm = bpm;
         bpm = $('#bpm').val();
-        if (bpm != prev_bpm && !isNaN(bpm) && bpm >= 1) {
+        // send change on increment/decrement by 1
+        if ( !isNaN(bpm) && bpm >= 1 && ( Math.abs(bpm-prev_bpm) == 1 ) ) {
           $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
             $.growl.error({ message: 'no connection to the Facet server' });
           });
@@ -385,14 +401,29 @@
 
         prev_steps = steps;
         steps = $('#steps').val();
-        if (steps != prev_steps) {
+        if ( !isNaN(steps) && steps >= 1 && ( Math.abs(steps-prev_steps) == 1 ) ) {
           $.post('http://127.0.0.1:3211/steps', {steps:Math.round(steps)}).done(function( data, status ) {}).fail(function(data) {
             $.growl.error({ message: 'no connection to the Facet server' });
           });
         }
       }, 10);
 
+      // set bpm whenever user unfocuses
+      $('body').on('focusout', $('#bpm'), function() {
+        if ( !isNaN($('#bpm').val()) && $('#bpm').val() >= 1  ) {
+          $.post('http://127.0.0.1:3211/bpm', {bpm:$('#bpm').val()});
+        }
+      });
+
+      // set steps whenever user unfocuses
+      $('body').on('focusout', $('#steps'), function() {
+        if ( !isNaN($('#steps').val()) && $('#steps').val() >= 1  ) {
+          $.post('http://127.0.0.1:3211/steps', {steps:Math.round($('#steps').val())});
+        }
+      });
+
       $('#bpm').val(90);
+      $('#steps').val(16);
     </script>
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
@@ -403,9 +434,9 @@
       <span class="ui_label">steps</span>
     </div>
     <div id="transport">
-      <span id="play">▶</span>
-      <span id="stop">■</span>
-      <span id="clear">⊖</span>
+      <span id="play" title="start transport">▶</span>
+      <span id="stop" title="stop transport">■</span>
+      <span id="clear" title="clear hooks">⊖</span>
     </div>
     <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>

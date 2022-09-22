@@ -51,18 +51,20 @@ app.post('/bpm', (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/steps', (req, res) => {
-  steps = Math.abs(Number(req.body.steps));
-  res.sendStatus(200);
-});
-
 app.post('/play', (req, res) => {
   transport_on = true;
   res.sendStatus(200);
 });
 
-app.post('/mute', (req, res) => {
+app.post('/steps', (req, res) => {
+  steps = Math.abs(Number(req.body.steps));
+  res.sendStatus(200);
+});
+
+app.post('/stop', (req, res) => {
   transport_on = false;
+  facet_patterns = {};
+  update_patterns = {};
   res.sendStatus(200);
 });
 

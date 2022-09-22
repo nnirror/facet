@@ -23,6 +23,7 @@ let pid;
 let stored = {};
 let facet_patterns = {};
 let reruns = {};
+let percent_cpu = 0;
 
 module.exports = {
   cleanUp: () => {
@@ -40,49 +41,51 @@ module.exports = {
     fs.writeFileSync('js/stored.json', '{}');
   },
   run: (code, hook_mode) => {
-    const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {}}});
-    worker.once("message", fps => {
-        Object.values(fps).forEach(fp => {
-          if ( hook_mode === false) {
-            reruns[fp.name] = code;
-          }
-          if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
-            // create wav file, 44.1 kHz, 32-bit floating point
-            storeAnyPatterns(fp);
-            let a_wav = new WaveFile();
-            a_wav.fromScratch(1, 44100, '32f', fp.data);
-            // store wav file in /tmp/
-            fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
-              // remix onto whatever channels via SoX
-              let speed = 1;
-              if ( fp.output_size != -1 ) {
-                // if a .size() was specified, upscale or downscale the file
-                // to that number of samples via the SoX speed function
-                speed = fp.data.length / fp.output_size;
-              }
-              if ( fp.dacs == '1' ) {
-                // by default, channels 1 and 2 are on. If _only_ channel 1 was
-                // specified via .channel(), turn off channel 2.
-                fp.dacs = '1 0';
-              }
-              exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
-                facet_patterns[fp.name] = fp;
-                axios.post('http://localhost:3211/update',
-                  {
-                    facet_patterns: JSON.stringify(facet_patterns)
-                  }
-                )
-                .catch(function (error) {
-                  console.log(`error posting to transport server: ${error}`);
+    if ( percent_cpu < 100 ) {
+      const worker = new Worker("./js/run.js", {workerData: {code: code, hook_mode: hook_mode, vars: {}}});
+      worker.once("message", fps => {
+          Object.values(fps).forEach(fp => {
+            if ( hook_mode === false) {
+              reruns[fp.name] = code;
+            }
+            if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
+              // create wav file, 44.1 kHz, 32-bit floating point
+              storeAnyPatterns(fp);
+              let a_wav = new WaveFile();
+              a_wav.fromScratch(1, 44100, '32f', fp.data);
+              // store wav file in /tmp/
+              fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+                // remix onto whatever channels via SoX
+                let speed = 1;
+                if ( fp.output_size != -1 ) {
+                  // if a .size() was specified, upscale or downscale the file
+                  // to that number of samples via the SoX speed function
+                  speed = fp.data.length / fp.output_size;
+                }
+                if ( fp.dacs == '1' ) {
+                  // by default, channels 1 and 2 are on. If _only_ channel 1 was
+                  // specified via .channel(), turn off channel 2.
+                  fp.dacs = '1 0';
+                }
+                exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
+                  facet_patterns[fp.name] = fp;
+                  axios.post('http://localhost:3211/update',
+                    {
+                      facet_patterns: JSON.stringify(facet_patterns)
+                    }
+                  )
+                  .catch(function (error) {
+                    console.log(`error posting to transport server: ${error}`);
+                  });
                 });
               });
-            });
-          }
-        });
-    });
-    worker.on("error", error => {
-      osc.send(new OSC.Message('/errors', error.toString()));
-    });
+            }
+          });
+      });
+      worker.on("error", error => {
+        osc.send(new OSC.Message('/errors', error.toString()));
+      });
+    }
   }
 }
 
@@ -110,7 +113,7 @@ app.post('/hooks/clear', (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/mute', (req, res) => {
+app.post('/stop', (req, res) => {
   facet_patterns = {};
   reruns = {};
   res.sendStatus(200);
@@ -161,7 +164,7 @@ process.on('SIGINT', () => {
 function getCpuUsage () {
   exec(`ps -p ${pid} -o %cpu`, (error, stdout, stderr) => {
     if ( typeof stdout == 'string' ) {
-      let percent_cpu = Number(stdout.split('\n')[1].trim());
+      percent_cpu = Number(stdout.split('\n')[1].trim());
       osc.send(new OSC.Message('/cpu', percent_cpu));
     }
   });
