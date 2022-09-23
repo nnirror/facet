@@ -52,11 +52,11 @@
       #transport span:hover {
         color: #f7d952;
       }
-      #play, #stop, #clear {
+      #play, #stop, #rerun, #clear {
         font-size: 28px;
         position: relative;
       }
-      #play {
+      #play, #rerun {
         top: 4px;
       }
       #status, #cpu {
@@ -219,8 +219,8 @@
       }
 
       $(document).keydown(function(e) {
-        // [ctrl + enter] to select text and send to pattern server (127.0.0.1:1123)
-        if ( e.ctrlKey && e.keyCode == 13 ) {
+        // [ctrl + enter] or [ctrl + r] to select text and send to pattern server (127.0.0.1:1123)
+        if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {
           $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
           runFacet();
         }
@@ -340,6 +340,11 @@
         $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
       });
 
+      $('body').on('click', '#rerun', function() {
+       $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+       runFacet();
+     });
+
       // begin OSC
       const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
       osc.open();
@@ -428,15 +433,16 @@
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
     <div id="notifications">
-      <input type="number" id="bpm" name="tentacles" min="1" max="1000" value="90">
+      <input type="number" id="bpm" name="bpm" min="1" max="1000" value="90">
       <span class="ui_label">bpm</span>
-      <input type="number" id="steps" name="tentacles" min="1" max="512" value="16">
+      <input type="number" id="steps" name="steps" min="1" max="512" value="16">
       <span class="ui_label">steps</span>
     </div>
     <div id="transport">
       <span id="play" title="start transport">▶</span>
       <span id="stop" title="stop transport">■</span>
-      <span id="clear" title="clear hooks">⊖</span>
+      <span id="rerun" title="rerun code at mouse position">↵</span>
+      <span id="clear" title="stop regeneration">⊖</span>
     </div>
     <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>

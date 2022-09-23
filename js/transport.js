@@ -63,7 +63,6 @@ app.post('/steps', (req, res) => {
 
 app.post('/stop', (req, res) => {
   transport_on = false;
-  facet_patterns = {};
   res.sendStatus(200);
 });
 

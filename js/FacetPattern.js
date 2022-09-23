@@ -811,46 +811,6 @@ class FacetPattern {
     return this;
   }
 
-  harmonics (ctrl_sequence, amplitude = 0.9) {
-    if ( !this.isFacetPattern(ctrl_sequence) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof ctrl_sequence}`;
-    }
-    let harmonics_array = [];
-    let harmonics_sequence = [];
-    this.reduce(10000);
-    ctrl_sequence.reduce(32);
-    for (var i = 0; i < ctrl_sequence.data.length; i++) {
-      let harmonic_gain = Math.pow(amplitude, i);
-      let harmonic = [];
-      let ratio = parseFloat(ctrl_sequence.data[i]);
-      let num_loops = Math.floor(ratio);
-      let fraction_loop = Math.floor((ratio - num_loops) * this.data.length);
-      for (var a = 0; a < num_loops; a++) {
-        for (var b = 0; b < this.data.length; b++) {
-          harmonic.push(this.data[b] * harmonic_gain);
-        }
-      }
-      for (var c = 0; c < fraction_loop; c++) {
-        harmonic.push(this.data[c] * harmonic_gain);
-      }
-      harmonics_array.push(harmonic);
-    }
-    for (var i = 0; i < harmonics_array.length; i++) {
-      var h = harmonics_array[i];
-      for (var a = 0; a < h.length; a++) {
-        var h_samp = h[a];
-        if (!harmonics_sequence[a] ) {
-          harmonics_sequence[a] = h_samp;
-        }
-        else {
-          harmonics_sequence[a] += h_samp;
-        }
-      }
-    }
-    this.data = harmonics_sequence;
-    return this;
-  }
-
   ifft () {
     this.reduce(this.prevPowerOf2(this.data.length));
     let f = new FFT(this.data.length);

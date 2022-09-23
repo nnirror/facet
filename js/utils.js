@@ -1,3 +1,6 @@
+const fs = require('fs');
+let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
+
 function $ (n) {
   if (!n) {
     return new FacetPattern(Math.random());
