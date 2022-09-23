@@ -336,12 +336,11 @@
       });
 
       $('body').on('click', '#clear', function() {
-        $.post('http://127.0.0.1:3211/hooks/clear', {}).done(function( data, status ) {});
         $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
       });
 
       $('body').on('click', '#rerun', function() {
-       $.post('http://127.0.0.1:1123/play', {}).done(function( data, status ) {})
+       $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
        runFacet();
      });
 

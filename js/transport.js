@@ -52,7 +52,9 @@ app.post('/bpm', (req, res) => {
 });
 
 app.post('/play', (req, res) => {
+  current_step = 1;
   transport_on = true;
+  axios.get('http://localhost:1123/update');
   res.sendStatus(200);
 });
 
@@ -63,7 +65,6 @@ app.post('/steps', (req, res) => {
 
 app.post('/stop', (req, res) => {
   transport_on = false;
-  facet_patterns = {};
   res.sendStatus(200);
 });
 
