@@ -519,7 +519,7 @@ class FacetPattern {
     wet = Math.abs(Number(wet));
     let dry = Math.abs(wet-1);
     let dry_data = new FacetPattern().from(this.data).gain(dry);
-    eval(this.utils + command);
+    eval(this.env + this.utils + command);
     let wet_data = new FacetPattern().from(this.data).gain(wet);
     let mixed_data = dry_data.add(wet_data, match_sizes);
     this.data = mixed_data.data;
@@ -704,8 +704,7 @@ class FacetPattern {
     this.reduce(this.prevPowerOf2(this.data.length));
     let f = new FFT(this.data.length);
     let out = f.createComplexArray();
-    let data = f.toComplexArray(this.data);
-    f.transform(out, data);
+    f.realTransform(out, this.data);
     this.data = f.fromComplexArray(out);
     return this;
   }
@@ -818,6 +817,8 @@ class FacetPattern {
     let out = f.createComplexArray();
     f.inverseTransform(out, data);
     this.data = f.fromComplexArray(out);
+    // IFFT result here is a palindrome; we only want the first half
+    this.range(0,0.5);
     return this;
   }
 

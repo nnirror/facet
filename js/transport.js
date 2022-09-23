@@ -63,6 +63,7 @@ app.post('/steps', (req, res) => {
 
 app.post('/stop', (req, res) => {
   transport_on = false;
+  facet_patterns = {};
   res.sendStatus(200);
 });
 
@@ -98,7 +99,7 @@ function tick() {
             velocity_fp = scalePatternToSteps(note.velocity.data,steps);
             duration_fp = scalePatternToSteps(note.duration.data,steps);
             // generate MIDI note on/off pair for this step
-            let n = note_fp.data[i];
+            let n = Math.round(note_fp.data[i]);
             let v = velocity_fp.data[i];
             let d = duration_fp.data[i];
             let c = note.channel;
