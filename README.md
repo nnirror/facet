@@ -439,6 +439,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from([1,2,3,4]).reduce(2); // 1 3`
 ---
+- **replace** ( _original_value_, _new_value_ )
+	- replaces all instances of `original_value` with `new_value` in the FacetPattern.
+	- example:
+		- `$('example').from([42,0,0,36]).replace(0,-1); // 42,-1,-1,36`
+---
 - **reverse** ( )
 	- returns the reversed FacetPattern.
 	- example:

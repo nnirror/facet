@@ -12,7 +12,7 @@ let current_step = 1;
 let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
 let bpm = 90;
 let steps = 16;
-let step_speed_ms = ((60000 / bpm) / steps) * 4;
+let step_speed_ms = ((60000 / bpm) / steps) * 2;
 let step_speed_copy = step_speed_ms;
 let running_transport = setInterval(tick, step_speed_ms);
 let transport_on = true;
@@ -64,6 +64,7 @@ app.post('/steps', (req, res) => {
 });
 
 app.post('/stop', (req, res) => {
+  facet_patterns = {};
   transport_on = false;
   res.sendStatus(200);
 });
@@ -213,7 +214,7 @@ function scaleNotePatternToSteps(pattern,steps) {
     // upscale
     let upscaled_data = new Array(steps).fill('skip');
     for (var n = 0; n < pattern.length; n++) {
-      let relative_index = n/(pattern.length-1);
+      let relative_index = n/(pattern.length);
       if (isNaN(relative_index)) {
         relative_index = 0;
       }

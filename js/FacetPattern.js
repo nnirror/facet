@@ -1272,6 +1272,22 @@ class FacetPattern {
     return this;
   }
 
+  replace ( original_value, new_value ) {
+    original_value = Number(original_value);
+    new_value = Number(new_value);
+    let replaced_sequence = [];
+    for (const [key, step] of Object.entries(this.data)) {
+      if (step === original_value) {
+        replaced_sequence[key] = new_value;
+      }
+      else {
+        replaced_sequence[key] = step;
+      }
+    }
+    this.data = replaced_sequence;
+    return this;
+  }
+
   reverse () {
     let reversed_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
