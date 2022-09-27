@@ -10,7 +10,6 @@ const frontEndWebApp = express();
 const cors = require('cors');
 const fs = require('fs');
 const wav = require('node-wav');
-const easymidi = require('easymidi');
 const open = require('open');
 const OSC = require('osc-js');
 const WaveFile = require('wavefile').WaveFile;

@@ -12,7 +12,6 @@
     "bootstrap-growl": "^3.1.3",
     "codemirror": "^5.65.5",
     "cors": "^2.8.5",
-    "easymidi": "^2.1.0",
     "express": "^4.18.1",
     "find-process": "^1.4.7",
     "node-wav": "^0.0.2",
@@ -21,6 +20,7 @@
     "request": "^2.88.2",
     "sync-request": "^6.1.0",
     "wavefile": "^11.0.0",
+    "webmidi": "^3.0.21",
     "ws": "^8.8.0"
   },
   "scripts": {

@@ -1,6 +1,6 @@
 const fs = require('fs');
 const sound = require('./lib/play_sound.js');
-const easymidi = require('easymidi');
+const {WebMidi} = require('webmidi');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -9,7 +9,6 @@ const axios = require('axios');
 const FacetPattern = require('./FacetPattern.js');
 let cycles_elapsed = 0;
 let current_step = 1;
-let midioutput = new easymidi.Output(easymidi.getOutputs()[0]);
 let bpm = 90;
 let steps = 16;
 let step_speed_ms = ((60000 / bpm) / steps) * 2;
@@ -22,9 +21,16 @@ app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
 app.use(bodyParser.json({limit: '100mb'}));
 app.use(cors());
 
+WebMidi.enable();
+let midioutput;
+
 app.post('/midi', (req, res) => {
+  let midi_port_names = [];
+  for (var i = 0; i < WebMidi.outputs.length; i++) {
+    midi_port_names.push(WebMidi.outputs[i]._midiOutput.name);
+  }
   res.send({
-    data:easymidi.getOutputs()
+    data:midi_port_names
   });
 });
 
@@ -36,7 +42,7 @@ app.post('/update', (req, res) => {
 
 app.post('/midi_select', (req, res) => {
   try {
-    midioutput = new easymidi.Output(req.body.output);
+    midioutput = WebMidi.getOutputByName(req.body.output);
     res.sendStatus(200);
   } catch (e) {
     res.send({
@@ -64,6 +70,9 @@ app.post('/steps', (req, res) => {
 });
 
 app.post('/stop', (req, res) => {
+  if ( typeof midioutput !== 'undefined' ) {
+    midioutput.sendAllNotesOff();
+  }
   facet_patterns = {};
   transport_on = false;
   res.sendStatus(200);
@@ -107,15 +116,13 @@ function tick() {
             let c = note.channel;
             try {
               if ( typeof midioutput !== 'undefined' ) {
-                midioutput.send('noteon', {
-                  note:n,
-                  velocity:v,
-                  channel:c
+                midioutput.playNote(n, {
+                  rawAttack:v,
+                  channels:c,
+                  duration:d,
+                  rawRelease:64
                 });
               }
-              setTimeout(() => {
-                noteoff(n,c);
-              },d);
             } catch (e) {
               throw e
             }
@@ -128,12 +135,10 @@ function tick() {
         let cc = fp.cc_data[j];
         // convert cc steps to positions based on global step resolution
         let cc_fp = scalePatternToSteps(cc.data,steps);
-        let value = cc_fp.data[current_step-1];
+        let value = Math.round(cc_fp.data[current_step-1]);
         if ( typeof midioutput !== 'undefined' ) {
-          midioutput.send('cc', {
-            controller: cc.controller,
-            value: value,
-            channel: cc.channel
+          midioutput.sendControlChange(cc.controller, value, {
+            channels:cc.channel
           });
         }
       }
@@ -145,9 +150,8 @@ function tick() {
         let pb_fp = scalePatternToSteps(pb.data,steps);
         let value = pb_fp.data[current_step-1];
         if ( typeof midioutput !== 'undefined' ) {
-          midioutput.send('pitch', {
-            value:value,
-            channel:pb.channel
+          midioutput.sendPitchBend(value, {
+            channels:pb.channel
           });
         }
       }
@@ -172,16 +176,6 @@ function handleBpmChange() {
    clearInterval(running_transport);
    step_speed_copy = step_speed_ms;
    running_transport = setInterval(tick, step_speed_ms);
-  }
-}
-
-function noteoff(note,channel) {
-  if ( typeof midioutput !== 'undefined' ) {
-    midioutput.send('noteoff', {
-      note: note,
-      velocity: 0,
-      channel: channel
-    });
   }
 }
 
