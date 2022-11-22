@@ -1989,7 +1989,7 @@ class FacetPattern {
     this.cc_data.push({
       data:this.data,
       controller:controller,
-      channel:channel-1
+      channel:channel
     });
     return this;
   }
@@ -2041,7 +2041,7 @@ class FacetPattern {
       data:this.data,
       velocity:velocity,
       duration:duration,
-      channel:channel-1
+      channel:channel
     });
     return this;
   }
@@ -2050,10 +2050,10 @@ class FacetPattern {
     if ( typeof channel != 'number' ) {
       throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
     }
-    this.scale(Math.min(...this.data)*16384,Math.max(...this.data) * 16384).round();
+    this.scale(-1,1);
     this.pitchbend_data.push({
       data:this.data,
-      channel:channel-1
+      channel:channel
     });
     return this;
   }

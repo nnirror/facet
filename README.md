@@ -107,7 +107,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1 )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
 	- The `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
-	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 	- example:
 		- `$('example').sine(1,32).scale(36,90).round().note();`
 		- `$('example').sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note();`
@@ -115,13 +115,13 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **cc** ( _controller_number_ = 70, _channel_ = 1 )
 	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
 	- _Note_: This function is automatically scaled into the expected data range for MIDI CC data. It expects a FacetPattern of values between 0 and 1.
-	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 	- example:
 		- `$('example').drunk(64,0.1).cc();`
 ---
 - **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitchbend event for every value in the FacetPattern's data.
-	- The `channel` argument by default sends the MIDI out all channels (channel 0). It can be set to any channel between 1-16.
+	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 	- _Note_: This function is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between 0 and 1.
 	- example:
 		- `$('example').sine(1,128).pitchbend();`
