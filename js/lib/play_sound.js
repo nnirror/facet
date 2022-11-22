@@ -13,6 +13,9 @@ const loadAudioFile = path => `$player.open('${path}');`
 const playAudio = `$player.Play();`
 const stopAudio = `Start-Sleep 1; Start-Sleep -s $player.NaturalDuration.TimeSpan.TotalSeconds;Exit;`
 
+/* LINUX PLAY COMMAND */
+const linuxPlayCommand = (path, volume) => `aplay \"${path}\" -v ${volume}`
+
 const windowPlayCommand = (path, volume) =>
   `powershell -c ${addPresentationCore} ${createMediaPlayer} ${loadAudioFile(
     path,
@@ -26,13 +29,26 @@ module.exports = {
      * Therefore, it is better to limit the volume on Mac, and set a common scale of 0 to 1 for simplicity
      */
     const volumeAdjustedByOS = process.platform === 'darwin' ? Math.min(2, volume * 2) : volume
-
-    const playCommand =
-      process.platform === 'darwin' ? macPlayCommand(path, volumeAdjustedByOS) : windowPlayCommand(path, volumeAdjustedByOS)
-    try {
-      exec(playCommand);
-    } catch (err) {
-      throw err
+    if ( process.platform === 'darwin' ) {
+      try {
+        exec(macPlayCommand(path, volumeAdjustedByOS));
+      } catch (err) {
+        throw err;
+      }
+    }
+    else if ( process.platform === 'linux' ) {
+      try {
+        exec(linuxPlayCommand(path, volumeAdjustedByOS));
+      } catch (err) {
+        throw err;
+      }
+    }
+    else {
+      try {
+        exec(windowPlayCommand(path, volumeAdjustedByOS));
+      } catch (err) {
+        throw err;
+      }
     }
   },
 }
