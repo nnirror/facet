@@ -1830,7 +1830,12 @@ class FacetPattern {
     return signal;
   }
 
-  fade () {
+  fade (fade_percent = 0.1) {
+    this.fadein(fade_percent).fadeout(fade_percent);
+    return this;
+  }
+
+  fadeInner () {
     this.data = this.applyWindow(this.data, this.hamming);
     return this;
   }
@@ -1851,7 +1856,7 @@ class FacetPattern {
     }
     let copy = new FacetPattern().from(this.data);
     let fade_samples = Math.round(this.data.length * fade_percent) * 2;
-    let out = this.range(0,1-fade_percent).append(copy.range(1-fade_percent,1).times(new FacetPattern().ramp(1,1,fade_samples).fade().range(0.5,1)));
+    let out = this.range(0,1-fade_percent).append(copy.range(1-fade_percent,1).times(new FacetPattern().ramp(1,1,fade_samples).fadeInner().range(0.5,1)));
     this.data = out.data;
     return this;
   }

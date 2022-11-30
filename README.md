@@ -267,8 +267,8 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').from([1]).echo(5); // 1 0.666 0.4435 0.29540 0.19674 0.13103`
 		- `$('example').phasor(5,20).echo(8); // phasor decreases after each 5 cycles `
 ---
-- **fade** ( )
-	- applies a crossfade window to the FacetPattern, so the beginning and end are faded out.
+- **fade** ( _fade_percent_ = 0.1 )
+	- applies a crossfade window to the FacetPattern, where `fade_percent` of the beginning and end are faded in/out.
 	- example:
 		- `$('example').noise(1024).fade().play();`
 ---
