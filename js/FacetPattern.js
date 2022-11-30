@@ -1941,7 +1941,7 @@ class FacetPattern {
       for (var a = chunk_start_index; a < chunk_end_index; a++) {
         chunk.push(this.data[a]);
       }
-      let chunk_fp = new FacetPattern().from(chunk).fade();
+      let chunk_fp = new FacetPattern().from(chunk).fade(0.05);
       out.push(chunk_fp.data);
     }
     this.data = out;
@@ -1960,10 +1960,10 @@ class FacetPattern {
       min = i * chunk_length;
       max = min + chunk_length;
       if ( Math.random() < prob ) {
-        chunk_fp = new FacetPattern().from(0).dup(chunk_length-1).fade();
+        chunk_fp = new FacetPattern().from(0).dup(chunk_length-1).fade(0.05);
       }
       else {
-        chunk_fp = new FacetPattern().from(this.data.slice(min,max)).fade();
+        chunk_fp = new FacetPattern().from(this.data.slice(min,max)).fade(0.05);
       }
       out.push(chunk_fp.data);
     }
