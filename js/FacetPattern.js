@@ -1840,13 +1840,7 @@ class FacetPattern {
     if (fade_percent >= 1 || fade_percent <= 0 ) {
       throw `fadein percentage must be between 0 and 1; value found: ${fade_percent}`;
     }
-    let copy = new FacetPattern().from(this.data);
-    let out = copy.fade().range(0,1-fade_percent).append(this.range(1-fade_percent,1));
-    this.data = out.data;
-    // fade it twice
-    copy = new FacetPattern().from(this.data);
-    out = copy.fade().range(0,0.5).append(this.range(0.5,1));
-    this.data = out.data;
+    this.reverse().fadeout(fade_percent).reverse();
     return this;
   }
 
@@ -1856,11 +1850,8 @@ class FacetPattern {
       throw `fadeout percentage must be between 0 and 1; value found: ${fade_percent}`;
     }
     let copy = new FacetPattern().from(this.data);
-    let out = this.range(0,1-fade_percent).append(copy.fade().range(1-fade_percent,1));
-    this.data = out.data;
-    // fade it twice
-    copy = new FacetPattern().from(this.data);
-    out = this.range(0,0.5).append(copy.fade().range(0.5,1));
+    let fade_samples = Math.round(this.data.length * fade_percent) * 2;
+    let out = this.range(0,1-fade_percent).append(copy.range(1-fade_percent,1).times(new FacetPattern().ramp(1,1,fade_samples).fade().range(0.5,1)));
     this.data = out.data;
     return this;
   }
