@@ -1570,6 +1570,24 @@ class FacetPattern {
     return this;
   }
 
+  speedNoClamp (ratio) {
+    // hard clamp stretch ratio between 0.02083 (48x) and 8
+    ratio = Math.abs(Number(ratio));
+    let upscaled_data = [];
+    let new_samps = Math.floor(ratio * this.data.length);
+    let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
+    for (var n = 0; n < this.data.length; n++) {
+      let i = 0;
+      while (i < copies_of_each_value) {
+        upscaled_data.push(this.data[n]);
+        i++;
+      }
+    }
+    this.data = upscaled_data;
+    this.reduce(new_samps);
+    return this;
+  }
+
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
     this.output_size = new_size;
@@ -1718,23 +1736,25 @@ class FacetPattern {
         out[key] = (same_size_arrays[0].data[key] * same_size_arrays[1].data[key]);
       }
     }
-    if (this.data.length >= sequence2.data.length) {
-      for (const [key, step] of Object.entries(this.data)) {
-        if (isNaN(sequence2.data[key])) {
-          out[key] = 0;
-        }
-        else {
-          out[key] = step * sequence2.data[key];
+    else {
+      if (this.data.length >= sequence2.data.length) {
+        for (const [key, step] of Object.entries(this.data)) {
+          if (isNaN(sequence2.data[key])) {
+            out[key] = 0;
+          }
+          else {
+            out[key] = step * sequence2.data[key];
+          }
         }
       }
-    }
-    else {
-      for (const [key, step] of Object.entries(sequence2.data)) {
-        if (isNaN(this.data[key])) {
-          out[key] = 0;
-        }
-        else {
-          out[key] = step * this.data[key];
+      else {
+        for (const [key, step] of Object.entries(sequence2.data)) {
+          if (isNaN(this.data[key])) {
+            out[key] = 0;
+          }
+          else {
+            out[key] = step * this.data[key];
+          }
         }
       }
     }
@@ -2188,10 +2208,10 @@ class FacetPattern {
   makePatternsTheSameSize (sequence1, sequence2) {
     // make whichever one is smaller, fit the larger one's size.
     if ( sequence1.data.length > sequence2.data.length ) {
-      sequence2 = sequence2.speed((sequence1.data.length / sequence2.data.length));
+      sequence2 = sequence2.speedNoClamp((sequence1.data.length / sequence2.data.length));
     }
     else if ( sequence2.data.length > sequence1.data.length ) {
-      sequence1 = sequence1.speed((sequence2.data.length / sequence1.data.length));
+      sequence1 = sequence1.speedNoClamp((sequence2.data.length / sequence1.data.length));
     }
     return [sequence1, sequence2];
   }
