@@ -103,34 +103,60 @@ function tick() {
           } catch (e) {}
         }
       }
-      // MIDI note logic
-      let prev_velocity, prev_duration;
-      for (var j = 0; j < fp.notes.length; j++) {
-        let note = fp.notes[j];
-        if (!note) { continue; }
-        let scaled_data = scaleNotePatternToSteps(note.data,steps);
-        if ( scaled_data[current_step-1] && scaled_data[current_step-1] != 'skip' && !isNaN(scaled_data[current_step-1]) ) {
-          let velocity_data, duration_data;
-          velocity_data = scalePatternToSteps(note.velocity.data,steps);
-          duration_data = scalePatternToSteps(note.duration.data,steps);
-          // generate MIDI note on/off pair for this step
-          let n = Math.round(scaled_data[current_step-1]);
-          let v = velocity_data[current_step-1];
-          let d = duration_data[current_step-1];
-          let c = note.channel;
-          try {
-            if ( typeof midioutput !== 'undefined' ) {
-              midioutput.playNote(n, {
-                rawAttack:v,
-                channels:c,
-                duration:d,
-                rawRelease:64
-              });
+      try {
+        // MIDI note logic
+        let prev_velocity, prev_duration;
+        for (var j = 0; j < fp.notes.length; j++) {
+          let note = fp.notes[j];
+          if (!note) { continue; }
+          let scaled_data = scaleNotePatternToSteps(note.data,steps);
+          // now we need to loop thru scaled_data and find the corresponding v & d
+          let maximum_values_in_step = scaled_data[0].length;
+          let all_notes_in_step = scaled_data[current_step-1];
+          for (var p = 0; p < maximum_values_in_step; p++) {
+            let note_inside_step = all_notes_in_step[p];
+            if ( note_inside_step != 'skip' && !isNaN(note_inside_step) ) {
+              let velocity_data, duration_data;
+              velocity_data = scalePatternToSteps(note.velocity.data,steps);
+              let maximum_values_in_velocity_data = velocity_data[0].length;
+              let v;
+              if ( (p+1) > maximum_values_in_velocity_data ) {
+                v = Math.round(velocity_data[current_step-1][0]);
+              }
+              else {
+                v = Math.round(velocity_data[current_step-1][p]);
+              }
+              duration_data = scalePatternToSteps(note.duration.data,steps);
+              let maximum_values_in_duration_data = duration_data[0].length;
+              let d;
+              if ( (p+1) > maximum_values_in_duration_data ) {
+                d = duration_data[current_step-1][0];
+              }
+              else {
+                d = duration_data[current_step-1][p];
+              }
+              // generate MIDI note on/off pair for this step
+              let n = Math.round(note_inside_step);
+              let c = note.channel;
+              try {
+                if ( typeof midioutput !== 'undefined' ) {
+                  midioutput.playNote(n, {
+                    rawAttack:v,
+                    channels:c,
+                    duration:d,
+                    rawRelease:64
+                  });
+                }
+              } catch (e) {
+                throw e
+              }
             }
-          } catch (e) {
-            throw e
           }
         }
+      } catch (e) {
+
+      } finally {
+
       }
 
       // MIDI CC logic
@@ -138,7 +164,7 @@ function tick() {
         let cc = fp.cc_data[j];
         // convert cc steps to positions based on global step resolution
         let cc_fp = scalePatternToSteps(cc.data,steps);
-        let value = Math.round(cc_fp[current_step-1]);
+        let value = Math.round(cc_fp[current_step-1][0]);
         if ( typeof midioutput !== 'undefined' ) {
           midioutput.sendControlChange(cc.controller, value, {
             channels:cc.channel
@@ -151,7 +177,7 @@ function tick() {
         let pb = fp.pitchbend_data[j];
         // convert cc steps to positions based on global step resolution
         let pb_fp = scalePatternToSteps(pb.data,steps);
-        let value = pb_fp[current_step-1];
+        let value = pb_fp[current_step-1][0];
         if ( typeof midioutput !== 'undefined' ) {
           midioutput.sendPitchBend(value, {
             channels:pb.channel
@@ -224,10 +250,18 @@ function scaleNotePatternToSteps(pattern,steps) {
 
 function simpleReduce (data, new_size) {
   let orig_size = data.length;
+  let num_values_per_step = Math.floor(orig_size / new_size);
+  if (num_values_per_step < 1) {
+    num_values_per_step = 1;
+  }
   let reduced_sequence = [];
-  for ( let i = 0; i < new_size; i++ ) {
-    let large_array_index = Math.floor(i * (orig_size + Math.floor(orig_size / new_size)) / new_size);
-    reduced_sequence[i] = data[large_array_index];
+  for ( let i = 0; i < data.length; i+= num_values_per_step ) {
+    let step_data = [];
+    for (var a = 0; a < num_values_per_step; a++) {
+      step_data.push(data[i+a]);
+      // add each step
+    }
+    reduced_sequence.push(step_data);
   }
   return reduced_sequence;
 }
