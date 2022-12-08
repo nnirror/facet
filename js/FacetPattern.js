@@ -689,14 +689,10 @@ class FacetPattern {
     if ( num === 0 ) {
       return this;
     }
-    let original_copy = this.data;
-    let original_feedback = feedback;
+    let next_copy = new FacetPattern().from(this.data);
     for (var x = 0; x < num; x++) {
-      this.append(new FacetPattern().from(original_copy).gain(feedback));
-      feedback *= feedback;
-      if ( Math.abs(feedback) > 4 ) {
-        feedback = original_feedback;
-      }
+      next_copy.gain(feedback)
+      this.append(next_copy);
     }
     return this;
   }
