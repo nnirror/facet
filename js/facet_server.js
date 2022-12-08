@@ -23,6 +23,12 @@ let stored = {};
 let reruns = {};
 let percent_cpu = 0;
 
+axios.interceptors.request.use(request => {
+    request.maxContentLength = Infinity;
+    request.maxBodyLength = Infinity;
+    return request;
+})
+
 module.exports = {
   cleanUp: () => {
     fs.writeFileSync('js/stored.json', '{}');
@@ -88,7 +94,8 @@ module.exports = {
 }
 
 osc.open();
-app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
+app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
 module.exports.initEnv();
 module.exports.initStore();

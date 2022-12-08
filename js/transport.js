@@ -18,8 +18,8 @@ let transport_on = true;
 let facet_patterns = {};
 let playback_data = {};
 
-app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
-app.use(bodyParser.json({limit: '100mb'}));
+app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
+app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
 
 WebMidi.enable();
@@ -159,31 +159,38 @@ function tick() {
 
       }
 
-      // MIDI CC logic
-      for (var j = 0; j < fp.cc_data.length; j++) {
-        let cc = fp.cc_data[j];
-        // convert cc steps to positions based on global step resolution
-        let cc_fp = scalePatternToSteps(cc.data,steps);
-        let value = Math.round(cc_fp[current_step-1][0]);
-        if ( typeof midioutput !== 'undefined' ) {
-          midioutput.sendControlChange(cc.controller, value, {
-            channels:cc.channel
-          });
+      try {
+        // MIDI CC logic
+        for (var j = 0; j < fp.cc_data.length; j++) {
+          let cc = fp.cc_data[j];
+          // convert cc steps to positions based on global step resolution
+          let cc_fp = scalePatternToSteps(cc.data,steps);
+          let value = Math.round(cc_fp[current_step-1][0]);
+          if ( typeof midioutput !== 'undefined' ) {
+            midioutput.sendControlChange(cc.controller, value, {
+              channels:cc.channel
+            });
+          }
         }
+
+        // MIDI pitchbend logic
+        for (var j = 0; j < fp.pitchbend_data.length; j++) {
+          let pb = fp.pitchbend_data[j];
+          // convert cc steps to positions based on global step resolution
+          let pb_fp = scalePatternToSteps(pb.data,steps);
+          let value = pb_fp[current_step-1][0];
+          if ( typeof midioutput !== 'undefined' ) {
+            midioutput.sendPitchBend(value, {
+              channels:pb.channel
+            });
+          }
+        }
+      } catch (e) {
+
+      } finally {
+
       }
 
-      // MIDI pitchbend logic
-      for (var j = 0; j < fp.pitchbend_data.length; j++) {
-        let pb = fp.pitchbend_data[j];
-        // convert cc steps to positions based on global step resolution
-        let pb_fp = scalePatternToSteps(pb.data,steps);
-        let value = pb_fp[current_step-1][0];
-        if ( typeof midioutput !== 'undefined' ) {
-          midioutput.sendPitchBend(value, {
-            channels:pb.channel
-          });
-        }
-      }
     }
     if ( current_step >= steps ) {
       // end of loop, tell pattern server to start processing next loop

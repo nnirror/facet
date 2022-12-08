@@ -648,10 +648,19 @@ Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary ope
 	- example:
 		- `$('example').randsamp().delay(random(1700,10000)).play();`
 ---
+- **file** ( _filename_ )
+	- loads the raw data of any file inside the `files/` directory into memory. You can supply any file type, not just images.
+	- example:
+		- `$('example').file('my_image.png').play(); // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them.
 	- example:
 		- `$('example').randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
+---
+- **randfile** ( _dir_ = `../files/` )
+	- loads a random file from the `files` directory into memory. The default directory is `../files/`, but you can supply any directory as an argument.
+	- example:
+		- `$('example').randfile().play(); // random new file converted to audio every time`
 ---
 - **randsamp** ( _dir_ = `../samples/` )
 	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument.

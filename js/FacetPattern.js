@@ -234,6 +234,44 @@ class FacetPattern {
     }
   }
 
+  file (file_name) {
+    this.data = fs.readFileSync(`./files/${file_name}`, (err, data) => {
+      return [...data];
+    }).toJSON().data;
+    this.clip(-1,1);
+    return this;
+  }
+
+  randfile(dir) {
+    if (!dir) {
+      dir = `./files`;
+    }
+    var files = fs.readdirSync(dir);
+    let chosenFile = files[Math.floor(Math.random() * files.length)];
+    try {
+      this.data = fs.readFileSync(`${dir}/${chosenFile}`, (err, data) => {
+        return [...data];
+      }).toJSON().data;
+    } catch (e) {
+      try {
+        this.data = fs.readFileSync(`${dir}/${chosenFile}`, (err, data) => {
+          return [...data];
+        }).toJSON().data;
+      } catch (er) {
+        try {
+          this.data = fs.readFileSync(`${dir}/${chosenFile}`, (err, data) => {
+            return [...data];
+          }).toJSON().data;
+        } catch (err) {
+          throw(err);
+        }
+      }
+    } finally {
+      this.reduce(44100).scale(-1,1);
+      return this;
+    }
+  }
+
   sine (periods, length) {
     let sine_sequence = [];
     periods = Math.round(Math.abs(Number(periods)));
