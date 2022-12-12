@@ -284,6 +284,7 @@
         // in memory, if changed update select #midi_outs add option
         if (data.data != midi_outs) {
           midi_outs = data.data;
+          $('#midi_outs').append('<option value="">-- MIDI output --</option>');
           for (var i = 0; i < midi_outs.length; i++) {
             let midi_out = midi_outs[i];
             $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
@@ -411,20 +412,6 @@
           });
         }
       }, 10);
-
-      // set bpm whenever user unfocuses
-      $('body').on('focusout', $('#bpm'), function() {
-        if ( !isNaN($('#bpm').val()) && $('#bpm').val() >= 1  ) {
-          $.post('http://127.0.0.1:3211/bpm', {bpm:$('#bpm').val()});
-        }
-      });
-
-      // set steps whenever user unfocuses
-      $('body').on('focusout', $('#steps'), function() {
-        if ( !isNaN($('#steps').val()) && $('#steps').val() >= 1  ) {
-          $.post('http://127.0.0.1:3211/steps', {steps:Math.round($('#steps').val())});
-        }
-      });
 
       $('#bpm').val(90);
       $('#steps').val(16);

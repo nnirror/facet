@@ -53,6 +53,12 @@ module.exports = {
               // don't add to reruns if it's meant to not regenerate via .keep()
               reruns[fp.name] = code;
             }
+            if ( fp.bpm_pattern !== false ) {
+              postMetaDataToTransport(fp.bpm_pattern,'bpm');
+            }
+            if ( fp.steps_pattern !== false ) {
+              postMetaDataToTransport(fp.steps_pattern,'steps');
+            }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
               // create wav file, 44.1 kHz, 32-bit floating point
               storeAnyPatterns(fp);
@@ -182,6 +188,18 @@ function postToTransport (fp) {
   )
   .catch(function (error) {
     console.log(`error posting to transport server: ${error}`);
+  });
+}
+
+function postMetaDataToTransport (fp,data_type) {
+  axios.post('http://localhost:3211/meta',
+    {
+      pattern: JSON.stringify(fp),
+      type: data_type
+    }
+  )
+  .catch(function (error) {
+    console.log(`error posting metadata to transport server: ${error}`);
   });
 }
 

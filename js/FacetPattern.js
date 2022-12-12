@@ -9,6 +9,7 @@ const http = require('http');
 class FacetPattern {
   constructor (name) {
     this.name = name ? name : Math.random();
+    this.bpm_pattern = false;
     this.cc_data = [];
     this.dacs = '1 1';
     this.data = [];
@@ -20,6 +21,7 @@ class FacetPattern {
     this.sequence_data = [];
     this.output_size = -1;
     this.skipped = false;
+    this.steps_pattern = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
     this.times_played = 0;
@@ -2028,6 +2030,11 @@ class FacetPattern {
   // END audio operations
 
   // BEGIN special operations
+  bpm () {
+    this.bpm_pattern = new FacetPattern().from(this.data).clip(1,1000);
+    return this;
+  }
+
   cc (controller = 70, channel = 1) {
     if ( typeof controller != 'number' ) {
       throw `.cc() 1st argument: controller must be a number; type found: ${typeof controller}`;
@@ -2182,6 +2189,11 @@ class FacetPattern {
     if ( Math.random() < prob ) {
       eval(this.utils + command);
     }
+    return this;
+  }
+
+  steps () {
+    this.steps_pattern = new FacetPattern().from(this.data).round().clip(1,512);
     return this;
   }
   // END special operations

@@ -128,6 +128,18 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(1,128).pitchbend();`
 
+### Methods for controlling transport steps & BPM
+
+- **bpm** ( )
+	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
+	- example:
+		- `$('example').from([20,40,80,160,320]).shuffle().bpm(); // each loop will be all 5 of these BPM, randomly ordered`
+---
+- **steps** ( )
+	- stores the FacetPattern data as the number of transport steps at any given point in time during each loop. When number of steps changes, the transport recalculates its speed.
+	- example:
+		- `$('example').ramp(4,128,64).steps(); // go from 4 steps/loop speed to 64 steps/loop speed, over the course of the loop`
+
 ### Single number generators
 - **choose** ( _pattern_ )
 	- returns a randomly selected value from a supplied array.

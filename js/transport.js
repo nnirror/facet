@@ -1,3 +1,4 @@
+const FacetPattern = require('./FacetPattern.js');
 const { exec } = require('child_process');
 const fs = require('fs');
 const sound = require('./lib/play_sound.js');
@@ -17,6 +18,10 @@ let running_transport = setInterval(tick, step_speed_ms);
 let transport_on = true;
 let facet_patterns = {};
 let playback_data = {};
+let meta_data = {
+  bpm: [90],
+  steps: [16]
+};
 
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
@@ -33,6 +38,17 @@ app.post('/midi', (req, res) => {
   res.send({
     data:midi_port_names
   });
+});
+
+app.post('/meta', (req, res) => {
+  let posted_pattern = JSON.parse(req.body.pattern);
+  if ( req.body.type == 'bpm' ) {
+    meta_data.bpm = posted_pattern.data;
+  }
+  if ( req.body.type == 'steps' ) {
+    meta_data.steps = posted_pattern.data;
+  }
+  res.sendStatus(200);
 });
 
 app.post('/update', (req, res) => {
@@ -60,7 +76,7 @@ app.post('/midi_select', (req, res) => {
 });
 
 app.post('/bpm', (req, res) => {
-  bpm = Math.abs(Number(req.body.bpm));
+  meta_data.bpm = [Math.abs(Number(req.body.bpm))];
   res.sendStatus(200);
 });
 
@@ -72,7 +88,7 @@ app.post('/play', (req, res) => {
 });
 
 app.post('/steps', (req, res) => {
-  steps = Math.abs(Number(req.body.steps));
+  meta_data.steps = [Math.abs(Number(req.body.steps))];
   res.sendStatus(200);
 });
 
@@ -91,7 +107,12 @@ const server = app.listen(3211);
 function tick() {
   if ( transport_on !== false) {
     // main stepping loop
-    let prev_step = current_step-1;
+    // first, check if bpm or steps needs to be recalculated
+    let scaledSteps = scalePatternToSteps(meta_data.steps,steps);
+    steps = typeof scaledSteps[current_step-1] != 'undefined' ? scaledSteps[current_step-1] : steps;
+    let scaledBpm = scalePatternToSteps(meta_data.bpm,steps);
+    bpm = typeof  scaledBpm[current_step-1] != 'undefined' ? scaledBpm[current_step-1] : bpm;
+    handleBpmChange();
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(playback_data)) {
       for (var j = 0; j < fp.sequence_data.length; j++) {
@@ -202,7 +223,6 @@ function tick() {
     else {
       current_step++;
     }
-    handleBpmChange();
   }
 }
 
@@ -270,5 +290,5 @@ function simpleReduce (data, new_size) {
     }
     reduced_sequence.push(step_data);
   }
-  return reduced_sequence;
+  return new FacetPattern().from(reduced_sequence).reduce(new_size).data;
 }
