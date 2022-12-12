@@ -109,9 +109,20 @@ function tick() {
     // main stepping loop
     // first, check if bpm or steps needs to be recalculated
     let scaledSteps = scalePatternToSteps(meta_data.steps,steps);
-    steps = typeof scaledSteps[current_step-1] != 'undefined' ? scaledSteps[current_step-1] : steps;
+    let calcSteps = typeof scaledSteps[current_step-1] != 'undefined' ? scaledSteps[current_step-1] : steps;
     let scaledBpm = scalePatternToSteps(meta_data.bpm,steps);
-    bpm = typeof  scaledBpm[current_step-1] != 'undefined' ? scaledBpm[current_step-1] : bpm;
+    let calcBpm = typeof scaledBpm[current_step-1] != 'undefined' ? scaledBpm[current_step-1] : bpm;
+    try {
+      // when the bpm is scaled to match steps, it can have more than 1 value per step - this always selects the first
+      if (typeof calcBpm == 'object') {
+        bpm = calcBpm[0];
+      }
+      if (typeof calcSteps == 'object') {
+        steps = calcSteps[0];
+      }
+    } catch (e) {
+
+    }
     handleBpmChange();
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(playback_data)) {
