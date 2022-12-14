@@ -2031,7 +2031,7 @@ class FacetPattern {
 
   // BEGIN special operations
   bpm () {
-    this.bpm_pattern = new FacetPattern().from(this.data).clip(1,1000);
+    this.bpm_pattern = new FacetPattern().from(this.data);
     return this;
   }
 
