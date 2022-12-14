@@ -363,10 +363,9 @@
         let connected = false;
         let interval = setInterval( () => {
           osc.open();
-          $.post('http://127.0.0.1:1123/status', {
+          $.post('http://127.0.0.1:3211/status', {
             mousex:mousex,
-            mousey:mousey,
-            bpm:bpm
+            mousey:mousey
           }).done(function( data, status ) {
             setStatus(`connected`);
           })

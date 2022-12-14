@@ -129,17 +129,6 @@ app.post('/stop', (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/status', (req, res) => {
-  // rewrite env.js, the environment variables that can be accessed in all future evals.
-  // it's loaded into each FacetPattern instance on consruction
-  fs.writeFileSync('js/env.js',
-    calculateNoteValues(req.body.bpm) +
-    `var bpm=${req.body.bpm};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
-    ()=> {}
-  );
-  res.sendStatus(200);
-});
-
 app.get('/update', (req, res) => {
   for (const [fp_name, code] of Object.entries(reruns)) {
     module.exports.run(code);
@@ -221,13 +210,4 @@ function storeAnyPatterns (fp) {
       fs.writeFileSync('js/stored.json', JSON.stringify(stored),()=> {});
     }
   }
-}
-
-function calculateNoteValues(bpm) {
-  let out = '';
-  for (var i = 1; i <= 128; i++) {
-    let calculated_nv = Math.round((((60000/bpm)/i)*4)*44.1);
-    out += `var n${i} = ${calculated_nv};`
-  }
-  return out;
 }

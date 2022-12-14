@@ -87,6 +87,17 @@ app.post('/play', (req, res) => {
   res.sendStatus(200);
 });
 
+app.post('/status', (req, res) => {
+  // rewrite env.js, the environment variables that can be accessed in all future evals.
+  // it's loaded into each FacetPattern instance on consruction
+  fs.writeFileSync('js/env.js',
+    calculateNoteValues(bpm) +
+    `var bpm=${bpm};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
+    ()=> {}
+  );
+  res.sendStatus(200);
+});
+
 app.post('/steps', (req, res) => {
   meta_data.steps = [Math.abs(Number(req.body.steps))];
   res.sendStatus(200);
@@ -302,4 +313,13 @@ function simpleReduce (data, new_size) {
     reduced_sequence.push(step_data);
   }
   return new FacetPattern().from(reduced_sequence).reduce(new_size).data;
+}
+
+function calculateNoteValues(bpm) {
+  let out = '';
+  for (var i = 1; i <= 128; i++) {
+    let calculated_nv = Math.round((((60000/bpm)/i)*4)*44.1);
+    out += `var n${i} = ${calculated_nv};`
+  }
+  return out;
 }
