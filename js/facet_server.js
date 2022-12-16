@@ -138,9 +138,13 @@ app.get('/update', (req, res) => {
 
 // run the server
 const server = app.listen(1123);
+
 // find the PID and continually re-check CPU usage every 500ms
-setPID();
-setInterval(getCpuUsage, 500);
+// TODO: this only works for Macs, would need to extend for other OSes
+if ( process.platform === 'darwin' ) {
+  setPID();
+  setInterval(getCpuUsage, 500);
+}
 
 // initialize and open a window in the browser with the text editor
 frontEndWebApp.use(express.static(path.join(__dirname, '../')));
@@ -159,7 +163,7 @@ process.on('SIGINT', () => {
   process.exit()
 });
 
-// TODO I'm guessing this doesn't work on windows- would need to differentiate user OS and check PID in windows commands
+// TODO this doesn't work on Windows or Linux - would need to modify the command based on user OS
 function getCpuUsage () {
   exec(`ps -p ${pid} -o %cpu`, (error, stdout, stderr) => {
     if ( typeof stdout == 'string' ) {
