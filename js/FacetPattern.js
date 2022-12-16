@@ -185,54 +185,21 @@ class FacetPattern {
     }
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];
-    let buffer, decodedAudio;
+    let buffer;
     try {
       buffer = fs.readFileSync(`${dir}/${chosenFile}`);
-      decodedAudio = wav.decode(buffer);
-      // this is a bit hacky - ideally if it fails loading the wav file, it would try again
-      // in the directory until it finds one.. or until it has tried as many files as are in the directory.
-      // until i implement that, this is just 3 tries before throwing the exception
-    } catch (e) {
-      try {
-        chosenFile = files[Math.floor(Math.random() * files.length)];
-        buffer = fs.readFileSync(`${dir}/${chosenFile}`);
-        decodedAudio = wav.decode(buffer);
-      } catch (er) {
-        try {
-          chosenFile = files[Math.floor(Math.random() * files.length)];
-          buffer = fs.readFileSync(`${dir}/${chosenFile}`);
-          decodedAudio = wav.decode(buffer);
-        } catch (err) {
-          throw(err);
-        }
-      }
-    } finally {
-      if (!decodedAudio) {
-        chosenFile = files[Math.floor(Math.random() * files.length)];
-        buffer = fs.readFileSync(`${dir}/${chosenFile}`);
-        decodedAudio = wav.decode(buffer);
-      }
-      this.data = Array.from(decodedAudio.channelData[0]);
+      this.data = this.loadBuffer(buffer);
       return this;
-    }
+    } catch (e) {}
   }
 
   sample (file_name) {
     try {
       let buffer = fs.readFileSync(`./samples/${file_name}`);
-      let decodedAudio = wav.decode(buffer);
-      this.data = Array.from(decodedAudio.channelData[0]);
+      this.data = this.loadBuffer(buffer);
       return this;
     } catch (e) {
-      try {
-        let buffer = fs.readFileSync(`${file_name}`);
-        let decodedAudio = wav.decode(buffer);
-        this.data = Array.from(decodedAudio.channelData[0]);
-        return this;
-      } catch (err) {
-        throw err;
-      }
-      throw(e);
+      throw e;
     }
   }
 
@@ -2260,6 +2227,19 @@ class FacetPattern {
       sequence1 = sequence1.speedNoClamp((sequence2.data.length / sequence1.data.length));
     }
     return [sequence1, sequence2];
+  }
+
+  loadBuffer (in_buffer) {
+    let out_buffer;
+    let num_samples_to_add = Buffer.byteLength(in_buffer) % 4;
+    let new_buff_str = '';
+    for ( var i = 0; i < num_samples_to_add; i++ ) {
+      new_buff_str += '0';
+    }
+    let new_buff = Buffer.from(new_buff_str)
+    out_buffer = Buffer.concat([in_buffer,new_buff]);
+    let decodedAudio = wav.decode(out_buffer);
+    return Array.from(decodedAudio.channelData[0]);
   }
 
   prevPowerOf2 (n) {
