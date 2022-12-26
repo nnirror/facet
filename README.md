@@ -537,7 +537,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').noise(128).sort(); // ascending values originally from noise`
 ---
 - **speed** ( _amt_ )
-	- increases or decreases the playback speed of the FacetPattern, similar to transposing audio samples up or down. _amt_ values less than 1 speed up; _amt_ values greater than 1 slow down. _amt_ is clamped between 0.02083 and 8.
+	- increases or decreases the playback speed of the FacetPattern, similar to transposing audio samples up or down. _amt_ values less than 1 speed up; _amt_ values greater than 1 slow down. _amt_ is clamped so that the resulting FacetPattern cannot be longer than 44100 samples.
 	- example
 		- `$('example').randsamp().speed(0.2); // fast sample`
 		- `$('example').randsamp().speed(1.5); // slow sample`

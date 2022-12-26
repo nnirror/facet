@@ -187,11 +187,22 @@ class FacetPattern {
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];
     let buffer;
-    try {
-      buffer = fs.readFileSync(`${dir}/${chosenFile}`);
-      this.data = this.loadBuffer(buffer);
-      return this;
-    } catch (e) {}
+    let fp_found = false;
+    let load_attempts = 0;
+    while ( fp_found !== true ) {
+      if ( load_attempts > 32 ) {
+        throw `error in randsamp(): the supplied directory ${dir} failed to find a sample file 32 times in a row`
+      }
+      try {
+        buffer = fs.readFileSync(`${dir}/${chosenFile}`);
+        this.data = this.loadBuffer(buffer);
+        fp_found = true;
+      } catch (e) {
+        load_attempts++;
+        chosenFile = files[Math.floor(Math.random() * files.length)];
+      }
+    }
+    return this;
   }
 
   sample (file_name) {
@@ -1551,13 +1562,15 @@ class FacetPattern {
   }
 
   speed (ratio) {
+    // determine maximim ratio based on input size.
+    let ratio_maximum = Math.round(44100/this.data.length);
     // hard clamp stretch ratio between 0.02083 (48x) and 8
     ratio = Math.abs(Number(ratio));
     if ( ratio < 0.000001 ) {
       ratio = 0.02083;
     }
-    if (ratio > 8) {
-      ratio = 8;
+    if (ratio > ratio_maximum) {
+      ratio = ratio_maximum;
     }
     let upscaled_data = [];
     let new_samps = Math.floor(ratio * this.data.length);
