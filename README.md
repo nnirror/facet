@@ -1,6 +1,6 @@
 ## Overview
 
-Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser and a NodeJS server running locally on your machine, Facet can generate and sequence audio and MIDI data in real-time.
+Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser and a NodeJS server running locally on your machine, Facet can generate and sequence audio, MIDI, and OSC data in real-time.
 
 Facet currently runs on MacOS and Linux. Windows users have reported some issues. If you're interested in helping to get Facet running on Windows, please get in touch.
 
@@ -79,7 +79,7 @@ There are 128 notevalues variables, corresponding to divisions of 1 whole note. 
 
 ### Outputs
 
-Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio or MIDI output. The patterns will continually regenerate each loop by default.
+Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default.
 
 ### Audio output
 - **channel** ( _channels_ )
@@ -103,7 +103,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- example:
 		- `$('example').noise(1000).size(44100).play(); // upscaling 1000 samples of noise to be 1 second long. lo-fi noise`
 
-### MIDI output
+### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
 
 - **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1 )
