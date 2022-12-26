@@ -121,6 +121,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').drunk(64,0.1).cc();`
 ---
+- **osc** ( _address_ )
+	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
+	- The `address` argument must begin with a backslash: `/`.
+	- _Note_: This function does not automatically scale, so the user can send any range of numbers over OSC.
+	- example:
+		- `$('example').noise(128).osc('/test');`
 - **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitchbend event for every value in the FacetPattern's data.
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.

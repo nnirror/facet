@@ -8,6 +8,11 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
 const axios = require('axios');
+const OSCPACKAGE = require('osc-js');
+const osc_package = new OSCPACKAGE({
+  discardLateMessages: false,
+  plugin: new OSCPACKAGE.WebsocketServerPlugin()
+});
 let cycles_elapsed = 0;
 let current_step = 1;
 let bpm = 90;
@@ -23,6 +28,7 @@ let meta_data = {
   steps: [16]
 };
 
+osc_package.open();
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
@@ -58,7 +64,8 @@ app.post('/update', (req, res) => {
     sequence_data: posted_pattern.sequence_data,
     notes: posted_pattern.notes,
     cc_data: posted_pattern.cc_data,
-    pitchbend_data: posted_pattern.pitchbend_data
+    pitchbend_data: posted_pattern.pitchbend_data,
+    osc_data: posted_pattern.osc_data,
   };
   res.sendStatus(200);
 });
@@ -227,6 +234,21 @@ function tick() {
               channels:pb.channel
             });
           }
+        }
+      } catch (e) {
+
+      } finally {
+
+      }
+
+      try {
+        // OSC logic
+        for (var j = 0; j < fp.osc_data.length; j++) {
+          let od = fp.osc_data[j];
+          // convert OSC steps to positions based on global step resolution
+          let od_fp = scalePatternToSteps(od.data,steps);
+          let value = od_fp[current_step-1][0];
+          osc_package.send(new OSCPACKAGE.Message(`/${od.address}`, value));
         }
       } catch (e) {
 

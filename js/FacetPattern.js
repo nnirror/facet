@@ -17,6 +17,7 @@ class FacetPattern {
     this.env = this.getEnv();
     this.history = '';
     this.notes = [];
+    this.osc_data = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
     this.output_size = -1;
@@ -2066,6 +2067,17 @@ class FacetPattern {
       velocity:velocity,
       duration:duration,
       channel:channel
+    });
+    return this;
+  }
+
+  osc ( address ) {
+    if ( address.charAt(0) !== '/' ) {
+      throw `invalid OSC address: ${address}. All OSC commands must have an address starting with the / character.`;
+    }
+    this.osc_data.push({
+      data:this.data,
+      address:address
     });
     return this;
   }

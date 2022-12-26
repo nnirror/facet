@@ -11,12 +11,12 @@ const cors = require('cors');
 const fs = require('fs');
 const wav = require('node-wav');
 const open = require('open');
-const OSC = require('osc-js');
+const OSCPACKAGE = require('osc-js');
 const WaveFile = require('wavefile').WaveFile;
 const FacetPattern = require('./FacetPattern.js');
-const osc = new OSC({
+const osc_package = new OSCPACKAGE({
   discardLateMessages: false,
-  plugin: new OSC.WebsocketServerPlugin()
+  plugin: new OSCPACKAGE.WebsocketServerPlugin()
 });
 let pid;
 let stored = {};
@@ -93,13 +93,13 @@ module.exports = {
           });
       });
       worker.on("error", error => {
-        osc.send(new OSC.Message('/errors', error.toString()));
+        osc_package.send(new OSCPACKAGE.Message('/errors', error.toString()));
       });
     }
   }
 }
 
-osc.open();
+osc_package.open();
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
@@ -168,7 +168,7 @@ function getCpuUsage () {
   exec(`ps -p ${pid} -o %cpu`, (error, stdout, stderr) => {
     if ( typeof stdout == 'string' ) {
       percent_cpu = Number(stdout.split('\n')[1].trim());
-      osc.send(new OSC.Message('/cpu', percent_cpu));
+      osc_package.send(new OSCPACKAGE.Message('/cpu', percent_cpu));
     }
   });
 }
