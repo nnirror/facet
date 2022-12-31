@@ -123,8 +123,9 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ---
 - **osc** ( _address_ )
 	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
+	- The OSC server sends output to port 5813 by default. You can change to a different port by modifying `const OSC_PORT` in `js/transport.js` to whatever port number you need.
 	- The `address` argument must begin with a backslash: `/`.
-	- _Note_: This function does not automatically scale, so the user can send any range of numbers over OSC.
+	- _Note_: This function does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
 	- example:
 		- `$('example').noise(128).osc('/test');`
 - **pitchbend** ( _channel_ = 1 )

@@ -13,6 +13,8 @@ const osc_package = new OSCPACKAGE({
   discardLateMessages: false,
   plugin: new OSCPACKAGE.WebsocketServerPlugin()
 });
+let maximum_audio_samples_played_per_step = 128;
+const OSC_PORT = 5813;
 let cycles_elapsed = 0;
 let current_step = 1;
 let bpm = 90;
@@ -28,7 +30,7 @@ let meta_data = {
   steps: [16]
 };
 
-osc_package.open();
+osc_package.open({ port: OSC_PORT });
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
@@ -142,14 +144,21 @@ function tick() {
 
     }
     handleBpmChange();
+    maximum_audio_samples_played_per_step = calculateMaximumSamplesPlayedPerStep(bpm);
+    let count_wav_files_played_this_step = 0;
+
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(playback_data)) {
-      for (var j = 0; j < fp.sequence_data.length; j++) {
+      let playback_sequence_data_scaled = scalePatternToSteps(fp.sequence_data,maximum_audio_samples_played_per_step);
+      for (var j = 0; j < playback_sequence_data_scaled.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
-        let sequence_step = Math.round(fp.sequence_data[j] * (steps)) + 1;
+        let sequence_step = Math.round(playback_sequence_data_scaled[j][0] * (steps)) + 1;
         if (current_step == sequence_step) {
           try {
-            sound.play(`tmp/${k}-out.wav`,1);
+            if ( count_wav_files_played_this_step < 8 ) {
+              sound.play(`tmp/${k}-out.wav`,1);
+            }
+            count_wav_files_played_this_step++;
           } catch (e) {}
         }
       }
@@ -267,6 +276,43 @@ function tick() {
     else {
       current_step++;
     }
+  }
+}
+
+function calculateMaximumSamplesPlayedPerStep(bpm) {
+  // scale the playback facet pattern steps based
+  // on the current bpm to prevent overloading
+  // while allowing a step-by-step playback triggering speed
+  // near the 30Hz audio rate at that bpm
+  if ( bpm <= 24 ) {
+    return 512;
+  }
+  else if ( bpm <= 48 )  {
+    return 256;
+  }
+  else if ( bpm <= 72 )  {
+    return 128;
+  }
+  else if ( bpm <= 96 )  {
+    return 96;
+  }
+  else if ( bpm <= 192 )  {
+    return 64;
+  }
+  else if ( bpm <= 384 )  {
+    return 32;
+  }
+  else if ( bpm <= 768 )  {
+    return 16;
+  }
+  else if ( bpm <= 1536 )  {
+    return 8;
+  }
+  else if ( bpm <= 3000 )  {
+    return 4;
+  }
+  else {
+    return 2;
   }
 }
 

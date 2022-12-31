@@ -67,23 +67,24 @@ module.exports = {
               // store wav file in /tmp/
               fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
                 // remix onto whatever channels via SoX
-                let speed = 1;
-                if ( fp.output_size != -1 ) {
-                  // if a .size() was specified, upscale or downscale the file
-                  // to that number of samples via the SoX speed function
-                  speed = fp.data.length / fp.output_size;
-                }
                 if ( fp.dacs == '1' ) {
                   // by default, channels 1 and 2 are on. If _only_ channel 1 was
                   // specified via .channel(), turn off channel 2.
                   fp.dacs = '1 0';
                 }
-
                 if ( fp.sequence_data.length > 0 ) {
-                  // run audio data through SoX, adding channels and potentially changing length
-                  exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed ${speed} rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
-                    postToTransport(fp);
-                  });
+                  if ( fp.dacs == '1 1' ) {
+                    // no channel processing needed
+                    exec(`mv tmp/${fp.name}.wav tmp/${fp.name}-out.wav`, (error, stdout, stderr) => {
+                      postToTransport(fp);
+                    });
+                  }
+                  else {
+                    // run audio data through SoX, adding channels
+                    exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
+                      postToTransport(fp);
+                    });
+                  }
                 }
                 else {
                   postToTransport(fp);

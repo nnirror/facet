@@ -1,0 +1,141 @@
+html {
+  height: 100%;
+}
+body {
+  height: 100%;
+}
+.CodeMirror {
+  height: calc(100% - 50px);
+  font-size: 2em;
+}
+#status, #notifications, #cpu, #midi, #transport {
+  height: 50px;
+  min-height: 50px;
+  padding-top: 14px;
+  padding-left: 0.25em;
+  margin-right: 0.25em;
+  display: inline-block;
+  vertical-align: middle;
+}
+#bpm {
+  width: 5em;
+  text-align: center;
+}
+#steps {
+  text-align: center;
+}
+#transport {
+  padding-top: 0;
+  float: right;
+}
+#transport span {
+  cursor: pointer;
+  user-select: none;
+}
+#transport span:hover {
+  color: #f7d952;
+}
+#play, #stop, #rerun, #clear {
+  font-size: 28px;
+  position: relative;
+}
+#play, #rerun {
+  top: 4px;
+}
+#status, #cpu {
+  float: left;
+}
+#status {
+  width: 2%;
+}
+#cpu {
+  width: 9%;
+  margin-right: 1%;
+  min-width: 66px;
+}
+#notifications {
+  float: left;
+  padding-right: 1%;
+  overflow: scroll;
+  width: 40%;
+}
+#midi {
+  float: right;
+  position: relative;
+  top: -3px;
+  display: inline-table;
+  padding-left:0;
+  min-width: 130px;
+}
+#midi_refresh {
+  background-color: green;
+  color: white;
+  min-width: 20px;
+  height: 2em;
+}
+#midi_refresh:hover {
+  background-color: forestgreen;
+}
+.error {
+  background-color: rgba(204, 0, 0, 0.5);
+}
+#midi_label {
+  display: inline;
+}
+@media screen and (max-width: 1200px) {
+  #midi_label {
+    display: none;
+  }
+  #midi_outs {
+    font-size: 0.7em;
+  }
+  #cpu {
+    font-size: 0.9em;
+    position: relative;
+    top: 1px;
+  }
+}
+@media screen and (max-width: 700px) {
+  #notifications {
+    width: 36% !important;
+  }
+  #midi_refresh {
+    font-size: 0.5em;
+    height: auto;
+  }
+  #cpu {
+    font-size: 0.7em;
+    position: relative;
+    top: 3px;
+    left: 5px;
+    margin-right: 0;
+  }
+  #midi_outs {
+    font-size: 0.8em;
+    position: relative;
+    top: 2px;
+  }
+}
+@media screen and (max-width: 600px) {
+  #notifications {
+    width: 34% !important;
+  }
+  #midi {
+    min-width: 110px;
+  }
+  #midi_outs {
+    font-size: 0.6em;
+    position: relative;
+    top: 3px;
+  }
+  #midi_refresh {
+    position: relative;
+    top: 2px;
+  }
+  .ui_label {
+    font-size: 0.6em;
+  }
+  #bpm, #steps {
+    font-size: 0.8em;
+  }
+}

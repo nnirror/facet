@@ -20,7 +20,6 @@ class FacetPattern {
     this.osc_data = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
-    this.output_size = -1;
     this.skipped = false;
     this.steps_pattern = false;
     this.store = [];
@@ -1607,7 +1606,12 @@ class FacetPattern {
 
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
-    this.output_size = new_size;
+    if ( new_size > 441000 ) {
+      throw `first argument to size() function is too large: ${new_size} is greater than the maximum size of 441000 samples.`
+    }
+    // get ratio between current size and new size
+    let change_ratio = new_size / this.data.length;
+    this.speedNoClamp(change_ratio);
     return this;
   }
 
@@ -2120,8 +2124,8 @@ class FacetPattern {
     if ( Array.isArray(sequence) === false ) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
-    if (sequence.length > 128 ) {
-      throw `input to .play() cannot exceed 128 values; total length: ${sequence.length}`;
+    if (sequence.length > 512 ) {
+      throw `input to .play() cannot exceed 512 values; total length: ${sequence.length}`;
     }
     Object.values(sequence).forEach(s => {
       this.sequence_data.push(s);
