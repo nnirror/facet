@@ -143,19 +143,24 @@ function tick() {
     } catch (e) {
 
     }
+    let max_steps_for_bpm = calculateMaximumSamplesPlayedPerStep(bpm);
+    if ( steps > max_steps_for_bpm ) {
+      steps = max_steps_for_bpm;
+    }
     handleBpmChange();
-    maximum_audio_samples_played_per_step = calculateMaximumSamplesPlayedPerStep(bpm);
+    maximum_audio_samples_played_per_step = max_steps_for_bpm;
     let count_wav_files_played_this_step = 0;
 
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(playback_data)) {
+      count_wav_files_played_this_step = 0;
       let playback_sequence_data_scaled = scalePatternToSteps(fp.sequence_data,maximum_audio_samples_played_per_step);
       for (var j = 0; j < playback_sequence_data_scaled.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
         let sequence_step = Math.round(playback_sequence_data_scaled[j][0] * (steps)) + 1;
         if (current_step == sequence_step) {
           try {
-            if ( count_wav_files_played_this_step < 8 ) {
+            if ( count_wav_files_played_this_step < 1 ) {
               sound.play(`tmp/${k}-out.wav`,1);
             }
             count_wav_files_played_this_step++;
@@ -284,7 +289,19 @@ function calculateMaximumSamplesPlayedPerStep(bpm) {
   // on the current bpm to prevent overloading
   // while allowing a step-by-step playback triggering speed
   // near the 30Hz audio rate at that bpm
-  if ( bpm <= 24 ) {
+  if ( bpm <= 2 )  {
+    return 8192;
+  }
+  else if ( bpm <= 4 )  {
+    return 2048;
+  }
+  else if ( bpm <= 6 ) {
+    return 1024;
+  }
+  else if ( bpm <= 9 )  {
+    return 768;
+  }
+  else if ( bpm <= 24 )  {
     return 512;
   }
   else if ( bpm <= 48 )  {

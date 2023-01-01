@@ -2124,9 +2124,6 @@ class FacetPattern {
     if ( Array.isArray(sequence) === false ) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
-    if (sequence.length > 512 ) {
-      throw `input to .play() cannot exceed 512 values; total length: ${sequence.length}`;
-    }
     Object.values(sequence).forEach(s => {
       this.sequence_data.push(s);
     });
@@ -2189,7 +2186,7 @@ class FacetPattern {
   }
 
   steps () {
-    this.steps_pattern = new FacetPattern().from(this.data).round().clip(1,512);
+    this.steps_pattern = new FacetPattern().from(this.data).round().clip(1,8192);
     return this;
   }
   // END special operations
