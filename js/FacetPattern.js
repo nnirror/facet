@@ -1563,7 +1563,7 @@ class FacetPattern {
 
   speed (ratio) {
     // determine maximim ratio based on input size.
-    let ratio_maximum = Math.round(44100/this.data.length);
+    let ratio_maximum = Math.round(176400/this.data.length);
     // hard clamp stretch ratio between 0.02083 (48x) and 8
     ratio = Math.abs(Number(ratio));
     if ( ratio < 0.000001 ) {

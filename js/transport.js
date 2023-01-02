@@ -89,7 +89,6 @@ app.post('/bpm', (req, res) => {
 });
 
 app.post('/play', (req, res) => {
-  current_step = 1;
   transport_on = true;
   axios.get('http://localhost:1123/update');
   res.sendStatus(200);
@@ -342,7 +341,8 @@ function handleBpmChange() {
   if ( step_speed_copy != step_speed_ms ) {
    clearInterval(running_transport);
    step_speed_copy = step_speed_ms;
-   running_transport = setInterval(tick, step_speed_ms);
+   // compensate for any latency from the previous step
+   running_transport = setInterval(tick, (new Date().getTime() + step_speed_ms) - new Date().getTime());
   }
 }
 

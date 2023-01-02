@@ -114,6 +114,7 @@ if ( !fs.existsSync('tmp/')) {
 
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
+  reruns = {};
   module.exports.run(req.body.code);
   res.send({
     status: 200,
