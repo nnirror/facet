@@ -17,6 +17,7 @@ class FacetPattern {
     this.env = this.getEnv();
     this.history = '';
     this.notes = [];
+    this.original_command = '';
     this.osc_data = [];
     this.pitchbend_data = [];
     this.sequence_data = [];

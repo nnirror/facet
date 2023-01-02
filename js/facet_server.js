@@ -51,7 +51,7 @@ module.exports = {
           Object.values(fps).forEach(fp => {
             if ( fp.do_not_regenerate === false ) {
               // don't add to reruns if it's meant to not regenerate via .keep()
-              reruns[fp.name] = code;
+              reruns[fp.name] = fp.original_command;
             }
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');

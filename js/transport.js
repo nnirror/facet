@@ -13,7 +13,6 @@ const osc_package = new OSCPACKAGE({
   discardLateMessages: false,
   plugin: new OSCPACKAGE.WebsocketServerPlugin()
 });
-let maximum_audio_samples_played_per_step = 128;
 const OSC_PORT = 5813;
 let cycles_elapsed = 0;
 let current_step = 1;
@@ -148,13 +147,12 @@ function tick() {
       steps = max_steps_for_bpm;
     }
     handleBpmChange();
-    maximum_audio_samples_played_per_step = max_steps_for_bpm;
     let count_wav_files_played_this_step = 0;
 
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(playback_data)) {
       count_wav_files_played_this_step = 0;
-      let playback_sequence_data_scaled = scalePatternToSteps(fp.sequence_data,maximum_audio_samples_played_per_step);
+      let playback_sequence_data_scaled = scalePatternToSteps(fp.sequence_data,max_steps_for_bpm);
       for (var j = 0; j < playback_sequence_data_scaled.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
         let sequence_step = Math.round(playback_sequence_data_scaled[j][0] * (steps)) + 1;
@@ -313,8 +311,14 @@ function calculateMaximumSamplesPlayedPerStep(bpm) {
   else if ( bpm <= 96 )  {
     return 96;
   }
-  else if ( bpm <= 192 )  {
+  else if ( bpm <= 150 ) {
+    return 72;
+  }
+  else if ( bpm <= 180 ) {
     return 64;
+  }
+  else if ( bpm <= 192 )  {
+    return 48;
   }
   else if ( bpm <= 384 )  {
     return 32;
