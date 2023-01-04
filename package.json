@@ -1,6 +1,6 @@
 {
   "name": "facet",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "Facet is a live coding system for algorithmic music",
   "main": "index.js",
   "directories": {
@@ -24,10 +24,7 @@
     "ws": "^8.11.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "facet": "node js/facet_server.js & node js/transport.js",
-    "transport": "node js/transport.js",
-    "server": "node js/facet_server.js"
+    "facet": "node js/start_facet.js"
   },
   "repository": {
     "type": "git",
