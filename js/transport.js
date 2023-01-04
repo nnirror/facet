@@ -33,6 +33,11 @@ app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
 
+axios.interceptors.response.use(res=>{return res}, (error) => {
+  // do nothing, necessary for windows to preven fatal 500s 
+  // with axios as transport starts up
+ });
+
 WebMidi.enable();
 let midioutput;
 
@@ -157,7 +162,7 @@ function tick() {
           try {
             // any pattern can play maximum 1 time per step
             if ( count_wav_files_played_this_step < 1 ) {
-              exec(`play tmp/${k}-out.wav gain -6`, (error, stdout, stderr) => {});
+              exec(`sox tmp\\${k}-out.wav -t waveaudio gain -6`, (error, stdout, stderr) => {});
             }
             count_wav_files_played_this_step++;
           } catch (e) {}

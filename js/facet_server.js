@@ -75,13 +75,13 @@ module.exports = {
                 if ( fp.sequence_data.length > 0 ) {
                   if ( fp.dacs == '1 1' ) {
                     // no channel processing needed
-                    exec(`mv tmp/${fp.name}.wav tmp/${fp.name}-out.wav`, (error, stdout, stderr) => {
+                    exec(`move tmp\\${fp.name}.wav tmp\\${fp.name}-out.wav`, (error, stdout, stderr) => {
                       postToTransport(fp);
                     });
                   }
                   else {
                     // run audio data through SoX, adding channels
-                    exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
+                    exec(`sox tmp\\${fp.name}.wav tmp\\${fp.name}-out.wav speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
                       postToTransport(fp);
                     });
                   }
