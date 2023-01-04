@@ -25,7 +25,9 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "facet": "node js/facet_server.js & node js/transport.js"
+    "facet": "node js/facet_server.js & node js/transport.js",
+    "transport": "node js/transport.js",
+    "server": "node js/facet_server.js"
   },
   "repository": {
     "type": "git",

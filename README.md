@@ -2,15 +2,15 @@
 
 Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser and a NodeJS server running locally on your machine, Facet can generate and sequence audio, MIDI, and OSC data in real-time.
 
-Facet currently runs on MacOS and Linux. Windows users have reported some issues. If you're interested in helping to get Facet running on Windows, please get in touch.
+Facet currently runs on MacOS, Linux, and Windows.
 
 ## Getting started
 
 1. Download and install Node.js and npm: https://www.npmjs.com/get-npm
-2. Download and install SoX: http://sox.sourceforge.net/
+2. Download and install SoX (the latest version is 14.4.2): http://sox.sourceforge.net/
 2. Download the Facet repo.
 3. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
-4. After the previous command completes, run `npm run facet`. The server should start running, and it should open up a new browser window with the code editor.
+4. If running on Max or Linux: After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work, and it should open up a new browser window with the code editor. If running on Windows: you will need to run two command prompt shells in order to start both servers that run in the background for Facet to work. First in one window, run `npm run transport`. Then another window, run `npm run server`. This should open up a new browser window with the code editor.
 5. Copy this command into the code editor in the browser: `$('test').sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
 
 For more information on getting started, check out this mini-tutorial on YouTube: https://www.youtube.com/watch?v=ceJbWjh8VOs
