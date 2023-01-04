@@ -22,6 +22,8 @@ let pid;
 let stored = {};
 let reruns = {};
 let percent_cpu = 0;
+let cross_platform_move_command = process.platform == 'win32' ? 'move' : 'mv';
+let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
 axios.interceptors.request.use(request => {
     request.maxContentLength = Infinity;
@@ -75,13 +77,13 @@ module.exports = {
                 if ( fp.sequence_data.length > 0 ) {
                   if ( fp.dacs == '1 1' ) {
                     // no channel processing needed
-                    exec(`mv tmp/${fp.name}.wav tmp/${fp.name}-out.wav`, (error, stdout, stderr) => {
+                    exec(`${cross_platform_move_command} tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav`, (error, stdout, stderr) => {
                       postToTransport(fp);
                     });
                   }
                   else {
                     // run audio data through SoX, adding channels
-                    exec(`sox tmp/${fp.name}.wav tmp/${fp.name}-out.wav speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
+                    exec(`sox tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
                       postToTransport(fp);
                     });
                   }

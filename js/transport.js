@@ -27,11 +27,19 @@ let meta_data = {
   bpm: [90],
   steps: [16]
 };
+let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
+let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
+let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
 
 osc_package.open({ port: OSC_PORT });
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
+
+axios.interceptors.response.use(res=>{return res}, (error) => {
+  // do nothing, necessary for windows to preven fatal 500s
+  // with axios as transport starts up
+ });
 
 WebMidi.enable();
 let midioutput;
@@ -157,7 +165,7 @@ function tick() {
           try {
             // any pattern can play maximum 1 time per step
             if ( count_wav_files_played_this_step < 1 ) {
-              exec(`play tmp/${k}-out.wav gain -6`, (error, stdout, stderr) => {});
+              exec(`${cross_platform_play_command} tmp${cross_platform_slash}${k}-out.wav ${cross_platform_sox_config} gain -6`, (error, stdout, stderr) => {});
             }
             count_wav_files_played_this_step++;
           } catch (e) {}
