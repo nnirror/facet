@@ -1,7 +1,6 @@
 const FacetPattern = require('./FacetPattern.js');
 const { exec } = require('child_process');
 const fs = require('fs');
-const sound = require('./lib/play_sound.js');
 const {WebMidi} = require('webmidi');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -147,18 +146,18 @@ function tick() {
     }
     handleBpmChange();
     let count_wav_files_played_this_step = 0;
-
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
     for (const [k, fp] of Object.entries(playback_data)) {
-      count_wav_files_played_this_step = 0;
       let playback_sequence_data_scaled = scalePatternToSteps(fp.sequence_data,max_steps_for_bpm);
+      count_wav_files_played_this_step = 0;
       for (var j = 0; j < playback_sequence_data_scaled.length; j++) {
         // sequence data is from 0-1 so it gets scaled into the step range at run time.
         let sequence_step = Math.round(playback_sequence_data_scaled[j][0] * (steps)) + 1;
         if (current_step == sequence_step) {
           try {
+            // any pattern can play maximum 1 time per step
             if ( count_wav_files_played_this_step < 1 ) {
-              sound.play(`tmp/${k}-out.wav`,1);
+              exec(`play tmp/${k}-out.wav gain -6`, (error, stdout, stderr) => {});
             }
             count_wav_files_played_this_step++;
           } catch (e) {}
@@ -287,7 +286,7 @@ function calculateMaximumSamplesPlayedPerStep(bpm) {
   // while allowing a step-by-step playback triggering speed
   // near the 30Hz audio rate at that bpm
   if ( bpm <= 2 )  {
-    return 8192;
+    return 4096;
   }
   else if ( bpm <= 4 )  {
     return 2048;
@@ -295,40 +294,28 @@ function calculateMaximumSamplesPlayedPerStep(bpm) {
   else if ( bpm <= 6 ) {
     return 1024;
   }
-  else if ( bpm <= 9 )  {
-    return 768;
-  }
-  else if ( bpm <= 24 )  {
+  else if ( bpm <= 12.5 )  {
     return 512;
   }
-  else if ( bpm <= 48 )  {
+  else if ( bpm <= 25 )  {
     return 256;
   }
-  else if ( bpm <= 72 )  {
+  else if ( bpm <= 50 )  {
     return 128;
   }
-  else if ( bpm <= 96 )  {
-    return 96;
-  }
-  else if ( bpm <= 150 ) {
-    return 72;
-  }
-  else if ( bpm <= 180 ) {
+  else if ( bpm <= 100 )  {
     return 64;
   }
-  else if ( bpm <= 192 )  {
-    return 48;
-  }
-  else if ( bpm <= 384 )  {
+  else if ( bpm <= 200 )  {
     return 32;
   }
-  else if ( bpm <= 768 )  {
+  else if ( bpm <= 400 )  {
     return 16;
   }
-  else if ( bpm <= 1536 )  {
+  else if ( bpm <= 800 )  {
     return 8;
   }
-  else if ( bpm <= 3000 )  {
+  else if ( bpm <= 1600 )  {
     return 4;
   }
   else {
