@@ -45,8 +45,8 @@ Below the text editor, there are several UI elements which control the Facet ser
 
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
-- Slider for setting the BPM of the global transport
-- Slider for setting the number of steps in a whole note
+- Slider for setting the BPM of the global transport (_note_: when the `.bpm()` operation runs, this value is overridden)
+- Slider for setting the number of steps in a whole note (_note_: when the `.steps()` operation runs, this value is overridden)
 - MIDI output selector / refresh button
 - ▶ = start playback
 - ■ = stop playback
