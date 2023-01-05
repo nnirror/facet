@@ -4,16 +4,14 @@ Facet is an open-source live coding system for algorithmic music and synthesis. 
 
 Facet currently runs on MacOS, Linux, and Windows.
 
-## Getting started
+## Installation and getting started
 
 1. Download and install Node.js (must be v14 or greater) and npm: https://www.npmjs.com/get-npm
 2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that sox can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed properly.
 3. Download the Facet repo.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
-5. After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work, and it should open up a new browser window with the code editor. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when startiong up the servers.
+5. After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work, and it should open up a new browser window with the code editor. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
 6. Copy this command into the code editor in the browser: `$('test').sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
-
-For more information on getting started, check out this mini-tutorial on YouTube: https://www.youtube.com/watch?v=ceJbWjh8VOs
 
 ## Facet commands
 
