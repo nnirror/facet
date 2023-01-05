@@ -9,6 +9,7 @@ const app = express();
 const frontEndWebApp = express();
 const cors = require('cors');
 const fs = require('fs');
+const os_utils = require('os-utils');
 const wav = require('node-wav');
 const open = require('open');
 const OSCPACKAGE = require('osc-js');
@@ -18,7 +19,6 @@ const osc_package = new OSCPACKAGE({
   discardLateMessages: false,
   plugin: new OSCPACKAGE.WebsocketServerPlugin()
 });
-let pid;
 let stored = {};
 let reruns = {};
 let percent_cpu = 0;
@@ -143,12 +143,8 @@ app.get('/update', (req, res) => {
 // run the server
 const server = app.listen(1123);
 
-// find the PID and continually re-check CPU usage every 500ms
-// TODO: this only works for Macs, would need to extend for other OSes
-if ( process.platform === 'darwin' ) {
-  setPID();
-  setInterval(getCpuUsage, 500);
-}
+// reports CPU usage of the process every 500ms
+setInterval(getCpuUsage, 500);
 
 // initialize and open a window in the browser with the text editor
 frontEndWebApp.use(express.static(path.join(__dirname, '../')));
@@ -167,13 +163,9 @@ process.on('SIGINT', () => {
   process.exit()
 });
 
-// TODO this doesn't work on Windows or Linux - would need to modify the command based on user OS
 function getCpuUsage () {
-  exec(`ps -p ${pid} -o %cpu`, (error, stdout, stderr) => {
-    if ( typeof stdout == 'string' ) {
-      percent_cpu = Number(stdout.split('\n')[1].trim());
-      osc_package.send(new OSCPACKAGE.Message('/cpu', percent_cpu));
-    }
+  os_utils.cpuUsage( (percent_cpu) => {
+    osc_package.send(new OSCPACKAGE.Message('/cpu', Math.round(percent_cpu*100)));
   });
 }
 
@@ -198,17 +190,6 @@ function postMetaDataToTransport (fp,data_type) {
   .catch(function (error) {
     console.log(`error posting metadata to transport server: ${error}`);
   });
-}
-
-function setPID () {
-  find('port', 1123)
-    .then(function (list) {
-      if (!list.length) {
-        // do nothing
-      } else {
-        pid = list[0].pid;
-      }
-    });
 }
 
 function storeAnyPatterns (fp) {
