@@ -24,6 +24,7 @@ let reruns = {};
 let percent_cpu = 0;
 let cross_platform_move_command = process.platform == 'win32' ? 'move' : 'mv';
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
+process.title = 'facet_pattern_generator';
 
 axios.interceptors.request.use(request => {
     request.maxContentLength = Infinity;
@@ -149,7 +150,6 @@ setInterval(getCpuUsage, 500);
 // initialize and open a window in the browser with the text editor
 frontEndWebApp.use(express.static(path.join(__dirname, '../')));
 const frontEndServer = frontEndWebApp.listen(1124);
-open('http://localhost:1124/');
 
 // do stuff when app is closing
 process.on('exit', () => {

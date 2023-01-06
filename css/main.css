@@ -35,9 +35,12 @@ body {
 #transport span:hover {
   color: #f7d952;
 }
-#play, #stop, #rerun, #clear {
+#play, #stop, #clear, #restart {
   font-size: 28px;
   position: relative;
+}
+#end {
+  font-size: 20px;
 }
 #play, #rerun {
   top: 4px;

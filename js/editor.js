@@ -61,13 +61,13 @@ $(document).keydown(function(e) {
     $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
     runFacet();
   }
-  else if ( e.ctrlKey && e.keyCode == 67 ) {
-    // clear hooks: ctrl+c
+  else if ( e.ctrlKey && e.keyCode == 188 ) {
+    // clear hooks: [ctrl + ","]
     $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
     $.growl.notice({ message: 'hooks cleared' });
   }
-  else if ( e.ctrlKey && e.keyCode == 77 ) {
-    // clear hooks and mute everything: ctrl+m
+  else if ( e.ctrlKey && e.keyCode == 190 ) {
+    // clear hooks and mute everything: [ctrl + "."]
     $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {});
     $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {});
     $.growl.notice({ message: 'system muted' });
@@ -180,6 +180,28 @@ $('body').on('click', '#clear', function() {
 $('body').on('click', '#rerun', function() {
  $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
  runFacet();
+});
+
+$('body').on('click', '#restart', function() {
+  $.post('http://127.0.0.1:5831/restart', {}).done(function( data, status ) {
+    if (status == 'success') {
+      $.growl.notice({ message: 'Facet restarted successfully'});
+    }
+    else {
+      $.growl.error({ message: 'There was an error while restarting Facet'});
+    }
+  });
+});
+
+$('body').on('click', '#end', function() {
+  $.post('http://127.0.0.1:5831/shutdown', {}).done(function( data, status ) {
+    if (status == 'success') {
+      $.growl.notice({ message: 'Facet shut down successfully'});
+    }
+    else {
+      $.growl.error({ message: 'There was an error while shutting down Facet'});
+    }
+  });
 });
 
 // begin OSC

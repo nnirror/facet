@@ -10,8 +10,9 @@ Facet currently runs on MacOS, Linux, and Windows.
 2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that sox can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed properly.
 3. Download or clone the Facet repository.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
-5. After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work, and it should open up a new browser window with the code editor. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
-6. Copy this command into the code editor in the browser: `$('test').sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
+5. After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
+6. In a browser tab, navigate to http://localhost:1124. This is the browser window with the code editor.
+7. Copy this command into the code editor in the browser: `$('test').sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
 
 ## Facet commands
 
@@ -50,14 +51,15 @@ Below the text editor, there are several UI elements which control the Facet ser
 - MIDI output selector / refresh button
 - ▶ = start playback
 - ■ = stop playback
-- ↵ = rerun the block of code selected by the cursor's current position
 - ⊖ = stop regenerating patterns but continue playback
+- ↻ = restart system (in case it becomes unresponsive)
+- 🛑 = shut down system
 
 ### Keyboard shortcuts
 
 - Run command(s): `[ctrl + enter]` or `[ctrl + r]`. All commands not separated by multiple newlines will run together.
-- Stop playback: `[ctrl + m]`
-- Stop regenerating patterns: `[ctrl + c]`
+- Stop playback: `[ctrl + .]`
+- Stop regenerating patterns: `[ctrl + ,]`
 
 ### Variables
 
@@ -90,7 +92,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
-	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + m]` or press the stop button "■".
+	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or press the stop button "■".
 	- example:
 		- `$('example').randsamp().play();	// plays once at beginning of loop`
 		- `$('example').randsamp().play(0.5);	// plays once at middle point`

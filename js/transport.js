@@ -30,6 +30,7 @@ let meta_data = {
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
+process.title = 'facet_transport';
 
 osc_package.open({ port: OSC_PORT });
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
