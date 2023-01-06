@@ -13,12 +13,14 @@ let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
 app.post('/shutdown', (req, res) => {
   console.log(`shutting down Facet...`);
-  exec(`pkill facet_pattern_generator && pkill facet_transport`, (error, stdout, stderr) => {
-    server.close(() => {
-      console.log(`Facet has shut down.`);
+  exec(`${crossPlatformkillProcessCommand('facet_transport')}`, (error, stdout, stderr) => {
+    exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
+      res.sendStatus(200);
+      server.close(() => {
+        console.log(`Facet has shut down.`);
+      });
     });
   });
-  res.sendStatus(200);
 });
 
 app.post('/restart', (req, res) => {
@@ -33,14 +35,23 @@ app.post('/restart', (req, res) => {
 });
 
 function crossPlatformkillProcessCommand(process_name) {
-  let cross_platform_command_str = '';
   if ( process.platform == 'darwin' || process.platform == 'linux' ) {
-    cross_platform_command_str = `pkill ${process_name}`;
+    exec(`pkill ${process_name}`);
   }
   else if ( process.platform == 'win32' ) {
-    cross_platform_command_str = `taskkill /ID ${process_name}.exe /F`;
+    if ( process_name == 'facet_transport' ) {
+     exec(`netstat -ano | find "LISTENING" | find "3211"`, (error,stdout,stderr) => {
+        let pid_str = stdout.split('LISTENING')[1].trim().split(' ')[0];
+        exec(`taskkill /f /pid ${pid_str}`);
+      })
+    }
+    else if ( process_name == 'facet_pattern_generator') {
+      exec(`netstat -ano | find "LISTENING" | find "1123"`, (error,stdout,stderr) => {
+        let pid_str = stdout.split('LISTENING')[1].trim().split(' ')[0];
+        exec(`taskkill /f /pid ${pid_str}`);
+      })
+    }
   }
-  return cross_platform_command_str;
 }
 
 // forked from https://stackoverflow.com/a/63235057 for cross-platform functionality.
