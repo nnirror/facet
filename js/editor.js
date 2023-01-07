@@ -209,6 +209,14 @@ const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 osc.open();
 checkStatus();
 
+osc.on('/bpm', message => {
+  $('#bpm').val(`${message.args[0]}`);
+});
+
+osc.on('/steps', message => {
+  $('#steps').val(`${message.args[0]}`);
+});
+
 osc.on('/cpu', message => {
   let cpu_percent = parseFloat(message.args[0]).toFixed(2).substring(0,4);
   $('#cpu').html(cpu_percent + '%&nbsp;cpu');

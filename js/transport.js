@@ -27,6 +27,8 @@ let meta_data = {
   bpm: [90],
   steps: [16]
 };
+let prev_bpm;
+let prev_steps;
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
@@ -153,6 +155,10 @@ function tick() {
     if ( steps > max_steps_for_bpm ) {
       steps = max_steps_for_bpm;
     }
+    if ( (bpm != prev_bpm) || (steps != prev_steps) ) {
+      reportTransportMetaData(bpm,steps);
+    }
+
     handleBpmChange();
     let count_wav_files_played_this_step = 0;
     // begin looping through all facet patterns, looking for wavs/notes/CCs to play
@@ -286,6 +292,8 @@ function tick() {
     else {
       current_step++;
     }
+    prev_bpm = bpm;
+    prev_steps = steps;
   }
 }
 
@@ -340,6 +348,18 @@ function handleBpmChange() {
    // compensate for any latency from the previous step
    running_transport = setInterval(tick, (new Date().getTime() + step_speed_ms) - new Date().getTime());
   }
+}
+
+function reportTransportMetaData() {
+  axios.post('http://localhost:1123/meta',
+    {
+      bpm: JSON.stringify(bpm),
+      steps: JSON.stringify(steps)
+    }
+  )
+  .catch(function (error) {
+    console.log(`error posting metadata to pattern server: ${error}`);
+  });
 }
 
 function scalePatternToSteps(pattern,steps) {
