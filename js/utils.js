@@ -1,4 +1,6 @@
 const fs = require('fs');
+const FacetConfig = require('./config.js');
+const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
 
 function $ (n) {
@@ -15,7 +17,7 @@ function choose (list) {
 }
 
 function ms (ms) {
-  return Math.round(Math.abs(Number(ms)) * 44.1);
+  return Math.round(Math.abs(Number(ms)) * (FACET_SAMPLE_RATE*0.001));
 }
 
 function random(min = 0, max = 1, int_mode = 0) {

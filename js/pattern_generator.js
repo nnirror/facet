@@ -15,6 +15,8 @@ const open = require('open');
 const OSCPACKAGE = require('osc-js');
 const WaveFile = require('wavefile').WaveFile;
 const FacetPattern = require('./FacetPattern.js');
+const FacetConfig = require('./config.js');
+const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const osc_package = new OSCPACKAGE({
   discardLateMessages: false,
   plugin: new OSCPACKAGE.WebsocketServerPlugin()
@@ -63,10 +65,10 @@ module.exports = {
               postMetaDataToTransport(fp.steps_pattern,'steps');
             }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
-              // create wav file, 44.1 kHz, 32-bit floating point
+              // create wav file at FACET_SAMPLE_RATE, 32-bit floating point
               storeAnyPatterns(fp);
               let a_wav = new WaveFile();
-              a_wav.fromScratch(1, 44100, '32f', fp.data);
+              a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', fp.data);
               // store wav file in /tmp/
               fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
                 // remix onto whatever channels via SoX

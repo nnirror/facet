@@ -12,7 +12,9 @@ const osc_package = new OSCPACKAGE({
   discardLateMessages: false,
   plugin: new OSCPACKAGE.WebsocketServerPlugin()
 });
-const OSC_PORT = 5813;
+const FacetConfig = require('./config.js');
+const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const OSC_OUTPORT = FacetConfig.settings.OSC_OUTPORT;
 let cycles_elapsed = 0;
 let current_step = 1;
 let bpm = 90;
@@ -34,7 +36,7 @@ let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
 process.title = 'facet_transport';
 
-osc_package.open({ port: OSC_PORT });
+osc_package.open({ port: OSC_OUTPORT });
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
@@ -423,7 +425,7 @@ function simpleReduce (data, new_size) {
 function calculateNoteValues(bpm) {
   let out = '';
   for (var i = 1; i <= 128; i++) {
-    let calculated_nv = Math.round((((60000/bpm)/i)*4)*44.1);
+    let calculated_nv = Math.round((((60000/bpm)/i)*4)*(FACET_SAMPLE_RATE*0.001));
     out += `var n${i} = ${calculated_nv};`
   }
   return out;
