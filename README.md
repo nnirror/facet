@@ -75,6 +75,10 @@ $('example').sine(100,200).gain(mousey).play(); // cursor y position controls vo
 
 There are 128 notevalues variables, corresponding to divisions of 1 whole note. A whole note is `n1`, a half note is `n2`, etc... up to `n128`.
 
+#### sample rate
+
+You can change the sample rate for the audio generated and played back with Facet by modifying `SAMPLE_RATE` in `js/config.js` to whatever integer you want.
+
 ## Command reference
 
 ### Outputs
