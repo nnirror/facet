@@ -6,6 +6,7 @@ const child_process = require('child_process');
 const cors = require('cors');
 app.use(cors());
 const server = app.listen(5831);
+const axios = require('axios');
 
 process.title = 'facet_process_manager';
 
@@ -13,11 +14,16 @@ let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
 app.post('/shutdown', (req, res) => {
   console.log(`shutting down Facet...`);
-  exec(`${crossPlatformkillProcessCommand('facet_transport')}`, (error, stdout, stderr) => {
-    exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
-      res.sendStatus(200);
-      server.close(() => {
-        console.log(`Facet has shut down.`);
+  // first, run cleanup on the pattern_generator
+  axios.get('http://localhost:1123/cleanup').then(response => {
+    // then, shut down both other servers
+    exec(`${crossPlatformkillProcessCommand('facet_transport')}`, (error, stdout, stderr) => {
+      exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
+        res.sendStatus(200);
+        // then, shut down this server
+        server.close(() => {
+          console.log(`Facet has shut down.`);
+        });
       });
     });
   });

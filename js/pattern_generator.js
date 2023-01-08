@@ -149,6 +149,11 @@ app.get('/update', (req, res) => {
   res.sendStatus(200);
 });
 
+app.get('/cleanup', (req, res) => {
+  module.exports.cleanUp();
+  res.sendStatus(200);
+});
+
 // run the server
 const server = app.listen(1123);
 
