@@ -2,6 +2,8 @@
 const fs = require('fs');
 const wav = require('node-wav');
 const WaveFile = require('wavefile').WaveFile;
+const FacetConfig = require('./config.js');
+const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
 const FFT = require('./lib/fft.js');
 const http = require('http');
@@ -248,7 +250,7 @@ class FacetPattern {
         }
       }
     } finally {
-      this.reduce(44100).scale(-1,1);
+      this.reduce(FACET_SAMPLE_RATE).scale(-1,1);
       return this;
     }
   }
@@ -1011,7 +1013,7 @@ class FacetPattern {
     // copy-modded from: https://github.com/rochars/low-pass-filter/blob/master/index.js
     let numChannels = 1;
     let rc = 1.0 / (cutoff * 2 * Math.PI);
-    let dt = 1.0 / 44100;
+    let dt = 1.0 / FACET_SAMPLE_RATE;
     let alpha = dt / (rc + dt);
     let last_val = [];
     let offset;
@@ -1053,8 +1055,8 @@ class FacetPattern {
     }
     // scale the data so it's in the range of the new_values
     this.scale(Math.min.apply(Math, fp.data),Math.max.apply(Math, fp.data));
-    // safeguard against mapping more than 48k samples to another pattern.
-    this.reduce(48000);
+    // safeguard against mapping more than 1 second's worth samples to another pattern.
+    this.reduce(FACET_SAMPLE_RATE);
     let same_size_arrays = this.makePatternsTheSameSize(this, fp);
     let sequence = same_size_arrays[0];
     let new_values = same_size_arrays[1];
@@ -1607,8 +1609,8 @@ class FacetPattern {
 
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
-    if ( new_size > 441000 ) {
-      throw `first argument to size() function is too large: ${new_size} is greater than the maximum size of 441000 samples.`
+    if ( new_size > FACET_SAMPLE_RATE * 10 ) {
+      throw `first argument to size() function is too large: ${new_size} is greater than the maximum size of ${FACET_SAMPLE_RATE * 10} samples.`
     }
     // get ratio between current size and new size
     let change_ratio = new_size / this.data.length;
@@ -1707,7 +1709,7 @@ class FacetPattern {
   }
 
   suspend (start, end) {
-    this.reduce(88200);
+    this.reduce(FACET_SAMPLE_RATE * 2);
     let suspend_sequence = [];
     start = Math.abs(Number(start));
     end = Math.abs(Number(end));
@@ -2133,7 +2135,7 @@ class FacetPattern {
 
   saveAs (filename) {
     let a_wav = new WaveFile();
-    a_wav.fromScratch(1, 44100, '32f', this.data);
+    a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', this.data);
     fs.writeFileSync(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
@@ -2266,7 +2268,14 @@ class FacetPattern {
     let new_buff = Buffer.from(new_buff_str)
     out_buffer = Buffer.concat([in_buffer,new_buff]);
     let decodedAudio = wav.decode(out_buffer);
-    return Array.from(decodedAudio.channelData[0]);
+    if ( decodedAudio.sampleRate != FACET_SAMPLE_RATE ) {
+      // adjust for sample rate
+      return new FacetPattern().from(decodedAudio.channelData[0]).speed(decodedAudio.sampleRate / FACET_SAMPLE_RATE).data;
+    }
+    else {
+      // no adjustment needed
+      return Array.from(decodedAudio.channelData[0]);
+    }
   }
 
   prevPowerOf2 (n) {

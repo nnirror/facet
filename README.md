@@ -75,6 +75,10 @@ $('example').sine(100,200).gain(mousey).play(); // cursor y position controls vo
 
 There are 128 notevalues variables, corresponding to divisions of 1 whole note. A whole note is `n1`, a half note is `n2`, etc... up to `n128`.
 
+#### sample rate
+
+You can change the sample rate for the audio generated and played back with Facet by modifying `SAMPLE_RATE` in `js/config.js` to whatever integer you want.
+
 ## Command reference
 
 ### Outputs
@@ -101,7 +105,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 - **size** ( _new_size_ )
 	- upscales or downscales the FacetPattern prior to playback, so its length is `new_size` samples. The upscaling and downscaling happens in SoX after all other calculations are complete, when the .wav file is generating. This means you can place the `.size()` anywhere in a command, since it runs at the end of the chain of function calls, no matter what. This also means you can only use one `.size()` per command, and if you use more than one, it will default to the _last_ one in the command.
 	- example:
-		- `$('example').noise(1000).size(44100).play(); // upscaling 1000 samples of noise to be 1 second long. lo-fi noise`
+		- `$('example').noise(1000).size(n1).play(); // upscaling 1000 samples of noise to be 1 second long. lo-fi noise`
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
@@ -123,7 +127,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ---
 - **osc** ( _address_ )
 	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
-	- The OSC server sends output to port 5813 by default. You can change to a different port by modifying `const OSC_PORT` in `js/transport.js` to whatever port number you need.
+	- The OSC server sends output to port 5813 by default. You can change to a different port by modifying `OSC_OUTPORT` in `js/config.js` to whatever port number you need.
 	- The `address` argument must begin with a backslash: `/`.
 	- _Note_: This function does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
 	- example:
@@ -154,7 +158,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').sine(choose([10,200,1000]),40).play(); // sine wave with either 10, 200, or 1000 cycles`
 ---
 - **ms** ( _milliseconds_ )
-	- converts the supplied `milliseconds` value to samples, at the default 44.1Khz sample rate.
+	- converts the supplied `milliseconds` value to that many samples, at whatever sample rate the user has configured.
 	- example:
 		- `$('example').sine(50,40).size(ms(5)).play(); // 5ms sine wave`
 		- `$('example').sine(50,40).size(ms(50)).play(); // 50ms sine wave`
@@ -393,7 +397,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **lpf** ( _cutoff_ )
 	- applies a simple low pass filter to the FacetPattern.
 	- example:
-		- `$('example').noise(44100).lpf(random(1,1000)); // low-passed noise`
+		- `$('example').noise(n1).lpf(random(1,1000)); // low-passed noise`
 ---
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.
@@ -538,7 +542,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').noise(128).sort(); // ascending values originally from noise`
 ---
 - **speed** ( _amt_ )
-	- increases or decreases the playback speed of the FacetPattern, similar to transposing audio samples up or down. _amt_ values less than 1 speed up; _amt_ values greater than 1 slow down. _amt_ is clamped so that the resulting FacetPattern cannot be longer than 44100 samples.
+	- increases or decreases the playback speed of the FacetPattern, similar to transposing audio samples up or down. _amt_ values less than 1 speed up; _amt_ values greater than 1 slow down.
 	- example
 		- `$('example').randsamp().speed(0.2); // fast sample`
 		- `$('example').randsamp().speed(1.5); // slow sample`
@@ -587,7 +591,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **chaos** ( _FacetPattern_, _iterations_ = 100, _cx_ = 0, _cy_ = 0)
 	- each piece of data in the FacetPattern is paired with the corresponding value in the second FacetPattern. The resulting complex number x,y coordinate is run through a function: f(x) = x2 + c, over `iterations` iterations. The output is a value between 0 and 1, which corresponds to how stable or unstable that particular point is in the complex number plane.
 	- By default, both cx and cy are set to 0 (Mandelbrot set). But you can set them to other values from -1 to 1, which can produce all sorts of Julia set variations.
-	- example: `$('example').sine(44,1000).chaos(_.drunk(44100,0.01)).play()`
+	- example: `$('example').sine(n1/1000,1000).chaos(_.drunk(n1,0.01)).play()`
 ---
 - **convolve** ( _FacetPattern_ )
 	- computes the convolution between the two FacetPatterns.
