@@ -66,8 +66,8 @@ $(document).keydown(function(e) {
     $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
     $.growl.notice({ message: 'hooks cleared' });
   }
-  else if ( e.ctrlKey && e.keyCode == 190 ) {
-    // clear hooks and mute everything: [ctrl + "."]
+  else if ( e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191) ) {
+    // clear hooks and mute everything: [ctrl + "."] or  [ctrl + "?"]
     $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {});
     $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {});
     $.growl.notice({ message: 'system muted' });

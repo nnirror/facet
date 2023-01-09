@@ -9,6 +9,7 @@ const FFT = require('./lib/fft.js');
 const http = require('http');
 const { exec } = require('child_process');
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
+let cross_platform_record_command = process.platform == 'win32' ? `sox -t waveaudio -d` : `rec`;
 
 class FacetPattern {
   constructor (name) {
@@ -209,7 +210,7 @@ class FacetPattern {
   record (file_name, length_in_samples = FACET_SAMPLE_RATE, input_channel = 1) {
     input_channel = Math.abs(Math.round(Number(input_channel)));
     length_in_samples = Math.abs(Math.round(Number(length_in_samples)));
-    exec(`rec -b 32 samples${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel} rate ${FACET_SAMPLE_RATE}`, (error, stdout, stderr) => {
+    exec(`${cross_platform_record_command} -b 32 samples${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel} rate ${FACET_SAMPLE_RATE}`, (error, stdout, stderr) => {
       if (error) {
         throw `error recording file: ${file_name}`;
       }
