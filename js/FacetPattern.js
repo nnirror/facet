@@ -200,8 +200,17 @@ class FacetPattern {
         this.data = this.loadBuffer(buffer);
         fp_found = true;
       } catch (e) {
-        load_attempts++;
-        chosenFile = files[Math.floor(Math.random() * files.length)];
+        try {
+          // samples with a different bit depth might need to be converted to 32f
+          // converted to 32f bit depth, otherise they don't load properly.
+          let wav = new WaveFile(fs.readFileSync(`${dir}/${chosenFile}`));
+          wav.toBitDepth("32f");
+          this.data = wav.getSamples();
+          return this.flatten();
+        } catch (err) {
+          load_attempts++;
+          chosenFile = files[Math.floor(Math.random() * files.length)];
+        }
       }
     }
     return this;
@@ -210,7 +219,7 @@ class FacetPattern {
   record (file_name, length_in_samples = FACET_SAMPLE_RATE, input_channel = 1) {
     input_channel = Math.abs(Math.round(Number(input_channel)));
     length_in_samples = Math.abs(Math.round(Number(length_in_samples)));
-    exec(`${cross_platform_record_command} -b 32 samples${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel} rate ${FACET_SAMPLE_RATE}`, (error, stdout, stderr) => {
+    exec(`${cross_platform_record_command} -b 32 tmp${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel} rate ${FACET_SAMPLE_RATE}`, (error, stdout, stderr) => {
       if (error) {
         throw `error recording file: ${file_name}`;
       }
@@ -222,6 +231,16 @@ class FacetPattern {
     if ( !file_name.includes('.wav') ) {
       file_name = `${file_name}.wav`;
     }
+
+    // first check if the file even exists - if not, don't waste any more resources
+    try {
+      if (fs.existsSync(`./samples/${file_name}`)) {}
+    } catch(err) {
+      throw `sample file does not exist: ${file_name}`;
+      return this;
+    }
+
+    // next, try loading as normal
     try {
       let buffer = fs.readFileSync(`./samples/${file_name}`);
       this.data = this.loadBuffer(buffer);
@@ -229,13 +248,13 @@ class FacetPattern {
     } catch (e) {
       try {
         // samples with a different bit depth might need to be converted to 32f
-        // converted to 32f bit depth, otherise they don't load properly
+        // converted to 32f bit depth, otherise they don't load properly.
         let wav = new WaveFile(fs.readFileSync(`./samples/${file_name}`));
         wav.toBitDepth("32f");
         this.data = wav.getSamples();
-        return this;
+        return this.flatten();
       } catch (err) {
-        throw `error loading sample: ${file_name}, error: ${e}`;
+        return this;
       }
     }
   }
