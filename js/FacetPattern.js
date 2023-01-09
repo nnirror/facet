@@ -224,6 +224,7 @@ class FacetPattern {
     try {
       let buffer = fs.readFileSync(`./samples/${file_name}`);
       this.data = this.loadBuffer(buffer);
+      return this;
     } catch (e) {
       try {
         // samples with a different bit depth might need to be converted to 32f
@@ -231,15 +232,10 @@ class FacetPattern {
         let wav = new WaveFile(fs.readFileSync(`./samples/${file_name}`));
         wav.toBitDepth("32f");
         this.data = wav.getSamples();
-      } catch (err) {
-        throw `error loading sample: ${file_name}`;
-      }
-      finally {
         return this;
+      } catch (err) {
+        throw `error loading sample: ${file_name}, error: ${err}`;
       }
-    }
-    finally {
-      return this;
     }
   }
 
