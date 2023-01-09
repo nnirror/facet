@@ -234,7 +234,7 @@ class FacetPattern {
         this.data = wav.getSamples();
         return this;
       } catch (err) {
-        throw `error loading sample: ${file_name}, error: ${err}`;
+        throw `error loading sample: ${file_name}, error: ${e}`;
       }
     }
   }

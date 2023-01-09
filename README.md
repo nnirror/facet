@@ -85,19 +85,14 @@ You can change the sample rate for the audio generated and played back with Face
 
 Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default.
 
-### Audio output
+### Audio input and output
 - **channel** ( _channels_ )
 	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
 	- example:
 		- `$('example').randsamp().channel(1).play(); // first channel only`
 		- `$('example').randsamp().channels([1,3]).play(); // second channel only`
 		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 9-16`
-- **record** ( _filename_, _length_in_samples_, _input_channel_ = 1)
-	- records a monophonic wav file into the `samples` directory named `filename.wav`. The recorded wav file can then be loaded into FacetPatterns via the `.sample()` method. The file is recorded at 32-bit floating-point bit depth, at the sample rate configured in `config.js`.
-	- The `input_channel` corresponds to that channel on whatever audio input device is currently selected as default by your computer.
-	- example:
-		- `$('a').record('test123',n16); // each loop, record a sample 1/16th the loop size named test123.wav`
-			`$('b').sample('test123.wav').play(_.ramp(0,1,16)); // and play back the previously recorded loop`
+---
 - **play** ( _FacetPattern_ )
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
@@ -108,10 +103,12 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().play(0.5);	// plays once at middle point`
 		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random steps`
 ---
-- **size** ( _new_size_ )
-	- upscales or downscales the FacetPattern prior to playback, so its length is `new_size` samples. The upscaling and downscaling happens in SoX after all other calculations are complete, when the .wav file is generating. This means you can place the `.size()` anywhere in a command, since it runs at the end of the chain of function calls, no matter what. This also means you can only use one `.size()` per command, and if you use more than one, it will default to the _last_ one in the command.
+- **record** ( _filename_, _length_in_samples_, _input_channel_ = 1)
+	- records a monophonic wav file into the `samples` directory named `filename.wav`. The recorded wav file can then be loaded into FacetPatterns via the `.sample()` method. The file is recorded at 32-bit floating-point bit depth, at the sample rate configured in `config.js`.
+	- The `input_channel` corresponds to that channel on whatever audio input device is currently selected as your computer's default audio input device. In order to use a different audio input device, you must select it as your computer's default audio input device.
+	- **NOTE**: This method does not generate data in the FacetPattern where it's running; it records and saves a wav file which must then be loaded into a FacetPattern via the `.sample()` method.
 	- example:
-		- `$('example').noise(1000).size(n1).play(); // upscaling 1000 samples of noise to be 1 second long. lo-fi noise`
+		- `$('a').record('test123',n16).sample('test123').play(_.ramp(0,1,16)); // each loop, record a sample 1/16th the loop size named test123.wav and play back the recording from the previous loop 16 times`
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
@@ -138,6 +135,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- _Note_: This function does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
 	- example:
 		- `$('example').noise(128).osc('/test');`
+---
 - **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitchbend event for every value in the FacetPattern's data.
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
@@ -656,7 +654,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(1,100).times(_.from([0.5,0.25,0.1,1]));`
 
-### Audio-rate operations
+### Audio operations
 
 Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary operations on them.
 
@@ -697,10 +695,15 @@ Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary ope
 		- `$('example').randsamp().reverse().play(); // random backwards sample`
 ---
 - **sample** ( _filename_ )
-	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well.
+	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_.
 	- example:
-		- `$('example').sample('1234.wav').play(); // if 1234.wav is in the samples directory, you're good to go`
+		- `$('example').sample('1234').play(); // if 1234.wav is in the samples directory, you're good to go`
 		- `$('example').sample('./myfolder/myfile.wav'); // or point to the file with a relative path`
+---
+- **size** ( _new_size_ )
+	- upscales or downscales the FacetPattern prior to playback, so its length is `new_size` samples.
+	- example:
+		- `$('example').noise(1000).size(n1).play(); // upscaling 1000 samples of noise to be 1 second long. lo-fi noise`
 ---
 - **suspend** ( _start_pos_, _end_pos_ )
 	- surrounds the FacetPattern with silence, so that the entire input FacetPattern still occurs, but only for a fraction of the overall resulting FacetPattern. The smallest possible fraction is 1/8 of the input FacetPattern, to safeguard against generating humongous and almost entirely empty wav files.
