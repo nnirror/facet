@@ -7,6 +7,8 @@ const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
 const FFT = require('./lib/fft.js');
 const http = require('http');
+const { exec } = require('child_process');
+let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
 class FacetPattern {
   constructor (name) {
@@ -17,7 +19,6 @@ class FacetPattern {
     this.data = [];
     this.do_not_regenerate = false;
     this.env = this.getEnv();
-    this.history = '';
     this.notes = [];
     this.original_command = '';
     this.osc_data = [];
@@ -27,9 +28,7 @@ class FacetPattern {
     this.steps_pattern = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
-    this.times_played = 0;
     this.utils = this.env + this.getUtils();
-    this.loop_has_occurred = false;
   }
 
   // BEGIN generator operations
@@ -207,13 +206,37 @@ class FacetPattern {
     return this;
   }
 
+  record (file_name, length_in_samples = FACET_SAMPLE_RATE, input_channel = 1) {
+    input_channel = Math.abs(Math.round(Number(input_channel)));
+    length_in_samples = Math.abs(Math.round(Number(length_in_samples)));
+    exec(`rec -b 32 -r ${FACET_SAMPLE_RATE} samples${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel}`, (error, stdout, stderr) => {
+      if (error) {
+        throw `error recording file: ${file_name}`;
+      }
+    });
+    return this;
+  }
+
   sample (file_name) {
     try {
       let buffer = fs.readFileSync(`./samples/${file_name}`);
       this.data = this.loadBuffer(buffer);
-      return this;
     } catch (e) {
-      throw e;
+      try {
+        // samples with a different bit depth might need to be converted to 32f
+        // converted to 32f bit depth, otherise they don't load properly
+        let wav = new WaveFile(fs.readFileSync(`./samples/${file_name}`));
+        wav.toBitDepth("32f");
+        this.data = wav.getSamples();
+      } catch (err) {
+        throw `error loading sample: ${file_name}`;
+      }
+      finally {
+        return this;
+      }
+    }
+    finally {
+      return this;
     }
   }
 
@@ -2195,6 +2218,10 @@ class FacetPattern {
   // END special operations
 
   // BEGIN utility functions used in other methods
+  convertSamplesToSeconds(samps) {
+    return (Math.round((samps / FACET_SAMPLE_RATE) * 1000) / 1000);
+  }
+
   scale1D (arr, n) {
     for (var i = arr.length *= n; i;)
       arr[--i] = arr[i / n | 0]

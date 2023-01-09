@@ -87,11 +87,17 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 
 ### Audio output
 - **channel** ( _channels_ )
-	- Facet ultimately creates .wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
+	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
 	- example:
 		- `$('example').randsamp().channel(1).play(); // first channel only`
 		- `$('example').randsamp().channels([1,3]).play(); // second channel only`
 		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 9-16`
+- **record** ( _filename_, _length_in_samples_, _input_channel_ = 1)
+	- records a monophonic wav file into the `samples` directory named `filename.wav`. The recorded wav file can then be loaded into FacetPatterns via the `.sample()` method. The file is recorded at 32-bit floating-point bit depth, at the sample rate configured in `config.js`.
+	- The `input_channel` corresponds to that channel on whatever audio input device is currently selected as default by your computer.
+	- example:
+		- `$('a').record('test123',n16); // each loop, record a sample 1/16th the loop size named test123.wav`
+			`$('b').sample('test123.wav').play(_.ramp(0,1,16)); // and play back the previously recorded loop`
 - **play** ( _FacetPattern_ )
 	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
