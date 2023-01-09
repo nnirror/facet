@@ -209,7 +209,7 @@ class FacetPattern {
   record (file_name, length_in_samples = FACET_SAMPLE_RATE, input_channel = 1) {
     input_channel = Math.abs(Math.round(Number(input_channel)));
     length_in_samples = Math.abs(Math.round(Number(length_in_samples)));
-    exec(`rec -b 32 -r ${FACET_SAMPLE_RATE} samples${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel}`, (error, stdout, stderr) => {
+    exec(`rec -b 32 samples${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel} rate ${FACET_SAMPLE_RATE}`, (error, stdout, stderr) => {
       if (error) {
         throw `error recording file: ${file_name}`;
       }
@@ -218,6 +218,9 @@ class FacetPattern {
   }
 
   sample (file_name) {
+    if ( !file_name.includes('.wav') ) {
+      file_name = `${file_name}.wav`;
+    }
     try {
       let buffer = fs.readFileSync(`./samples/${file_name}`);
       this.data = this.loadBuffer(buffer);
@@ -680,6 +683,7 @@ class FacetPattern {
 
   dup (num) {
     this.data = Array.from({length: Number(num+1)}).flatMap(a => this.data)
+    this.flatten();
     return this;
   }
 
@@ -698,8 +702,9 @@ class FacetPattern {
     let next_copy = new FacetPattern().from(this.data);
     for (var x = 0; x < num; x++) {
       next_copy.gain(feedback)
-      this.append(next_copy);
+      this.flatten().append(next_copy);
     }
+    this.flatten();
     return this;
   }
 
@@ -2301,7 +2306,7 @@ class FacetPattern {
     }
     else {
       // no adjustment needed
-      return Array.from(decodedAudio.channelData[0]);
+      return new FacetPattern().from(decodedAudio.channelData[0]).data;
     }
   }
 
