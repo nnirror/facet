@@ -7,6 +7,9 @@ const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
 const FFT = require('./lib/fft.js');
 const http = require('http');
+const { exec } = require('child_process');
+let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
+let cross_platform_record_command = process.platform == 'win32' ? `sox -t waveaudio -d` : `rec`;
 
 class FacetPattern {
   constructor (name) {
@@ -17,7 +20,6 @@ class FacetPattern {
     this.data = [];
     this.do_not_regenerate = false;
     this.env = this.getEnv();
-    this.history = '';
     this.notes = [];
     this.original_command = '';
     this.osc_data = [];
@@ -27,9 +29,7 @@ class FacetPattern {
     this.steps_pattern = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
-    this.times_played = 0;
     this.utils = this.env + this.getUtils();
-    this.loop_has_occurred = false;
   }
 
   // BEGIN generator operations
@@ -200,20 +200,62 @@ class FacetPattern {
         this.data = this.loadBuffer(buffer);
         fp_found = true;
       } catch (e) {
-        load_attempts++;
-        chosenFile = files[Math.floor(Math.random() * files.length)];
+        try {
+          // samples with a different bit depth might need to be converted to 32f
+          // converted to 32f bit depth, otherise they don't load properly.
+          let wav = new WaveFile(fs.readFileSync(`${dir}/${chosenFile}`));
+          wav.toBitDepth("32f");
+          this.data = wav.getSamples();
+          return this.flatten();
+        } catch (err) {
+          load_attempts++;
+          chosenFile = files[Math.floor(Math.random() * files.length)];
+        }
       }
     }
     return this;
   }
 
+  record (file_name, length_in_samples = FACET_SAMPLE_RATE, input_channel = 1) {
+    input_channel = Math.abs(Math.round(Number(input_channel)));
+    length_in_samples = Math.abs(Math.round(Number(length_in_samples)));
+    exec(`${cross_platform_record_command} -b 32 tmp${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel} rate ${FACET_SAMPLE_RATE}`, (error, stdout, stderr) => {
+      if (error) {
+        throw `error recording file: ${file_name}`;
+      }
+    });
+    return this;
+  }
+
   sample (file_name) {
+    if ( !file_name.includes('.wav') ) {
+      file_name = `${file_name}.wav`;
+    }
+
+    // first check if the file even exists - if not, don't waste any more resources
+    try {
+      if (fs.existsSync(`./samples/${file_name}`)) {}
+    } catch(err) {
+      throw `sample file does not exist: ${file_name}`;
+      return this;
+    }
+
+    // next, try loading as normal
     try {
       let buffer = fs.readFileSync(`./samples/${file_name}`);
       this.data = this.loadBuffer(buffer);
       return this;
     } catch (e) {
-      throw e;
+      try {
+        // samples with a different bit depth might need to be converted to 32f
+        // converted to 32f bit depth, otherise they don't load properly.
+        let wav = new WaveFile(fs.readFileSync(`./samples/${file_name}`));
+        wav.toBitDepth("32f");
+        this.data = wav.getSamples();
+        return this.flatten();
+      } catch (err) {
+        return this;
+      }
     }
   }
 
@@ -657,6 +699,7 @@ class FacetPattern {
 
   dup (num) {
     this.data = Array.from({length: Number(num+1)}).flatMap(a => this.data)
+    this.flatten();
     return this;
   }
 
@@ -675,8 +718,9 @@ class FacetPattern {
     let next_copy = new FacetPattern().from(this.data);
     for (var x = 0; x < num; x++) {
       next_copy.gain(feedback)
-      this.append(next_copy);
+      this.flatten().append(next_copy);
     }
+    this.flatten();
     return this;
   }
 
@@ -2195,6 +2239,10 @@ class FacetPattern {
   // END special operations
 
   // BEGIN utility functions used in other methods
+  convertSamplesToSeconds(samps) {
+    return (Math.round((samps / FACET_SAMPLE_RATE) * 1000) / 1000);
+  }
+
   scale1D (arr, n) {
     for (var i = arr.length *= n; i;)
       arr[--i] = arr[i / n | 0]
@@ -2274,7 +2322,7 @@ class FacetPattern {
     }
     else {
       // no adjustment needed
-      return Array.from(decodedAudio.channelData[0]);
+      return new FacetPattern().from(decodedAudio.channelData[0]).data;
     }
   }
 

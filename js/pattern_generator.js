@@ -37,9 +37,6 @@ axios.interceptors.request.use(request => {
 module.exports = {
   cleanUp: () => {
     fs.writeFileSync('js/stored.json', '{}');
-    fs.writeFileSync('js/reruns.json', '{}');
-    fs.writeFileSync('js/patterns.json', '{}');
-    fs.writeFileSync('js/hooks.json', '{}');
     fs.writeFileSync('js/env.js', '');
     fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   },
@@ -52,7 +49,9 @@ module.exports = {
   run: (code) => {
     if ( percent_cpu < 100 ) {
       const worker = new Worker("./js/run.js", {workerData: {code: code, vars: {}}});
-      worker.once("message", fps => {
+      worker.once("message", run_data => {
+          let fps = run_data.fps;
+          let errors = run_data.errors;
           Object.values(fps).forEach(fp => {
             if ( fp.do_not_regenerate === false ) {
               // don't add to reruns if it's meant to not regenerate via .keep()
@@ -97,9 +96,10 @@ module.exports = {
               });
             }
           });
-      });
-      worker.on("error", error => {
-        osc_package.send(new OSCPACKAGE.Message('/errors', error.toString()));
+          Object.values(errors).forEach(error => {
+            // send any exceptions thrown when running the comands to the editor
+            osc_package.send(new OSCPACKAGE.Message('/errors', error.toString()));
+          });
       });
     }
   }
