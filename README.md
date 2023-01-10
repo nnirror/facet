@@ -94,7 +94,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 9-16`
 ---
 - **play** ( _FacetPattern_ )
-	- plays the FacetPattern as audio to your computer's default sound card, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note.
+	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
 	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or press the stop button "■".
@@ -104,8 +104,8 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random steps`
 ---
 - **record** ( _filename_, _length_in_samples_, _input_channel_ = 1)
-	- records a monophonic wav file into the `samples` directory named `filename.wav`. The recorded wav file can then be loaded into FacetPatterns via the `.sample()` method. The file is recorded at 32-bit floating-point bit depth, at the sample rate configured in `config.js`.
-	- The `input_channel` corresponds to that channel on whatever audio input device is currently selected as your computer's default audio input device. In order to use a different audio input device, you must select it as your computer's default audio input device.
+	- records a monophonic wav file into the `tmp` directory named `filename.wav`. The recorded wav file can then be loaded into FacetPatterns via the `.sample()` method. The file is recorded at 32-bit floating-point bit depth, at the sample rate configured in `config.js`.
+	- The `input_channel` corresponds to that channel on your computer's currently selected default audio input device. If you want to use a different audio input device with Facet, simply select it as your computer's default audio input device.
 	- **NOTE**: This method does not generate data in the FacetPattern where it's running; it records and saves a wav file which must then be loaded into a FacetPattern via the `.sample()` method.
 	- example:
 		- `$('a').record('test123',n16).sample('test123').play(_.ramp(0,1,16)); // each loop, record a sample 1/16th the loop size named test123.wav and play back the recording from the previous loop 16 times`
