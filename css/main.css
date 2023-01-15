@@ -35,14 +35,14 @@ body {
 #transport span:hover {
   color: #f7d952;
 }
-#play, #stop, #clear, #restart {
+#stop, #clear, #restart {
   font-size: 28px;
   position: relative;
 }
 #end {
   font-size: 20px;
 }
-#play, #rerun {
+#rerun {
   top: 4px;
 }
 #status, #cpu {

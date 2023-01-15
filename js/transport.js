@@ -73,13 +73,20 @@ app.post('/meta', (req, res) => {
 app.post('/update', (req, res) => {
   let posted_pattern = JSON.parse(req.body.pattern);
   facet_patterns[posted_pattern.name] = posted_pattern;
-  playback_data[posted_pattern.name] = {
-    sequence_data: posted_pattern.sequence_data,
-    notes: posted_pattern.notes,
-    cc_data: posted_pattern.cc_data,
-    pitchbend_data: posted_pattern.pitchbend_data,
-    osc_data: posted_pattern.osc_data,
-  };
+  if ( posted_pattern.sequence_data.length > 0
+    || posted_pattern.notes.length > 0
+    || posted_pattern.cc_data.length > 0
+    || posted_pattern.pitchbend_data.length > 0
+    || posted_pattern.osc_data.length > 0 ) {
+      playback_data[posted_pattern.name] = {
+        sequence_data: posted_pattern.sequence_data,
+        notes: posted_pattern.notes,
+        cc_data: posted_pattern.cc_data,
+        pitchbend_data: posted_pattern.pitchbend_data,
+        osc_data: posted_pattern.osc_data,
+      };
+      transport_on = true;
+  }
   res.sendStatus(200);
 });
 
@@ -111,7 +118,7 @@ app.post('/status', (req, res) => {
   // it's loaded into each FacetPattern instance on consruction
   fs.writeFileSync('js/env.js',
     calculateNoteValues(bpm) +
-    `var bpm=${bpm};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
+    `var bpm=${bpm};var steps=${steps};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
     ()=> {}
   );
   res.sendStatus(200);
@@ -286,7 +293,9 @@ function tick() {
     }
     if ( current_step >= steps ) {
       // end of loop, tell pattern server to start processing next loop
-      axios.get('http://localhost:1123/update');
+      if ( transport_on === true ) {
+        axios.get('http://localhost:1123/update');
+      }
       // go back to the first step
       current_step = 1;
       cycles_elapsed++;

@@ -927,14 +927,7 @@ class FacetPattern {
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     let sequence = same_size_arrays[0];
     let mult_sequence = same_size_arrays[1];
-    for (const [key, step] of Object.entries(sequence.data)) {
-      // linear interpolation between the two provided sequences
-      let seq_amt = (1 - amt) * step;
-      let mult_amt = amt * mult_sequence.data[key];
-      let avg = (seq_amt + mult_amt);
-      interp_sequence[key] = avg;
-    }
-    this.data = interp_sequence;
+    this.data = sequence.gain(1 - amt).add(mult_sequence.gain(amt)).data;
     return this;
   }
 
@@ -1653,9 +1646,6 @@ class FacetPattern {
 
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
-    if ( new_size > FACET_SAMPLE_RATE * 10 ) {
-      throw `first argument to size() function is too large: ${new_size} is greater than the maximum size of ${FACET_SAMPLE_RATE * 10} samples.`
-    }
     // get ratio between current size and new size
     let change_ratio = new_size / this.data.length;
     this.speedNoClamp(change_ratio);

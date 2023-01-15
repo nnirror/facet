@@ -58,7 +58,6 @@ function getLastLineOfBlock(initial_line) {
 $(document).keydown(function(e) {
   // [ctrl + enter] or [ctrl + r] to select text and send to pattern server (127.0.0.1:1123)
   if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {
-    $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
     runFacet();
   }
   else if ( e.ctrlKey && e.keyCode == 188 ) {
@@ -149,15 +148,6 @@ $('body').on('click', '#midi_refresh', function() {
   });
 });
 
-$('body').on('click', '#play', function() {
-  $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
-  .fail(function(data) {
-    if ( data.statusText == 'error' ) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    }
-  });
-});
-
 $('body').on('click', '#stop', function() {
   $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {})
   .fail(function(data) {
@@ -178,7 +168,6 @@ $('body').on('click', '#clear', function() {
 });
 
 $('body').on('click', '#rerun', function() {
- $.post('http://127.0.0.1:3211/play', {}).done(function( data, status ) {})
  runFacet();
 });
 

@@ -49,16 +49,15 @@ Below the text editor, there are several UI elements which control the Facet ser
 - Slider for setting the BPM of the global transport (_note_: when the `.bpm()` operation runs, this value is updated automatically)
 - Slider for setting the number of steps in a whole note (_note_: when the `.steps()` operation runs, this value is updated automatically)
 - MIDI output selector / refresh button
-- ▶ = start playback
 - ■ = stop playback
 - ⊖ = stop regenerating patterns but continue playback
 - ↻ = restart system (in case it becomes unresponsive)
 - 🛑 = shut down system
 
-### Keyboard shortcuts
+### Key commands
 
 - Run command(s): `[ctrl + enter]` or `[ctrl + r]`. All commands not separated by multiple newlines will run together.
-- Stop playback: `[ctrl + .]`
+- Stop playback: `[ctrl + .]` or `[ctrl + ?]`
 - Stop regenerating patterns: `[ctrl + ,]`
 
 ### Variables
@@ -74,6 +73,10 @@ $('example').sine(100,200).gain(mousey).play(); // cursor y position controls vo
 #### notevalues
 
 There are 128 notevalues variables, corresponding to divisions of 1 whole note. A whole note is `n1`, a half note is `n2`, etc... up to `n128`.
+
+#### bpm / steps
+
+Both `bpm` and `steps`, representing the current BPM and number of steps per loop in the Facet transport, are available for use in commands as well.
 
 ## Sample rate
 
