@@ -107,12 +107,6 @@ app.post('/bpm', (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/play', (req, res) => {
-  transport_on = true;
-  axios.get('http://localhost:1123/update');
-  res.sendStatus(200);
-});
-
 app.post('/status', (req, res) => {
   // rewrite env.js, the environment variables that can be accessed in all future evals.
   // it's loaded into each FacetPattern instance on consruction
@@ -130,12 +124,12 @@ app.post('/steps', (req, res) => {
 });
 
 app.post('/stop', (req, res) => {
-  if ( typeof midioutput !== 'undefined' ) {
-    midioutput.sendAllNotesOff();
-  }
   facet_patterns = {};
   playback_data = {};
   transport_on = false;
+  if ( typeof midioutput !== 'undefined' ) {
+    midioutput.sendAllNotesOff();
+  }
   res.sendStatus(200);
 });
 
@@ -293,7 +287,7 @@ function tick() {
     }
     if ( current_step >= steps ) {
       // end of loop, tell pattern server to start processing next loop
-      if ( transport_on === true ) {
+      if ( transport_on === true && facet_patterns.length > 0  ) {
         axios.get('http://localhost:1123/update');
       }
       // go back to the first step

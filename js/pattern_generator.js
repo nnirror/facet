@@ -133,6 +133,10 @@ app.post('/hooks/clear', (req, res) => {
 
 app.post('/stop', (req, res) => {
   reruns = {};
+  axios.post('http://localhost:3211/stop',{})
+  .catch(function (error) {
+    console.log(`error stopping transport server: ${error}`);
+  });
   res.sendStatus(200);
 });
 

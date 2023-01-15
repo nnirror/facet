@@ -68,10 +68,6 @@ $(document).keydown(function(e) {
   else if ( e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191) ) {
     // clear hooks and mute everything: [ctrl + "."] or  [ctrl + "?"]
     $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {});
-    // TODO: fix this so it's not hard-coded to run twice. right now the stop command needs to be run twice
-    // to the transport server
-    $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {});
-    $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {});
     $.growl.notice({ message: 'system muted' });
   }
 
@@ -152,15 +148,6 @@ $('body').on('click', '#midi_refresh', function() {
 });
 
 $('body').on('click', '#stop', function() {
-  // TODO: fix this so it's not hard-coded to run twice. right now the stop command needs to be run twice
-  // to the transport server
-  $.post('http://127.0.0.1:3211/stop', {}).done(function( data, status ) {})
-  .fail(function(data) {
-    if ( data.statusText == 'error' ) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    }
-    $.post('http://127.0.0.1:3211/stop', {});
-  });
   $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {})
   .fail(function(data) {
     if ( data.statusText == 'error' ) {
