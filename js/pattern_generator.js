@@ -120,6 +120,7 @@ if ( !fs.existsSync('tmp/')) {
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
   reruns = {};
+  startTransport();
   module.exports.run(req.body.code);
   res.send({
     status: 200,
@@ -194,6 +195,13 @@ function postToTransport (fp) {
   )
   .catch(function (error) {
     console.log(`error posting to transport server: ${error}`);
+  });
+}
+
+function startTransport () {
+  axios.post('http://localhost:3211/play',{})
+  .catch(function (error) {
+    console.log(`error starting transport server: ${error}`);
   });
 }
 
