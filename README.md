@@ -78,7 +78,7 @@ There are 128 notevalues variables, corresponding to divisions of 1 whole note. 
 
 Both `bpm` and `steps`, representing the current BPM and number of steps per loop in the Facet transport, are available for use in commands as well.
 
-### Sample rate
+## Sample rate
 
 You can change the sample rate for the audio generated and played back with Facet by modifying `SAMPLE_RATE` in `js/config.js` to whatever integer you want.
 
