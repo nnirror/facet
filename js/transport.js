@@ -138,6 +138,10 @@ const server = app.listen(3211);
 
 function tick() {
   if ( transport_on !== false) {
+    if (current_step == 1) {
+      // tell pattern server to start processing next loop
+      axios.get('http://localhost:1123/update');
+    }
     // main stepping loop
     // first, check if bpm or steps needs to be recalculated
     let scaledSteps = scalePatternToSteps(meta_data.steps,steps);
@@ -287,11 +291,6 @@ function tick() {
 
     }
     if ( current_step >= steps ) {
-      // end of loop, tell pattern server to start processing next loop
-      if ( transport_on === true ) {
-        console.log('rerun', Date.now(), transport_on, Object.keys(facet_patterns).length)
-        axios.get('http://localhost:1123/update');
-      }
       // go back to the first step
       current_step = 1;
       cycles_elapsed++;

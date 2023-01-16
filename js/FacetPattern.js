@@ -20,7 +20,9 @@ class FacetPattern {
     this.data = [];
     this.do_not_regenerate = false;
     this.env = this.getEnv();
+    this.loops_since_generation = 1;
     this.notes = [];
+    this.regenerate_every_n_loops = 1;
     this.original_command = '';
     this.osc_data = [];
     this.pitchbend_data = [];
@@ -2070,6 +2072,11 @@ class FacetPattern {
       controller:controller,
       channel:channel
     });
+    return this;
+  }
+
+  every (n_loops = 1) {
+    this.regenerate_every_n_loops = Math.abs(Math.round(n_loops)) == 0 ? 1 : Math.abs(Math.round(n_loops));
     return this;
   }
 

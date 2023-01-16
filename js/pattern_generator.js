@@ -55,7 +55,7 @@ module.exports = {
           Object.values(fps).forEach(fp => {
             if ( fp.do_not_regenerate === false ) {
               // don't add to reruns if it's meant to not regenerate via .keep()
-              reruns[fp.name] = fp.original_command;
+              reruns[fp.name] = fp;
             }
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
@@ -148,8 +148,17 @@ app.post('/meta', (req, res) => {
 });
 
 app.get('/update', (req, res) => {
-  for (const [fp_name, code] of Object.entries(reruns)) {
-    module.exports.run(code);
+  for (const [fp_name, fp] of Object.entries(reruns)) {
+    // determine which patterns to rerun
+    if ( fp.regenerate_every_n_loops == 1
+      || ((fp.loops_since_generation > 0) && ((fp.loops_since_generation % fp.regenerate_every_n_loops) == 0 ))
+    ) {
+      module.exports.run(fp.original_command);
+      fp.loops_since_generation = 1;
+    }
+    else {
+      fp.loops_since_generation++;
+    }
   }
   res.sendStatus(200);
 });

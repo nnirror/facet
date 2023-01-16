@@ -86,7 +86,7 @@ You can change the sample rate for the audio generated and played back with Face
 
 ### Outputs
 
-Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default.
+Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default. In order to only regenerate every n loops, use the `.every()` function.
 
 ### Audio input and output
 - **channel** ( _channels_ )
@@ -147,7 +147,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').sine(1,128).pitchbend();`
 
 ### Methods for controlling transport steps & BPM
-
 - **bpm** ( )
 	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
 	- example:
@@ -157,6 +156,17 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- stores the FacetPattern data as the number of transport steps at any given point in time during each loop. When number of steps changes, the transport recalculates its speed.
 	- example:
 		- `$('example').ramp(4,128,64).steps(); // go from 4 steps/loop speed to 64 steps/loop speed, over the course of the loop`
+
+### Methods for controlling pattern regeneration
+- **every** ( _n_loops_ )
+	- only regenerate the pattern after `n_loops` loops. By default, patterns regenerate each loop, so this function only needs to be included if you wish to regenerate a pattern less frequently.
+	- example:
+		- `$('example').sine(random(10,500,1),50).gain(random()).every(4).play(); // slightly different sine wave tone every 4 loops`
+---
+- **keep** (  )
+	- preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
+	- example:
+		- `$('example').sine(random(10,500,1),50).keep().play();`
 
 ### Single number generators
 - **choose** ( _pattern_ )
@@ -354,11 +364,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- returns `1` for every value in the FacetPattern greater than or equal to `amt` and `0` for all other values.
 	- example:
 		- `$('example').from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
----
-- **keep** (  )
-	- preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
-	- example:
-		- `$('example').sine(random(10,500,1),50).keep().play();`
 ---
 - **ifft** ( )
 	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
