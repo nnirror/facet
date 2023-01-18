@@ -391,6 +391,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').drunk(128,0.05).jam(0.1,0.7); // small 128 step random walk with larger deviations from the jam`
 ---
+- **key** ( _key_and_scale_ )
+	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` function uses the TonalJS npm package as a scale dictionary.
+	- possible keys: "A", "A#", "B", "B#", "C", "C#", "D", "D#", "E", "E#", "F", "F#", "G", "G#"
+	- possible scales: ["ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian", "bebop", "bebop dominant", "bebop major", "chromatic", "ichikosucho", "ionian pentatonic", "major pentatonic", "ritusen"]
+	- example: `$('example').randsamp().reduce(32).scale(36,51).key("F# bebop").note();`
+---
 - **lt** ( _amt_ )
 	- returns `1` for every value in the FacetPattern less than `amt` and `0` for all other values.
 	- example:

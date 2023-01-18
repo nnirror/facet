@@ -6,6 +6,7 @@ const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
 const FFT = require('./lib/fft.js');
+const { Midi, Scale } = require("tonal");
 const http = require('http');
 const { exec } = require('child_process');
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
@@ -479,6 +480,12 @@ class FacetPattern {
       }
     }
     this.data = out;
+    return this;
+  }
+
+  key (key_string = "C major") {
+    let note_numbers_in_key = Midi.pcsetNearest(Scale.get(key_string).chroma);
+    this.data.map(note_numbers_in_key);
     return this;
   }
 

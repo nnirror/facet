@@ -1,12 +1,13 @@
 {
   "name": "facet",
-  "version": "0.5.16",
+  "version": "0.5.17",
   "description": "Facet is a live coding system for algorithmic music",
   "main": "index.js",
   "directories": {
     "example": "examples"
   },
   "dependencies": {
+    "@tonaljs/midi": "^4.9.0",
     "axios": "^0.27.2",
     "body-parser": "^1.20.1",
     "bootstrap-growl": "^3.1.3",
@@ -20,6 +21,7 @@
     "osc-js": "^2.4.0",
     "request": "^2.88.2",
     "sync-request": "^6.1.0",
+    "tonal": "^4.12.0",
     "wavefile": "^11.0.0",
     "webmidi": "^3.0.25",
     "ws": "^8.11.0"
