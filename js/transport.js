@@ -21,6 +21,7 @@ let bpm = 90;
 let steps = 16;
 let step_speed_ms = ((60000 / bpm) / steps) * 2;
 let step_speed_copy = step_speed_ms;
+let next_step_expected_run_time = new Date().getTime() + step_speed_ms;
 let running_transport = setInterval(tick, step_speed_ms);
 let transport_on = true;
 let facet_patterns = {};
@@ -347,13 +348,20 @@ function calculateMaximumSamplesPlayedPerStep(bpm) {
 }
 
 function handleBpmChange() {
+  // compensate for any latency from the previous step
   step_speed_ms = ((60000 / bpm) / steps) * 4;
-  if ( step_speed_copy != step_speed_ms ) {
-   clearInterval(running_transport);
-   step_speed_copy = step_speed_ms;
-   // compensate for any latency from the previous step
-   running_transport = setInterval(tick, (new Date().getTime() + step_speed_ms) - new Date().getTime());
+  let latency_compensation_from_previous_step_ms = new Date().getTime() - next_step_expected_run_time;
+  clearInterval(running_transport);
+  step_speed_copy = step_speed_ms;
+  if ( latency_compensation_from_previous_step_ms > 100 ) {
+    // don't compensate for when "latency" from the previous step is > 100ms, as it would indicate
+    // the transport has just been restarted rather than due to latency
+    running_transport = setInterval(tick, step_speed_ms);
   }
+  else {
+    running_transport = setInterval(tick, step_speed_ms - latency_compensation_from_previous_step_ms);
+  }
+  next_step_expected_run_time = new Date().getTime() + (step_speed_ms - latency_compensation_from_previous_step_ms);
 }
 
 function reportTransportMetaData() {
