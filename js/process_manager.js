@@ -78,7 +78,15 @@ const commands = [
 
 // run command
 function runCommand(command, name, callback) {
-    child_process.exec(command, (error, stdout, stderr) => {});
+    let proc = child_process.exec(command, (error, stdout, stderr) => {});
+    // pipes the stdout and stderr from the child processes to
+    // the main process stdout in the terminal
+    proc.stdout.on('data', function(data) {
+      process.stdout.write(data);
+    });
+    proc.stderr.on('data', function(data) {
+      process.stderr.write(data);
+    });
 }
 
 // main calling function

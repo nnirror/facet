@@ -484,8 +484,31 @@ class FacetPattern {
   }
 
   key (key_string = "C major") {
-    let note_numbers_in_key = Midi.pcsetNearest(Scale.get(key_string).chroma);
-    this.data.map(note_numbers_in_key);
+    // get the chroma: Midi.pcsetNearest(Scale.get(key_string).chroma)
+    let chroma_key = Scale.get(key_string).chroma;
+    // check the modulo 12 of each variable. if it's 0, move it up 1 and try again. try 12 times then quit
+    let key_sequence = [];
+    for (let [k, step] of Object.entries(this.data)) {
+      step = Math.round(step);
+      let key_found = false, i = 0;
+      while ( key_found == false && i < 12 ) {
+        if ( chroma_key[step%12] == 1 ) {
+          // in key now
+          key_found = true;
+          key_sequence.push(step);
+          break;
+        }
+        else {
+          // not yet in key
+          step += 1;
+        }
+        i++;
+      }
+      if ( key_found == false ) {
+        key_sequence.push(0);
+      }
+    }
+    this.data = key_sequence;
     return this;
   }
 
