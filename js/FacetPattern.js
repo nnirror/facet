@@ -2097,11 +2097,11 @@ class FacetPattern {
       throw `.cc() 2nd argument: channel must be a number; type found: ${typeof channel}`;
     }
     this.scale(Math.min(...this.data)*127,Math.max(...this.data) * 127);
-    this.cc_data.push({
+    this.cc_data = {
       data:this.data,
       controller:controller,
       channel:channel
-    });
+    };
     return this;
   }
 
@@ -2145,20 +2145,23 @@ class FacetPattern {
 
   note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 1) {
     if ( typeof velocity == 'number' || Array.isArray(velocity) === true ) {
-      velocity = new FacetPattern().from(velocity);
+      velocity = new FacetPattern().from(velocity).size(this.data.length);
     }
     if ( typeof duration == 'number' || Array.isArray(duration) === true ) {
-      duration = new FacetPattern().from(duration);
+      duration = new FacetPattern().from(duration).size(this.data.length);
     }
     if ( typeof channel != 'number' ) {
       throw `3rd argument to .note(): channel must be a number; type found: ${typeof channel}`;
     }
-    this.notes.push({
-      data:this.data,
-      velocity:velocity,
-      duration:duration,
-      channel:channel
-    });
+
+    for (const [key, step] of Object.entries(this.data)) {
+      this.notes.push({
+        note:step,
+        velocity:velocity.data[key],
+        duration:duration.data[key],
+        channel:channel
+      });
+    }
     return this;
   }
 
@@ -2166,10 +2169,10 @@ class FacetPattern {
     if ( address.charAt(0) !== '/' ) {
       throw `invalid OSC address: ${address}. All OSC commands must have an address starting with the / character.`;
     }
-    this.osc_data.push({
+    this.osc_data = {
       data:this.data,
       address:address
-    });
+    };
     return this;
   }
 
@@ -2178,10 +2181,10 @@ class FacetPattern {
       throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
     }
     this.scale(-1,1);
-    this.pitchbend_data.push({
+    this.pitchbend_data = {
       data:this.data,
       channel:channel
-    });
+    };
     return this;
   }
 

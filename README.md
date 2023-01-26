@@ -47,7 +47,6 @@ Below the text editor, there are several UI elements which control the Facet ser
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
 - Slider for setting the BPM of the global transport (_note_: when the `.bpm()` operation runs, this value is updated automatically)
-- Slider for setting the number of steps in a whole note (_note_: when the `.steps()` operation runs, this value is updated automatically)
 - MIDI output selector / refresh button
 - ■ = stop playback
 - ⊖ = stop regenerating patterns but continue playback
@@ -74,9 +73,9 @@ $('example').sine(100,200).gain(mousey).play(); // cursor y position controls vo
 
 There are 128 notevalues variables, corresponding to divisions of 1 whole note. A whole note is `n1`, a half note is `n2`, etc... up to `n128`.
 
-#### bpm / steps
+#### bpm
 
-Both `bpm` and `steps`, representing the current BPM and number of steps per loop in the Facet transport, are available for use in commands as well.
+The variable `bpm` (representing the current BPM in the Facet transport when the FacetPattern is generated) is available for use in commands as well.
 
 ## Sample rate
 
@@ -97,14 +96,14 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 9-16`
 ---
 - **play** ( _FacetPattern_ )
-	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in _FacetPattern_, as the global transport steps through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
-	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play, given the number of steps.
+	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in _FacetPattern_, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
+	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or press the stop button "■".
 	- example:
 		- `$('example').randsamp().play();	// plays once at beginning of loop`
 		- `$('example').randsamp().play(0.5);	// plays once at middle point`
-		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random steps`
+		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random positions`
 ---
 - **record** ( _filename_, _length_in_samples_, _input_channel_ = 1)
 	- records a monophonic wav file into the `tmp` directory named `filename.wav`. The recorded wav file can then be loaded into FacetPatterns via the `.sample()` method. The file is recorded at 32-bit floating-point bit depth, at the sample rate configured in `config.js`.
@@ -146,16 +145,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(1,128).pitchbend();`
 
-### Methods for controlling transport steps & BPM
+### Methods for controlling transport BPM
 - **bpm** ( )
 	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
 	- example:
 		- `$('example').from([20,40,80,160,320]).shuffle().bpm(); // each loop will be all 5 of these BPM, randomly ordered`
----
-- **steps** ( )
-	- stores the FacetPattern data as the number of transport steps at any given point in time during each loop. When number of steps changes, the transport recalculates its speed.
-	- example:
-		- `$('example').ramp(4,128,64).steps(); // go from 4 steps/loop speed to 64 steps/loop speed, over the course of the loop`
 
 ### Methods for controlling pattern regeneration
 - **every** ( _n_loops_ )

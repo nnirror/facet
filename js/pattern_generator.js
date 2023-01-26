@@ -143,7 +143,6 @@ app.post('/stop', (req, res) => {
 
 app.post('/meta', (req, res) => {
   osc_package.send(new OSCPACKAGE.Message(`/bpm`, req.body.bpm));
-  osc_package.send(new OSCPACKAGE.Message(`/steps`, req.body.steps));
   res.sendStatus(200);
 });
 
