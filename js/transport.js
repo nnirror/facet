@@ -15,23 +15,21 @@ const osc_package = new OSCPACKAGE({
 const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const OSC_OUTPORT = FacetConfig.settings.OSC_OUTPORT;
-let cycles_elapsed = 0;
-let current_step = 1;
+const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
+let bars_elapsed = 0;
 let bpm = 90;
-let steps = 16;
-let step_speed_ms = ((60000 / bpm) / steps) * 2;
-let step_speed_copy = step_speed_ms;
-let next_step_expected_run_time = new Date().getTime() + step_speed_ms;
-let running_transport = setInterval(tick, step_speed_ms);
+let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
+let running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
+let current_relative_step_position = 0;
+let event_register = [];
 let transport_on = true;
 let facet_patterns = {};
-let playback_data = {};
 let meta_data = {
-  bpm: [90],
-  steps: [16]
+  bpm: [90]
 };
+let latency_counter = 0;
+let latency_calculated = 0;
 let prev_bpm;
-let prev_steps;
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
@@ -65,9 +63,6 @@ app.post('/meta', (req, res) => {
   if ( req.body.type == 'bpm' ) {
     meta_data.bpm = posted_pattern.data;
   }
-  if ( req.body.type == 'steps' ) {
-    meta_data.steps = posted_pattern.data;
-  }
   res.sendStatus(200);
 });
 
@@ -79,15 +74,108 @@ app.post('/play', (req, res) => {
 app.post('/update', (req, res) => {
   // only set data if the transport was not stopped while the pattern was generated
   if (transport_on === true) {
+
     let posted_pattern = JSON.parse(req.body.pattern);
-    facet_patterns[posted_pattern.name] = posted_pattern;
-    playback_data[posted_pattern.name] = {
-      sequence_data: posted_pattern.sequence_data,
-      notes: posted_pattern.notes,
-      cc_data: posted_pattern.cc_data,
-      pitchbend_data: posted_pattern.pitchbend_data,
-      osc_data: posted_pattern.osc_data,
-    };
+
+    if ( posted_pattern.sequence_data.length > 0 ) {
+      event_register[posted_pattern.name] = [];
+      posted_pattern.sequence_data.forEach((step) => {
+        event_register[posted_pattern.name].push(
+          {
+            position: step,
+            type: "audio",
+            data: [],
+          }
+        )
+      });
+    }
+
+    if ( posted_pattern.notes.length > 0 ) {
+      event_register[posted_pattern.name] = [];
+      for (var i = 0; i < posted_pattern.notes.length; i++) {
+        let note_data = posted_pattern.notes[i];
+        event_register[posted_pattern.name].push(
+          {
+            position: (i/posted_pattern.notes.length),
+            type: "note",
+            data: note_data,
+          }
+        )
+        for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
+          let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
+          // check if key needs to be locked
+          if ( posted_pattern.key_data !== false ) {
+            note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
+          }
+
+          event_register[posted_pattern.name].push(
+            {
+              position: (i/posted_pattern.notes.length),
+              type: "note",
+              data: {
+                note: note_to_add,
+                channel: note_data.channel,
+                velocity: note_data.velocity,
+                duration: note_data.duration
+              },
+            }
+          )
+        }
+      }
+    }
+
+    if ( typeof posted_pattern.cc_data.data !== 'undefined' ) {
+      event_register[posted_pattern.name] = [];
+      for (var i = 0; i < posted_pattern.cc_data.data.length; i++) {
+        let cc_object = {
+          data: posted_pattern.cc_data.data[i],
+          controller: posted_pattern.cc_data.controller,
+          channel: posted_pattern.cc_data.channel,
+        };
+        event_register[posted_pattern.name].push(
+          {
+            position: (i/posted_pattern.cc_data.data.length),
+            type: "cc",
+            data: cc_object,
+          }
+        )
+      }
+    }
+
+    if ( typeof posted_pattern.pitchbend_data.data !== 'undefined' ) {
+      event_register[posted_pattern.name] = [];
+      for (var i = 0; i < posted_pattern.pitchbend_data.data.length; i++) {
+        let pb_object = {
+          data: posted_pattern.pitchbend_data.data[i],
+          channel: posted_pattern.pitchbend_data.channel,
+        };
+        event_register[posted_pattern.name].push(
+          {
+            position: (i/posted_pattern.pitchbend_data.data.length),
+            type: "pitchbend",
+            data: pb_object,
+          }
+        )
+      }
+    }
+
+    if ( typeof posted_pattern.osc_data.data !== 'undefined' ) {
+      event_register[posted_pattern.name] = [];
+      for (var i = 0; i < posted_pattern.osc_data.data.length; i++) {
+        let osc_object = {
+          data: posted_pattern.osc_data.data[i],
+          address: posted_pattern.osc_data.address,
+        };
+        event_register[posted_pattern.name].push(
+          {
+            position: (i/posted_pattern.osc_data.data.length),
+            type: "osc",
+            data: osc_object,
+          }
+        )
+      }
+    }
+
   }
   res.sendStatus(200);
 });
@@ -114,20 +202,14 @@ app.post('/status', (req, res) => {
   // it's loaded into each FacetPattern instance on consruction
   fs.writeFileSync('js/env.js',
     calculateNoteValues(bpm) +
-    `var bpm=${bpm};var steps=${steps};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
+    `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
     ()=> {}
   );
   res.sendStatus(200);
 });
 
-app.post('/steps', (req, res) => {
-  meta_data.steps = [Math.abs(Number(req.body.steps))];
-  res.sendStatus(200);
-});
-
 app.post('/stop', (req, res) => {
-  facet_patterns = {};
-  playback_data = {};
+  event_register = [];
   transport_on = false;
   if ( typeof midioutput !== 'undefined' ) {
     midioutput.sendAllNotesOff();
@@ -138,237 +220,124 @@ app.post('/stop', (req, res) => {
 const server = app.listen(3211);
 
 function tick() {
-  if ( transport_on !== false) {
-    if (current_step == 1) {
+  // calculate based on bpm how many ticks at EVENT_RESOLUTION_MS equal a full loop
+  // first need to figure out how many events per second run at EVENT_RESOLUTION_MS = Math.round(1000 / EVENT_RESOLUTION_MS)
+  let events_per_second = 1000 / EVENT_RESOLUTION_MS; // for test purposes, 100 events per second at 10ms global event resolution
+  // now figure out how many seconds it will take for 4 quarter notes to occur: BPM / 4.
+  let loops_per_minute = bpm / 4; // in this case = 15
+  let loops_per_second = loops_per_minute / 60; // in this case = 0.25
+  let seconds_per_loop = 60 / loops_per_minute; // in this case = 4
+  let events_per_loop = seconds_per_loop * events_per_second; //  in this case, 4 * 100 = 400
+  let relative_step_amount_to_add_per_loop = 1 / events_per_loop; // in this case, 1/400 = 0.0025
+  current_relative_step_position += relative_step_amount_to_add_per_loop;
+  if ( current_relative_step_position > 1.00001 ) {
+    current_relative_step_position = 0;
+    bars_elapsed++;
+  }
+
+  let scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
+
+  let calcBpm = typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ? scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] : bpm;
+  try {
+    // when the bpm is scaled to match steps, it can have more than 1 value per step - this always selects the first
+    if (typeof calcBpm == 'object') {
+      bpm = calcBpm[0];
+    }
+  } catch (e) {
+
+  }
+  handleBpmChange();
+
+  if ( transport_on === true ) {
+    for (const [fp_name, fp_data] of Object.entries(event_register)) {
+      let count_times_fp_played = 0;
+      fp_data.forEach((event) => {
+        if ( event.position >= current_relative_step_position
+          && event.position < (current_relative_step_position + relative_step_amount_to_add_per_loop) ) {
+          // fire all events for this facetpattern matching the current step
+          if ( event.type === "audio" ) {
+            // play any audio files at this step
+            if ( count_times_fp_played < 1 ) {
+              exec(`${cross_platform_play_command} tmp${cross_platform_slash}${fp_name}-out.wav ${cross_platform_sox_config} gain -6`, (error, stdout, stderr) => {});
+            }
+            count_times_fp_played++;
+          }
+          if ( event.type === "note" ) {
+            // play any notes at this step
+            try {
+              if ( typeof midioutput !== 'undefined' ) {
+                midioutput.playNote(event.data.note, {
+                  rawAttack:event.data.velocity,
+                  channels:event.data.channel,
+                  duration:event.data.duration,
+                  rawRelease:64
+                });
+              }
+            } catch (e) {}
+          }
+
+          if ( event.type === "cc" ) {
+            // send any cc data at this step
+            try {
+              if ( typeof midioutput !== 'undefined' ) {
+                midioutput.sendControlChange(event.data.controller, Math.round(event.data.data), {
+                  channels:event.data.channel
+                });
+              }
+            } catch (e) {}
+          }
+
+          if ( event.type === "pitchbend" ) {
+            // send any pitchbend data at this step
+            try {
+              if ( typeof midioutput !== 'undefined' ) {
+                midioutput.sendPitchBend(event.data.data, {
+                  channels:event.data.channel
+                });
+              }
+            } catch (e) {}
+          }
+
+          if ( event.type === "osc" ) {
+            // send any osc data at this step
+            try {
+              osc_package.send(new OSCPACKAGE.Message(`/${event.data.address}`, event.data.data));
+            } catch (e) {}
+          }
+
+        }
+      });
+    }
+
+    if (current_relative_step_position == 0) {
       // tell pattern server to start processing next loop
       axios.get('http://localhost:1123/update');
     }
-    // main stepping loop
-    // first, check if bpm or steps needs to be recalculated
-    let scaledSteps = scalePatternToSteps(meta_data.steps,steps);
-    let calcSteps = typeof scaledSteps[current_step-1] != 'undefined' ? scaledSteps[current_step-1] : steps;
-    let scaledBpm = scalePatternToSteps(meta_data.bpm,steps);
-    let calcBpm = typeof scaledBpm[current_step-1] != 'undefined' ? scaledBpm[current_step-1] : bpm;
-    try {
-      // when the bpm is scaled to match steps, it can have more than 1 value per step - this always selects the first
-      if (typeof calcBpm == 'object') {
-        bpm = calcBpm[0];
-      }
-      if (typeof calcSteps == 'object') {
-        steps = calcSteps[0];
-      }
-    } catch (e) {
-
-    }
-    let max_steps_for_bpm = calculateMaximumSamplesPlayedPerStep(bpm);
-    if ( steps > max_steps_for_bpm ) {
-      steps = max_steps_for_bpm;
-    }
-    if ( (bpm != prev_bpm) || (steps != prev_steps) ) {
-      reportTransportMetaData(bpm,steps);
-    }
-
-    handleBpmChange();
-    let count_wav_files_played_this_step = 0;
-    // begin looping through all facet patterns, looking for wavs/notes/CCs to play
-    for (const [k, fp] of Object.entries(playback_data)) {
-      let playback_sequence_data_scaled = scalePatternToSteps(fp.sequence_data,max_steps_for_bpm);
-      count_wav_files_played_this_step = 0;
-      for (var j = 0; j < playback_sequence_data_scaled.length; j++) {
-        // sequence data is from 0-1 so it gets scaled into the step range at run time.
-        let sequence_step = Math.round(playback_sequence_data_scaled[j][0] * (steps)) + 1;
-        if (current_step == sequence_step) {
-          try {
-            // any pattern can play maximum 1 time per step
-            if ( count_wav_files_played_this_step < 1 ) {
-              exec(`${cross_platform_play_command} tmp${cross_platform_slash}${k}-out.wav ${cross_platform_sox_config} gain -6`, (error, stdout, stderr) => {});
-            }
-            count_wav_files_played_this_step++;
-          } catch (e) {}
-        }
-      }
-      try {
-        // MIDI note logic
-        let prev_velocity, prev_duration;
-        for (var j = 0; j < fp.notes.length; j++) {
-          let note = fp.notes[j];
-          if (!note) { continue; }
-          let scaled_data = scaleNotePatternToSteps(note.data,steps);
-          // now we need to loop thru scaled_data and find the corresponding v & d
-          let maximum_values_in_step = scaled_data[0].length;
-          let all_notes_in_step = scaled_data[current_step-1];
-          for (var p = 0; p < maximum_values_in_step; p++) {
-            let note_inside_step = all_notes_in_step[p];
-            if ( note_inside_step != 'skip' && !isNaN(note_inside_step) ) {
-              let velocity_data, duration_data;
-              velocity_data = scalePatternToSteps(note.velocity.data,steps);
-              let maximum_values_in_velocity_data = velocity_data[0].length;
-              let v;
-              if ( (p+1) > maximum_values_in_velocity_data ) {
-                v = Math.round(velocity_data[current_step-1][0]);
-              }
-              else {
-                v = Math.round(velocity_data[current_step-1][p]);
-              }
-              duration_data = scalePatternToSteps(note.duration.data,steps);
-              let maximum_values_in_duration_data = duration_data[0].length;
-              let d;
-              if ( (p+1) > maximum_values_in_duration_data ) {
-                d = duration_data[current_step-1][0];
-              }
-              else {
-                d = duration_data[current_step-1][p];
-              }
-              // generate MIDI note on/off pair for this step
-              let n = Math.round(note_inside_step);
-              let c = note.channel;
-              try {
-                if ( typeof midioutput !== 'undefined' ) {
-                  midioutput.playNote(n, {
-                    rawAttack:v,
-                    channels:c,
-                    duration:d,
-                    rawRelease:64
-                  });
-                }
-              } catch (e) {
-                throw e
-              }
-            }
-          }
-        }
-      } catch (e) {
-
-      } finally {
-
-      }
-
-      try {
-        // MIDI CC logic
-        for (var j = 0; j < fp.cc_data.length; j++) {
-          let cc = fp.cc_data[j];
-          // convert cc steps to positions based on global step resolution
-          let cc_fp = scalePatternToSteps(cc.data,steps);
-          let value = Math.round(cc_fp[current_step-1][0]);
-          if ( typeof midioutput !== 'undefined' ) {
-            midioutput.sendControlChange(cc.controller, value, {
-              channels:cc.channel
-            });
-          }
-        }
-
-        // MIDI pitchbend logic
-        for (var j = 0; j < fp.pitchbend_data.length; j++) {
-          let pb = fp.pitchbend_data[j];
-          // convert cc steps to positions based on global step resolution
-          let pb_fp = scalePatternToSteps(pb.data,steps);
-          let value = pb_fp[current_step-1][0];
-          if ( typeof midioutput !== 'undefined' ) {
-            midioutput.sendPitchBend(value, {
-              channels:pb.channel
-            });
-          }
-        }
-      } catch (e) {
-
-      } finally {
-
-      }
-
-      try {
-        // OSC logic
-        for (var j = 0; j < fp.osc_data.length; j++) {
-          let od = fp.osc_data[j];
-          // convert OSC steps to positions based on global step resolution
-          let od_fp = scalePatternToSteps(od.data,steps);
-          let value = od_fp[current_step-1][0];
-          osc_package.send(new OSCPACKAGE.Message(`/${od.address}`, value));
-        }
-      } catch (e) {
-
-      } finally {
-
-      }
-
-    }
-    if ( current_step >= steps ) {
-      // go back to the first step
-      current_step = 1;
-      cycles_elapsed++;
-    }
-    else {
-      current_step++;
-    }
-    prev_bpm = bpm;
-    prev_steps = steps;
-  }
-}
-
-function calculateMaximumSamplesPlayedPerStep(bpm) {
-  // scale the playback facet pattern steps based
-  // on the current bpm to prevent overloading
-  // while allowing a step-by-step playback triggering speed
-  // near the 30Hz audio rate at that bpm
-  if ( bpm <= 2 )  {
-    return 4096;
-  }
-  else if ( bpm <= 4 )  {
-    return 2048;
-  }
-  else if ( bpm <= 6 ) {
-    return 1024;
-  }
-  else if ( bpm <= 12.5 )  {
-    return 512;
-  }
-  else if ( bpm <= 25 )  {
-    return 256;
-  }
-  else if ( bpm <= 50 )  {
-    return 128;
-  }
-  else if ( bpm <= 100 )  {
-    return 64;
-  }
-  else if ( bpm <= 200 )  {
-    return 32;
-  }
-  else if ( bpm <= 400 )  {
-    return 16;
-  }
-  else if ( bpm <= 800 )  {
-    return 8;
-  }
-  else if ( bpm <= 1600 )  {
-    return 4;
-  }
-  else {
-    return 2;
   }
 }
 
 function handleBpmChange() {
   // compensate for any latency from the previous step
-  step_speed_ms = ((60000 / bpm) / steps) * 4;
   let latency_compensation_from_previous_step_ms = new Date().getTime() - next_step_expected_run_time;
-  clearInterval(running_transport);
-  step_speed_copy = step_speed_ms;
   if ( latency_compensation_from_previous_step_ms > 100 ) {
     // don't compensate for when "latency" from the previous step is > 100ms, as it would indicate
     // the transport has just been restarted rather than due to latency
-    running_transport = setInterval(tick, step_speed_ms);
+    running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
+    next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
   }
   else {
-    running_transport = setInterval(tick, step_speed_ms - latency_compensation_from_previous_step_ms);
+    // apply calculated latency to next 16 steps
+    clearInterval(running_transport);
+    running_transport = setInterval(tick, (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms));
+    next_step_expected_run_time = new Date().getTime() + (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms);
+    latency_calculated = 0;
   }
-  next_step_expected_run_time = new Date().getTime() + (step_speed_ms - latency_compensation_from_previous_step_ms);
 }
 
 function reportTransportMetaData() {
   axios.post('http://localhost:1123/meta',
     {
-      bpm: JSON.stringify(bpm),
-      steps: JSON.stringify(steps)
+      bpm: JSON.stringify(bpm)
     }
   )
   .catch(function (error) {
@@ -387,26 +356,6 @@ function scalePatternToSteps(pattern,steps) {
         upscaled_data.push(pattern[n]);
         i++;
       }
-    }
-    return simpleReduce(upscaled_data, steps);
-  }
-  else {
-    // downscale
-    return simpleReduce(pattern, steps);
-  }
-}
-
-function scaleNotePatternToSteps(pattern,steps) {
-  // scale note pattern onto a bar of length _steps_.
-  if (pattern.length < steps ) {
-    // upscale
-    let upscaled_data = new Array(steps).fill('skip');
-    for (var n = 0; n < pattern.length; n++) {
-      let relative_index = n/(pattern.length);
-      if (isNaN(relative_index)) {
-        relative_index = 0;
-      }
-      upscaled_data[Math.floor(relative_index * steps)] = pattern[n];
     }
     return simpleReduce(upscaled_data, steps);
   }

@@ -79,13 +79,6 @@ $(document).keydown(function(e) {
     $('#bpm').blur();
   }
 
-  // set steps & unfocus the the #steps input when user hits enter while focused on it
-  if ( $('#steps').is(':focus') && e.keyCode == 13 ) {
-    $.post('http://127.0.0.1:3211/steps', {steps:Math.round($('#steps').val())}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
-    $('#steps').blur();
-  }
 });
 
 function runFacet() {
@@ -195,10 +188,6 @@ osc.on('/bpm', message => {
   $('#bpm').val(`${message.args[0]}`);
 });
 
-osc.on('/steps', message => {
-  $('#steps').val(`${message.args[0]}`);
-});
-
 osc.on('/cpu', message => {
   let cpu_percent = parseFloat(message.args[0]).toFixed(2).substring(0,4);
   $('#cpu').html(cpu_percent + '%&nbsp;cpu');
@@ -239,7 +228,6 @@ function setStatus(status) {
 // end OSC
 
 let bpm=90;
-let steps=16;
 // check every 10ms for bpm change and send if changed
 setInterval(function () {
   prev_bpm = bpm;
@@ -250,15 +238,6 @@ setInterval(function () {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
   }
-
-  prev_steps = steps;
-  steps = $('#steps').val();
-  if ( !isNaN(steps) && steps >= 1 && ( Math.abs(steps-prev_steps) == 1 ) ) {
-    $.post('http://127.0.0.1:3211/steps', {steps:Math.round(steps)}).done(function( data, status ) {}).fail(function(data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
-  }
 }, 10);
 
 $('#bpm').val(90);
-$('#steps').val(16);
