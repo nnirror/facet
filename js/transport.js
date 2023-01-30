@@ -273,9 +273,7 @@ function tick() {
                   rawRelease:64
                 });
               }
-            } catch (e) {
-              throw e
-            }
+            } catch (e) {}
           }
 
           if ( event.type === "cc" ) {
@@ -286,9 +284,7 @@ function tick() {
                   channels:event.data.channel
                 });
               }
-            } catch (e) {
-              throw e
-            }
+            } catch (e) {}
           }
 
           if ( event.type === "pitchbend" ) {
@@ -299,18 +295,14 @@ function tick() {
                   channels:event.data.channel
                 });
               }
-            } catch (e) {
-              throw e
-            }
+            } catch (e) {}
           }
 
           if ( event.type === "osc" ) {
             // send any osc data at this step
             try {
               osc_package.send(new OSCPACKAGE.Message(`/${event.data.address}`, event.data.data));
-            } catch (e) {
-              throw e
-            }
+            } catch (e) {}
           }
 
         }
