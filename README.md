@@ -77,6 +77,10 @@ There are 128 notevalues variables, corresponding to divisions of 1 whole note. 
 
 The variable `bpm` (representing the current BPM in the Facet transport when the FacetPattern is generated) is available for use in commands as well.
 
+#### bars
+
+The variable `bars` (representing how many loops have occurred since the time the server was started) is available for use in commands as well. This is especially useful with the modulo % operator, e.g.: `bars%4`, which could be either 0, 1, 2, or 3, depending on how many loops have occurred.
+
 ## Sample rate
 
 You can change the sample rate for the audio generated and played back with Facet by modifying `SAMPLE_RATE` in `js/config.js` to whatever integer you want.
@@ -129,6 +133,31 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 	- example:
 		- `$('example').drunk(64,0.1).cc();`
+---
+**chord** ( _chord_name_, _inversion_mode_ = 0 )
+	- creates a chord of MIDI notes for every value in the FacetPatter's data.
+	- Here is a list of the possible chord names, as well as a numerical representation of the intervals in that chord:
+	```
+	maj / major = 0,4,7
+	min / minor = 0,3,7
+	fifth / 5th = 0,5
+	seventh / 7th = 0,4,7,10
+	major seventh / maj7 = 0,4,7,11
+	minor seventh / m7 = 0,3,7,10
+	diminished / dim = -1,2,5
+	add2 = 0,2,4,7
+	add9 = 0,4,7,14
+	```
+	-	The `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
+	- _Note_: to force chords into a certain key, use the `key()` operation after the `chord()` operation.
+	- example:
+		- `$('example').ramp(36,72,32).chord('maj7').offset((bars%4)*12).key('F# major').note(50,100,1);`
+---
+- **key** ( _key_and_scale_ )
+	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` function uses the TonalJS npm package as a scale dictionary.
+	- possible keys: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
+	- possible scales: ["ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian", "bebop", "bebop dominant", "bebop major", "chromatic", "ichikosucho", "ionian pentatonic", "major pentatonic", "ritusen"]
+	- example: `$('example').randsamp().reduce(32).scale(36,51).key("F# bebop").note();`
 ---
 - **osc** ( _address_ )
 	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
@@ -384,12 +413,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- changes values in the FacetPattern.  `prob` (float 0-1) sets the likelihood of each value changing. `amt` is how much bigger or smaller the changed values can be. If `amt` is set to 2, and `prob` is set to 0.5 half the values could have any number between 2 and -2 added to them.
 	- example:
 		- `$('example').drunk(128,0.05).jam(0.1,0.7); // small 128 step random walk with larger deviations from the jam`
----
-- **key** ( _key_and_scale_ )
-	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` function uses the TonalJS npm package as a scale dictionary.
-	- possible keys: "A", "A#", "B", "B#", "C", "C#", "D", "D#", "E", "E#", "F", "F#", "G", "G#"
-	- possible scales: ["ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian", "bebop", "bebop dominant", "bebop major", "chromatic", "ichikosucho", "ionian pentatonic", "major pentatonic", "ritusen"]
-	- example: `$('example').randsamp().reduce(32).scale(36,51).key("F# bebop").note();`
 ---
 - **lt** ( _amt_ )
 	- returns `1` for every value in the FacetPattern less than `amt` and `0` for all other values.

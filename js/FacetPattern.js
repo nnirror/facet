@@ -17,10 +17,12 @@ class FacetPattern {
     this.name = name ? name : Math.random();
     this.bpm_pattern = false;
     this.cc_data = [];
+    this.chord_intervals = [];
     this.dacs = '1 1';
     this.data = [];
     this.do_not_regenerate = false;
     this.env = this.getEnv();
+    this.key_data = false;
     this.loops_since_generation = 1;
     this.notes = [];
     this.regenerate_every_n_loops = 1;
@@ -486,6 +488,45 @@ class FacetPattern {
   key (key_string = "C major") {
     // get the chroma: Midi.pcsetNearest(Scale.get(key_string).chroma)
     let chroma_key = Scale.get(key_string).chroma;
+    let key_letter = key_string.split(' ')[0].toLowerCase();
+
+    if ( key_letter == 'a' ) {
+      chroma_key = this.stringLeftRotate(chroma_key,3);
+    }
+    else if ( key_letter == 'a#' ) {
+      chroma_key = this.stringLeftRotate(chroma_key,2);
+    }
+    else if ( key_letter == 'b' ) {
+      chroma_key = this.stringLeftRotate(chroma_key,1);
+    }
+    else if ( key_letter == 'c' ) {
+      // no rotation needed, chroma defaults to c at root
+    }
+    else if ( key_letter == 'c#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,1);
+    }
+    else if ( key_letter == 'd' ) {
+      chroma_key = this.stringRightRotate(chroma_key,2);
+    }
+    else if ( key_letter == 'd#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,3);
+    }
+    else if ( key_letter == 'e' ) {
+      chroma_key = this.stringRightRotate(chroma_key,4);
+    }
+    else if ( key_letter == 'f' ) {
+      chroma_key = this.stringRightRotate(chroma_key,5);
+    }
+    else if ( key_letter == 'f#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,6);
+    }
+    else if ( key_letter == 'g' ) {
+      chroma_key = this.stringRightRotate(chroma_key,7);
+    }
+    else if ( key_letter == 'g#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,8);
+    }
+
     // check the modulo 12 of each variable. if it's 0, move it up 1 and try again. try 12 times then quit
     let key_sequence = [];
     for (let [k, step] of Object.entries(this.data)) {
@@ -508,6 +549,7 @@ class FacetPattern {
         key_sequence.push(0);
       }
     }
+    this.key_data = key_string;
     this.data = key_sequence;
     return this;
   }
@@ -2105,6 +2147,76 @@ class FacetPattern {
     return this;
   }
 
+  chord (chord_name, inversion_mode = 0) {
+    const VALID_CHORD_NAMES = [
+      'maj', 'major',
+      'min', 'minor',
+      'fifth', '5th', '5',
+      'seventh', '7th', '7',
+      'major seventh', 'maj7',
+      'minor seventh', 'm7',
+      'diminished', 'dim',
+      'add2', 'add9'
+    ];
+    if ( !VALID_CHORD_NAMES.includes(chord_name) ) {
+      throw `invalid chord name: ${chord_name}`;
+    }
+
+    let chord_intervals_to_add = [];
+    switch (chord_name) {
+      case 'maj':
+        chord_intervals_to_add = [4,7];
+      case 'major':
+        chord_intervals_to_add = [4,7];
+      case 'min':
+            chord_intervals_to_add = [3,7];
+      case 'minor':
+          chord_intervals_to_add = [3,7];
+      case 'fifth':
+          chord_intervals_to_add = [7];
+      case '5th':
+          chord_intervals_to_add = [7];
+      case 'seventh':
+          chord_intervals_to_add = [4,7,10];
+      case '7th':
+          chord_intervals_to_add = [4,7,10];
+      case 'major seventh':
+        chord_intervals_to_add = [4,7,11];
+      case 'maj7':
+        chord_intervals_to_add = [4,7,11];
+      case 'minor seventh':
+        chord_intervals_to_add = [3,7,10];
+      case 'm7':
+        chord_intervals_to_add = [3,7,10];
+      case 'diminished':
+        chord_intervals_to_add = [-1,2,5];
+      case 'dim':
+        chord_intervals_to_add = [-1,2,5];
+      case 'add2':
+        chord_intervals_to_add = [2,4,7];
+      case 'add9':
+        chord_intervals_to_add = [4,7,14];
+        break;
+      default:
+    }
+
+    if ( inversion_mode == 1 ) {
+      chord_intervals_to_add[0] -= 12;
+    }
+    else if ( inversion_mode == 2 ) {
+      chord_intervals_to_add[0] -= 12;
+      chord_intervals_to_add[1] -= 12;
+    }
+    else if ( inversion_mode == 3 ) {
+      chord_intervals_to_add[0] -= 12;
+      chord_intervals_to_add[1] -= 12;
+      chord_intervals_to_add[2] -= 12;
+    }
+
+    this.chord_intervals = chord_intervals_to_add;
+    return this;
+  }
+
   every (n_loops = 1) {
     this.regenerate_every_n_loops = Math.abs(Math.round(n_loops)) == 0 ? 1 : Math.abs(Math.round(n_loops));
     return this;
@@ -2314,6 +2426,15 @@ class FacetPattern {
     return fs.readFileSync('js/utils.js', 'utf8', (err, data) => {
       return data;
     });
+  }
+
+  stringLeftRotate(str, d) {
+    return str.substring(d, str.length) + str.substring(0, d);
+  }
+
+
+  stringRightRotate(str, d) {
+    return this.stringLeftRotate(str, str.length - d);
   }
 
   isFacetPattern(t) {

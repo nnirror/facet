@@ -16,6 +16,7 @@ const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const OSC_OUTPORT = FacetConfig.settings.OSC_OUTPORT;
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
+let bars_elapsed = 0;
 let bpm = 90;
 let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
 let running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
@@ -100,6 +101,26 @@ app.post('/update', (req, res) => {
             data: note_data,
           }
         )
+        for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
+          let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
+          // check if key needs to be locked
+          if ( posted_pattern.key_data !== false ) {
+            note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
+          }
+
+          event_register[posted_pattern.name].push(
+            {
+              position: (i/posted_pattern.notes.length),
+              type: "note",
+              data: {
+                note: note_to_add,
+                channel: note_data.channel,
+                velocity: note_data.velocity,
+                duration: note_data.duration
+              },
+            }
+          )
+        }
       }
     }
 
@@ -181,7 +202,7 @@ app.post('/status', (req, res) => {
   // it's loaded into each FacetPattern instance on consruction
   fs.writeFileSync('js/env.js',
     calculateNoteValues(bpm) +
-    `var bpm=${bpm};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
+    `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
     ()=> {}
   );
   res.sendStatus(200);
@@ -211,6 +232,7 @@ function tick() {
   current_relative_step_position += relative_step_amount_to_add_per_loop;
   if ( current_relative_step_position > 1.00001 ) {
     current_relative_step_position = 0;
+    bars_elapsed++;
   }
 
   let scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
