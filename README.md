@@ -138,9 +138,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').drunk(64,0.1).cc();`
 ---
-**chord** ( _chord_name_, _inversion_mode_ = 0 )
+- **chord** ( _chord_name_, _inversion_mode_ = 0 )
 	- creates a chord of MIDI notes for every value in the FacetPatter's data.
 	- Here is a list of the possible chord names, as well as a numerical representation of the intervals in that chord:
+	```
 	maj / major = 0,4,7
 	min / minor = 0,3,7
 	fifth / 5th = 0,5
@@ -150,6 +151,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	diminished / dim = -1,2,5
 	add2 = 0,2,4,7
 	add9 = 0,4,7,14
+	```
 	- The `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
 	- _Note_: to force chords into a certain key, use the `key()` operation after the `chord()` operation.
 	- example:
