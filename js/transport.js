@@ -18,6 +18,7 @@ const OSC_OUTPORT = FacetConfig.settings.OSC_OUTPORT;
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 let bars_elapsed = 0;
 let bpm = 90;
+let prev_bpm = 90;
 let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
 let running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
 let current_relative_step_position = 0;
@@ -29,7 +30,6 @@ let meta_data = {
   bpm: [90]
 };
 let latency_counter = 0;
-let prev_bpm;
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
@@ -340,7 +340,7 @@ function handleBpmChange() {
       next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
     }
 
-    if ( bpm_changed_manually === true ) {
+    if ( bpm_changed_manually === true || bpm != prev_bpm ) {
       reportTransportMetaData();
       bpm_changed_manually = false;
     }
