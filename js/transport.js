@@ -22,6 +22,7 @@ let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
 let running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
 let current_relative_step_position = 0;
 let event_register = [];
+let bpm_changed_manually = false;
 let transport_on = true;
 let facet_patterns = {};
 let meta_data = {
@@ -61,6 +62,7 @@ app.post('/midi', (req, res) => {
 app.post('/meta', (req, res) => {
   let posted_pattern = JSON.parse(req.body.pattern);
   if ( req.body.type == 'bpm' ) {
+    bpm_changed_manually = true;
     meta_data.bpm = posted_pattern.data;
   }
   res.sendStatus(200);
@@ -333,7 +335,10 @@ function handleBpmChange() {
     running_transport = setInterval(tick, (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms));
     next_step_expected_run_time = new Date().getTime() + (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms);
     latency_calculated = 0;
-    reportTransportMetaData();
+    if ( bpm_changed_manually === true ) {
+      reportTransportMetaData();
+      bpm_changed_manually = false;
+    }
   }
 }
 
