@@ -340,7 +340,7 @@ function handleBpmChange() {
       next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
     }
 
-    if ( bpm_changed_manually === true || bpm != prev_bpm ) {
+    if ( bpm_changed_manually === true ) {
       reportTransportMetaData();
       bpm_changed_manually = false;
     }
