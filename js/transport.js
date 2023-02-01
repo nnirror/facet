@@ -29,7 +29,6 @@ let meta_data = {
   bpm: [90]
 };
 let latency_counter = 0;
-let latency_calculated = 0;
 let prev_bpm;
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
@@ -323,18 +322,24 @@ function tick() {
 function handleBpmChange() {
   // compensate for any latency from the previous step
   let latency_compensation_from_previous_step_ms = new Date().getTime() - next_step_expected_run_time;
-  if ( latency_compensation_from_previous_step_ms > 100 ) {
+  clearInterval(running_transport);
+  if ( latency_compensation_from_previous_step_ms > 100 || latency_compensation_from_previous_step_ms < 0 ) {
     // don't compensate for when "latency" from the previous step is > 100ms, as it would indicate
     // the transport has just been restarted rather than due to latency
     running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
     next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
   }
   else {
-    // apply calculated latency to next 16 steps
-    clearInterval(running_transport);
-    running_transport = setInterval(tick, (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms));
-    next_step_expected_run_time = new Date().getTime() + (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms);
-    latency_calculated = 0;
+    // apply calculated latency to next steps
+    if (latency_compensation_from_previous_step_ms > 0 ) {
+      running_transport = setInterval(tick, (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms));
+      next_step_expected_run_time = new Date().getTime() + (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms);
+    }
+    else {
+      running_transport = setInterval(tick, EVENT_RESOLUTION_MS);
+      next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
+    }
+
     if ( bpm_changed_manually === true ) {
       reportTransportMetaData();
       bpm_changed_manually = false;
