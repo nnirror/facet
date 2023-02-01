@@ -31,7 +31,6 @@ class FacetPattern {
     this.pitchbend_data = [];
     this.sequence_data = [];
     this.skipped = false;
-    this.steps_pattern = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
     this.utils = this.env + this.getUtils();
@@ -530,6 +529,10 @@ class FacetPattern {
     // check the modulo 12 of each variable. if it's 0, move it up 1 and try again. try 12 times then quit
     let key_sequence = [];
     for (let [k, step] of Object.entries(this.data)) {
+      if (step < 0) {
+        key_sequence.push(-1);
+        continue;
+      }
       step = Math.round(step);
       let key_found = false, i = 0;
       while ( key_found == false && i < 12 ) {
@@ -546,7 +549,7 @@ class FacetPattern {
         i++;
       }
       if ( key_found == false ) {
-        key_sequence.push(0);
+        key_sequence.push(-1);
       }
     }
     this.key_data = key_string;
@@ -2371,11 +2374,6 @@ class FacetPattern {
     if ( Math.random() < prob ) {
       eval(this.utils + command);
     }
-    return this;
-  }
-
-  steps () {
-    this.steps_pattern = new FacetPattern().from(this.data).round().clip(1,8192);
     return this;
   }
   // END special operations

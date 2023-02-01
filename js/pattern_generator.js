@@ -60,9 +60,6 @@ module.exports = {
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
             }
-            if ( fp.steps_pattern !== false ) {
-              postMetaDataToTransport(fp.steps_pattern,'steps');
-            }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
               // create wav file at FACET_SAMPLE_RATE, 32-bit floating point
               storeAnyPatterns(fp);

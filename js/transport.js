@@ -94,32 +94,34 @@ app.post('/update', (req, res) => {
       event_register[posted_pattern.name] = [];
       for (var i = 0; i < posted_pattern.notes.length; i++) {
         let note_data = posted_pattern.notes[i];
-        event_register[posted_pattern.name].push(
-          {
-            position: (i/posted_pattern.notes.length),
-            type: "note",
-            data: note_data,
-          }
-        )
-        for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
-          let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
-          // check if key needs to be locked
-          if ( posted_pattern.key_data !== false ) {
-            note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
-          }
-
+        if ( note_data.note >= 0 ) {
           event_register[posted_pattern.name].push(
             {
               position: (i/posted_pattern.notes.length),
               type: "note",
-              data: {
-                note: note_to_add,
-                channel: note_data.channel,
-                velocity: note_data.velocity,
-                duration: note_data.duration
-              },
+              data: note_data,
             }
           )
+          for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
+            let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
+            // check if key needs to be locked
+            if ( posted_pattern.key_data !== false ) {
+              note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
+            }
+
+            event_register[posted_pattern.name].push(
+              {
+                position: (i/posted_pattern.notes.length),
+                type: "note",
+                data: {
+                  note: note_to_add,
+                  channel: note_data.channel,
+                  velocity: note_data.velocity,
+                  duration: note_data.duration
+                },
+              }
+            )
+          }
         }
       }
     }
@@ -246,9 +248,9 @@ function tick() {
   } catch (e) {
 
   }
-  handleBpmChange();
 
   if ( transport_on === true ) {
+    handleBpmChange();
     for (const [fp_name, fp_data] of Object.entries(event_register)) {
       let count_times_fp_played = 0;
       fp_data.forEach((event) => {
@@ -331,6 +333,7 @@ function handleBpmChange() {
     running_transport = setInterval(tick, (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms));
     next_step_expected_run_time = new Date().getTime() + (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms);
     latency_calculated = 0;
+    reportTransportMetaData();
   }
 }
 
