@@ -1470,9 +1470,6 @@ class FacetPattern {
   }
 
   scale (new_min, new_max) {
-    if ( this.data.length == 1 ) {
-      return [(Number(new_max) + Number(new_min)) / 2];
-    }
     // first determine existing range
     let min = Math.min.apply(Math, this.data);
     let max = Math.max.apply(Math, this.data);
@@ -1480,7 +1477,19 @@ class FacetPattern {
       new_max = new_min;
       new_min *= -1;
     }
-    // now scale each value based on new_min, new_max
+
+    // special handling if only one value in the pattern
+    if ( this.data.length == 1 ) {
+      if (this.data[0] <= new_min ) {
+        this.data[0] = new_min;
+      }
+      else if (this.data[0] >= new_max ) {
+        this.data[0] = new_max;
+      }
+      return this.data;
+    }
+
+    // otherwise scale each value based on new_min, new_max
     let scaled_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
       let new_val = this.scaleInner(step, [min,max], [Number(new_min), Number(new_max)]);

@@ -141,25 +141,25 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **chord** ( _chord_name_, _inversion_mode_ = 0 )
 	- creates a chord of MIDI notes for every value in the FacetPattern's data.
 	- Here is a list of the possible chord names, as well as a numerical representation of the intervals in that chord:
-	
+
 	`maj` / `major` = `0,4,7`
-	
+
 	`min` / `minor` = `0,3,7`
-	
+
 	`fifth` / `5th` = `0,5`
-	
+
 	`seventh` / `7th` = `0,4,7,10`
-	
+
 	`major seventh` / `maj7` = `0,4,7,11`
-	
+
 	`minor seventh` / `m7` = `0,3,7,10`
-	
+
 	`diminished` / `dim` = `-1,2,5`
-	
+
 	`add2` = `0,2,4,7`
-	
+
 	`add9` = `0,4,7,14`
-	
+
 	- The `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
 	- _Note_: to force chords into a certain key, use the `key()` operation after the `chord()` operation.
 	- example:
@@ -217,6 +217,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ---
 - **random** ( _min_ = 0, _max_ = 1, _int_mode_ = 0 )
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
+	- you can also use these shorthands for a random float: `rf(min,max)` and a random integer: `ri(min,max)`.
 	- example:
 		- `$('example').sine(random(1,1000,1),40).play(); // a sine wave with 1 - 1000 cycles`
 

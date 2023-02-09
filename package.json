@@ -1,6 +1,6 @@
 {
   "name": "facet",
-  "version": "0.5.21",
+  "version": "0.5.22",
   "description": "Facet is a live coding system for algorithmic music",
   "main": "index.js",
   "directories": {
