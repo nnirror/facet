@@ -1773,6 +1773,25 @@ class FacetPattern {
     return this;
   }
 
+  stutter (repeats, start_pos = 0, end_pos = 1) {
+    repeats = Math.abs(Math.round(Number(repeats)));
+    if ( repeats < 1 ) {
+      throw `stutter repeat value must be greater than 0, value found: ${repeats}`;
+    }
+    start_pos = Math.abs(Number(start_pos));
+    if ( start_pos > 1 ) {
+      throw `stutter start_pos value must be between 0 and 1, value found: ${start_pos}`;
+    }
+    end_pos = Math.abs(Number(end_pos));
+    if ( end_pos > 1 ) {
+      throw `stutter end_pos value must be between 0 and 1, value found: ${end_pos}`;
+    }
+    let original_length = this.data.length;
+    let stutter_fp = new FacetPattern().from(this.range(start_pos,end_pos).data).speed(1/repeats).dup(repeats-1).size(original_length);
+    this.data = stutter_fp.data;
+    return this;
+  }
+
   subset (percentage) {
     percentage = Number(percentage);
     if ( percentage < 0 ) {
@@ -2133,6 +2152,27 @@ class FacetPattern {
     }
     this.data = out;
     this.flatten();
+    return this;
+  }
+
+  rechunk (chunks) {
+    if ( !chunks ) {
+      chunks = this.data.length;
+    }
+    chunks = Math.abs(Math.round(Number(chunks)));
+    if ( chunks < 1 ) {
+      throw `rechunk pieces value must be greater than 0, value found: ${chunks}`;
+    }
+    if ( chunks > this.data.length ) {
+      throw `rechunk pieces value must be less than the total pattern length, value found: ${chunks}`;
+    }
+    let shuffle_chunks = new FacetPattern();
+    let unique_random_indices = new FacetPattern().ramp(0,chunks-1,chunks).normalize().data.sort((a, b) => 0.5 - Math.random());
+    for (var i = 0; i < unique_random_indices.length; i++) {
+      let individual_chunk = new FacetPattern().from(this.data).range(unique_random_indices[i],unique_random_indices[i] + 1/chunks).fade(0.01);
+      shuffle_chunks.append(individual_chunk);
+    }
+    this.data = shuffle_chunks.flatten().data;
     return this;
   }
   // END audio operations

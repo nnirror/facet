@@ -600,6 +600,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example
 		- `$('example').sine(1,1000).sticky(0.98); // glitchy sine`
 ---
+- **stutter** ( _number_of_repeats_, _start_pos_ = 0, _end_pos_ = 1 )
+	- creates `_number_of_repeats_` identical chunks of data, calculated from the `start_pos` and `end_pos` values, which represent two relative positions between 0 and 1 in the input FacetPattern's data. After all the repeats have been appended to it, the FacetPattern is resized back to its original length.
+	- example
+		- `$('example').sine(100,100).stutter(16,random(),random()).size(n1).play(); // copies a unique sub-section of the same sine wave 16 times`
+---
 - **subset** ( _percentage_ )
 	- returns a subset of the FacetPattern with `percentage`% values in it.
 	- example:
@@ -727,6 +732,11 @@ Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary ope
 	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them.
 	- example:
 		- `$('example').randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
+---
+- **rechunk** ( _chunks_ )
+	- slices the input FacetPattern into `chunks` chunks and shuffles the chunks around.
+	- example:
+		- `$('example').randsamp().rechunk(16).play();	// 16 slices from the sample in random order`
 ---
 - **randfile** ( _dir_ = `../files/` )
 	- loads a random file from the `files` directory into memory. The default directory is `../files/`, but you can supply any directory as an argument.
