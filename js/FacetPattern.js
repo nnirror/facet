@@ -2378,6 +2378,7 @@ class FacetPattern {
       throw `2nd argument must be a function, type found: ${typeof command}`;
     }
     command = command.toString();
+    command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     prob = Math.abs(Number(prob));
     if ( Math.random() < prob ) {
