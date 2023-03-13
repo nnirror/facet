@@ -47,13 +47,14 @@ module.exports = {
     fs.writeFileSync('js/stored.json', '{}');
   },
   run: (code) => {
-    if ( percent_cpu < 100 ) {
+    if ( percent_cpu < 0.9 ) {
       const worker = new Worker("./js/run.js", {workerData: {code: code, vars: {}}});
       worker.once("message", run_data => {
           let fps = run_data.fps;
           let errors = run_data.errors;
           Object.values(fps).forEach(fp => {
-            if ( fp.do_not_regenerate === false ) {
+            // if failed execution BUT doesnt exist in reruns yet, you can add it. otherwise skip any failed executions
+            if ( fp.do_not_regenerate === false && ( fp.executed_successfully == true || ( fp.executed_successfully == false && reruns.hasOwnProperty(fp.name) == false ) ) ) {
               // don't add to reruns if it's meant to not regenerate via .keep()
               reruns[fp.name] = fp;
             }
@@ -187,8 +188,9 @@ process.on('SIGINT', () => {
 });
 
 function getCpuUsage () {
-  os_utils.cpuUsage( (percent_cpu) => {
-    osc_package.send(new OSCPACKAGE.Message('/cpu', Math.round(percent_cpu*100)));
+  os_utils.cpuUsage( (cpu) => {
+    percent_cpu = cpu;
+    osc_package.send(new OSCPACKAGE.Message('/cpu', Math.round(cpu*100)));
   });
 }
 

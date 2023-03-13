@@ -280,8 +280,9 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').cosine(2,30); // 2 cycles, 30 values each`
 ---
-- **spiral** ( _length_, _degrees_ = 137.5 )
+- **spiral** ( _length_, _degrees_ = 137.5, _angle_phase_offset_ = 0 )
 	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to 137.5 which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
+	- The `angle_phase_offset` argument changes where the sequence starts. At its default value of 0, the first value will be 0. You can supply any float between 0 and 1, and the sequence will begin at that value instead.
 	- example:
 		- `$('example').sine(1,1000).times(_.spiral(1000,random(1,360))); // an interesting, modulated sine wave`
 		- `$('example').spiral(100); // defaults to a Fibonacci leaf spiral`
@@ -437,8 +438,8 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from(0.1,0.3,0.5,0.7]).lte(0.5); // 1 1 1 0`
 ---
-- **log** ( _base_, _direction_ )
-	- stretches a FacetPattern according to a logarithmic curve `base`, where the values at the end can be stretched for a significant portion of the FacetPattern, and the values at the beginning can be squished together. If `direction` is negative, returns the FacetPattern in reverse.
+- **log** ( _intensity_ , _direction_ )
+	- stretches a FacetPattern according to a logarithmic curve, where the values at the end can be stretched for a significant portion of the FacetPattern, and the values at the beginning can be squished together. The intensity of the curve is controlled by `intensity`, which accepts a float between 0 and 1. If `direction` is negative, it returns the FacetPattern in reverse.
 	- example:
 		- `$('example').ramp(1,0,1000).log(100); // a logarithmic curve from 1 to 0`
 ---

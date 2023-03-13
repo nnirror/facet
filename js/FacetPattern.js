@@ -22,6 +22,7 @@ class FacetPattern {
     this.data = [];
     this.do_not_regenerate = false;
     this.env = this.getEnv();
+    this.executed_successfully = true;
     this.key_data = false;
     this.loops_since_generation = 1;
     this.notes = [];
@@ -190,8 +191,22 @@ class FacetPattern {
     if (!dir) {
       dir = `./samples`;
     }
-    var files = fs.readdirSync(dir);
-    let chosenFile = files[Math.floor(Math.random() * files.length)];
+    let files, chosenFile;
+    try {
+      // try loading the directory exactly as it's supplied
+      files = fs.readdirSync(dir);
+      chosenFile = files[Math.floor(Math.random() * files.length)];
+    } catch (e) {
+      // try appending './samples' to the supplied directory name
+      try {
+        dir = `./samples/${dir}`;
+        files = fs.readdirSync(dir);
+        chosenFile = files[Math.floor(Math.random() * files.length)];
+      } catch (er) {
+        // directory not found
+        throw er;
+      }
+    }
     let buffer;
     let fp_found = false;
     let load_attempts = 0;
@@ -322,6 +337,7 @@ class FacetPattern {
   }
 
   spiral (length, angle_degrees = 137.5, angle_phase_offset = 0) {
+    angle_phase_offset = Math.abs(Number(angle_phase_offset));
     let spiral_sequence = [], i = 1, angle = 360 * angle_phase_offset;
     angle_degrees = Math.abs(Number(angle_degrees));
     length = Math.abs(Number(length));
@@ -1052,6 +1068,15 @@ class FacetPattern {
       this.warp(base, rotation);
       return this;
   }
+
+  logslider(position) {
+  var minp = 0;
+  var maxp = 1;
+  var minv = Math.log(0.1);
+  var maxv = Math.log(1000);
+  var scale = (maxv-minv) / (maxp-minp);
+  return Math.exp(minv + scale*(position-minp));
+}
 
   biquad(a,b,c,d,e) {
     // implemented based on: https://docs.cycling74.com/max7/tutorials/08_filterchapter02
@@ -1977,6 +2002,7 @@ class FacetPattern {
     let warp_sequence = [];
     let length = this.data.length;
     base = Math.abs(Number(base));
+    base = this.logslider(base);
     rotation = Number(rotation);
     let curve = new Float32Array(length), index, x = 0, i;
     // create a curve that will be used to look up the original pattern's keys nonlinearly

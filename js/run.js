@@ -11,9 +11,10 @@ function runCode (code, vars) {
   let fps = [];
   let run_errors = [];
   user_input = commentStripper.stripComments(code);
-  let commands = user_input.trim().split(';').filter(Boolean);
+  user_input = delimitEndsOfCommands(user_input);
+  let commands = splitCommandsOnDelimiter(user_input);
   Object.values(commands).forEach(command => {
-    let original_command = command;
+    let original_command = replaceDelimiterWithSemicolon(command);
     command = formatCode(command);
     try {
       let fp = eval(env + utils + command);
@@ -31,8 +32,9 @@ function runCode (code, vars) {
       // succeed because all exceptions are caught rather than thrown,
       // and the error messages from any caught exceptions are put into an
       // errors object which is then passed to the UI. graceful error handling
-      let failed_fp = new FacetPattern();
+      let failed_fp = new FacetPattern(original_command);
       failed_fp.original_command = original_command;
+      failed_fp.executed_successfully = false;
       fps.push(failed_fp);
       run_errors.push(e);
     }
@@ -50,4 +52,34 @@ function formatCode (user_input) {
   // anyonymous FacetPattern instantiation via "_." shorthand
   user_input = user_input.replace(/_\./g, '$().');
   return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
+}
+
+function delimitEndsOfCommands (code) {
+  let out = '';
+  let scope_depth = 0;
+  for (let x = 0, c=''; c = code.charAt(x); x++) {
+    if ( c === '{' ) {
+      scope_depth++;
+    }
+    else if ( c === '}' ) {
+      scope_depth--;
+    }
+    if ( c === ';' && scope_depth === 0 ) {
+      // end of command found. replace with delimiter '>|<',
+      // to be changed back into a semicolon prior to evaluation.
+      out += '>|<';
+    }
+    else {
+      out += c;
+    }
+  }
+  return out;
+}
+
+function replaceDelimiterWithSemicolon (command) {
+  return command.replace('>|<', ';');
+}
+
+function splitCommandsOnDelimiter (user_input) {
+  return user_input.trim().split('>|<').filter(Boolean);
 }
