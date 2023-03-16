@@ -58,6 +58,10 @@ module.exports = {
               // don't add to reruns if it's meant to not regenerate via .keep()
               reruns[fp.name] = fp;
             }
+            if ( fp.send_debug_data === true ) {
+              // send fp data to browser for debugging purposes
+              osc_package.send(new OSCPACKAGE.Message('/debug', JSON.stringify(fp.data)));
+            }
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
             }

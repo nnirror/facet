@@ -193,6 +193,11 @@ osc.on('/cpu', message => {
   $('#cpu').html(cpu_percent + '%&nbsp;cpu');
 });
 
+osc.on('/debug', message => {
+  // prints the pattern data to the browser console for debugging purposes
+  console.log(JSON.parse(message.args[0]));
+});
+
 osc.on('/errors', message => {
   $.growl.error({ message: message.args[0] });
 });

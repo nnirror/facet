@@ -18,7 +18,6 @@ const OSC_OUTPORT = FacetConfig.settings.OSC_OUTPORT;
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 let bars_elapsed = 0;
 let bpm = 90;
-let prev_bpm = 90;
 let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
 let running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
 let current_relative_step_position = 0;
@@ -86,6 +85,7 @@ app.post('/update', (req, res) => {
             position: step,
             type: "audio",
             data: [],
+            bpm_at_generation_time: posted_pattern.bpm_at_generation_time
           }
         )
       });
@@ -100,7 +100,7 @@ app.post('/update', (req, res) => {
             {
               position: (i/posted_pattern.notes.length),
               type: "note",
-              data: note_data,
+              data: note_data
             }
           )
           for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
@@ -250,6 +250,7 @@ function tick() {
 
   }
 
+
   if ( transport_on === true ) {
     handleBpmChange();
     for (const [fp_name, fp_data] of Object.entries(event_register)) {
@@ -260,8 +261,9 @@ function tick() {
           // fire all events for this facetpattern matching the current step
           if ( event.type === "audio" ) {
             // play any audio files at this step
+            // include a calculated "tempo" argument to handle the possibility of a difference between the fp.bpm_at_generation_time and the current bpm
             if ( count_times_fp_played < 1 ) {
-              exec(`${cross_platform_play_command} tmp${cross_platform_slash}${fp_name}-out.wav ${cross_platform_sox_config} gain -6`, (error, stdout, stderr) => {});
+              exec(`${cross_platform_play_command} tmp${cross_platform_slash}${fp_name}-out.wav ${cross_platform_sox_config} gain -6 tempo ${bpm / event.bpm_at_generation_time}`, (error, stdout, stderr) => {});
             }
             count_times_fp_played++;
           }

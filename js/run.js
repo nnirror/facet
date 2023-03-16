@@ -18,6 +18,11 @@ function runCode (code, vars) {
     command = formatCode(command);
     try {
       let fp = eval(env + utils + command);
+      // parse the current BPM and add it as a property of the FP.
+      // the BPM at generation time is needed in the transport - if BPM has changed
+      // since the pattern was generated, it will play back at a corresponding
+      // faster or slower speed
+      fp.bpm_at_generation_time = parseBpmFromEnv(env);
       fp.original_command = original_command;
       fps.push(fp);
     } catch (e) {
@@ -82,4 +87,8 @@ function replaceDelimiterWithSemicolon (command) {
 
 function splitCommandsOnDelimiter (user_input) {
   return user_input.trim().split('>|<').filter(Boolean);
+}
+
+function parseBpmFromEnv (env_str) {
+   return env_str.match(/bpm=[\d]+[.]*[\d]+/gm)[0].split('bpm=')[1];
 }

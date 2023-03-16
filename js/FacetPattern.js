@@ -25,12 +25,14 @@ class FacetPattern {
     this.executed_successfully = true;
     this.key_data = false;
     this.loops_since_generation = 1;
+    this.bpm_at_generation_time = -1;
     this.notes = [];
     this.regenerate_every_n_loops = 1;
     this.original_command = '';
     this.osc_data = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
+    this.send_debug_data = false;
     this.skipped = false;
     this.store = [];
     this.stored_patterns = this.getPatterns();
@@ -279,9 +281,23 @@ class FacetPattern {
   }
 
   file (file_name) {
-    this.data = fs.readFileSync(`./files/${file_name}`, (err, data) => {
-      return [...data];
-    }).toJSON().data;
+    try {
+      // first try loading the file from the files directory
+      this.data = fs.readFileSync(`./files/${file_name}`, (err, data) => {
+        return [...data];
+      }).toJSON().data;
+    }
+    catch (e) {
+      try {
+        // then try loading the resource exactly as provided
+        this.data = fs.readFileSync(`${file_name}`, (err, data) => {
+          return [...data];
+        }).toJSON().data;
+      }
+      catch (er) {
+        throw er;
+      } 
+    }
     this.clip(-1,1);
     return this;
   }
@@ -2292,6 +2308,11 @@ class FacetPattern {
     }
 
     this.chord_intervals = chord_intervals_to_add;
+    return this;
+  }
+
+  debug () {
+    this.send_debug_data = true;
     return this;
   }
 

@@ -118,7 +118,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- The `input_channel` corresponds to that channel on your computer's currently selected default audio input device. If you want to use a different audio input device with Facet, simply select it as your computer's default audio input device.
 	- **NOTE**: This method does not generate data in the FacetPattern where it's running; it records and saves a wav file which must then be loaded into a FacetPattern via the `.sample()` method.
 	- example:
-		- `$('a').record('test123',n16).sample('test123').play(_.ramp(0,1,16)); // each loop, record a sample 1/16th the loop size named test123.wav and play back the recording from the previous loop 16 times`
+		- `$('example').record('test123',n16).sample('test123').play(_.ramp(0,1,16)); // each loop, record a sample 1/16th the loop size named test123.wav and play back the recording from the previous loop 16 times`
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
@@ -202,6 +202,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
 	- example:
 		- `$('example').sine(random(10,500,1),50).keep().play();`
+
+### Methods for debugging
+- **debug** ( )
+	- prints the FacetPattern's data in the browser's developer console, which can be useful while writing and debugging commands.
+	- example:
+		- `$('example').noise(16).debug(); // 16 random floats between 0 and 1 are printed in the developer console`
 
 ### Single number generators
 - **choose** ( _pattern_ )
@@ -419,7 +425,9 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').from([0,0.1,0.5,0.667,1]).invert(); // 1 0.9 0.5 0.333 0`
 ---
 - **iter** ( _num_times_, _commands_ = function(), _prob_ = 1 )
-	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs. You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
+	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
+	- You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
+	- The variable `i`, referring to the current iteration number starting at 0, is also available for use in commands.
 	- example:
 		- `$('example').randsamp().iter(8,()=>{this.delay(random(1,2000))}).scale(-1,1).play(); // 8 delay lines between 1 and 2000 samples`
 ---
@@ -572,6 +580,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ---
 - **slices** ( _num_slices_, _commands_ = function, _prob_ = 1 )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
+	- The variable `i`, referring to the current slice number starting at 0, is also available for use in commands.
 	- example:
 		- `$('example').randsamp().slices(32,()=>{this.fft().shift(random()).ifft()}).play();`
 ---
@@ -726,9 +735,11 @@ Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary ope
 		- `$('example').randsamp().delay(random(1700,10000)).play();`
 ---
 - **file** ( _filename_ )
-	- loads the raw data of any file inside the `files/` directory into memory. You can supply any file type, not just images.
+	- loads the raw data of any file into memory. You can supply any file type.
+	- By default, it checks for a file in the `files` subdirectory. If no file exists there, it will try to load the file as an absolute path on your hard drive. 
 	- example:
 		- `$('example').file('my_image.png').play(); // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!`
+		- `$('example').file('/Users/my_username/Desktop/myfile.zip').play(); // example with a supplied absolute file path`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them.
 	- example:
