@@ -369,7 +369,9 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ---
 - **fft** ( )
 	- computes the FFT of the FacetPattern, translating the FacetPattern data into "phase data" that could theoretically reconstruct it using sine waves.
+	- **NOTE**: by default, this command will compute the FFT for the entire input FacetPattern, which can produce artifacts with patterns larger than the typical FFT window sample sizes (> 8192). In order to avoid this, first use the `slices()` command to slice the pattern into smaller chunks, then run the FFT on each of those chunks.
 	- example:
+		- `$('example').randsamp().slices(32,()=>{this.fft().shift(rf()).ifft()}).play(); // break the sample into 32 slices, compute the FFT for each slice, shift each slice's spectral data by a random amount, and run IFFT to return back into the audio realm before playback`
 		- `$('example').from([1,0,1,1]).fft(); // 3 0 0 1 1 0 0 -1`
 ---
 - **flipAbove** ( _maximum_ )

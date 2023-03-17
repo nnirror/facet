@@ -987,8 +987,6 @@ class FacetPattern {
     let out = f.createComplexArray();
     f.inverseTransform(out, data);
     this.data = f.fromComplexArray(out);
-    // IFFT result here is a palindrome; we only want the first half
-    this.range(0,0.5);
     return this;
   }
 
