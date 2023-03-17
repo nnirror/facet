@@ -11,6 +11,16 @@ onmousemove = function(e) {
   mousey = Math.abs(1-(e.clientY/window.innerHeight));
 }
 
+try {
+  let facet_history = localStorage.getItem('facet_history');
+  if ( facet_history ) {
+    cm.setValue(facet_history);
+  }
+}
+catch (e) {
+  // do nothing because there's nothing saved in localStorage
+}
+
 function getFirstLineOfBlock(initial_line) {
   // true if line above is empty or the line number gets to 0
   let above_line_is_empty = false;
@@ -78,7 +88,11 @@ $(document).keydown(function(e) {
     });
     $('#bpm').blur();
   }
+});
 
+$(document).keyup(function(e) {
+  // save the entire text block in localstorage
+  localStorage.setItem('facet_history', cm.getValue());
 });
 
 function runFacet() {
@@ -181,7 +195,7 @@ $('body').on('click', '#end', function() {
 
 // begin OSC
 const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
-osc.open();
+setInterval(()=>{osc.open()}, 1000);
 checkStatus();
 
 osc.on('/bpm', message => {
