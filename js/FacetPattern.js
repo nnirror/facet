@@ -2168,7 +2168,7 @@ class FacetPattern {
       out.push(chunk_fp.data);
     }
     this.data = out;
-    this.flatten();
+    this.flatten().audio();
     return this;
   }
 
