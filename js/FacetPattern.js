@@ -27,6 +27,7 @@ class FacetPattern {
     this.loops_since_generation = 1;
     this.bpm_at_generation_time = -1;
     this.notes = [];
+    this.play_once = false;
     this.regenerate_every_n_loops = 1;
     this.original_command = '';
     this.osc_data = [];
@@ -2371,6 +2372,12 @@ class FacetPattern {
         channel:channel
       });
     }
+    return this;
+  }
+
+  once () {
+    this.play_once = true;
+    this.do_not_regenerate = true;
     return this;
   }
 

@@ -93,7 +93,7 @@ By default, Facet checks every 2 milliseconds whether it needs to fire any event
 
 ### Outputs
 
-Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default. In order to only regenerate every n loops, use the `.every()` function.
+Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default. In order to only regenerate every n loops, use the `.every()` function. In order to only play back once, use the `.once()` function.
 
 ### Audio input and output
 - **channel** ( _channels_ )
@@ -202,6 +202,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
 	- example:
 		- `$('example').sine(random(10,500,1),50).keep().play();`
+---
+- **once** (  )
+	- only play the generated FacetPattern a single time. Without including `once()`, the FacetPattern will regenerate and play back each loop by default.
+	- example:
+		- `$('example').noise(4096).play().once();`
 
 ### Methods for debugging
 - **debug** ( )

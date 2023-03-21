@@ -85,7 +85,8 @@ app.post('/update', (req, res) => {
             position: step,
             type: "audio",
             data: [],
-            bpm_at_generation_time: posted_pattern.bpm_at_generation_time
+            bpm_at_generation_time: posted_pattern.bpm_at_generation_time,
+            play_once: posted_pattern.play_once
           }
         )
       });
@@ -100,7 +101,8 @@ app.post('/update', (req, res) => {
             {
               position: (i/posted_pattern.notes.length),
               type: "note",
-              data: note_data
+              data: note_data,
+              play_once: posted_pattern.play_once
             }
           )
           for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
@@ -118,7 +120,8 @@ app.post('/update', (req, res) => {
                   note: note_to_add,
                   channel: note_data.channel,
                   velocity: note_data.velocity,
-                  duration: note_data.duration
+                  duration: note_data.duration,
+                  play_once: posted_pattern.play_once
                 },
               }
             )
@@ -140,6 +143,7 @@ app.post('/update', (req, res) => {
             position: (i/posted_pattern.cc_data.data.length),
             type: "cc",
             data: cc_object,
+            play_once: posted_pattern.play_once
           }
         )
       }
@@ -157,6 +161,7 @@ app.post('/update', (req, res) => {
             position: (i/posted_pattern.pitchbend_data.data.length),
             type: "pitchbend",
             data: pb_object,
+            play_once: posted_pattern.play_once
           }
         )
       }
@@ -174,6 +179,7 @@ app.post('/update', (req, res) => {
             position: (i/posted_pattern.osc_data.data.length),
             type: "osc",
             data: osc_object,
+            play_once: posted_pattern.play_once
           }
         )
       }
@@ -308,6 +314,11 @@ function tick() {
             try {
               osc_package.send(new OSCPACKAGE.Message(`/${event.data.address}`, event.data.data));
             } catch (e) {}
+          }
+
+          // remove any events from the event register that are intended to play only once
+          if ( event.play_once === true ) {
+            delete event_register[fp_name];
           }
 
         }
