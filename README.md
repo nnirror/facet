@@ -324,6 +324,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').turing(16).at(0,1); // the 1st value of the 16-step Turing sequence (i.e. 0% position) is always 1`
 		- `$('example').turing(16).at(0.5,2); // the 9th value of the 16-step Turing sequence (i.e. 50% position) is always 2`
 ---
+- **bpf** ( _cutoff_ = 1000, _q_ = 2.5 )
+	- applies a bandpass filter with configurable `cutoff` and `q` to the FacetPattern.
+	- example:
+		- `$('example').noise(n1).bpf(1000,6).gain(0.1).play(); // band-passed noise`
+---
 - **changed** ( )
 	- returns a 1 or 0 for each value in the FacetPattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the FacetPattern.)
 	- example:
@@ -415,6 +420,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
 ---
+- **hpf** ( _cutoff_ = 100, _q_ = 2.5 )
+	- applies a high pass filter with configurable `cutoff` and `q` to the FacetPattern.
+	- example:
+		- `$('example').noise(n1).hpf(2000,6).gain(0.1).play(); // high-passed noise`
+---
 - **ifft** ( )
 	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
 	- example:
@@ -459,9 +469,9 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').ramp(1,0,1000).log(100); // a logarithmic curve from 1 to 0`
 ---
 - **lpf** ( _cutoff_ )
-	- applies a simple low pass filter to the FacetPattern.
+	- applies a low pass filter with configurable `cutoff` and `q` to the FacetPattern.
 	- example:
-		- `$('example').noise(n1).lpf(random(1,1000)); // low-passed noise`
+		- `$('example').noise(n1).lpf(1000,6).gain(0.1).play(); // low-passed noise`
 ---
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.

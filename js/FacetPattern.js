@@ -5,6 +5,7 @@ const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
+const BiQuadFilter = require('./lib/BiQuadFilter.js').BiQuadFilter;
 const FFT = require('./lib/fft.js');
 const { Midi, Scale } = require("tonal");
 const http = require('http');
@@ -1163,25 +1164,43 @@ class FacetPattern {
     return this;
   }
 
-  lpf (cutoff) {
-    // copy-modded from: https://github.com/rochars/low-pass-filter/blob/master/index.js
-    let numChannels = 1;
-    let rc = 1.0 / (cutoff * 2 * Math.PI);
-    let dt = 1.0 / FACET_SAMPLE_RATE;
-    let alpha = dt / (rc + dt);
-    let last_val = [];
-    let offset;
-    for (let i=0; i<numChannels; i++) {
-        last_val[i] = this.data[i];
+    
+  lpf (cutoff = 2000 , q = 2.5) {
+    // first argument is 0 for type = lpf. last arg is the filter gain (1)
+    BiQuadFilter.create(0,cutoff,FACET_SAMPLE_RATE,q,1);
+    let out = [];
+    for ( var i = 1; i < 6; i++ ) {
+      var v = BiQuadFilter.constants()[i-1];
+      v = BiQuadFilter.formatNumber(v,8);
+      out.push(v);
     }
-    for (let i=0; i<this.data.length; i++) {
-      for (let j=0; j< numChannels; j++) {
-          offset = (i * numChannels) + j;
-          last_val[j] =
-              last_val[j] + (alpha * (this.data[offset] - last_val[j]));
-          this.data[offset] = last_val[j];
-      }
+    this.biquad(out[2],out[3],out[4],out[0],out[1]);
+    return this;
+  }
+
+  hpf (cutoff = 100, q = 2.5) {
+    // first argument is 1 for type = hpf. last arg is the filter gain (1)
+    BiQuadFilter.create(1,cutoff,FACET_SAMPLE_RATE,q,1);
+    let out = [];
+    for ( var i = 1; i < 6; i++ ) {
+      var v = BiQuadFilter.constants()[i-1];
+      v = BiQuadFilter.formatNumber(v,8);
+      out.push(v);
     }
+    this.biquad(out[2],out[3],out[4],out[0],out[1]);
+    return this;
+  }
+
+  bpf (cutoff = 1000, q = 2.5) {
+    // first argument is 2 for type = bpf. last arg is the filter gain (1)
+    BiQuadFilter.create(2,cutoff,FACET_SAMPLE_RATE,q,1);
+    let out = [];
+    for ( var i = 1; i < 6; i++ ) {
+      var v = BiQuadFilter.constants()[i-1];
+      v = BiQuadFilter.formatNumber(v,8);
+      out.push(v);
+    }
+    this.biquad(out[2],out[3],out[4],out[0],out[1]);
     return this;
   }
 
