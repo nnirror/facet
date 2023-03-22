@@ -206,23 +206,3 @@ BiQuadFilter.formatNumber = function(n,p) {
 module.exports = {
   BiQuadFilter: BiQuadFilter
 };
-
-// filter type, cutoff, sr, q, gain
-// BiQuadFilter.create(0,100,44100,2.5,1);
-//   let lemma = [];
-//   let out = [];
-//   for(var i = 1; i < 6;i++) {
-//     var v = BiQuadFilter.constants()[i-1]; // contains [a1,a2,b0,b1,b2]
-//     v = BiQuadFilter.formatNumber(v,8);
-//     lemma.push(v);
-//   }
-//   out[0] = lemma[2];
-//   out[1] = lemma[3];
-//   out[2] = lemma[4];
-//   out[3] = lemma[0];
-//   out[4] = lemma[1];
-//   console.log(out);
-//   // the numbers in out can go directly into biquad.
-//   // all you need to do is create different functions that are for filter type: bandpass = 2, lowpass = 0, highpass = 1  to start
-//   // then you send the sample rate constant and the gain as 1
-//   // and it's only cutoff and q that are the arguments.
