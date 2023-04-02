@@ -95,7 +95,7 @@ By default, Facet checks every 2 milliseconds whether it needs to fire any event
 
 Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default. In order to only regenerate every n loops, use the `.every()` function. In order to only play back once, use the `.once()` function.
 
-### Audio input and output
+### Audio output
 - **channel** ( _channels_ )
 	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
 	- example:
@@ -113,12 +113,10 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().play(0.5);	// plays once at middle point`
 		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random positions`
 ---
-- **record** ( _filename_, _length_in_samples_, _input_channel_ = 1)
-	- records a monophonic wav file into the `tmp` directory named `filename.wav`. The recorded wav file can then be loaded into FacetPatterns via the `.sample()` method. The file is recorded at 32-bit floating-point bit depth, at the sample rate configured in `config.js`.
-	- The `input_channel` corresponds to that channel on your computer's currently selected default audio input device. If you want to use a different audio input device with Facet, simply select it as your computer's default audio input device.
-	- **NOTE**: This method does not generate data in the FacetPattern where it's running; it records and saves a wav file which must then be loaded into a FacetPattern via the `.sample()` method.
+- **saveAs** ( _filename_ )
+	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. **NOTE**: the directory must already exist.
 	- example:
-		- `$('example').record('test123',n16).sample('test123').play(_.ramp(0,1,16)); // each loop, record a sample 1/16th the loop size named test123.wav and play back the recording from the previous loop 16 times`
+		- `$('example').iter(6,()=>{this.append(_.sine(random(1,40,1),100)).saveAs('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
@@ -226,6 +224,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').sine(50,40).size(ms(5)).play(); // 5ms sine wave`
 		- `$('example').sine(50,40).size(ms(50)).play(); // 50ms sine wave`
 ---
+- **mtof** ( _midi_note_number_ )
+	- converts the supplied `_midi_note_number_` value to its corresponding frequency in Hz.
+	- example:
+		- `$('example').sine(100,mtof(choose([36,38,40,41,43,45,47,48]))).play(); // random sine wave each loop, each of which shares a relative major key`
+---
 - **random** ( _min_ = 0, _max_ = 1, _int_mode_ = 0 )
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
 	- you can also use these shorthands for a random float: `rf(min,max)` and a random integer: `ri(min,max)`.
@@ -285,6 +288,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- stores a FacetPattern in memory for temporary reference in future operations. **NOTE**: You cannot run `.get()` in the same block of commands where the pattern was initially stored via `.set()`. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
 		- example:
 		- `$('example').noise(32).set('my_pattern');`
+---
+- **silence** ( _length_ )
+	- generates silence (many 0s in a row) for `length` samples.
+	- example:
+		- `$('example').silence(n2).append(_.noise(n2)); // first half of loop is silence, second half is noise`
 ---
 - **sine** ( _periods_, _length_ )
 	- generates a cosine for `periods` periods, each period having `length` values.
@@ -563,11 +571,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').phasor(1,20).gain(10).saturate(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
 ---
-- **saveAs** ( _filename_ )
-	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. **NOTE**: the directory must already exist.
-	- example:
-		- `$('example').iter(6,()=>{this.append(_.sine(random(1,40,1),100)).saveAs('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.`
----
 - **scale** ( _new_min_, _new_max_ )
 	- moves the FacetPattern to a new range, from `new_min` to `new_max`. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
 	- if no value is entered for `new_max`, then the first argument will be used to create the `new_min` and `new_max`, centered around 0. For instance, `scale(1) == scale(-1,1)`
@@ -757,6 +760,12 @@ Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary ope
 	- example:
 		- `$('example').file('my_image.png').play(); // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!`
 		- `$('example').file('/Users/my_username/Desktop/myfile.zip').play(); // example with a supplied absolute file path`
+---
+- **harmonics** ( _FacetPattern_, _amplitude_ = 0.9 )
+	- superimposes `FacetPattern.length` copies of the input FacetPattern onto the output. Each number in `FacetPattern` corresponds to the frequency of the harmonic it will add, which is a copy of the input signal playing at a different speed. Each harmonic `n` in the output sequence is slightly lower in level, by 0.9^n. 
+	- **NOTE**: if the input FacetPattern is large enough, even the harmonic "copies" playing at slower or faster speeds might still sound like discrete copies, rather than a "harmonic" as it is traditionally understood. To avoid this, you can use the `slices()` command first to slice the pattern into smaller chunks, then run the `harmonics()` command on each of those chunks.
+	- example:
+		`$('example').randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them.
 	- example:

@@ -47,7 +47,7 @@ module.exports = {
     fs.writeFileSync('js/stored.json', '{}');
   },
   run: (code) => {
-    if ( percent_cpu < 0.9 ) {
+    if ( percent_cpu < 0.5 ) {
       const worker = new Worker("./js/run.js", {workerData: {code: code, vars: {}}});
       worker.once("message", run_data => {
           let fps = run_data.fps;

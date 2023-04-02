@@ -87,12 +87,11 @@ class FacetPattern {
   }
 
   cosine (periods, length) {
-    let cosine_sequence = [];
     periods = Math.round(Math.abs(Number(periods)));
     if ( periods < 1 ) {
       periods = 1;
     }
-    length =Math.round(Math.abs(Number(length)));
+    length = Math.round(Math.abs(Number(length)));
     // apply a 0.25 phase shift to a sine
     this.sine(periods, length);
     this.shift(((1/periods) * 0.25));
@@ -239,12 +238,28 @@ class FacetPattern {
     return this;
   }
 
-  record (file_name, length_in_samples = FACET_SAMPLE_RATE, input_channel = 1) {
-    input_channel = Math.abs(Math.round(Number(input_channel)));
-    length_in_samples = Math.abs(Math.round(Number(length_in_samples)));
-    exec(`${cross_platform_record_command} -b 32 tmp${cross_platform_slash}${file_name}.wav trim 0 ${this.convertSamplesToSeconds(length_in_samples)} remix ${input_channel} rate ${FACET_SAMPLE_RATE}`, (error, stdout, stderr) => {
+  stitchdir (dir) {
+    if (!dir) {
+      dir = `./samples`;
+    }
+    let files;
+    try {
+      // try loading the directory exactly as it's supplied
+      files = fs.readdirSync(dir);
+    } catch (e) {
+      // try appending './samples' to the supplied directory name
+      try {
+        dir = `./samples/${dir}`;
+        files = fs.readdirSync(dir);
+      } catch (er) {
+        // directory not found
+        throw er;
+      }
+    }
+    let stitch_cmd = `cp ./scripts/stitchdir.sh ${dir}/stitchdir.sh && cd ${dir} && sh stitchdir.sh && rm in.wav && rm stitchdir.sh`;
+    exec(stitch_cmd, (error, stdout, stderr) => {
       if (error) {
-        throw `error recording file: ${file_name}`;
+        throw `error stitching file`;
       }
     });
     return this;
@@ -254,32 +269,48 @@ class FacetPattern {
     if ( !file_name.includes('.wav') ) {
       file_name = `${file_name}.wav`;
     }
-
-    // first check if the file even exists - if not, don't waste any more resources
-    try {
-      if (fs.existsSync(`./samples/${file_name}`)) {}
-    } catch(err) {
-      throw `sample file does not exist: ${file_name}`;
-      return this;
-    }
-
-    // next, try loading as normal
+    // first, try loading from the samples directory
     try {
       let buffer = fs.readFileSync(`./samples/${file_name}`);
       this.data = this.loadBuffer(buffer);
       return this;
     } catch (e) {
       try {
-        // samples with a different bit depth might need to be converted to 32f
-        // converted to 32f bit depth, otherise they don't load properly.
-        let wav = new WaveFile(fs.readFileSync(`./samples/${file_name}`));
-        wav.toBitDepth("32f");
-        this.data = wav.getSamples();
-        return this.flatten();
-      } catch (err) {
+        // next, try loading from an absolute file location
+        let buffer = fs.readFileSync(`${file_name}`);
+        this.data = this.loadBuffer(buffer);
         return this;
       }
+      catch (er) {
+        try {
+          // samples with a different bit depth might need to be converted to 32f
+          // converted to 32f bit depth, otherise they don't load properly.
+          // first try from the absolute file location
+          let wav = new WaveFile(fs.readFileSync(`${file_name}`));
+          wav.toBitDepth("32f");
+          this.data = wav.getSamples();
+          return this.flatten();
+        } catch (err) {
+          try {
+            // then try from the samples directory
+            let wav = new WaveFile(fs.readFileSync(`./samples/${file_name}`));
+            wav.toBitDepth("32f");
+            this.data = wav.getSamples();
+            return this.flatten();
+          }
+          catch (error) {
+            // can't find the wav file
+            throw error;
+          }
+        }
+      }
     }
+  }
+
+  silence (length) {
+    length = Math.abs(Math.round(Number(length)));
+    this.data = new FacetPattern().noise(length).gain(0).data;
+    return this;
   }
 
   file (file_name) {
@@ -354,7 +385,7 @@ class FacetPattern {
     return this;
   }
 
-  spiral (length, angle_degrees = 137.5, angle_phase_offset = 0) {
+  spiral (length, angle_degrees = 360/length, angle_phase_offset = 0) {
     angle_phase_offset = Math.abs(Number(angle_phase_offset));
     let spiral_sequence = [], i = 1, angle = 360 * angle_phase_offset;
     angle_degrees = Math.abs(Number(angle_degrees));
@@ -364,7 +395,7 @@ class FacetPattern {
     }
     while ( i <= length ) {
       angle += angle_degrees;
-      if (angle > 359) {
+      if (angle >= 360) {
         angle = Math.abs(360 - angle);
       }
       // convert degrees back to radians, and then to a 0. - 1. range
@@ -717,6 +748,7 @@ class FacetPattern {
       delay_out[i] = ((original_value*dry) + (copy.data[i]*wet));
     }
     this.data = delay_out;
+    this.gain(1.5);
     return this;
   }
 
@@ -979,6 +1011,45 @@ class FacetPattern {
       gte_sequence[key] = (Number(step) >= Number(amt)) ? 1 : 0;
     }
     this.data = gte_sequence;
+    return this;
+  }
+
+  harmonics (ctrl_sequence, amplitude = 0.9) {
+    if ( !this.isFacetPattern(ctrl_sequence) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof ctrl_sequence}`;
+    }
+    let harmonics_array = [];
+    let harmonics_sequence = [];
+    ctrl_sequence.reduce(32);
+    for (var i = 0; i < ctrl_sequence.data.length; i++) {
+      let harmonic_gain = Math.pow(amplitude, i);
+      let harmonic = [];
+      let ratio = parseFloat(ctrl_sequence.data[i]);
+      let num_loops = Math.floor(ratio);
+      let fraction_loop = Math.floor((ratio - num_loops) * this.data.length);
+      for (var a = 0; a < num_loops; a++) {
+        for (var b = 0; b < this.data.length; b++) {
+          harmonic.push(this.data[b] * harmonic_gain);
+        }
+      }
+      for (var c = 0; c < fraction_loop; c++) {
+        harmonic.push(this.data[c] * harmonic_gain);
+      }
+      harmonics_array.push(harmonic);
+    }
+    for (var i = 0; i < harmonics_array.length; i++) {
+      var h = harmonics_array[i];
+      for (var a = 0; a < h.length; a++) {
+        var h_samp = h[a];
+        if (!harmonics_sequence[a] ) {
+          harmonics_sequence[a] = h_samp;
+        }
+        else {
+          harmonics_sequence[a] += h_samp;
+        }
+      }
+    }
+    this.data = harmonics_sequence;
     return this;
   }
 

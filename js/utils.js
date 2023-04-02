@@ -20,6 +20,11 @@ function ms (ms) {
   return Math.round(Math.abs(Number(ms)) * (FACET_SAMPLE_RATE*0.001));
 }
 
+function mtof(note) {
+  note = Math.abs(Number(note));
+  return Math.pow(2,(note-69)/12) * 440;
+}
+
 function ri (min = 0, max = 1) {
   return random(min,max,1);
 }
