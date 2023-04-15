@@ -96,8 +96,7 @@ $(document).keyup(function(e) {
 });
 
 function runFacet() {
-  // select the entire block surrounding the cursor pos, based on if
-  // newlines exist above and below
+  // select the entire block surrounding the cursor pos, based on if newlines exist above and below
   let cursor = cm.getCursor();
   let line = cursor.line;
   let first_line_of_block = getFirstLineOfBlock(line);
@@ -217,8 +216,7 @@ osc.on('/errors', message => {
 });
 
 function checkStatus() {
-  let connected = false;
-  let interval = setInterval( () => {
+  setInterval( () => {
     $.post('http://127.0.0.1:3211/status', {
       mousex:mousex,
       mousey:mousey
@@ -248,7 +246,7 @@ function setStatus(status) {
 
 let bpm=90;
 // check every 10ms for bpm change and send if changed
-setInterval(function () {
+setInterval(()=>{
   prev_bpm = bpm;
   bpm = $('#bpm').val();
   // send change on increment/decrement by 1

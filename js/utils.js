@@ -25,18 +25,24 @@ function mtof(note) {
   return Math.pow(2,(note-69)/12) * 440;
 }
 
-function ri (min = 0, max = 1) {
-  return random(min,max,1);
+function ri (min = 0, max = 1, weight = 1) {
+  return random(min,max,1,weight);
 }
 
-function rf (min = 0, max = 1) {
-  return random(min,max,0);
+function rf (min = 0, max = 1, weight = 1) {
+  return random(min,max,0,weight);
 }
 
-function random(min = 0, max = 1, int_mode = 0) {
-  let num = Math.random() * (Number(max) - Number(min)) + Number(min);
-  if ( int_mode != 0 ) {
-    num = Math.round(num);
+function random(min = 0, max = 1, int_mode = 0, weight = 1) {
+  let num = Math.pow(Math.random(), weight) * (Number(max) - Number(min)) + Number(min);
+  if (int_mode != 0) {
+      num = Math.round(num);
   }
   return num;
+}
+
+function mtos(midiNoteIn) {
+  let frequency = Math.pow(2, (midiNoteIn - 69) / 12) * 440;
+  let samples = FACET_SAMPLE_RATE / frequency;
+  return samples;
 }

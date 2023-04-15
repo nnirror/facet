@@ -46,8 +46,8 @@ module.exports = {
   initStore: () => {
     fs.writeFileSync('js/stored.json', '{}');
   },
-  run: (code) => {
-    if ( percent_cpu < 0.5 ) {
+  run: (code, is_rerun) => {
+    if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
       const worker = new Worker("./js/run.js", {workerData: {code: code, vars: {}}});
       worker.once("message", run_data => {
           let fps = run_data.fps;
@@ -66,8 +66,8 @@ module.exports = {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
             }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
+              fp.data = sliceEndFade(fp.data);
               // create wav file at FACET_SAMPLE_RATE, 32-bit floating point
-              storeAnyPatterns(fp);
               let a_wav = new WaveFile();
               a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', fp.data);
               // store wav file in /tmp/
@@ -123,7 +123,7 @@ if ( !fs.existsSync('tmp/')) {
 app.post('/', (req, res) => {
   reruns = {};
   startTransport();
-  module.exports.run(req.body.code);
+  module.exports.run(req.body.code,false);
   res.send({
     status: 200,
   });
@@ -154,7 +154,7 @@ app.get('/update', (req, res) => {
     if ( fp.regenerate_every_n_loops == 1
       || ((fp.loops_since_generation > 0) && ((fp.loops_since_generation % fp.regenerate_every_n_loops) == 0 ))
     ) {
-      module.exports.run(fp.original_command);
+      module.exports.run(fp.original_command,true);
       fp.loops_since_generation = 1;
     }
     else {
@@ -228,11 +228,12 @@ function postMetaDataToTransport (fp,data_type) {
   });
 }
 
-function storeAnyPatterns (fp) {
-  if ( fp.store.length > 0 ) {
-    for (var i = 0; i < fp.store.length; i++) {
-      stored[fp.store[i]] = fp.data;
-      fs.writeFileSync('js/stored.json', JSON.stringify(stored),()=> {});
-    }
+function sliceEndFade(array) {
+  let result = [...array];
+  let fadeLength = 128;
+  for (let i = array.length - fadeLength; i < array.length; i++) {
+    let t = (i - (array.length - fadeLength)) / fadeLength;
+    result[i] = array[i] * (1 - t);
   }
+  return result;
 }

@@ -243,10 +243,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').binary(490321,13); // 1110111101101: truncated at 13 values`
 		- `$('example').binary(8,12); // 000000001000: padded with 0s`
 ---
-- **cosine** ( _periods_, _length_ )
-	- generates a cosine for `periods` periods, each period having `length` values.
+- **cosine** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	- generates a cosine wave at `frequency` hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- example:
-		- `$('example').cosine(2,30); // 2 cycles, 30 values each`
+		- `$('example').cosine(440,n4); // 440 Hz cosine wave for a quarter note`
 ---
 - **drunk** ( _length_, _intensity_ )
 	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
@@ -264,7 +264,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').from([1,2,3,4]);`
 ---
 - **get** ( _name_ )
-	- retrieves a FacetPattern previously stored in memory by a `.set()` command. **NOTE**: You cannot run `.get()` in the same block of commands where the pattern was initially stored via `.set()`.
+	- retrieves a FacetPattern previously stored in memory by a `.set()` command.
 		- example:
 		- `$('example').randsamp().set('my_pattern'); // first, set a random sample, in a separate command`
 		- `$('example').get('my_pattern').reverse().dup(1).play(); // then in a new command, run this`
@@ -274,18 +274,19 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').noise(1024);`
 ---
-- **phasor** ( _periods_, _length_ )
-	- ramps from 0 to 1 for `periods` periods, each period having length `length`.
-	- example:
-		- `$('example').phasor(10,100); // 10 ramps`
+- **phasor** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	- TODO
 ---
 - **ramp** ( _from_, _to_, _size_ )
 	- moves from `from` to `to` over `size` values.
 	- example:
 		- `$('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
 ---
+- **rect** (  )
+	TODO
+---
 - **set** ( _name_ )
-	- stores a FacetPattern in memory for temporary reference in future operations. **NOTE**: You cannot run `.get()` in the same block of commands where the pattern was initially stored via `.set()`. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+	- stores a FacetPattern in memory for temporary reference in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
 		- example:
 		- `$('example').noise(32).set('my_pattern');`
 ---
@@ -294,10 +295,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').silence(n2).append(_.noise(n2)); // first half of loop is silence, second half is noise`
 ---
-- **sine** ( _periods_, _length_ )
-	- generates a cosine for `periods` periods, each period having `length` values.
+- **sine** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	- generates a sine wave at `frequency` hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- example:
-		- `$('example').cosine(2,30); // 2 cycles, 30 values each`
+		- `$('example').sine(440,n4); // 440 Hz sine wave for a quarter note`
 ---
 - **spiral** ( _length_, _degrees_ = 137.5, _angle_phase_offset_ = 0 )
 	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to 137.5 which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
@@ -306,19 +307,15 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').sine(1,1000).times(_.spiral(1000,random(1,360))); // an interesting, modulated sine wave`
 		- `$('example').spiral(100); // defaults to a Fibonacci leaf spiral`
 ---
-- **square** ( _periods_, _length_ )
-	- generates a square wave (all 0 and 1 values) for `periods` periods, each period having `length` values.
-	- example:
-		- `$('example').square(5,6); // 5 cycles, 6 values each`
+- **square** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	TODO
 ---
 - **turing** ( _length_ )
 	- generates a pattern of length `length` with random 1s and 0s.
 	- example:
 		- `$('example').turing(64); // instant rhythmic triggers`
-- **tri** ( _periods_, _length_ )
-	- generates a triangle wave for `periods` periods, each period having `length` values.
-	- example:
-		- `$('example').triangle(30,33); // 30 cycles, 33 values each`
+- **tri** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	TODO
 
 ### FacetPattern modulators
 - **abs** ( )
@@ -453,6 +450,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
 	- You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
 	- The variable `i`, referring to the current iteration number starting at 0, is also available for use in commands.
+	- The variable `iters`, referring to the total number of iterations, is also available for use in commands.
 	- example:
 		- `$('example').randsamp().iter(8,()=>{this.delay(random(1,2000))}).scale(-1,1).play(); // 8 delay lines between 1 and 2000 samples`
 ---
@@ -536,11 +534,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from([0.1,0.2,0.3,0.4]).range(0.5,1); // 0.3 0.4`
 ---
-- **recurse** ( _prob_ )
-	- randomly copies portions of the FacetPattern onto itself, creating nested, self-similar structures. `prob` (float 0-1) sets the likelihood of each value running a recursive copying process.
-	- example:
-		- `$('example').noise(128).recurse(0.7); // remove the recurse to hear the difference `
----
 - **reduce** ( _new_size_ )
 	- reduces the FacetPattern length to `new_size`. If `new_size` is larger than the FacetPattern length, no change.
 	- example:
@@ -566,10 +559,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').phasor(1,20).saheach(2); // 0 0 0.1 0.1 0.2 0.2 0.3 0.3 0.4 0.4 0.5 0.5 0.6 0.6 0.7 0.7 0.8 0.8 0.9 0.9`
 ---
-- **saturate** ( _gain_ )
-	- runs nonlinear waveshaping (distortion) on the FacetPattern, always returning values between -1 and 1.
+- **tanh** ( _gain_ = 20 )
+	- outputs the hyperbolic tangent function for the input FacetPattern, always returning values between -1 and 1. Higher `gain` values will create more intense distortion.
 	- example:
-		- `$('example').phasor(1,20).gain(10).saturate(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
+		- `$('example').phasor(1,20).gain(10).tanh(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
 ---
 - **scale** ( _new_min_, _new_max_ )
 	- moves the FacetPattern to a new range, from `new_min` to `new_max`. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
@@ -601,6 +594,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **slices** ( _num_slices_, _commands_ = function, _prob_ = 1 )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
 	- The variable `i`, referring to the current slice number starting at 0, is also available for use in commands.
+	- The variable `num_slices`, referring to the number of slices, is also available for use in commands.
 	- example:
 		- `$('example').randsamp().slices(32,()=>{this.fft().shift(random()).ifft()}).play();`
 ---
@@ -761,11 +755,6 @@ Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary ope
 		- `$('example').file('my_image.png').play(); // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!`
 		- `$('example').file('/Users/my_username/Desktop/myfile.zip').play(); // example with a supplied absolute file path`
 ---
-- **harmonics** ( _FacetPattern_, _amplitude_ = 0.9 )
-	- superimposes `FacetPattern.length` copies of the input FacetPattern onto the output. Each number in `FacetPattern` corresponds to the frequency of the harmonic it will add, which is a copy of the input signal playing at a different speed. Each harmonic `n` in the output sequence is slightly lower in level, by 0.9^n. 
-	- **NOTE**: if the input FacetPattern is large enough, even the harmonic "copies" playing at slower or faster speeds might still sound like discrete copies, rather than a "harmonic" as it is traditionally understood. To avoid this, you can use the `slices()` command first to slice the pattern into smaller chunks, then run the `harmonics()` command on each of those chunks.
-	- example:
-		`$('example').randsamp().harmonics(_.noise(16).gain(3)).times(ramp(1,0,12000)); // add 16 inharmonic frequencies, all between 0 and 3x the input speed`
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them.
 	- example:
