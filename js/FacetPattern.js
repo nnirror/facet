@@ -11,10 +11,6 @@ const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStron
 const BiQuadFilter = require('./lib/BiQuadFilter.js').BiQuadFilter;
 const FFT = require('./lib/fft.js');
 const { Midi, Scale } = require("tonal");
-const http = require('http');
-const { exec } = require('child_process');
-let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
-let cross_platform_record_command = process.platform == 'win32' ? `sox -t waveaudio -d` : `rec`;
 
 class FacetPattern {
   constructor (name) {
@@ -300,7 +296,7 @@ class FacetPattern {
     // these are safeguards so this command runs when and only when the user initializes it, rather than each loop
     this.play_once = true;
     this.do_not_regenerate = true;
-    
+
     let stitchDir = dir;
     if (!dir) {
       stitchDir = `./samples`;

@@ -14,7 +14,6 @@
     "codemirror": "^5.65.11",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "find-process": "^1.4.7",
     "node-wav": "^0.0.2",
     "open": "^8.4.0",
     "os-utils": "0.0.14",

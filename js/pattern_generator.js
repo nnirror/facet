@@ -1,6 +1,5 @@
 const { exec } = require('child_process');
 const {Worker} = require('worker_threads');
-const find = require('find-process');
 const path = require('path');
 const bodyParser = require('body-parser');
 const express = require('express');
@@ -10,10 +9,7 @@ const frontEndWebApp = express();
 const cors = require('cors');
 const fs = require('fs');
 const os_utils = require('os-utils');
-const wav = require('node-wav');
-const open = require('open');
 const WaveFile = require('wavefile').WaveFile;
-const FacetPattern = require('./FacetPattern.js');
 const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 let bpm = 90;
