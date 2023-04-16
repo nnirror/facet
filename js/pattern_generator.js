@@ -12,18 +12,16 @@ const fs = require('fs');
 const os_utils = require('os-utils');
 const wav = require('node-wav');
 const open = require('open');
-const OSCPACKAGE = require('osc-js');
 const WaveFile = require('wavefile').WaveFile;
 const FacetPattern = require('./FacetPattern.js');
 const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
-const osc_package = new OSCPACKAGE({
-  discardLateMessages: false,
-  plugin: new OSCPACKAGE.WebsocketServerPlugin()
-});
-let stored = {};
+let bpm = 90;
+let bars_elapsed = 0;
 let reruns = {};
+let errors = [];
 let percent_cpu = 0;
+let mousex, mousey;
 let cross_platform_move_command = process.platform == 'win32' ? 'move' : 'mv';
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 process.title = 'facet_pattern_generator';
@@ -51,16 +49,11 @@ module.exports = {
       const worker = new Worker("./js/run.js", {workerData: {code: code, vars: {}}});
       worker.once("message", run_data => {
           let fps = run_data.fps;
-          let errors = run_data.errors;
           Object.values(fps).forEach(fp => {
             // if failed execution BUT doesnt exist in reruns yet, you can add it. otherwise skip any failed executions
             if ( fp.do_not_regenerate === false && ( fp.executed_successfully == true || ( fp.executed_successfully == false && reruns.hasOwnProperty(fp.name) == false ) ) ) {
               // don't add to reruns if it's meant to not regenerate via .keep()
               reruns[fp.name] = fp;
-            }
-            if ( fp.send_debug_data === true ) {
-              // send fp data to browser for debugging purposes
-              osc_package.send(new OSCPACKAGE.Message('/debug', JSON.stringify(fp.data)));
             }
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
@@ -98,16 +91,14 @@ module.exports = {
               });
             }
           });
-          Object.values(errors).forEach(error => {
-            // send any exceptions thrown when running the comands to the editor
-            osc_package.send(new OSCPACKAGE.Message('/errors', error.toString()));
+          Object.values(run_data.errors).forEach(error => {
+            errors.push(error.message);
           });
       });
     }
   }
 }
 
-osc_package.open();
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
@@ -144,8 +135,31 @@ app.post('/stop', (req, res) => {
 });
 
 app.post('/meta', (req, res) => {
-  osc_package.send(new OSCPACKAGE.Message(`/bpm`, req.body.bpm));
+  bpm = req.body.bpm;
+  bars_elapsed = req.body.bars_elapsed;
+    // rewrite env.js, the environment variables that can be accessed in all future evals.
+    // it's loaded into each FacetPattern instance on consruction
+    fs.writeFileSync('js/env.js',
+      calculateNoteValues(bpm) +
+      `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};`,
+      ()=> {}
+    );
   res.sendStatus(200);
+});
+
+app.post('/status', (req, res) => {
+  // set mousex and mousey variables from the mouse position in the browser editor
+  mousex = req.body.mousex;
+  mousey = req.body.mousey;
+  res.send({
+    data: {
+      bpm: bpm,
+      cpu: percent_cpu,
+      errors: errors
+    },
+    status: 200
+  });
+  errors = [];
 });
 
 app.get('/update', (req, res) => {
@@ -191,10 +205,18 @@ process.on('SIGINT', () => {
   process.exit()
 });
 
+function calculateNoteValues(bpm) {
+  let out = '';
+  for (var i = 1; i <= 128; i++) {
+    let calculated_nv = Math.round((((60000/bpm)/i)*4)*(FACET_SAMPLE_RATE*0.001));
+    out += `var n${i} = ${calculated_nv};`
+  }
+  return out;
+}
+
 function getCpuUsage () {
   os_utils.cpuUsage( (cpu) => {
     percent_cpu = cpu;
-    osc_package.send(new OSCPACKAGE.Message('/cpu', Math.round(cpu*100)));
   });
 }
 

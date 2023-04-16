@@ -36,7 +36,6 @@ class FacetPattern {
     this.osc_data = [];
     this.pitchbend_data = [];
     this.sequence_data = [];
-    this.send_debug_data = false;
     this.skipped = false;
     this.utils = this.env + this.getUtils();
   }
@@ -2538,11 +2537,6 @@ waveformSample(waveform, phase) {
     }
 
     this.chord_intervals = chord_intervals_to_add;
-    return this;
-  }
-
-  debug () {
-    this.send_debug_data = true;
     return this;
   }
 

@@ -192,35 +192,20 @@ $('body').on('click', '#end', function() {
   });
 });
 
-// begin OSC
-const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
-setInterval(()=>{osc.open()}, 1000);
+// begin loop to check status of servers
 checkStatus();
-
-osc.on('/bpm', message => {
-  $('#bpm').val(`${message.args[0]}`);
-});
-
-osc.on('/cpu', message => {
-  let cpu_percent = parseFloat(message.args[0]).toFixed(2).substring(0,4);
-  $('#cpu').html(cpu_percent + '%&nbsp;cpu');
-});
-
-osc.on('/debug', message => {
-  // prints the pattern data to the browser console for debugging purposes
-  console.log(JSON.parse(message.args[0]));
-});
-
-osc.on('/errors', message => {
-  $.growl.error({ message: message.args[0] });
-});
 
 function checkStatus() {
   setInterval( () => {
-    $.post('http://127.0.0.1:3211/status', {
+    $.post('http://127.0.0.1:1123/status', {
       mousex:mousex,
       mousey:mousey
     }).done(function( data, status ) {
+      Object.values(data.data.errors).forEach(error => {
+        $.growl.error({ message: error });
+      });
+      $('#cpu').html(parseFloat(data.data.cpu).toFixed(2).substring(0,4) * 100 + '%&nbsp;cpu');
+      $('#bpm').val(`${data.data.bpm}`);
       setStatus(`connected`);
     })
     .fail(function(data) {
@@ -242,7 +227,6 @@ function setStatus(status) {
   }
   $('#status').html(colored_span);
 }
-// end OSC
 
 let bpm=90;
 // check every 10ms for bpm change and send if changed

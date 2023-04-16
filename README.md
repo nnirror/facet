@@ -206,12 +206,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').noise(4096).play().once();`
 
-### Methods for debugging
-- **debug** ( )
-	- prints the FacetPattern's data in the browser's developer console, which can be useful while writing and debugging commands.
-	- example:
-		- `$('example').noise(16).debug(); // 16 random floats between 0 and 1 are printed in the developer console`
-
 ### Single number generators
 - **choose** ( _pattern_ )
 	- returns a randomly selected value from a supplied array.

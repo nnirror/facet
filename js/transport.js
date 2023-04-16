@@ -13,7 +13,6 @@ const osc_package = new OSCPACKAGE({
   plugin: new OSCPACKAGE.WebsocketServerPlugin()
 });
 const FacetConfig = require('./config.js');
-const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const OSC_OUTPORT = FacetConfig.settings.OSC_OUTPORT;
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 let bars_elapsed = 0;
@@ -22,13 +21,10 @@ let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
 let running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
 let current_relative_step_position = 0;
 let event_register = [];
-let bpm_changed_manually = false;
 let transport_on = true;
-let facet_patterns = {};
 let meta_data = {
   bpm: [90]
 };
-let latency_counter = 0;
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
@@ -38,6 +34,8 @@ osc_package.open({ port: OSC_OUTPORT });
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
+
+setInterval(reportTransportMetaData,100);
 
 axios.interceptors.response.use(res=>{return res}, (error) => {
   // do nothing, necessary for windows to preven fatal 500s
@@ -60,7 +58,6 @@ app.post('/midi', (req, res) => {
 app.post('/meta', (req, res) => {
   let posted_pattern = JSON.parse(req.body.pattern);
   if ( req.body.type == 'bpm' ) {
-    bpm_changed_manually = true;
     meta_data.bpm = posted_pattern.data;
   }
   res.sendStatus(200);
@@ -201,19 +198,18 @@ app.post('/midi_select', (req, res) => {
   }
 });
 
+app.get('/status', (req,res)=> {
+  res.send({
+    data: {
+      bpm: bpm,
+      bars_elapsed: bars_elapsed
+    },
+    status: 200
+  });
+})
+
 app.post('/bpm', (req, res) => {
   meta_data.bpm = [Math.abs(Number(req.body.bpm))];
-  res.sendStatus(200);
-});
-
-app.post('/status', (req, res) => {
-  // rewrite env.js, the environment variables that can be accessed in all future evals.
-  // it's loaded into each FacetPattern instance on consruction
-  fs.writeFileSync('js/env.js',
-    calculateNoteValues(bpm) +
-    `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${req.body.mousex};var mousey=${req.body.mousey};`,
-    ()=> {}
-  );
   res.sendStatus(200);
 });
 
@@ -352,18 +348,14 @@ function handleBpmChange() {
       running_transport = setInterval(tick, EVENT_RESOLUTION_MS);
       next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
     }
-
-    if ( bpm_changed_manually === true ) {
-      reportTransportMetaData();
-      bpm_changed_manually = false;
-    }
   }
 }
 
 function reportTransportMetaData() {
   axios.post('http://localhost:1123/meta',
     {
-      bpm: JSON.stringify(bpm)
+      bpm: JSON.stringify(bpm),
+      bars_elapsed: JSON.stringify(bars_elapsed)
     }
   )
   .catch(function (error) {
@@ -409,11 +401,3 @@ function simpleReduce (data, new_size) {
   return new FacetPattern().from(reduced_sequence).reduce(new_size).data;
 }
 
-function calculateNoteValues(bpm) {
-  let out = '';
-  for (var i = 1; i <= 128; i++) {
-    let calculated_nv = Math.round((((60000/bpm)/i)*4)*(FACET_SAMPLE_RATE*0.001));
-    out += `var n${i} = ${calculated_nv};`
-  }
-  return out;
-}
