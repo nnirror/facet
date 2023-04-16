@@ -1,5 +1,6 @@
 "use strict";
 const fs = require('fs');
+const path = require('path');
 const wav = require('node-wav');
 const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
@@ -291,29 +292,35 @@ class FacetPattern {
     return this;
 }
 
-  stitchdir (dir) {
+  stitchdir (dir, samplesBetweenEachFile, saved_filename = 'stitched') {
+    if ( !samplesBetweenEachFile ) {
+      throw `the second argument to stitchdir() is required: you must specify the number of samples separating each file`;
+    }
+
+    // these are safeguards so this command runs when and only when the user initializes it, rather than each loop
+    this.play_once = true;
+    this.do_not_regenerate = true;
+    
+    let stitchDir = dir;
     if (!dir) {
-      dir = `./samples`;
+      stitchDir = `./samples`;
     }
-    let files;
-    try {
-      // try loading the directory exactly as it's supplied
-      files = fs.readdirSync(dir);
-    } catch (e) {
-      // try appending './samples' to the supplied directory name
-      try {
-        dir = `./samples/${dir}`;
-        files = fs.readdirSync(dir);
-      } catch (er) {
-        // directory not found
-        throw er;
-      }
+    else {
+      stitchDir = `./samples/${dir}`;
     }
-    let stitch_cmd = `cp ./scripts/stitchdir.sh ${dir}/stitchdir.sh && cd ${dir} && sh stitchdir.sh && rm in.wav && rm stitchdir.sh`;
-    exec(stitch_cmd, (error, stdout, stderr) => {
-      if (error) {
-        throw `error stitching file`;
-      }
+    let out_fp = new FacetPattern();
+    let iters = 0;
+    fs.readdir(stitchDir, (err, files) => {
+      if (err) throw err;
+      files
+        .filter(file => path.extname(file) === '.wav')
+        .sort()
+        .forEach(file => {
+          let next_fp_to_add = new FacetPattern().sample(`${dir}/${file}`).prepend(new FacetPattern().silence(samplesBetweenEachFile*iters));
+          out_fp.sup(next_fp_to_add,0);
+          iters++;
+        });
+        out_fp.saveAs(`${dir}/${saved_filename}`);
     });
     return this;
   }
@@ -656,6 +663,18 @@ class FacetPattern {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
     this.data = this.data.concat(sequence2.data);
+    return this;
+  }
+
+  prepend(sequence2) {
+    if ( typeof sequence2 == 'number' || Array.isArray(sequence2) === true ) {
+      sequence2 = new FacetPattern().from(sequence2);
+    }
+    if ( !this.isFacetPattern(sequence2) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    }
+    this.data = [...sequence2.data, ...this.data];
+    this.flatten();
     return this;
   }
 

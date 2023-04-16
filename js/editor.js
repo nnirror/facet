@@ -204,12 +204,15 @@ function checkStatus() {
       Object.values(data.data.errors).forEach(error => {
         $.growl.error({ message: error });
       });
-      $('#cpu').html(parseFloat(data.data.cpu).toFixed(2).substring(0,4) * 100 + '%&nbsp;cpu');
+      let cpu_percent = parseFloat(data.data.cpu).toFixed(2) * 100;
+      cpu_percent = cpu_percent.toString().substring(0,4);
+      $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
       $('#bpm').val(`${data.data.bpm}`);
       setStatus(`connected`);
     })
     .fail(function(data) {
       setStatus(`disconnected`);
+      $('#cpu').html(`[offline]`);
     });
   }, 250);
 }
