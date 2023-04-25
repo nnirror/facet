@@ -293,6 +293,14 @@ class FacetPattern {
       throw `the second argument to stitchdir() is required: you must specify the number of samples separating each file`;
     }
 
+    if ( typeof samplesBetweenEachFile == 'number' ) {
+      samplesBetweenEachFile = [samplesBetweenEachFile];
+    }
+
+    if ( this.isFacetPattern(samplesBetweenEachFile) ) {
+      samplesBetweenEachFile = samplesBetweenEachFile.data;
+    }
+
     // these are safeguards so this command runs when and only when the user initializes it, rather than each loop
     this.play_once = true;
     this.do_not_regenerate = true;
@@ -305,6 +313,7 @@ class FacetPattern {
       stitchDir = `./samples/${dir}`;
     }
     let out_fp = new FacetPattern();
+    let silence_samples_to_add = 0;
     let iters = 0;
     fs.readdir(stitchDir, (err, files) => {
       if (err) throw err;
@@ -312,8 +321,9 @@ class FacetPattern {
         .filter(file => path.extname(file) === '.wav')
         .sort()
         .forEach(file => {
-          let next_fp_to_add = new FacetPattern().sample(`${dir}/${file}`).prepend(new FacetPattern().silence(samplesBetweenEachFile*iters));
+          let next_fp_to_add = new FacetPattern().sample(`${dir}/${file}`).prepend(new FacetPattern().silence(silence_samples_to_add));
           out_fp.sup(next_fp_to_add,0);
+          silence_samples_to_add += samplesBetweenEachFile[iters%samplesBetweenEachFile.length]
           iters++;
         });
         out_fp.saveAs(`${dir}/${saved_filename}`);
@@ -1505,7 +1515,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  pong (min, max) {
+  wrap (min, max) {
     min = Number(min);
     if (!max) {
       max = min;
@@ -1517,7 +1527,7 @@ waveformSample(waveform, phase) {
     min = sorted_range[0];
     max = sorted_range[1];
     if ( min == max ) {
-      throw `Cannot run pong with equal min and max: ${min}`;
+      throw `Cannot run wrap with equal min and max: ${min}`;
     }
     let pong_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
@@ -2656,9 +2666,19 @@ waveformSample(waveform, phase) {
   }
 
   saveAs (filename) {
+    let folder = 'samples';
+    if (filename.includes('/')) {
+      folder += `/${filename.split('/')[0]}`;
+      filename = filename.split('/')[1];
+    }
+    if (!fs.existsSync(folder)) {
+      fs.mkdir(folder, { recursive: true }, (err) => {
+          if (err) throw err;
+      });
+    }
     let a_wav = new WaveFile();
     a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', this.data);
-    fs.writeFileSync(`samples/${filename}.wav`, a_wav.toBuffer(),(err) => {});
+    fs.writeFileSync(`${folder}/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 

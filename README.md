@@ -114,7 +114,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random positions`
 ---
 - **saveAs** ( _filename_ )
-	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. **NOTE**: the directory must already exist.
+	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern.
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(random(1,40,1),100)).saveAs('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
 
@@ -499,12 +499,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from([0,1,2,3]).palindrome(); // 0 1 2 3 3 2 1 0`
 ---
-- **pong** ( _min_, _max_ )
-	- folds FacetPattern values greater than `max` so their output continues at `min`.  If the values are twice greater than `max`, their output continues at `min` again. Similar for values less than `min`, such that they wrap around the min/max thresholds.
-	- if no value is entered for `max`, then the first argument will be used to create the `min` and `max`, centered around 0. For instance, `pong(0.3) == pong(-0.3,0.3)`
-	- example:
-		- `$('example').sine(1,1000).offset(-0.1).pong(0.2,0.5);`
----
 - **pow** ( _expo_, _direction_ = 1 )
 	- stretches a FacetPattern according to an exponential power `expo`, where the values at the beginning can be stretched for a significant portion of the FacetPattern, and the values at the end can be squished together. If `direction` is negative, returns the FacetPattern in reverse.
 	- example:
@@ -643,6 +637,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- changes positions in the FacetPattern.  `prob` (float 0-1) sets the likelihood of each position changing. `amt` controls how many steps the values can move. If `amt` is set to 10, and `prob` is set to 0.5 half the values could move 10 positions to the left or the right.
 	- example:
 		- `$('example').from([0,1,2,0,1,0.5,2,0]).walk(0.25, 3);`
+---
+- **wrap** ( _min_, _max_ )
+	- folds FacetPattern values greater than `max` so their output continues at `min`.  If the values are twice greater than `max`, their output continues at `min` again. Similar for values less than `min`, such that they wrap around the min/max thresholds.
+	- if no value is entered for `max`, then the first argument will be used to create the `min` and `max`, centered around 0. For instance, `pong(0.3) == pong(-0.3,0.3)`
+	- example:
+		- `$('example').sine(1,1000).offset(-0.1).pong(0.2,0.5);`
 ---
 ### Pattern modulators with a second pattern as argument
 - **add** ( _FacetPattern_, _match_sizes_ = false )

@@ -207,7 +207,9 @@ function checkStatus() {
       let cpu_percent = parseFloat(data.data.cpu).toFixed(2) * 100;
       cpu_percent = cpu_percent.toString().substring(0,4);
       $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
-      $('#bpm').val(`${data.data.bpm}`);
+      if ( !$('#bpm').is(':focus') ) {
+        $('#bpm').val(`${data.data.bpm}`);
+      }
       setStatus(`connected`);
     })
     .fail(function(data) {
