@@ -884,8 +884,8 @@ waveformSample(waveform, phase) {
   // attacktime and release time are expressed as relations to a second, so 0.1 would be 1/10th of a second
   // 
   compress (ratio, threshold, attackTime, releaseTime) {
-    let attack = Math.pow(0.01, 1.0 / (attackTime * 44100));
-    let release = Math.pow(0.01, 1.0 / (releaseTime * 44100));
+    let attack = Math.pow(0.01, 1.0 / (attackTime * FACET_SAMPLE_RATE));
+    let release = Math.pow(0.01, 1.0 / (releaseTime * FACET_SAMPLE_RATE));
     let envelope = 0;
     let gain = 1;
     let compressedAudio = [];
