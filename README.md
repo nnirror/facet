@@ -1,3 +1,4 @@
+
 ## Overview
 
 Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser and a pair of NodeJS servers running locally on your machine, Facet can generate and sequence audio, MIDI, and OSC data in real-time.
@@ -101,7 +102,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- example:
 		- `$('example').randsamp().channel(1).play(); // first channel only`
 		- `$('example').randsamp().channels([1,3]).play(); // second channel only`
-		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(random(1,8,1))).play(); // play on a random number of channels from 9-16`
+		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
 ---
 - **play** ( _FacetPattern_ )
 	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in _FacetPattern_, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
@@ -114,9 +115,9 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random positions`
 ---
 - **saveAs** ( _filename_ )
-	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern.
+	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
 	- example:
-		- `$('example').iter(6,()=>{this.append(_.sine(random(1,40,1),100)).saveAs('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
+		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveAs('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
@@ -127,7 +128,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 	- example:
 		- `$('example').sine(1,32).scale(36,90).round().note();`
-		- `$('example').sine(1,random(32,100,1)).scale(36,random(52,100,1)).prob(random()).nonzero().round().note();`
+		- `$('example').sine(1,ri(32,100)).scale(36,ri(52,100)).prob(rf()).nonzero().round().note();`
 ---
 - **cc** ( _controller_number_ = 70, _channel_ = 1 )
 	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
@@ -170,7 +171,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example: `$('example').randsamp().reduce(32).scale(36,51).key("F# bebop").note();`
 ---
 - **osc** ( _address_ )
-	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
+	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
 	- The OSC server sends output to port 5813 by default. You can change to a different port by modifying `OSC_OUTPORT` in `js/config.js` to whatever port number you need.
 	- The `address` argument must begin with a backslash: `/`.
 	- _Note_: This function does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
@@ -182,7 +183,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 	- _Note_: This function is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between 0 and 1.
 	- example:
-		- `$('example').sine(1,128).pitchbend();`
+		- `$('example').sine(1).scale(0,1).size(128).pitchbend();`
 
 ### Methods for controlling transport BPM
 - **bpm** ( )
@@ -194,12 +195,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **every** ( _n_loops_ )
 	- only regenerate the pattern after `n_loops` loops. By default, patterns regenerate each loop, so this function only needs to be included if you wish to regenerate a pattern less frequently.
 	- example:
-		- `$('example').sine(random(10,500,1),50).gain(random()).every(4).play(); // slightly different sine wave tone every 4 loops`
+		- `$('example').sine(ri(10,500)).gain(rf()).every(4).play(); // slightly different sine wave tone every 4 loops`
 ---
 - **keep** (  )
 	- preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
 	- example:
-		- `$('example').sine(random(10,500,1),50).keep().play();`
+		- `$('example').sine(ri(10,500)).keep().play();`
 ---
 - **once** (  )
 	- only play the generated FacetPattern a single time. Without including `once()`, the FacetPattern will regenerate and play back each loop by default.
@@ -210,24 +211,24 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **choose** ( _pattern_ )
 	- returns a randomly selected value from a supplied array.
 	- example:
-		- `$('example').sine(choose([10,200,1000]),40).play(); // sine wave with either 10, 200, or 1000 cycles`
+		- `$('example').sine(choose([10,200,1000])).play(); // sine wave with either 10, 200, or 1000 cycles`
 ---
 - **ms** ( _milliseconds_ )
 	- converts the supplied `milliseconds` value to that many samples, at whatever sample rate the user has configured.
 	- example:
-		- `$('example').sine(50,40).size(ms(5)).play(); // 5ms sine wave`
-		- `$('example').sine(50,40).size(ms(50)).play(); // 50ms sine wave`
+		- `$('example').noise(4096).size(ms(5)).play(); // 5ms noise`
+		- `$('example').noise(4096).size(ms(50)).play(); // 50ms noise`
 ---
 - **mtof** ( _midi_note_number_ )
-	- converts the supplied `_midi_note_number_` value to its corresponding frequency in Hz.
+	- converts the supplied `midi_note_number` value to its corresponding frequency in Hz.
 	- example:
-		- `$('example').sine(100,mtof(choose([36,38,40,41,43,45,47,48]))).play(); // random sine wave each loop, each of which shares a relative major key`
+		- `$('example').sine(mtof(choose([36,38,40,41,43,45,47,48]))).play(); // random sine wave each loop in C major key`
 ---
 - **random** ( _min_ = 0, _max_ = 1, _int_mode_ = 0 )
 	- returns a random number between `min` and `max`. If `int_mode` = 1, returns an integer. Otherwise, returns a float by default.
 	- you can also use these shorthands for a random float: `rf(min,max)` and a random integer: `ri(min,max)`.
 	- example:
-		- `$('example').sine(random(1,1000,1),40).play(); // a sine wave with 1 - 1000 cycles`
+		- `$('example').sine(ri(1,1000)).play(); // a sine wave with 1 - 1000 cycles`
 
 ### FacetPattern generators
 - **binary** ( _integer_, _length_)
@@ -237,10 +238,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').binary(490321,13); // 1110111101101: truncated at 13 values`
 		- `$('example').binary(8,12); // 000000001000: padded with 0s`
 ---
-- **cosine** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+- **cosine** ( _frequency_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
 	- generates a cosine wave at `frequency` hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- example:
-		- `$('example').cosine(440,n4); // 440 Hz cosine wave for a quarter note`
+		- `$('example').cosine(440,n4).play(); // 440 Hz cosine wave for a quarter note`
 ---
 - **drunk** ( _length_, _intensity_ )
 	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
@@ -264,58 +265,66 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').get('my_pattern').reverse().dup(1).play(); // then in a new command, run this`
 ---
 - **noise** ( _length_ )
-	- generates a random series of values between9 0 and 1 for `length`.
+	- generates a random series of values between 0 and 1 for `length`.
 	- example:
-		- `$('example').noise(1024);`
+		- `$('example').noise(1024).play();`
 ---
-- **phasor** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
-	- TODO
+- **phasor** ( _frequency_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
+	- generates a phasor wave at `frequency` hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- example:
+		- `$('example').phasor(440,n4).play(); // 440 Hz cosine wave for a quarter note`
 ---
 - **ramp** ( _from_, _to_, _size_ )
 	- moves from `from` to `to` over `size` values.
 	- example:
 		- `$('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
 ---
-- **rect** (  )
-	TODO
+- **rect** ( _frequency_, _duration_ = 1 second, _pulse_width_ = 0.5, _samplerate_ = default_sample_rate )
+	- generates a rectangle wave at `frequency` hertz, with a pulse width defined by `pulse_width`,  lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- example:
+		- `$('example').rect(440,n4,rf()).play(); // 440 Hz rectangle wave for a quarter note, different bandwidth each time`
 ---
 - **set** ( _name_ )
 	- stores a FacetPattern in memory for temporary reference in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
 		- example:
-		- `$('example').noise(32).set('my_pattern');`
+		- `$('example').noise(32).set('my_pattern').once();`
 ---
 - **silence** ( _length_ )
 	- generates silence (many 0s in a row) for `length` samples.
 	- example:
-		- `$('example').silence(n2).append(_.noise(n2)); // first half of loop is silence, second half is noise`
+		- `$('example').silence(n2).append(_.noise(n2)).play(); // first half of loop is silence; second half is noise`
 ---
 - **sine** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
 	- generates a sine wave at `frequency` hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- example:
-		- `$('example').sine(440,n4); // 440 Hz sine wave for a quarter note`
+		- `$('example').sine(440,n4).play(); // 440 Hz sine wave for a quarter note`
 ---
-- **spiral** ( _length_, _degrees_ = 137.5, _angle_phase_offset_ = 0 )
-	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to 137.5 which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
+- **spiral** ( _length_, _degrees_ = 360/length, _angle_phase_offset_ = 0 )
+	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to `360/length` which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
 	- The `angle_phase_offset` argument changes where the sequence starts. At its default value of 0, the first value will be 0. You can supply any float between 0 and 1, and the sequence will begin at that value instead.
 	- example:
-		- `$('example').sine(1,1000).times(_.spiral(1000,random(1,360))); // an interesting, modulated sine wave`
-		- `$('example').spiral(100); // defaults to a Fibonacci leaf spiral`
+		- `$('example').sine(1).times(_.spiral(1000,ri(1,360))).play(); // an interesting, modulated sine wave`
 ---
 - **square** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
-	TODO
+	- generates a square wave at `frequency` hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- example:
+		- `$('example').square(440,n4).play(); // 440 Hz square wave for a quarter note`
 ---
 - **turing** ( _length_ )
 	- generates a pattern of length `length` with random 1s and 0s.
 	- example:
 		- `$('example').turing(64); // instant rhythmic triggers`
+---
 - **tri** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
-	TODO
+	- generates a triangle wave at `frequency` hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- example:
+		- `$('example').tri(440,n4).play(); // 440 Hz triangle wave for a quarter note`
 
 ### FacetPattern modulators
 - **abs** ( )
 	- returns the absolute value of all numbers in the FacetPattern.
 	- example:
-		- `$('example').sine(1,100).offset(-0.3).abs(); // a wonky sine`
+		- `$('example').sine(100).offset(-0.3).abs().play(); // a wonky sine`
 ---
 - **at** ( _position_, _value_ )
 	- replaces the value of a FacetPattern at the relative position `position` with `value`.
@@ -353,13 +362,13 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **dup** ( _num_ )
 	- duplicates the FacetPattern `num` times.
 	- example:
-		- `$('example').sine(1,100).dup(random(2,4,1)); // sine has 2, 3, or 4 cycles `
+		- `$('example').noise(n16).dup(ri(2,12)).play(); // 16th note of noise repeats between 2 and 12 times each loop `
 ---
 - **echo** ( _num_, _feedback_ = 0.666 )
 	- repeats the FacetPattern `num` times, with amplitude multiplied by `feedback` each repeat.
 	- example:
 		- `$('example').from([1]).echo(5); // 1 0.666 0.4435 0.29540 0.19674 0.13103`
-		- `$('example').phasor(5,20).echo(8); // phasor decreases after each 5 cycles `
+		- `$('example').phasor(50).size(n8).echo(7).play(); // echoing out over a whole note `
 ---
 - **fade** ( _fade_percent_ = 0.1 )
 	- applies a crossfade window to the FacetPattern, where `fade_percent` of the beginning and end are faded in/out.
