@@ -20,19 +20,19 @@ Facet currently runs on MacOS, Linux, and Windows.
 
 Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. In order to produce audio or MIDI output, simply create an instance of a FacetPattern, and run some methods:
 
-`new FacetPattern('example').sine(100,200).play();`
+`new FacetPattern('example').sine(100).play();`
 
 There is a shorthand for creating a new FacetPattern instance:
 
-`$('example').sine(100,200).play();`
+`$('example').sine(100).play();`
 
 Some FacetPatterns might contain other FacetPatterns. The most outer-facing one must have a name via the above method `$()`, but other FacetPatterns inside the code can use a separate, more concise shorthand, `_`:
 
-`$('example').sine(100,200).times(_.sine(100,200)).play();`
+`$('example').sine(100).times(_.sine(100)).play();`
 
 There are lots of methods to generate, translate, and orchestrate playback on FacetPattern data:
 
-`$('example').sine(100,200).gain(random()).play();`
+`$('example').sine(100).gain(random()).play();`
 `// each time you run ^, the same sine wave at a different volume`
 
 Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`) allow you to supply functions as arguments:
@@ -66,7 +66,7 @@ Below the text editor, there are several UI elements which control the Facet ser
 Both `mousex` and `mousey`, as floating-point number representations of your cursor's position _in the browser window_, are available for use in commands, e.g.:
 
 ```
-$('example').sine(100,200).gain(mousey).play(); // cursor y position controls volume every time the code runs
+$('example').sine(100).gain(mousey).play(); // cursor y position controls volume every time the code runs
 ```
 
 #### notevalues
