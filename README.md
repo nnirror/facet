@@ -12,7 +12,7 @@ Facet currently runs on MacOS, Linux, and Windows.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
 5. After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
 6. In a browser tab, navigate to http://localhost:1124. This is the browser window with the code editor.
-7. Copy this command into the code editor in the browser: `$('test').sine(100,200).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
+7. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
 
 ## Facet commands
 
