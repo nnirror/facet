@@ -648,7 +648,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ---
 - **slices** ( _num_slices_, _commands_ = function, _prob_ = 1 )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
-	- The variable `i`, referring to the current slice number starting at 0, is also available for use in commands.
+	- The variable `s`, referring to the current slice number starting at 0, is also available for use in commands.
 	- The variable `num_slices`, referring to the number of slices, is also available for use in commands.
 	- example:
 		- `$('example').randsamp().slices(32,()=>{this.fft().shift(random()).ifft()}).play();`

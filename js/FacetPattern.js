@@ -2725,8 +2725,8 @@ waveformSample(waveform, phase) {
     let calc_slice_size = Math.round(this.data.length / num_slices);
     let slice_start_pos, slice_end_pos;
     let current_slice;
-    for (var i = 0; i < num_slices; i++) {
-      slice_start_pos = i * calc_slice_size;
+    for (var s = 0; s < num_slices; s++) {
+      slice_start_pos = s * calc_slice_size;
       slice_end_pos = slice_start_pos + calc_slice_size;
       current_slice = new FacetPattern().from(this.data).range(slice_start_pos/this.data.length, slice_end_pos/this.data.length);
       if ( Math.random() < prob ) {
