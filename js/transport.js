@@ -7,13 +7,10 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
 const axios = require('axios');
-const OSCPACKAGE = require('osc-js');
-const osc_package = new OSCPACKAGE({
-  discardLateMessages: false,
-  plugin: new OSCPACKAGE.WebsocketServerPlugin()
-});
 const FacetConfig = require('./config.js');
-const OSC_OUTPORT = FacetConfig.settings.OSC_OUTPORT;
+const OSC = require('osc-js')
+const osc = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
+osc.open({ port: 2134 });
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 let bars_elapsed = 0;
 let bpm = 90;
@@ -30,7 +27,6 @@ let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
 process.title = 'facet_transport';
 
-osc_package.open({ port: OSC_OUTPORT });
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
@@ -311,7 +307,7 @@ function tick() {
           if ( event.type === "osc" ) {
             // send any osc data at this step
             try {
-              osc_package.send(new OSCPACKAGE.Message(`/${event.data.address}`, event.data.data));
+              osc.send(new OSC.Message(`${event.data.address}`, event.data.data));
             } catch (e) {}
           }
 
