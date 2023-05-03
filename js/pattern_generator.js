@@ -30,15 +30,11 @@ axios.interceptors.request.use(request => {
 
 module.exports = {
   cleanUp: () => {
-    fs.writeFileSync('js/stored.json', '{}');
     fs.writeFileSync('js/env.js', '');
     fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   },
   initEnv: () => {
     fs.writeFileSync('js/env.js', '');
-  },
-  initStore: () => {
-    fs.writeFileSync('js/stored.json', '{}');
   },
   run: (code, is_rerun) => {
     if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
@@ -99,7 +95,6 @@ app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
 module.exports.initEnv();
-module.exports.initStore();
 
 // make the tmp/ directory if it doesn't exist
 if ( !fs.existsSync('tmp/')) {

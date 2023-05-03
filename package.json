@@ -18,6 +18,7 @@
     "open": "^8.4.0",
     "os-utils": "0.0.14",
     "osc-js": "^2.4.0",
+    "readimage": "^1.1.1",
     "request": "^2.88.2",
     "sync-request": "^6.1.0",
     "tonal": "^4.12.0",

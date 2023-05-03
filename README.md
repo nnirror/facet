@@ -621,7 +621,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ---
 - **scale** ( _new_min_, _new_max_ )
 	- moves the FacetPattern to a new range, from `new_min` to `new_max`. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
-	- if no value is entered for `new_max`, then the first argument will be used to create the `new_min` and `new_max`, centered around 0. For instance, `scale(1) == scale(-1,1)`
 	- example:
 		- `$('example').sine(10,100).scale(0,1); // unipolar signal`
 ---
@@ -887,10 +886,18 @@ Facet can load audio samples (.wav files) as FacetPatterns and run arbitrary ope
 	- example:
 		- `$('example').drunk(16,0.1); // slight random movement`
 ---
-- **envelope** ( _values_ )
+- **envelope** ( _imagePath_,  )
 	- Generates an envelope using the supplied array `values`, which must have a total number of entries equal to a multiple of 3. The numbers inside the `values` array should be continually ordered in groups of three: `from`, `to`, `size`, just like the `ramp()` function.
 	- example:
 		- ` $('example').noise(ms(500)).times(_.envelope([0,1,ms(10),1,0.1,ms(200),0.1,0,ms(290)])).play(); // transient noise burst`
+---
+- **image** ( _values_, _samplesPerColumn_ = sample_rate / 10, _maximumFrequency_ = sample_rate / 2, _frequencyOffset_ = 0 )
+	- Transposes an image onto the audio spectrum by generating a sine wave lasting for `samplesPerColumn` samples for every pixel in the image, starting with the left-most column and moving rightwards.
+	- The default `samplesPerColumn` value of 10 means that each second of audio will contain 10 columns of pixels. This value can be larger or smaller, but keep in mind the potential for generating humongous files. The lowest pixels in the image correspond to the lowest frequencies in the output. Conversely, the highest pixels in the image correspond to the highest frequencies in the output.
+	This method currently only works with JPEG files, and sometimes certain JPEG files won't even work. (I have submitted a GitHub issue: https://github.com/revisitors/readimage/issues/4) Re-saving the JPEG files in GIMP seems to create JPEGs that the middleware this method uses can parse correctly.
+	- The `maximumFrequency` and `frequencyOffset` values control the range of frequencies that the pixels will map onto.
+	- example:
+		- ` $('example').image('/path/to/file/goes/here.jpg',1024).play(); // each column lasts 1024 samples`
 ---
 - **from** ( _pattern_ )
 	- allows the user to specify their own pattern. **Note the array syntax!**

@@ -10,7 +10,8 @@ const Freeverb = require('./lib/Freeverb.js').Freeverb;
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const BiQuadFilter = require('./lib/BiQuadFilter.js').BiQuadFilter;
 const FFT = require('./lib/fft.js');
-const { Midi, Scale } = require("tonal");
+const { Midi, Scale } = require('tonal');
+const readimage = require('readimage');
 
 class FacetPattern {
   constructor (name) {
@@ -170,6 +171,46 @@ class FacetPattern {
         }
     }
     this.data = sequence;
+    return this;
+  }
+
+  image (imagePath ,samplesPerColumn = Math.floor(FACET_SAMPLE_RATE / 10), nyquistFrequency = FACET_SAMPLE_RATE / 2, frequencyOffset = 0) {
+    const fileData = fs.readFileSync(imagePath);
+    let imageData;
+
+    readimage(fileData, function (err, image) {
+      if (err) {
+        throw `image file: ${imagePath} could not be read correctly. Make sure the file is a JPEG, and try re-exporting it with GIMP or another image editor.`;
+      }
+      imageData = image;
+    });
+
+    const frequencyStep = nyquistFrequency / imageData.height;
+    const audioData = [];
+  
+    for (let x = 0; x < imageData.width; x++) {
+      const columnData = new Array(samplesPerColumn).fill(0);
+  
+      for (let y = 0; y < imageData.height; y++) {
+        const pixelIndex = (y * imageData.width + x) * 4;
+        const r = imageData.frames[0].data[pixelIndex];
+        const g = imageData.frames[0].data[pixelIndex + 1];
+        const b = imageData.frames[0].data[pixelIndex + 2];
+        const brightness = (r + g + b) / (255 * 3);
+  
+        const frequency = y * frequencyStep;
+  
+        for (let i = 0; i < samplesPerColumn; i++) {
+          const sineWave = Math.sin(Math.abs((nyquistFrequency-frequency) + frequencyOffset) * i * Math.PI * 2 / FACET_SAMPLE_RATE);
+          columnData[i] += sineWave * brightness * (1/imageData.height); // amplitude scaled based on image height so even if every pixel was at full brightness they won't add to 1
+        }
+      }
+      audioData.push(columnData);
+    }
+    this.data = audioData;
+    this.data = this.fadeArrays(this.data);
+    this.data = this.sliceEndFade(this.data);
+    this.flatten();
     return this;
   }
 
@@ -1743,32 +1784,22 @@ waveformSample(waveform, phase) {
   }
 
   scale (new_min, new_max) {
-    // first determine existing range
-    let min = Math.min.apply(Math, this.data);
-    let max = Math.max.apply(Math, this.data);
-    if (!new_max) {
-      new_max = new_min;
-      new_min *= -1;
+    if (this.data.length === 1) {
+        if (this.data[0] < new_min) {
+          // if only a single value is in the data, and it's below new_min, output new_min
+          this.data = [new_min];
+        }
+        else if (this.data[0] > new_max) {
+          // if only a single value is in the data, and it's above new_max, output new_max
+          this.data = [new_max];
+        }
+        // do nothing if the data is already in the range of new_min and new_max
+        return this;
     }
-
-    // special handling if only one value in the pattern
-    if ( this.data.length == 1 ) {
-      if (this.data[0] <= new_min ) {
-        this.data[0] = new_min;
-      }
-      else if (this.data[0] >= new_max ) {
-        this.data[0] = new_max;
-      }
-      return this.data;
-    }
-
-    // otherwise scale each value based on new_min, new_max
-    let scaled_sequence = [];
-    for (const [key, step] of Object.entries(this.data)) {
-      let new_val = this.scaleInner(step, [min,max], [Number(new_min), Number(new_max)]);
-      scaled_sequence[key] = Number(new_val);
-    }
-    this.data = scaled_sequence;
+    const min = Math.min(...this.data);
+    const max = Math.max(...this.data);
+    const scaledData = this.data.map(value => ((value - min) / (max - min)) * (new_max - new_min) + new_min);
+    this.data = scaledData;
     return this;
   }
 
@@ -1960,54 +1991,28 @@ waveformSample(waveform, phase) {
   }
 
   speed (ratio) {
-    // determine maximim ratio based on input size.
-    let ratio_maximum = Math.round(176400/this.data.length);
-    // hard clamp stretch ratio between 0.02083 (48x) and 8
-    ratio = Math.abs(Number(ratio));
-    if ( ratio < 0.000001 ) {
-      ratio = 0.02083;
-    }
-    if (ratio > ratio_maximum) {
-      ratio = ratio_maximum;
-    }
-    let upscaled_data = [];
-    let new_samps = Math.floor(ratio * this.data.length);
-    let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
-    for (var n = 0; n < this.data.length; n++) {
-      let i = 0;
-      while (i < copies_of_each_value) {
-        upscaled_data.push(this.data[n]);
-        i++;
-      }
-    }
-    this.data = upscaled_data;
-    this.reduce(new_samps);
-    return this;
-  }
-
-  speedNoClamp (ratio) {
-    // hard clamp stretch ratio between 0.02083 (48x) and 8
-    ratio = Math.abs(Number(ratio));
-    let upscaled_data = [];
-    let new_samps = Math.floor(ratio * this.data.length);
-    let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
-    for (var n = 0; n < this.data.length; n++) {
-      let i = 0;
-      while (i < copies_of_each_value) {
-        upscaled_data.push(this.data[n]);
-        i++;
-      }
-    }
-    this.data = upscaled_data;
-    this.reduce(new_samps);
-    return this;
+   // hard clamp stretch ratio between 0.02083 (48x) and 8
+   ratio = Math.abs(Number(ratio));
+   let upscaled_data = [];
+   let new_samps = Math.floor(ratio * this.data.length);
+   let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
+   for (var n = 0; n < this.data.length; n++) {
+     let i = 0;
+     while (i < copies_of_each_value) {
+       upscaled_data.push(this.data[n]);
+       i++;
+     }
+   }
+   this.data = upscaled_data;
+   this.reduce(new_samps);
+   return this;
   }
 
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
     // get ratio between current size and new size
     let change_ratio = new_size / this.data.length;
-    this.speedNoClamp(change_ratio);
+    this.speed(change_ratio);
     return this;
   }
 
@@ -2862,10 +2867,10 @@ waveformSample(waveform, phase) {
   makePatternsTheSameSize (sequence1, sequence2) {
     // make whichever one is smaller, fit the larger one's size.
     if ( sequence1.data.length > sequence2.data.length ) {
-      sequence2 = sequence2.speedNoClamp((sequence1.data.length / sequence2.data.length));
+      sequence2 = sequence2.speed((sequence1.data.length / sequence2.data.length));
     }
     else if ( sequence2.data.length > sequence1.data.length ) {
-      sequence1 = sequence1.speedNoClamp((sequence2.data.length / sequence1.data.length));
+      sequence1 = sequence1.speed((sequence2.data.length / sequence1.data.length));
     }
     return [sequence1, sequence2];
   }
@@ -2902,25 +2907,6 @@ waveformSample(waveform, phase) {
       return 1 << count;
   }
 
-  scaleInner (value, r1, r2) {
-      return ( value - r1[ 0 ] ) * ( r2[ 1 ] - r2[ 0 ] ) / ( r1[ 1 ] - r1[ 0 ] ) + r2[ 0 ];
-  }
-
-  scaleThePattern (arrayToScale, nTimes) {
-      nTimes-= 1;
-      for (var idx = 0, i = 0, len = arrayToScale.length * nTimes; i < len; i++) {
-        var elem = arrayToScale[idx];
-
-        /* Insert the element into (idx + 1) */
-        arrayToScale.splice(idx + 1, 0, elem);
-
-        /* Add idx for the next elements */
-        if ((i + 1) % nTimes === 0) {
-          idx += nTimes + 1;
-        }
-      }
-      return arrayToScale;
-  }
   // END utility functions
 
   // frequency: hz. duration: samples (converted to seconds internally). damping and feedback both scaled 0-1. 
