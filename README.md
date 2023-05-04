@@ -85,6 +85,10 @@ The variable `bars` (representing how many loops have occurred since the time th
 
 You can change the sample rate for the audio generated and played back with Facet by modifying `SAMPLE_RATE` in `js/config.js` to whatever integer you want.
 
+In Facet commands, you can use the variable `FACET_SAMPLE_RATE` to refer to the configured sample rate, which is useful when you want to do something for a specific number of seconds. 
+
+For example: `$('example').noise(FACET_SAMPLE_RATE).play(); // generate and continually play back exactly 1 second of noise`
+
 ## Global event resolution
 
 By default, Facet checks every 2 milliseconds whether it needs to fire any events that produce output, such as playing audio, MIDI, or osc. You can change  `EVENT_RESOLUTION_MS` in `js/config.js` to set a different integer value. Slower speeds (e.g. 10 = 10ms) will produce less tightly-timed events but can help make it possible for Facet to run on computers with less CPU resources, at the expense of slight timing accuracy.
