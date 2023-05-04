@@ -174,7 +174,7 @@ class FacetPattern {
     return this;
   }
 
-  image (imagePath ,samplesPerColumn = Math.floor(FACET_SAMPLE_RATE / 10), nyquistFrequency = FACET_SAMPLE_RATE / 2, frequencyOffset = 0) {
+  image (imagePath, samplesPerColumn = Math.floor(FACET_SAMPLE_RATE / 10), nyquistFrequency = FACET_SAMPLE_RATE / 2, frequencyOffset = 0) {
     const fileData = fs.readFileSync(imagePath);
     let imageData;
 
@@ -202,11 +202,34 @@ class FacetPattern {
   
         for (let i = 0; i < samplesPerColumn; i++) {
           const sineWave = Math.sin(Math.abs((nyquistFrequency-frequency) + frequencyOffset) * i * Math.PI * 2 / FACET_SAMPLE_RATE);
-          columnData[i] += sineWave * brightness * (1/imageData.height); // amplitude scaled based on image height so even if every pixel was at full brightness they won't add to 1
+          columnData[i] += sineWave * brightness;
         }
+      }
+      
+      const fadeInLength = Math.floor(FACET_SAMPLE_RATE / 33);
+      const fadeOutLength = Math.floor(FACET_SAMPLE_RATE / 33);
+      for (let i = 0; i < fadeInLength; i++) {
+          columnData[i] *= i / fadeInLength;
+      }
+      for (let i = 0; i < fadeOutLength; i++) {
+          columnData[samplesPerColumn - 1 - i] *= i / fadeOutLength;
       }
       audioData.push(columnData);
     }
+
+    let maxAmplitude = 0;
+    for (let x = 0; x < audioData.length; x++) {
+        for (let y = 0; y < samplesPerColumn; y++) {
+            maxAmplitude = Math.max(maxAmplitude, Math.abs(audioData[x][y]));
+        }
+    }
+
+    for (let x = 0; x < audioData.length; x++) {
+        for (let y = 0; y < samplesPerColumn; y++) {
+            audioData[x][y] /= maxAmplitude;
+        }
+    }
+
     this.data = audioData;
     this.data = this.fadeArrays(this.data);
     this.data = this.sliceEndFade(this.data);
