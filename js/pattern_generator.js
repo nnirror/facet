@@ -45,7 +45,10 @@ module.exports = {
             // if failed execution BUT doesnt exist in reruns yet, you can add it. otherwise skip any failed executions
             if ( fp.do_not_regenerate === false && ( fp.executed_successfully == true || ( fp.executed_successfully == false && reruns.hasOwnProperty(fp.name) == false ) ) ) {
               // don't add to reruns if it's meant to not regenerate via .keep()
-              reruns[fp.name] = fp;
+              if ( is_rerun === false ) {
+                // and only add to reruns the first time the code is POSTed
+                reruns[fp.name] = fp;
+              }
             }
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');

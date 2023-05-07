@@ -184,7 +184,7 @@ class FacetPattern {
       }
       imageData = image;
     });
-
+    samplesPerColumn = Math.round(samplesPerColumn);
     const frequencyStep = nyquistFrequency / imageData.height;
     const audioData = [];
   
@@ -205,7 +205,7 @@ class FacetPattern {
           columnData[i] += sineWave * brightness;
         }
       }
-      
+
       const fadeInLength = Math.floor(FACET_SAMPLE_RATE / 33);
       const fadeOutLength = Math.floor(FACET_SAMPLE_RATE / 33);
       for (let i = 0; i < fadeInLength; i++) {
