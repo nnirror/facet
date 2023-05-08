@@ -18,7 +18,7 @@ body {
   vertical-align: middle;
 }
 #bpm {
-  width: 5em;
+  width: 4em;
   text-align: center;
 }
 #steps {
@@ -52,15 +52,13 @@ body {
   width: 2%;
 }
 #cpu {
-  width: 9%;
   margin-right: 1%;
-  min-width: 66px;
+  width: 6em;
 }
 #notifications {
   float: left;
   padding-right: 1%;
   overflow: scroll;
-  width: 40%;
 }
 #midi {
   float: right;
@@ -99,9 +97,6 @@ body {
   }
 }
 @media screen and (max-width: 700px) {
-  #notifications {
-    width: 36% !important;
-  }
   #midi_refresh {
     font-size: 0.5em;
     height: auto;
@@ -120,11 +115,8 @@ body {
   }
 }
 @media screen and (max-width: 600px) {
-  #notifications {
-    width: 34% !important;
-  }
   #midi {
-    min-width: 110px;
+    min-width: 5em;
   }
   #midi_outs {
     font-size: 0.6em;
@@ -140,5 +132,11 @@ body {
   }
   #bpm, #steps {
     font-size: 0.8em;
+  }
+}
+
+@media screen and (max-width: 400px) {
+  #midi_outs {
+    width: 6em;
   }
 }

@@ -2173,47 +2173,6 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  suspend (start, end) {
-    this.reduce(FACET_SAMPLE_RATE * 2);
-    let suspend_sequence = [];
-    start = Math.abs(Number(start));
-    end = Math.abs(Number(end));
-    if ( start < 0 ) {
-      start = 0;
-    }
-    else if ( start > 1 ) {
-      start = 1;
-    }
-    if ( end < 0 ) {
-      end = 0;
-    }
-    else if ( end > 1 ) {
-      end = 1;
-    }
-    let sorted = new FacetPattern().from([start,end]).sort();
-    start = sorted.data[0];
-    end = sorted.data[1];
-    let calc_size = Math.abs(end-start);
-    if ( calc_size < 0.125 ) {
-      // maximum 1/8th resolution
-      calc_size = 0.125;
-    }
-    let size_increase_coefficient = 1 / calc_size;
-
-    let begin_zeroes = Math.round(start * (this.data.length * size_increase_coefficient));
-    let end_zeroes = begin_zeroes + this.data.length;
-    for (var i = 0; i < (size_increase_coefficient * this.data.length); i++) {
-      if ( i < begin_zeroes || i > end_zeroes ) {
-        suspend_sequence.push(0);
-      }
-      else {
-        suspend_sequence.push(this.data[i - begin_zeroes]);
-      }
-    }
-    this.data = suspend_sequence;
-    return this;
-  }
-
   times (sequence2, match_sizes = true) {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
