@@ -192,6 +192,16 @@ $('body').on('click', '#end', function() {
   });
 });
 
+let blockBpmUpdateFromServer;
+let bpmCanBeUpdatedByServer = true;
+$('body').on('change', '#bpm', function() {
+    bpmCanBeUpdatedByServer = false;
+    clearTimeout(blockBpmUpdateFromServer);
+    blockBpmUpdateFromServer = setTimeout(function() {
+      bpmCanBeUpdatedByServer = true;
+    }, 3000);
+});
+
 // begin loop to check status of servers
 checkStatus();
 
@@ -207,7 +217,7 @@ function checkStatus() {
       let cpu_percent = parseFloat(data.data.cpu).toFixed(2) * 100;
       cpu_percent = cpu_percent.toString().substring(0,4);
       $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
-      if ( !$('#bpm').is(':focus') ) {
+      if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
         $('#bpm').val(`${data.data.bpm}`);
       }
       setStatus(`connected`);

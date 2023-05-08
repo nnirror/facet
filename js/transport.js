@@ -31,6 +31,9 @@ app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
 
+// pass bpm and bars_elapsed every 100ms
+setInterval(reportTransportMetaData,100);
+
 axios.interceptors.response.use(res=>{return res}, (error) => {
   // do nothing, necessary for windows to preven fatal 500s
   // with axios as transport starts up
@@ -218,9 +221,6 @@ app.post('/stop', (req, res) => {
 
 const server = app.listen(3211);
 
-// pass along bpm and bars elapsed on server initialization
-reportTransportMetaData();
-
 function tick() {
   // calculate based on bpm how many ticks at EVENT_RESOLUTION_MS equal a full loop
   // first need to figure out how many events per second run at EVENT_RESOLUTION_MS = Math.round(1000 / EVENT_RESOLUTION_MS)
@@ -235,8 +235,8 @@ function tick() {
   if ( current_relative_step_position > 1.00001 ) {
     current_relative_step_position = 0;
     bars_elapsed++;
-    // pass along bpm and bars elapsed, then tell pattern server to start processing next loop
-    reportTransportMetaData();
+    // tell pattern server to start processing next loop
+    requestNewPatterns();
   }
 
   let scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
@@ -356,6 +356,9 @@ function reportTransportMetaData() {
   .catch(function (error) {
     console.log(`error posting metadata to pattern server: ${error}`);
   });
+}
+
+function requestNewPatterns () {
   if ( bars_elapsed > 0 ) {
     // tell server to generate any new patterns
     axios.get('http://localhost:1123/update');
