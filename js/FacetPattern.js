@@ -141,6 +141,8 @@ class FacetPattern {
   }
 
   euclid (pulses, steps) {
+    pulses = Math.abs(Math.floor(Number(pulses)));
+    steps = Math.abs(Math.floor(Number(steps)));
     let sequence = [];
     let counts = new Array(pulses).fill(1);
     let remainders = new Array(steps - pulses).fill(0);
@@ -263,6 +265,7 @@ class FacetPattern {
   }
 
   phasor (frequency, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+    frequency = Math.abs(frequency);
     let wave = [];
     let samplesPerCycle = sampleRate / frequency;
     for (let i = 0; i < duration; i++) {
@@ -341,6 +344,7 @@ class FacetPattern {
   }
 
   rect (frequency, duration = FACET_SAMPLE_RATE, pulseWidth = 0.5, sampleRate = FACET_SAMPLE_RATE) {
+    frequency = Math.abs(frequency);
     let wave = [];
     let samplesPerCycle = sampleRate / frequency;
     let amplitude = 1;
@@ -438,6 +442,7 @@ class FacetPattern {
   }
 
   silence (length) {
+    length = Math.abs(Math.floor(length));
     this.data = new Array(length).fill(0);
     return this;
   }
@@ -495,6 +500,7 @@ class FacetPattern {
   }
 
   sine (frequency, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+    frequency = Math.abs(frequency);
     let output = [];
     for (let i = 0; i < length; i++) {
       let t = i / sampleRate;
@@ -526,6 +532,7 @@ class FacetPattern {
   }
 
   square (frequency, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+    frequency = Math.abs(frequency);
     let wave = [];
     let samplesPerCycle = sampleRate / frequency;
     let amplitude = 1;
@@ -538,6 +545,7 @@ class FacetPattern {
 }
   
   tri (frequency, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+    frequency = Math.abs(frequency);
     let wave = [];
     let samplesPerCycle = sampleRate / frequency;
     let amplitude = 1;
@@ -843,24 +851,34 @@ class FacetPattern {
     return this;
   }
 
-  fm (frequency, modulatorFrequency, durationSamples, envelope, modulationIndex = 2, carrierWaveform = 0, modulatorWaveform = 0) {
+  fm (frequency, modulatorFrequency, durationSamples, envelopePattern, modulationIndex = 2, carrierWaveform = 0, modulatorWaveform = 0) {
+    frequency = Math.abs(frequency);
+    modulatorFrequency = Math.abs(modulatorFrequency);
+    durationSamples = Math.abs(Math.floor(durationSamples));
+    modulationIndex = Math.abs(modulationIndex);
+    carrierWaveform = Math.abs(Math.floor(carrierWaveform));
+    modulatorWaveform = Math.abs(Math.floor(modulatorWaveform));
+    if ( !this.isFacetPattern(envelopePattern) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof envelopePattern}`;
+    }
+
     let carrierFrequency = frequency;
     let envelopeIndex = 0;
-    let envelopeStep = Math.floor(FACET_SAMPLE_RATE / envelope.data.length);
+    let envelopeStep = Math.floor(FACET_SAMPLE_RATE / envelopePattern.data.length);
     let envelopeCounter = 0;
     for (let i = 0; i < durationSamples; i++) {
         let carrierPhase = (i / FACET_SAMPLE_RATE) * carrierFrequency * 2 * Math.PI;
         let modulatorPhase = (i / FACET_SAMPLE_RATE) * modulatorFrequency * 2 * Math.PI;
         let carrierSample = this.waveformSample(carrierWaveform, carrierPhase);
         let modulatorSample = this.waveformSample(modulatorWaveform, modulatorPhase);
-        let sample = carrierSample + modulationIndex * modulatorSample * envelope.data[envelopeIndex];
+        let sample = carrierSample + modulationIndex * modulatorSample * envelopePattern.data[envelopeIndex];
         this.data.push(sample);
         envelopeCounter++;
         if (envelopeCounter >= envelopeStep) {
             envelopeCounter = 0;
             envelopeIndex++;
-            if (envelopeIndex >= envelope.data.length) {
-                envelopeIndex = envelope.data.length - 1;
+            if (envelopeIndex >= envelopePattern.data.length) {
+                envelopeIndex = envelopePattern.data.length - 1;
             }
         }
     }
@@ -883,17 +901,20 @@ waveformSample(waveform, phase) {
 }
 
   gate(threshold, attackSamples, releaseSamples) {
+    attackSamples = Math.abs(Math.floor(Number(attackSamples)));
+    releaseSamples = Math.abs(Math.floor(Number(releaseSamples)));
+    threshold = Math.abs(threshold);
     let gateOn = false;
     let attackCounter = 0;
     let releaseCounter = 0;
     let gatedSignal = this.data.map(sample => {
-        if (sample < threshold && !gateOn) {
+        if (Math.abs(sample) < threshold && !gateOn) {
             attackCounter++;
             if (attackCounter >= attackSamples) {
                 gateOn = true;
                 releaseCounter = 0;
             }
-        } else if (sample >= threshold) {
+        } else if (Math.abs(sample) >= threshold) {
             attackCounter = 0;
         } else if (gateOn && releaseCounter < releaseSamples) {
             releaseCounter++;
@@ -1712,6 +1733,10 @@ waveformSample(waveform, phase) {
   }
 
   pitch (pitchShiftFactor) {
+    pitchShiftFactor = Math.abs(pitchShiftFactor);
+    if (pitchShiftFactor == 0 ) {
+      pitchShiftFactor = 0.125;
+    }
     let windowSize = 1024;
     let hopSize = windowSize / 4;
     let outputArray = [];
@@ -2893,7 +2918,9 @@ waveformSample(waveform, phase) {
 
   // frequency: hz. duration: samples (converted to seconds internally). damping and feedback both scaled 0-1. 
   pluck(frequency, duration = FACET_SAMPLE_RATE, damping, feedback) {
+    frequency = Math.abs(frequency);
     duration = duration / FACET_SAMPLE_RATE;
+    damping = Math.abs(Number(damping));
     feedback = Math.abs(Number(feedback));
     feedback = 0.5 + feedback * 0.5;
     let string = new KarplusStrongString(frequency, damping, feedback);
@@ -2909,23 +2936,32 @@ waveformSample(waveform, phase) {
 
   // maxFrameSize allows you to hard-code the range that the data will get appended to, so that if you're
   // iteratively superposing stuff, the relative positions don't change as you add stuff to the data
-  sup (addArray, startPosition, maxFrameSize = this.data.length ) {
+  sup (addPattern, startPosition, maxFrameSize = this.data.length ) {
+    if ( !this.isFacetPattern(addPattern) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof addPattern}`;
+    }
+    startPosition = Math.abs(startPosition);
+    maxFrameSize = Math.abs(Math.floor(maxFrameSize));
     let start = Math.floor(startPosition * maxFrameSize);
     let output = this.data.slice();
-    for (let i = 0; i < addArray.data.length; i++) {
+    for (let i = 0; i < addPattern.data.length; i++) {
         if (start + i < this.data.length) {
-            output[start + i] += addArray.data[i];
+            output[start + i] += addPattern.data[i];
         } else {
-            output.push(addArray.data[i]);
+            output.push(addPattern.data[i]);
         }
     }
     this.data = output;
     return this;
   }
 
-  splice (spliceArray, relativePosition) {
+  splice (splicePattern, relativePosition) {
+    if ( !this.isFacetPattern(splicePattern) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof splicePattern}`;
+    }
+    relativePosition = Math.abs(relativePosition);
     let position = Math.round(relativePosition * this.data.length);
-    this.data.splice(position, spliceArray.data.length, ...spliceArray.data);
+    this.data.splice(position, splicePattern.data.length, ...splicePattern.data);
     return this;
   }
 
