@@ -216,6 +216,8 @@ app.post('/stop', (req, res) => {
   if ( typeof midioutput !== 'undefined' ) {
     midioutput.sendAllNotesOff();
   }
+  // clear out any dynamic BPM patterns, so BPM stays at whatever value it was prior to stopping
+  meta_data.bpm = bpm;
   res.sendStatus(200);
 });
 
@@ -346,8 +348,9 @@ function handleBpmChange() {
 }
 
 function reportTransportMetaData() {
-  // pass along the current bpm and bars elapsed
-  axios.post('http://localhost:1123/meta',
+  // pass along the current bpm and bars elapsed, if the transport is running
+  if ( transport_on === true ) {
+    axios.post('http://localhost:1123/meta',
     {
       bpm: JSON.stringify(bpm),
       bars_elapsed: JSON.stringify(bars_elapsed)
@@ -356,6 +359,7 @@ function reportTransportMetaData() {
   .catch(function (error) {
     console.log(`error posting metadata to pattern server: ${error}`);
   });
+  }
 }
 
 function requestNewPatterns () {

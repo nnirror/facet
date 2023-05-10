@@ -134,6 +134,7 @@ $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
 });
 
 $('body').on('change', '#midi_outs', function() {
+  localStorage.setItem('midi_outs_value', this.value);
   $.post('http://127.0.0.1:3211/midi_select', {output:this.value}).done(function( data, status ) {});
 });
 
@@ -190,6 +191,18 @@ $('body').on('click', '#end', function() {
       $.growl.error({ message: 'There was an error while shutting down Facet'});
     }
   });
+});
+
+$(document).ready(function() {
+  // retrieve the previously stored MIDI out destination from localstorage
+  var storedValue = localStorage.getItem('midi_outs_value');
+  if (storedValue) {
+      // reset the most recently used MIDI out destination
+      setTimeout(function() {
+        $('#midi_outs').val(storedValue);
+    }, 100);
+      $.post('http://127.0.0.1:3211/midi_select', {output:storedValue}).done(function( data, status ) {});
+  }
 });
 
 let blockBpmUpdateFromServer;
