@@ -502,6 +502,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
 ---
+- **harmonics** ( _num_harmonics_ )
+	- adds `num_harmonics` harmonics to the input signal.
+	- example:
+		- `$('example').sine(10).harmonics(200).play(); // 10Hz sine wave with 200 harmonics added on top`
+---
 - **hpf** ( _cutoff_ = 100, _q_ = 2.5 )
 	- applies a high pass filter with configurable `cutoff` and `q` to the FacetPattern.
 	- example:

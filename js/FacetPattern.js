@@ -1443,6 +1443,19 @@ waveformSample(waveform, phase) {
     return this;
   }
 
+  harmonics (num_harmonics) {
+    num_harmonics = Math.abs(Math.floor(Number(num_harmonics)));
+    let result = [];
+    for (let i = 0; i < this.data.length; i++) {
+        let harmonicSum = 0;
+        for (let j = 1; j <= num_harmonics; j++) {
+            harmonicSum += Math.sin(j * this.data[i]);
+        }
+        result.push(this.data[i] + harmonicSum);
+    }
+    this.data = result;
+    return this;
+  }
     
   lpf (cutoff = 2000 , q = 2.5) {
     // first argument is 0 for type = lpf. last arg is the filter gain (1)
