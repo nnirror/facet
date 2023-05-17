@@ -2353,68 +2353,31 @@ waveformSample(waveform, phase) {
   // END modulator operations
 
   // WINDOW operations
-  applyWindow (signal, func) {
-    var i, n = signal.length, args = [0,n];
-    // pass rest of args
-    for(i = 2; i < arguments.length; i++) {
-      args[i] = arguments[i]
-    }
-    for ( i = n-1; i >= 0; i-- ) {
-      args[0] = i;
-      signal[i] *= func.apply(null,args);
-    }
-    return signal;
-  }
-
   fade (fade_percent = 0.1) {
     this.fadein(fade_percent).fadeout(fade_percent);
     return this;
   }
 
-  fadeInner () {
-    this.data = this.applyWindow(this.data, this.hamming);
-    return this;
-  }
-
-  fadein(fade_percent = 0.5) {
-    fade_percent = Math.abs(Number(fade_percent));
-    if (fade_percent >= 1 || fade_percent <= 0 ) {
-      throw `fadein percentage must be between 0 and 1; value found: ${fade_percent}`;
+  fadein(fade_amount) {
+    let fade_length = Math.floor(this.data.length * fade_amount);
+    for (let i = 0; i < fade_length; i++) {
+        this.data[i] = this.data[i] * Math.sin((i / fade_length) * (Math.PI / 2));
     }
-    this.reverse().fadeout(fade_percent).reverse();
-    return this;
-  }
-
-  fadeout(fade_percent = 0.5) {
-    fade_percent = Math.abs(Number(fade_percent));
-    if (fade_percent >= 1 || fade_percent <= 0 ) {
-      throw `fadeout percentage must be between 0 and 1; value found: ${fade_percent}`;
+    for (let i = 0; i < fade_length; i++) {
+      this.data[i] = this.data[i] * Math.sin((i / fade_length) * (Math.PI / 2));
     }
-    let copy = new FacetPattern().from(this.data);
-    let fade_samples = Math.round(this.data.length * fade_percent) * 2;
-    let out = this.range(0,1-fade_percent).append(copy.range(1-fade_percent,1).times(new FacetPattern().ramp(1,1,fade_samples).fadeInner().range(0.5,1)));
-    this.data = out.data;
     return this;
   }
 
-  flattop () {
-    this.data = this.applyWindow(this.data, this.flatTopInner);
+  fadeout(fade_amount) {
+    let fade_length = Math.floor(this.data.length * fade_amount);
+    for (let i = this.data.length - 1; i >= this.data.length - fade_length; i--) {
+        this.data[i] = this.data[i] * Math.sin(((this.data.length - i) / fade_length) * (Math.PI / 2));
+    }
+    for (let i = this.data.length - 1; i >= this.data.length - fade_length; i--) {
+      this.data[i] = this.data[i] * Math.sin(((this.data.length - i) / fade_length) * (Math.PI / 2));
+  }
     return this;
-  }
-
-  flatTopInner (i,N) {
-    var a0 = 1,
-        a1 = 1.93,
-        a2 = 1.29,
-        a3 = 0.388,
-        a4 = 0.028,
-        f = 6.283185307179586*i/(N-1)
-
-    return a0 - a1*Math.cos(f) +a2*Math.cos(2*f) - a3*Math.cos(3*f) + a4 * Math.cos(4*f)
-  }
-
-  hamming (i,N) {
-    return 0.54 - 0.46 * Math.cos(6.283185307179586*i/(N-1));
   }
   // END WINDOW operations. shimmed from https://github.com/scijs/window-function
 
