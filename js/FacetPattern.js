@@ -1443,6 +1443,16 @@ waveformSample(waveform, phase) {
     return this;
   }
 
+  trim () {
+    let dbArr = this.data.map(x => 20 * Math.log10(Math.abs(x)));
+    let end = dbArr.length - 1;
+    while (dbArr[end] < -70) {
+        end--;
+    }
+    this.data = this.data.slice(0, end + 1);
+    return this;
+  }
+
   harmonics (num_harmonics) {
     num_harmonics = Math.abs(Math.floor(Number(num_harmonics)));
     let result = [];
@@ -1456,7 +1466,7 @@ waveformSample(waveform, phase) {
     this.data = result;
     return this;
   }
-    
+  
   lpf (cutoff = 2000 , q = 2.5) {
     // first argument is 0 for type = lpf. last arg is the filter gain (1)
     BiQuadFilter.create(0,cutoff,FACET_SAMPLE_RATE,q,1);
@@ -1741,7 +1751,7 @@ waveformSample(waveform, phase) {
     let silence_at_end = new FacetPattern().silence(FACET_SAMPLE_RATE*10);
     this.append(silence_at_end);
     this.data = new Freeverb(size).process(this.data,size);
-    this.flatten();
+    this.flatten().trim();
     return this;
   }
 
@@ -2101,6 +2111,25 @@ waveformSample(waveform, phase) {
     this.flatten();
     return this;
   }
+
+  stretchTo(samps) {
+    let stretchFactor = samps / this.data.length;
+    this.stretch(stretchFactor);
+    this.reduce(samps);
+    return this;
+  }
+
+  loud () {
+    let maxVal = 0;
+    for (let i = 0; i < this.data.length; i++) {
+        maxVal = Math.max(maxVal, Math.abs(this.data[i]));
+    }
+    let gain = 1 / maxVal;
+    for (let i = 0; i < this.data.length; i++) {
+      this.data[i] *= gain;
+    }
+    return this;
+}
 
   sort () {
     let sorted_sequence = [];
@@ -2793,10 +2822,13 @@ waveformSample(waveform, phase) {
       return array;
     }
     let result = [...array];
-    let fadeLength = 128;
+    let fadeLength = Math.floor(0.002 * FACET_SAMPLE_RATE);
     for (let i = array.length - fadeLength; i < array.length; i++) {
       let t = (i - (array.length - fadeLength)) / fadeLength;
       result[i] = array[i] * (1 - t);
+      if (isNaN(result[i])) {
+        result[i] = 0;
+      }
     }
     return result;
   }
@@ -2820,6 +2852,9 @@ waveformSample(waveform, phase) {
         for (let j = 0; j < fadeLength; j++) {
           let t = j / fadeLength;
           let value = startValue + t * (endValue - startValue);
+          if (isNaN(value)) {
+            value = 0;
+          }
           result.push(value);
         }
       } else {

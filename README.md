@@ -547,6 +547,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').noise(n8).log(rf()).play(); // each time a different logarithmic curve on the 8th note of noise`
 ---
+- **loud** ( )
+	- rescales the FacetPattern to a full dynamic range between -1 and 1, without any dynamic range compression, in a more efficient way than `scale(-1,1)`.
+	- example:
+		- `$('example').noise(n2).gain(0.1).loud().play(); // remove loud() to hear the difference`
+---
 - **lpf** ( _cutoff_ )
 	- applies a low pass filter with configurable `cutoff` and `q` to the FacetPattern.
 	- example:
@@ -702,6 +707,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- time-stretches the FacetPattern while preserving pitch. `shift_amount` values less than 1 will shorten its overall length; values greater than 1 will increase its length.
 	- example:
 		- `$('example').sine(100,n4).stretch(4).play(); // stretching a quarter note sine wave to last a whole note`
+---
+- **stretchTo** ( _num_samples_ )
+	- time-stretches the FacetPattern while preserving pitch so it now lasts `num_samples` samples.
+	- example:
+		- `$('example').sine(1000,n2).stretchTo(n1).play(); // 1000Hz sine wave originally a half note long, stretched to a whole note`
 ---
 - **stutter** ( _number_of_repeats_, _start_pos_ = 0, _end_pos_ = 1 )
 	- creates `_number_of_repeats_` identical chunks of data, calculated from the `start_pos` and `end_pos` values, which represent two relative positions between 0 and 1 in the input FacetPattern's data. After all the repeats have been appended to it, the FacetPattern is resized back to its original length.
