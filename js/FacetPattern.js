@@ -1453,6 +1453,27 @@ waveformSample(waveform, phase) {
     return this;
   }
 
+  resonate (baseFrequency, coefficients, q = 80, wet = 1) {
+    baseFrequency = Math.abs(Number(baseFrequency));
+    q = Math.abs(Number(q));
+    wet = Math.abs(Number(wet));
+    if (wet > 1 ) {
+      wet = 1;
+    }
+    if ( !this.isFacetPattern(coefficients) ) {
+      throw `input must be a FacetPattern object; type found: ${typeof coefficients}`;
+    }
+    let out_fp = new FacetPattern();
+    for (var i = 0; i < coefficients.data.length; i++) {
+      out_fp.sup(new FacetPattern().from(this.data).bpf(baseFrequency*coefficients.data[i],q),0);
+    }
+    let dry = Math.abs(1 - wet);
+    this.gain(dry);
+    out_fp.gain(wet);
+    this.sup(out_fp,0);
+    return this;
+}
+
   harmonics (num_harmonics) {
     num_harmonics = Math.abs(Math.floor(Number(num_harmonics)));
     let result = [];

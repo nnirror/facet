@@ -626,6 +626,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from([42,0,0,36]).replace(0,-1); // 42,-1,-1,36`
 ---
+- **resonate** ( _baseFrequency_, _coefficients_, _q_ = 80, _wet_ = 1 )
+	- resonates the FacetPattern running it through parallel bandpass filters. Each number in the `coefficients` FacetPattern is multiplied by the `baseFrequency` to determine the frequency for that bandpass filter.
+	- example:
+		- `$('example').noise(n16).times(_.ramp(1,0,n16)).resonate(mtof(36),_.ramp(1,20,20),80).play(); // 16th note transient noise burst, resonating at its first 20 harmonics starting at 65.41 Hz (MIDI note C2, mtof(36))`
+---
 - **reverb** (  _reverb_size_ )
 	- applies a reverb effect to the FacetPattern,  using the Freeverb algorithm. Acceptable values for `reverb_size` are between 0 (very small) and 1 (huge).
 	- example:
