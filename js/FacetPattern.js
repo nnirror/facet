@@ -1459,6 +1459,8 @@ waveformSample(waveform, phase) {
     baseFrequency = Math.abs(Number(baseFrequency));
     q = Math.abs(Number(q));
     wet = Math.abs(Number(wet));
+    let tail_fp = new FacetPattern().from(this.data).reverb(0.3).times(new FacetPattern().from(this.data).gain(0),false);
+    this.sup(tail_fp,0);
     if (wet > 1 ) {
       wet = 1;
     }
@@ -1474,8 +1476,9 @@ waveformSample(waveform, phase) {
     out_fp.gain(wet);
     this.sup(out_fp,0);
     this.full(initial_maximum_value);
+    this.fadeout(0.2);
     return this;
-}
+  }
 
   harmonics (num_harmonics) {
     let initial_maximum_value = this.getMaximumValue();
@@ -2409,7 +2412,7 @@ waveformSample(waveform, phase) {
 
   // BEGIN audio operations
   audio () {
-    this.gain(2).offset(-1);
+    this.hpf(0.1);
     return this;
   }
 
