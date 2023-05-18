@@ -382,7 +382,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').turing(16).at(0.5,2); // the 9th value of the 16-step Turing sequence (i.e. 50% position) is always 2`
 ---
 - **audio** ( )
-	- removes any DC offset on the FacetPattern by running it through a high-pass biquadratic filter at ~0Hz.
+	- converts the FacetPattern to a bipolar signal between -1 and 1.
 	- example:
 		- `$('example').randsamp().times(_.noise(4)).audio().play();`
 ---
@@ -476,6 +476,11 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(100).fracture(10).play(); // the sine has shattered into 10 pieces!`
 ---
+- **full** ( )
+	- rescales the FacetPattern to a full dynamic range between -1 and 1, without any dynamic range compression, in a more efficient way than `scale(-1,1)`.
+	- example:
+		- `$('example').noise(n2).gain(0.1).loud().play(); // remove loud() to hear the difference`
+---
 - **gain** ( _amt_ )
 	- multiplies every value in the FacetPattern by a number.
 	- example:
@@ -541,11 +546,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- stretches a FacetPattern according to a logarithmic curve, where the values at the end can be stretched for a significant portion of the FacetPattern, and the values at the beginning can be squished together. The intensity of the curve is controlled by `intensity`, which accepts a float between 0 and 1. If `direction` is negative, it returns the FacetPattern in reverse.
 	- example:
 		- `$('example').noise(n8).log(rf()).play(); // each time a different logarithmic curve on the 8th note of noise`
----
-- **loud** ( )
-	- rescales the FacetPattern to a full dynamic range between -1 and 1, without any dynamic range compression, in a more efficient way than `scale(-1,1)`.
-	- example:
-		- `$('example').noise(n2).gain(0.1).loud().play(); // remove loud() to hear the difference`
 ---
 - **lpf** ( _cutoff_ )
 	- applies a low pass filter with configurable `cutoff` and `q` to the FacetPattern.

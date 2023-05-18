@@ -969,6 +969,7 @@ waveformSample(waveform, phase) {
   // attacktime and release time are expressed as relations to a second, so 0.1 would be 1/10th of a second
   // 
   compress (ratio, threshold, attackTime, releaseTime) {
+    let initial_maximum_value = this.getMaximumValue();
     let attack = Math.pow(0.01, 1.0 / (attackTime * FACET_SAMPLE_RATE));
     let release = Math.pow(0.01, 1.0 / (releaseTime * FACET_SAMPLE_RATE));
     let envelope = 0;
@@ -998,7 +999,7 @@ waveformSample(waveform, phase) {
     }
     this.data = compressedAudio;
     // automatically set gain to match loudest value in original data
-    this.scale(maximum_value*-1,maximum_value);
+    this.full(initial_maximum_value);
     return this;
 }
   
@@ -1454,6 +1455,7 @@ waveformSample(waveform, phase) {
   }
 
   resonate (baseFrequency, coefficients, q = 80, wet = 1) {
+    let initial_maximum_value = this.getMaximumValue();
     baseFrequency = Math.abs(Number(baseFrequency));
     q = Math.abs(Number(q));
     wet = Math.abs(Number(wet));
@@ -1471,20 +1473,23 @@ waveformSample(waveform, phase) {
     this.gain(dry);
     out_fp.gain(wet);
     this.sup(out_fp,0);
+    this.full(initial_maximum_value);
     return this;
 }
 
   harmonics (num_harmonics) {
+    let initial_maximum_value = this.getMaximumValue();
     num_harmonics = Math.abs(Math.floor(Number(num_harmonics)));
     let result = [];
     for (let i = 0; i < this.data.length; i++) {
         let harmonicSum = 0;
         for (let j = 1; j <= num_harmonics; j++) {
-            harmonicSum += Math.sin(j * this.data[i]);
+            harmonicSum += Math.sin(j * this.data[i]) + Math.cos(j * this.data[i]);
         }
         result.push(this.data[i] + harmonicSum);
     }
     this.data = result;
+    this.full(initial_maximum_value);
     return this;
   }
   
@@ -2140,17 +2145,17 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  loud () {
+  full (new_maximum = 1) {
     let maxVal = 0;
     for (let i = 0; i < this.data.length; i++) {
         maxVal = Math.max(maxVal, Math.abs(this.data[i]));
     }
-    let gain = 1 / maxVal;
+    let gain = new_maximum / maxVal;
     for (let i = 0; i < this.data.length; i++) {
       this.data[i] *= gain;
     }
     return this;
-}
+  }
 
   sort () {
     let sorted_sequence = [];
@@ -2404,8 +2409,7 @@ waveformSample(waveform, phase) {
 
   // BEGIN audio operations
   audio () {
-    // HPF at ~0hz
-    this.biquad(0.998575,-1.99715,0.998575,-1.997146,0.997155);
+    this.gain(2).offset(-1);
     return this;
   }
 
@@ -2796,6 +2800,12 @@ waveformSample(waveform, phase) {
   // END special operations
 
   // BEGIN utility functions used in other methods
+  getMaximumValue () {
+    let max = Math.max.apply(Math, this.data);
+    let min = Math.abs(Math.min.apply(Math, this.data));
+    return max > min ? max : min;
+  }
+
   sliceEndFade(array) {
     // since this is to smooth clicks in audio data, don't crossfade any "data" patterns with <= 1024 values
     let totalLength = 0;
