@@ -397,6 +397,13 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').noise(n1).bpf(1000,6).gain(0.1).play(); // band-passed noise`
 ---
+- **bitshift** ( _shift_ = 16 )
+	- performs a bitwise rotation on the elements of the FacetPattern object’s data array by shift bits.
+	- `shift` is an optional parameter that specifies the number of bits to rotate. It defaults to 16 if not provided. The value of shift is converted to a non-negative integer and taken modulo 32 before being used.
+	- The function first scales the values in the data array to a range of 0 to 1000000 and rounds them to integers. It then performs a bitwise rotation on each element using a combination of the left shift (<<) and right shift (>>>) operators. Finally, it restores the original scale of the data.
+	- example:
+		- `$('example').sine(1000,n2).bitshift(16).play(); // rotates the bits of a 1000Hz sine wave by 16 positions`
+---
 - **changed** ( )
 	- returns a 1 or 0 for each value in the FacetPattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the FacetPattern.)
 	- example:

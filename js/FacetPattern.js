@@ -660,6 +660,21 @@ class FacetPattern {
     return this;
   }
 
+  bitshift (shift = 16) {
+    shift = Math.abs(Math.floor(Number(shift))) % 32;
+    let min = Math.min.apply(Math, this.data);
+    let max = Math.max.apply(Math, this.data);
+    this.scale(0,1000000).round();
+    let result = [];
+    for (let i = 0; i < this.data.length; i++) {
+        this.data[i] = parseInt(this.data[i]);
+        result.push((this.data[i] << shift) | (this.data[i] >>> (32 - shift)));
+    }
+    this.data = result;
+    this.scale(min, max);
+    return this;
+  }
+
   key (key_string = "C major") {
     // get the chroma: Midi.pcsetNearest(Scale.get(key_string).chroma)
     let chroma_key = Scale.get(key_string).chroma;
