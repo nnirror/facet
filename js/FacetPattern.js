@@ -2212,7 +2212,7 @@ waveformSample(waveform, phase) {
   stutter (repeats, start_pos = 0, end_pos = 1) {
     repeats = Math.abs(Math.round(Number(repeats)));
     if ( repeats < 1 ) {
-      throw `stutter repeat value must be greater than 0, value found: ${repeats}`;
+      return this;
     }
     start_pos = Math.abs(Number(start_pos));
     if ( start_pos > 1 ) {
