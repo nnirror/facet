@@ -2108,7 +2108,7 @@ waveformSample(waveform, phase) {
   }
 
   flange (delaySamples = 220, depth = 110) {
-    const output = new Float32Array(this.data.length);
+    const output = [];
     for (let i = 0; i < this.data.length; i++) {
       const delay = Math.sin(i / this.data.length * Math.PI * 2) * depth + delaySamples;
       const delayIndex = i - Math.floor(delay);
