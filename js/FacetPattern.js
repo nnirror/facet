@@ -1973,7 +1973,6 @@ waveformSample(waveform, phase) {
   }
 
   slew (depth = 25, up_speed = 1, down_speed = 1) {
-    let initial_size = this.data.length;
     let slewed_sequence = [];
     up_speed = Math.abs(up_speed);
     down_speed = Math.abs(down_speed);
@@ -2106,6 +2105,21 @@ waveformSample(waveform, phase) {
    this.data = upscaled_data;
    this.reduce(new_samps);
    return this;
+  }
+
+  flange (delaySamples = 220, depth = 110) {
+    const output = new Float32Array(this.data.length);
+    for (let i = 0; i < this.data.length; i++) {
+      const delay = Math.sin(i / this.data.length * Math.PI * 2) * depth + delaySamples;
+      const delayIndex = i - Math.floor(delay);
+      if (delayIndex < 0) {
+        output[i] = this.data[i];
+      } else {
+        output[i] = (this.data[i] + this.data[delayIndex]) / 2;
+      }
+    }
+    this.data = output;
+    return this;
   }
 
   size (new_size) {
@@ -2756,6 +2770,7 @@ waveformSample(waveform, phase) {
 
   slices (num_slices, command, prob = 1) {
     let out = [];
+    let out_fp = new FacetPattern();
     prob = Math.abs(Number(prob));
     num_slices = Math.abs(Math.round(Number(num_slices)));
     if ( num_slices == 0 ) {
@@ -2777,12 +2792,9 @@ waveformSample(waveform, phase) {
       if ( Math.random() < prob ) {
         current_slice = eval(this.utils + command);
       }
-      out.push(current_slice.data);
+      out_fp.sup(current_slice.fadeout(0.01),s/num_slices,this.data.length);
     }
-    this.data = out;
-    this.data = this.fadeArrays(this.data);
-    // fadeout last 128 samples
-    this.data = this.sliceEndFade(this.data);
+    this.data = out_fp.data;
     this.flatten();
     return this;
   }
