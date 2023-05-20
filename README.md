@@ -482,12 +482,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').randsamp().slices(32,()=>{this.fft().shift(rf()).ifft()}).play(); // break the sample into 32 slices, compute the FFT for each slice, shift each slice's spectral data by a random amount, and run IFFT to return back into the audio realm before playback`
 		- `$('example').from([1,0,1,1]).fft(); // 3 0 0 1 1 0 0 -1`
 ---
-**flange** ( _delaySamples_ = 220, _depth_ = 110)
+- **flange** ( _delaySamples_ = 220, _depth_ = 110 )
 	- applies a flanger effect to the FacetPattern.
 	- `delaySamples` is the base delay in samples. Controls the delay of the flanging effect.
 	- `depth` is the maximum amount by which the delay is modulated. Controls the depth of the flanging effect.
 	- example:
-		- `$('image7').sine(100,n1).flange(220,110).play(); // flanged whole note sine wave at 100Hz`
+		- `$('example').sine(100,n1).flange(220,110).play(); // flanged whole note sine wave at 100Hz`
 ---
 - **flipAbove** ( _maximum_ )
 	- for all values above `maximum`, it returns `maximum` minus how far above the value was.
