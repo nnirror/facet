@@ -292,6 +292,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- the maximumFrequency and frequencyOffset values control the range of frequencies that the pixels will map onto.
 	- example:
 		- `$('example').image('/path/to/file/goes/here.jpg',1024).play(); // each column lasts 1024 samples`
+---
 - **noise** ( _length_ )
 	- generates a random series of values between 0 and 1 for `length`.
 	- example:
@@ -309,6 +310,13 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').pluck(440,n4,rf(),rf()).play(); // different 440 Hz quarter note pluck each time`
 ---
+- **primes** ( _n_, _offset_from_first_prime_ = 2, _skip_ = 1 )
+	- generates the first `n` prime numbers starting at `offset`, skipping `skip` prime numbers before including the next one in the list.
+	- `n` specifies the number of prime numbers to generate.
+	- `offset` specifies the first number to be included in the list of prime numbers. The default value is 2.
+	- `skip` specifies the number of prime numbers to skip before including the next one in the list. The default value is 1.
+	- example:
+		- `$('s').noise(n4).times(_.ramp(1,0,n4)).iter(12,()=>{this.allpass().delay(_.primes(60,1000,ri(20,2000)).data[i]).full()}).full().play(); // generates a quarter note transient burst of noise, then iteratively sends it through delays that are all primes`
 - **ramp** ( _from_, _to_, _size_, _curve_type_ = 0.5 )
 	- moves from `from` to `to` over `size` values. With a default `curve_type` of 0.5, the ramp is linear. Curve types lower than 0.5 will produce a logarithmic ramp contour, with more values weighted towards the initial `from` value. Curve types greater than 0.5 will produce an exponential ramp contour, with more values weighted towards the destination `to` value.
 	- example:

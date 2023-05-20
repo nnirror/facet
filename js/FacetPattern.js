@@ -176,6 +176,36 @@ class FacetPattern {
     return this;
   }
 
+  primes(n, offset = 2, skip = 1) {
+    n = Math.abs(Math.floor(Number(n)));
+    if ( n == 0 ) {
+      return this;
+    }
+    const primes = [];
+    let num = 2;
+    let skipped = 0;
+    while (primes.length < n) {
+        let isPrime = true;
+        for (let i = 2; i <= Math.sqrt(num); i++) {
+            if (num % i === 0) {
+                isPrime = false;
+                break;
+            }
+        }
+        if (isPrime && num >= offset) {
+            if (skipped === skip) {
+                primes.push(num);
+                skipped = 0;
+            } else {
+                skipped++;
+            }
+        }
+        num++;
+    }
+    this.data = primes;
+    return this;
+  }
+
   image (imagePath, samplesPerColumn = Math.floor(FACET_SAMPLE_RATE / 10), nyquistFrequency = FACET_SAMPLE_RATE / 2, frequencyOffset = 0) {
     const fileData = fs.readFileSync(imagePath);
     let imageData;
