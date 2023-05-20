@@ -2701,15 +2701,16 @@ waveformSample(waveform, phase) {
 
   note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 1) {
     if ( typeof velocity == 'number' || Array.isArray(velocity) === true ) {
-      velocity = new FacetPattern().from(velocity).size(this.data.length);
+      velocity = new FacetPattern().from(velocity);
     }
     if ( typeof duration == 'number' || Array.isArray(duration) === true ) {
-      duration = new FacetPattern().from(duration).size(this.data.length);
+      duration = new FacetPattern().from(duration);
     }
     if ( typeof channel != 'number' ) {
       throw `3rd argument to .note(): channel must be a number; type found: ${typeof channel}`;
     }
-
+    velocity.size(this.data.length);
+    duration.size(this.data.length);
     for (const [key, step] of Object.entries(this.data)) {
       this.notes.push({
         note:step,
