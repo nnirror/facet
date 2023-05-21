@@ -988,24 +988,17 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  delay (samples, wet = 0.5) {
-    samples = Math.round(Math.abs(Number(samples)));
-    wet = Number(wet);
-    let dry = Math.abs(wet-1);
-    let copy = new FacetPattern().noise(samples).gain(0).append(new FacetPattern().from(this.data));
-    let delay_out = [];
-    let original_value;
-    for (var i = 0; i < copy.data.length; i++) {
-      if ( i >= this.data.length) {
-        original_value = 0;
-      }
-      else {
-        original_value = this.data[i];
-      }
-      delay_out[i] = ((original_value*dry) + (copy.data[i]*wet));
+  delay (delayAmount, feedback = 0.5) {
+    feedback = Math.min(Math.max(feedback, 0), 0.975);
+    let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
+    let delayedArray = new Array(this.data.length + delayAmount * maxFeedbackIterations).fill(0);
+    for (let i = 0; i < maxFeedbackIterations; i++) {
+        let gain = Math.pow(feedback, i);
+        for (let j = 0; j < this.data.length; j++) {
+            delayedArray[j + i * delayAmount] += this.data[j] * gain;
+        }
     }
-    this.data = delay_out;
-    this.gain(1.5);
+    this.data = delayedArray;
     return this;
   }
 
@@ -1467,25 +1460,20 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  allpass (a = 1) {
-    a = Number(a);
-    let filter_out = [];
-    for (var i = 0; i < this.data.length; i++) {
-      let prev_step = i-1;
-      if (i == 0) {
-        filter_out.push(
-          (this.data[i]*a)
-        );
-      }
-      else {
-        filter_out.push(
-            (this.data[i]*a)
-          + (this.data[prev_step])
-          - (filter_out[prev_step]*a)
-        );
-      }
+  allpass(frequency = FACET_SAMPLE_RATE / 2) {
+    let outputArray = [];
+    let a = (Math.tan(Math.PI * frequency / FACET_SAMPLE_RATE) - 1) / (Math.tan(Math.PI * frequency / FACET_SAMPLE_RATE) + 1);
+    for (let i = 0; i < this.data.length; i++) {
+        let x = this.data[i];
+        let y;
+        if (i === 0) {
+            y = -a * x;
+        } else {
+            y = -a * x + this.data[i - 1] + a * outputArray[i - 1];
+        }
+        outputArray.push(y);
     }
-    this.data = filter_out;
+    this.data = outputArray;
     return this;
   }
 
@@ -2671,6 +2659,26 @@ waveformSample(waveform, phase) {
 
   every (n_loops = 1) {
     this.regenerate_every_n_loops = Math.abs(Math.round(n_loops)) == 0 ? 1 : Math.abs(Math.round(n_loops));
+    return this;
+  }
+  
+  parallel (commands) {
+    if ( typeof commands != 'object' && Array.isArray(commands) == false ) {
+      throw `input to parallel() must be an array of functions, type found: ${typeof commands}`;
+    }
+    let initial_maximum_value = this.getMaximumValue();
+    let out_fp = new FacetPattern();
+    let initial_fp = new FacetPattern().from(this.data);
+    for (let [key, command] of Object.entries(commands)) {
+      this.data = initial_fp.data;
+      command = command.toString();
+      command = command.replace(/current_slice./g, 'this.');
+      command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+      eval(this.env + this.utils + command);
+      out_fp.sup(this,0);
+    }
+    this.data = out_fp.data;
+    this.full(initial_maximum_value);
     return this;
   }
 
