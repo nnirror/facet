@@ -38,7 +38,7 @@ module.exports = {
   },
   run: (code, is_rerun) => {
     if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
-      const worker = new Worker("./js/run.js", {workerData: {code: code, vars: {}}});
+      const worker = new Worker("./js/run.js", {workerData:{code:code},resourceLimits:{stackSizeMb:16}});
       worker.once("message", run_data => {
           let fps = run_data.fps;
           Object.values(fps).forEach(fp => {
@@ -106,7 +106,6 @@ if ( !fs.existsSync('tmp/')) {
 
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
-  // reruns = {};
   startTransport();
   module.exports.run(req.body.code,false);
   res.send({

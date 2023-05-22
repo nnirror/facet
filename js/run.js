@@ -5,9 +5,9 @@ const FacetPattern = require('./FacetPattern.js')
 let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
 let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
 
-parentPort.postMessage(runCode(workerData.code, workerData.vars));
+parentPort.postMessage(runCode(workerData.code));
 
-function runCode (code, vars) {
+function runCode (code) {
   let fps = [];
   let run_errors = [];
   user_input = commentStripper.stripComments(code);
