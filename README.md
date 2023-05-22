@@ -120,7 +120,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 - **saveas** ( _filename_ )
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
 	- example:
-		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveAs('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
+		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveas('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
@@ -494,12 +494,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **flipabove** ( _maximum_ )
 	- for all values above `maximum`, it returns `maximum` minus how far above the value was.
 	- example:
-		- `$('example').sine(100).flipAbove(0.2).play(); // wonky sine`
+		- `$('example').sine(100).flipabove(0.2).play(); // wonky sine`
 ---
 - **flipbelow** ( _min_ )
 	- for all values below `minimum`, it returns `minimum` plus how far below the value was.
 	- example:
-		- `$('example').sine(100).flipBelow(0.2).play(); // inverse wonky sine`
+		- `$('example').sine(100).flipbelow(0.2).play(); // inverse wonky sine`
 ---
 - **fracture** ( _pieces_ )
 	- divides and scrambles the FacetPattern into `pieces` pieces.
@@ -741,7 +741,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **stretchto** ( _num_samples_ )
 	- time-stretches the FacetPattern while preserving pitch so it now lasts `num_samples` samples.
 	- example:
-		- `$('example').sine(1000,n2).stretchTo(n1).play(); // 1000Hz sine wave originally a half note long, stretched to a whole note`
+		- `$('example').sine(1000,n2).stretchto(n1).play(); // 1000Hz sine wave originally a half note long, stretched to a whole note`
 ---
 - **stutter** ( _number_of_repeats_, _start_pos_ = 0, _end_pos_ = 1 )
 	- creates `_number_of_repeats_` identical chunks of data, calculated from the `start_pos` and `end_pos` values, which represent two relative positions between 0 and 1 in the input FacetPattern's data. After all the repeats have been appended to it, the FacetPattern is resized back to its original length.

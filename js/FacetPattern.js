@@ -424,7 +424,7 @@ class FacetPattern {
           silence_samples_to_add += samplesBetweenEachFile[iters%samplesBetweenEachFile.length]
           iters++;
         });
-        out_fp.saveAs(`${dir}/${saved_filename}`);
+        out_fp.saveas(`${dir}/${saved_filename}`);
     });
     return this;
   }
