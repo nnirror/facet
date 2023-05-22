@@ -1200,7 +1200,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  flipAbove (maximum) {
+  flipabove (maximum) {
     maximum = Number(maximum);
     let flipped_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
@@ -1216,7 +1216,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  flipBelow (min) {
+  flipbelow (min) {
     min = Number(min);
     let flipped_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
@@ -2188,7 +2188,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  stretchTo(samps) {
+  stretchto(samps) {
     let stretchFactor = samps / this.data.length;
     this.stretch(stretchFactor);
     this.reduce(samps);
@@ -2778,7 +2778,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  saveAs (filename) {
+  saveas (filename) {
     let folder = 'samples';
     if (filename.includes('/')) {
       folder += `/${filename.split('/')[0]}`;

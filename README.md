@@ -117,7 +117,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().play(0.5);	// plays once at middle point`
 		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random positions`
 ---
-- **saveAs** ( _filename_ )
+- **saveas** ( _filename_ )
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveAs('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
@@ -491,12 +491,12 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(100,n1).flange(220,110).play(); // flanged whole note sine wave at 100Hz`
 ---
-- **flipAbove** ( _maximum_ )
+- **flipabove** ( _maximum_ )
 	- for all values above `maximum`, it returns `maximum` minus how far above the value was.
 	- example:
 		- `$('example').sine(100).flipAbove(0.2).play(); // wonky sine`
 ---
-- **flipBelow** ( _min_ )
+- **flipbelow** ( _min_ )
 	- for all values below `minimum`, it returns `minimum` plus how far below the value was.
 	- example:
 		- `$('example').sine(100).flipBelow(0.2).play(); // inverse wonky sine`
@@ -738,7 +738,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(100,n4).stretch(4).play(); // stretching a quarter note sine wave to last a whole note`
 ---
-- **stretchTo** ( _num_samples_ )
+- **stretchto** ( _num_samples_ )
 	- time-stretches the FacetPattern while preserving pitch so it now lasts `num_samples` samples.
 	- example:
 		- `$('example').sine(1000,n2).stretchTo(n1).play(); // 1000Hz sine wave originally a half note long, stretched to a whole note`
