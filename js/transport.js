@@ -15,7 +15,6 @@ const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 let bars_elapsed = 0;
 let bpm = 90;
 let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
-let running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
 let current_relative_step_position = 0;
 let event_register = [];
 let transport_on = true;
@@ -223,6 +222,8 @@ app.post('/stop', (req, res) => {
 
 const server = app.listen(3211);
 
+let expectedTime = Date.now() + EVENT_RESOLUTION_MS;
+
 function tick() {
   // calculate based on bpm how many ticks at EVENT_RESOLUTION_MS equal a full loop
   // first need to figure out how many events per second run at EVENT_RESOLUTION_MS = Math.round(1000 / EVENT_RESOLUTION_MS)
@@ -255,7 +256,6 @@ function tick() {
 
 
   if ( transport_on === true ) {
-    handleBpmChange();
     for (const [fp_name, fp_data] of Object.entries(event_register)) {
       let count_times_fp_played = 0;
       fp_data.forEach((event) => {
@@ -322,30 +322,12 @@ function tick() {
       });
     }
   }
+  let delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
+  expectedTime += EVENT_RESOLUTION_MS;
+  setTimeout(tick, delay);
 }
 
-function handleBpmChange() {
-  // compensate for any latency from the previous step
-  let latency_compensation_from_previous_step_ms = new Date().getTime() - next_step_expected_run_time;
-  clearInterval(running_transport);
-  if ( latency_compensation_from_previous_step_ms > 100 || latency_compensation_from_previous_step_ms < 0 ) {
-    // don't compensate for when "latency" from the previous step is > 100ms, as it would indicate
-    // the transport has just been restarted rather than due to latency
-    running_transport = setInterval(tick,EVENT_RESOLUTION_MS);
-    next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
-  }
-  else {
-    // apply calculated latency to next steps
-    if (latency_compensation_from_previous_step_ms > 0 ) {
-      running_transport = setInterval(tick, (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms));
-      next_step_expected_run_time = new Date().getTime() + (EVENT_RESOLUTION_MS - latency_compensation_from_previous_step_ms);
-    }
-    else {
-      running_transport = setInterval(tick, EVENT_RESOLUTION_MS);
-      next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
-    }
-  }
-}
+tick();
 
 function reportTransportMetaData() {
   // pass along the current bpm and bars elapsed, if the transport is running
