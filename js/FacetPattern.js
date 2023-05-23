@@ -3005,7 +3005,7 @@ waveformSample(waveform, phase) {
     let decodedAudio = wav.decode(out_buffer);
     if ( decodedAudio.sampleRate != FACET_SAMPLE_RATE ) {
       // adjust for sample rate
-      return new FacetPattern().from(decodedAudio.channelData[0]).speed(decodedAudio.sampleRate / FACET_SAMPLE_RATE).data;
+      return new FacetPattern().from(decodedAudio.channelData[0]).speed(FACET_SAMPLE_RATE/decodedAudio.sampleRate).data;
     }
     else {
       // no adjustment needed
