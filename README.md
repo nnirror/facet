@@ -397,7 +397,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').turing(16).at(0.5,2); // the 9th value of the 16-step Turing sequence (i.e. 50% position) is always 2`
 ---
 - **audio** ( )
-	- removes any DC offset on the FacetPattern by running it through a high-pass biquadratic filter at ~0Hz.
+	- removes any DC offset on the FacetPattern by running it through a high-pass biquadratic filter at 5Hz.
 	- example:
 		- `$('example').randsamp().times(_.noise(4)).audio().play();`
 ---

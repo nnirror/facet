@@ -1526,6 +1526,7 @@ waveformSample(waveform, phase) {
     }
     this.data = result;
     this.full(initial_maximum_value);
+    this.audio();
     return this;
   }
   
@@ -2459,7 +2460,7 @@ waveformSample(waveform, phase) {
 
   // BEGIN audio operations
   audio () {
-    this.hpf(0.1);
+    this.hpf(5);
     return this;
   }
 
