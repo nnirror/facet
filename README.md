@@ -501,6 +501,13 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(100).flipbelow(0.2).play(); // inverse wonky sine`
 ---
+- **follow** ( _attackTime_ = default_sample_rate / 10, _releaseTime_ = default_sample_rate / 4 )
+	- performs envelope following on a FacetPattern.
+	- `attackTime` is the attack time in samples. It controls the speed at which the envelope rises. Its default value is 100ms.
+	- `releaseTime` is the release time in samples. It controls the speed at which the envelope falls. Its default value is 250ms.
+	- example:
+		- `$('example').noise(n1).times(_.noise(32).scale(0,1).size(n1).follow(n16,n16)).play(); // controlling the amplitude of a whole note of noise, with 32 samples of noise sent through the envelope follower`
+---
 - **fracture** ( _pieces_ )
 	- divides and scrambles the FacetPattern into `pieces` pieces.
 	- example:

@@ -1232,13 +1232,21 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  follow (audio, up_samps, down_samps) {
-    if ( !this.isFacetPattern(audio) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof audio}`;
+  follow (attackTime = FACET_SAMPLE_RATE / 0.1, releaseTime = FACET_SAMPLE_RATE / 4) {
+    let envelope = [];
+    let attack = Math.exp(-1 / attackTime);
+    let release = Math.exp(-1 / releaseTime);
+    let currentEnvelope = 0;
+    for (let i = 0; i < this.data.length; i++) {
+        let input = Math.abs(this.data[i]);
+        if (input > currentEnvelope) {
+            currentEnvelope = attack * currentEnvelope + (1 - attack) * input;
+        } else {
+            currentEnvelope = release * currentEnvelope + (1 - release) * input;
+        }
+        envelope.push(currentEnvelope);
     }
-    up_samps = Math.round(Math.abs(Number(up_samps)));
-    down_samps = Math.round(Math.abs(Number(down_samps)));
-    this.times(audio.slew(up_samps,down_samps));
+    this.data = envelope;
     return this;
   }
 
