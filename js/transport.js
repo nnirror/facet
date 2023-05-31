@@ -30,8 +30,8 @@ app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
 
-// pass bpm and bars_elapsed every 100ms
-setInterval(reportTransportMetaData,100);
+// pass bpm and bars_elapsed every 20ms
+setInterval(reportTransportMetaData,20);
 
 axios.interceptors.response.use(res=>{return res}, (error) => {
   // do nothing, necessary for windows to preven fatal 500s
@@ -239,6 +239,7 @@ function tick() {
     current_relative_step_position = 0;
     bars_elapsed++;
     // tell pattern server to start processing next loop
+    reportTransportMetaData();
     requestNewPatterns();
   }
 

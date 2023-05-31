@@ -75,7 +75,7 @@ module.exports = {
                   }
                   else {
                     // run audio data through SoX, adding channels
-                    exec(`sox tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
+                    exec(`sox tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav fade 0 -0 0.03 speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
                       postToTransport(fp);
                     });
                   }
@@ -87,7 +87,12 @@ module.exports = {
             }
           });
           Object.values(run_data.errors).forEach(error => {
-            errors.push(error.message);
+            if (error.message) {
+              errors.push(error.message);
+            }
+            else {
+              errors.push(error);
+            }
           });
       });
     }

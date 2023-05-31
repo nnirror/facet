@@ -32,7 +32,7 @@ Some FacetPatterns might contain other FacetPatterns. The most outer-facing one 
 
 There are lots of methods to generate, translate, and orchestrate playback on FacetPattern data:
 
-`$('example').sine(100).gain(random()).play();`
+`$('example').sine(100).times(random()).play();`
 `// each time you run ^, the same sine wave at a different volume`
 
 Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`) allow you to supply functions as arguments:
@@ -165,7 +165,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- The `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
 	- _Note_: to force chords into a certain key, use the `key()` operation after the `chord()` operation.
 	- example:
-		- `$('example').ramp(36,72,32).chord('maj7').offset((bars%4)*12).key('F# major').note(50,100,1);`
+		- `$('example').ramp(36,72,32).chord('maj7').add((bars%4)*12).key('F# major').note(50,100,1);`
 ---
 - **key** ( _key_and_scale_ )
 	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` function uses the TonalJS npm package as a scale dictionary.
@@ -211,6 +211,14 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').noise(4096).play().once();`
 
 ### Single number generators
+- **barmod** ( _modulo_, _values_ )
+	- returns values that depend on the current value of `bars`. (`bars` is a global variable that starts at 0 and increments at the completion of a loop.)
+	- selects a value from the `values` array, based on `bars % modulo`.  If the `bars` value currently is 9, and the `modulo` argument to this function is 4, since 9 % 4 = 1, this function will return the value from the `values` array immediately following the number 1.
+	- **NOTE**: The function first checks if the `values` array contains an even number of elements. If not, it throws an error.
+	- **NOTE**: The function checks if every integer from 0 to (mod-1) is one of the even-numbered keys of the values array. If not, it throws an error.
+	- example:
+		- `$('example').sine(barmod(4,[0,100,1,150,2,200,3,300])).play(); // when bars % 4 == 0, plays a 100Hz sine. when bars % 4 == 1, plays a 150 Hz sine. when bars % 4 == 2, plays a 200Hz sine. when bars % 4 == 3, plays a 300Hz sine.`
+---
 - **choose** ( _pattern_ )
 	- returns a randomly selected value from a supplied array.
 	- example:
@@ -239,6 +247,64 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(ri(1,1000)).play(); // a sine wave with 1 - 1000 cycles`
 
+### FacetPattern generators that can take a FacetPattern, number, or array as an argument
+When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').noise(16).add(4)`, all 16 output values will be between 4 and 5, because 4 is added to every noise value, and noise values are between 0 and 1 by default. But with the command `$('example').noise(16).add(_.ramp(0,4,16))`, the output values will ramp from between 0-1 at the beginning to between 4-5 at the end, since the FacetPattern that is being added is a ramp of values starting at 0 and ending at 4.
+
+- **sine** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	- generates a sine wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- Output range is from -1 - 1.
+	- example:
+		- `$('example').sine(440,n4).play(); // 440 Hz sine wave for a quarter note`
+		- `$('example').sine(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
+		- `$('example').sine(_.sine(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
+---
+- **cosine** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
+	- generates a cosine wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- Output range is from -1 - 1.
+	- example:
+		- `$('example').cosine(440,n4).play(); // 440 Hz cosine wave for a quarter note`
+		- `$('example').cosine(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
+		- `$('example').cosine(_.cosine(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
+---
+- **phasor** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
+	- generates a phasor wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- Output range is from -1 - 1.
+	- example:
+		- `$('example').phasor(440,n4).play(); // 440 Hz phasor wave for a quarter note`
+		- `$('example').phasor(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
+		- `$('example').phasor(_.phasor(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
+---
+- **pluck** ( _frequencyPattern_, _duration_ = 1 second, _damping_ = 0, _feedback_ = 0.5 )
+	- generates a Karplus-Strong type string pluck emulation at `frequencyPattern` Hertz, lasting for `duration` samples. `damping` and `feedback` values should be between 0 and 1.
+	- Output range is from -1 - 1.
+	- example:
+		- `$('example').pluck(440,n4,rf(),rf()).play(); // different 440 Hz quarter note pluck each time`
+		- `$('example').pluck(_.ramp(100,2000,300),n1,0,0.99).play(); // ramp from 100Hz to 2000 Hz over 300 values`
+---
+- **rect** ( _frequencyPattern_, _duration_ = 1 second, _pulse_width_ = 0.5, _samplerate_ = default_sample_rate )
+	- generates a rectangle wave at `frequencyPattern` Hertz, with a pulse width defined by `pulse_width`,  lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- Output range is from -1 - 1.
+	- example:
+		- `$('example').rect(440,n4,rf()).play(); // 440 Hz rectangle wave for a quarter note, different bandwidth each time`
+		- `$('example').rect(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
+		- `$('example').rect(_.rect(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
+---
+- **square** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	- generates a square wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- Output range is from -1 - 1.
+	- example:
+		- `$('example').square(440,n4).play(); // 440 Hz square wave for a quarter note`
+		- `$('example').square(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
+		- `$('example').square(_.square(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
+---
+- **tri** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+	- generates a triangle wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- Output range is from -1 - 1.
+	- example:
+		- `$('example').tri(440,n4).play(); // 440 Hz triangle wave for a quarter note`
+		- `$('example').tri(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
+		- `$('example').tri(_.tri(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
+
 ### FacetPattern generators
 - **binary** ( _integer_, _length_)
 	- Computes the binary representation of `integer`. If `length` is not present, the output FacetPattern will be the actual length of the binary representation of `integer`.
@@ -246,12 +312,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').binary(8); // 1000`
 		- `$('example').binary(490321,13); // 1110111101101: truncated at 13 values`
 		- `$('example').binary(8,12); // 000000001000: padded with 0s`
----
-- **cosine** ( _frequency_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
-	- generates a cosine wave at `frequency` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
-	- example:
-		- `$('example').cosine(440,n4).play(); // 440 Hz cosine wave for a quarter note`
 ---
 - **drunk** ( _length_, _intensity_ )
 	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
@@ -275,12 +335,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 		- `$('example').file('my_image.png').play(); // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!`
 		- `$('example').file('/Users/my_username/Desktop/myfile.zip').play(); // example with a supplied absolute file path`
 ---
-- **fm** (_frequency_, _modulatorFrequency_, _duration_, _envelopeFacetPattern_, _modulationIndex_ = 2, _carrierWaveform_ = 0, _modulatorWaveform_ = 0)
-	- generates a simple FM drum, using `frequency` and `modulatorFrequency` at the two operators, over `duration` samples. `envelopeFacetPattern` controls the amplitude contour of the generated sound. `modulationIndex` controls how heavily `modulatorFrequency` will modulate `frequency`.
-	- `carrierWaveform` and `modulatorWaveform` can be any of the following: 0 = sine wave. 1 = square wave. 2 = triangle wave. 3 = sawtooth wave.
-	- example:
-		- `$('example').fm(50,200,n2,_.ramp(1,0,n2,0.9),10,2,2).play(); // bass stab type thing`
----
 - **from** ( _pattern_ )
 	- allows the user to specify their own pattern. **Note the array syntax!**
 	- example:
@@ -297,18 +351,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- generates a random series of values between 0 and 1 for `length`.
 	- example:
 		- `$('example').noise(1024).play();`
----
-- **phasor** ( _frequency_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
-	- generates a phasor wave at `frequency` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
-	- example:
-		- `$('example').phasor(440,n4).play(); // 440 Hz cosine wave for a quarter note`
----
-- **pluck** (_frequency_, _duration_ = 1 second, _damping_, _feedback_)
-	- generates a Karplus-Strong type string pluck emulation at `frequency` Hertz, lasting for `duration` samples. `damping` and `feedback` values should be between 0 and 1.
-	- Output range is from -1 - 1.
-	- example:
-		- `$('example').pluck(440,n4,rf(),rf()).play(); // different 440 Hz quarter note pluck each time`
 ---
 - **primes** ( _n_, _offset_from_first_prime_ = 2, _skip_ = 1 )
 	- generates the first `n` prime numbers starting at `offset`, skipping `skip` prime numbers before including the next one in the list.
@@ -332,12 +374,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').randsamp().reverse().play(); // random backwards sample`
 ---
-- **rect** ( _frequency_, _duration_ = 1 second, _pulse_width_ = 0.5, _samplerate_ = default_sample_rate )
-	- generates a rectangle wave at `frequency` Hertz, with a pulse width defined by `pulse_width`,  lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
-	- example:
-		- `$('example').rect(440,n4,rf()).play(); // 440 Hz rectangle wave for a quarter note, different bandwidth each time`
----
 - **sample** ( _filename_ )
 	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_.
 	- example:
@@ -349,40 +385,22 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').silence(n2).append(_.noise(n2)).play(); // first half of loop is silence; second half is noise`
 ---
-- **sine** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
-	- generates a sine wave at `frequency` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
-	- example:
-		- `$('example').sine(440,n4).play(); // 440 Hz sine wave for a quarter note`
----
 - **spiral** ( _length_, _degrees_ = 360/length, _angle_phase_offset_ = 0 )
 	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to `360/length` which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
 	- The `angle_phase_offset` argument changes where the sequence starts. At its default value of 0, the first value will be 0. You can supply any float between 0 and 1, and the sequence will begin at that value instead.
 	- example:
 		- `$('example').sine(1).times(_.spiral(1000,ri(1,360))).play(); // an interesting, modulated sine wave`
 ---
-- **square** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
-	- generates a square wave at `frequency` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
-	- example:
-		- `$('example').square(440,n4).play(); // 440 Hz square wave for a quarter note`
----
 - **turing** ( _length_ )
 	- generates a pattern of length `length` with random 1s and 0s.
 	- example:
 		- `$('example').turing(64); // instant rhythmic triggers`
----
-- **tri** ( _frequency_, _duration_ = sample_rate, _samplerate_ = sample_rate )
-	- generates a triangle wave at `frequency` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
-	- example:
-		- `$('example').tri(440,n4).play(); // 440 Hz triangle wave for a quarter note`
 
 ### FacetPattern modulators
 - **abs** ( )
 	- returns the absolute value of all numbers in the FacetPattern.
 	- example:
-		- `$('example').sine(100).offset(-0.3).abs().play(); // a wonky sine`
+		- `$('example').sine(100).add(-0.3).abs().play(); // a wonky sine`
 ---
 - **allpass** ( _frequency_ = default_sample_rate/2 )
  	- runs the FacetPattern through an allpass filter.
@@ -400,11 +418,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- removes any DC offset on the FacetPattern by running it through a high-pass biquadratic filter at 5Hz.
 	- example:
 		- `$('example').randsamp().times(_.noise(4)).audio().play();`
----
-- **bpf** ( _cutoff_ = 1000, _q_ = 2.5 )
-	- applies a bandpass filter with configurable `cutoff` and `q` to the FacetPattern.
-	- example:
-		- `$('example').noise(n1).bpf(1000,6).gain(0.1).play(); // band-passed noise`
 ---
 - **bitshift** ( _shift_ = 16 )
 	- performs a bitwise rotation on the elements of the FacetPattern object’s data array by shift bits.
@@ -427,11 +440,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- compresses the FacetPattern into a smaller dynamic range. `ratio` is a float between 0 and 1 corresponding to n:1 so 0.5 would be 2:1, 0.2 would be 5:1, etc. `threshold` is the sample amplitude at which compression kicks in. `attackTime` and `releaseTime` are expressed as relations to a second, so 0.1 would be 1/10th of a second.
 	- example:
 		- `$('example').randsamp().compress(0.1,0.001,0.01,0.01).play();`
----
-- **crush** ( _crush_percent_ )
-	- applies a bit crushing effect to the incoming FacetPattern, with lower `crush_percent` values creating a more drastic crush. `crush_percent` accepts values between 0 - 1.
-	- example:
-		- `$('example').sine(100).crush(rf()).play(); // redux on the sine wave `
 ---
 - **curve** ( _tension_ = 0.5, _segments_ = 25 )
 	- returns a curved version of the FacetPattern. Tension and number of segments in the curve can be included but default to 0.5 and 25, respectively.
@@ -518,12 +526,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').noise(n2).gain(0.1).loud().play(); // remove loud() to hear the difference`
 ---
-- **gain** ( _amt_ )
-	- multiplies every value in the FacetPattern by a number.
-	- example:
-		- `$('example').from([0,1,2]).gain(100); // 0 100 200`
-		- `$('example').from([0,1,2]).gain(0.5); // 0 0.5 1`
----
 - **gate** (  _threshold_, _attackSamples_, _releaseSamples_ )
 	- gates the incoming FacetPattern so that any values below `threshold`, after `attackSamples` have occurred, will be set to 0, until the values go back above `threshold` for `releaseSamples`. 
 	- example:
@@ -538,16 +540,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- returns `1` for every value in the FacetPattern greater than or equal to `amt` and `0` for all other values.
 	- example:
 		- `$('example').from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
----
-- **harmonics** ( _num_harmonics_ )
-	- adds `num_harmonics` harmonics to the input signal.
-	- example:
-		- `$('example').sine(10).harmonics(200).play(); // 10Hz sine wave with 200 harmonics added on top`
----
-- **hpf** ( _cutoff_ = 100, _q_ = 2.5 )
-	- applies a high pass filter with configurable `cutoff` and `q` to the FacetPattern.
-	- example:
-		- `$('example').noise(n1).hpf(2000,6).gain(0.1).play(); // high-passed noise`
 ---
 - **ifft** ( )
 	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
@@ -584,11 +576,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').noise(n8).log(rf()).play(); // each time a different logarithmic curve on the 8th note of noise`
 ---
-- **lpf** ( _cutoff_ )
-	- applies a low pass filter with configurable `cutoff` and `q` to the FacetPattern.
-	- example:
-		- `$('example').noise(n1).lpf(1000,6).gain(0.1).play(); // low-passed noise`
----
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.
 	- example:
@@ -610,20 +597,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').from([1,2,3,4]).prob(0.5).nonzero(); // if 2 and 4 are set to 0 by prob(0.5), the output of .nonzero() would be 1 1 3 3`
 ---
-- **offset** ( _amt_ )
-	- adds `amt` to each value in the FacetPattern.
-	- example:
-		- `$('example').sine(4).offset(-0.2); // sine's dipping into negative territory`
----
 - **palindrome** ( )
 	- returns the original FacetPattern plus the reversed FacetPattern.
 	- example:
 		- `$('example').from([0,1,2,3]).palindrome(); // 0 1 2 3 3 2 1 0`
----
-- **pitch** (  _shift_amount_ )
-	- pitch-shifts the FacetPattern. `shift_amount` values between 0 and 1 will lower the pitch; e.g. a value of 0.5 will shift it down an octave. Values higher than 1 will increase the pitch; e.g. a value of 2 will be an octave higher.
-	- example:
-		- `$('example').sine(100).shift(rf(0.5,2)); // sometimes lower pitch, sometimes higher pitch`
 ---
 - **pow** ( _expo_, _direction_ = 1 )
 	- stretches a FacetPattern according to an exponential power `expo`, where the values at the beginning can be stretched for a significant portion of the FacetPattern, and the values at the end can be squished together. If `direction` is negative, returns the FacetPattern in reverse.
@@ -740,11 +717,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example
 		- `$('example').noise(n4).sticky(0.98); // quarter note of "sticky" noise`
 ---
-- **stretch** ( _shift_amount_ )
-	- time-stretches the FacetPattern while preserving pitch. `shift_amount` values less than 1 will shorten its overall length; values greater than 1 will increase its length.
-	- example:
-		- `$('example').sine(100,n4).stretch(4).play(); // stretching a quarter note sine wave to last a whole note`
----
 - **stretchto** ( _num_samples_ )
 	- time-stretches the FacetPattern while preserving pitch so it now lasts `num_samples` samples.
 	- example:
@@ -759,11 +731,6 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- returns a subset of the FacetPattern with `percentage`% values in it.
 	- example:
 		- `$('example').phasor(1).size(50).subset(0.3); // originally 50 values long, now 0.02 0.08 0.50 0.58 0.62 0.700 0.76 0.78 0.92`
----
-- **tanh** ( _gain_ = 20 )
-	- outputs the hyperbolic tangent function for the input FacetPattern, always returning values between -1 and 1. Higher `gain` values will create more intense distortion.
-	- example:
-		- `$('example').phasor(1,20).gain(10).tanh(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
 ---
 - **truncate** ( _length_ )
 	- truncates the FacetPattern so it's now `length` values long. If `length` is longer than the FacetPattern, return the whole FacetPattern.
@@ -785,14 +752,85 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- folds FacetPattern values greater than `max` so their output continues at `min`.  If the values are twice greater than `max`, their output continues at `min` again. Similar for values less than `min`, such that they wrap around the min/max thresholds.
 	- if no value is entered for `max`, then the first argument will be used to create the `min` and `max`, centered around 0. For instance, `wrap(0.3) == wrap(-0.3,0.3)`
 	- example:
-		- `$('example').sine(100).offset(-0.1).wrap(0.2,0.5).play();`
+		- `$('example').sine(100).add(-0.1).wrap(0.2,0.5).play();`
 ---
-### Pattern modulators with a second pattern as argument
-- **add** ( _FacetPattern_, _match_sizes_ = false )
+
+### Pattern modulators that can take a FacetPattern, number, or array as an argument
+When a modulator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').noise(16).add(4)`, all 16 output values will be between 4 and 5, because 4 is added to every noise value, and noise values are between 0 and 1 by default. But with the command `$('example').noise(16).add(_.ramp(0,4,16))`, the output values will ramp from between 0-1 at the beginning to between 4-5 at the end, since the FacetPattern that is being added is a ramp of values starting at 0 and ending at 4.
+
+- **add** ( _FacetPattern_, _match_sizes_ = true )
 	- adds the first FacetPattern and the second FacetPattern. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `$('example').randsamp().add(_.randsamp()).play(); // two random samples each loop`
-- **and** ( _FacetPattern_, _match_sizes_ = false )
+---
+- **bpf** ( _cutoffPattern_ = 1000, _q_ = 2.5 )
+	- applies a bandpass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
+	- example:
+		- `$('example').noise(n1).bpf(1000,6).gain(0.1).play(); // band-passed noise`
+		- `$('example').noise(n1).bpf(_.sine(4).scale(10,1000)).play(); // 4-cycle LFO modulating the bandpass cutoff between 10 and 1000 Hz`
+---
+- **crush** ( _numberOfBitsPattern_, _downsamplingPattern_ )
+	- applies bit crushing and / or downsampling to the incoming FacetPattern.
+	- `numberOfBitsPattern` controls the bit depth for the output pattern. To hear the effect, the values need to be integers between 1 and 8. Lower values produce more drastic results.
+	- `downsamplingPattern` controls the fator by which to reduce the sample rate. Values need to be integers greater than 1. Higher values produce more drastic results.
+	- example:
+		- `$('example').sine(100).crush(2).play(); // redux on the sine wave`
+		- `$('example').sine(100,n1).crush(_.ramp(8,1,8)).play(); // ramping bit depth on 100Hz sine wave from 8 bits to 1`
+		- `$('example').sine(100,n1).crush(_.ramp(8,1,8),_.noise(16).scale(1,40)).play(); // ramping bit depth on 100Hz sine wave from 8 bits to 1, and dynamically changing the downsampling amount between 1 and 40 samples`
+---
+- **divide** ( _FacetPattern_, _match_sizes_ = true )
+	- divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
+	- example:
+		- `$('example').sine(1).divide(_.from([0.5,0.25,0.1,1]));`
+---
+- **harmonics** ( _numHarmonicsPattern_ )
+	- adds `numHarmonicsPattern` harmonics to the input signal.
+	- example:
+		- `$('example').sine(10).harmonics(200).play(); // 10Hz sine wave with 200 harmonics added on top`
+		- `$('example').sine(10,n1).harmonics(_.ramp(0,200,200)).play(); // ramping up from 0 harmonics on the 10Hz wave to 200 harmonics`
+---
+- **hpf** ( _cutoffPattern_ = 100, _q_ = 2.5 )
+	- applies a high pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
+	- example:
+		- `$('example').noise(n1).hpf(2000,6).gain(0.1).play(); // high-passed noise`
+		- `$('example').noise(n1).hpf(_.sine(4).scale(10000,20000)).play(); // 4-cycle LFO modulating the high pass cutoff between 10000 and 20000 Hz`
+---
+- **lpf** ( _cutoffPattern_ )
+	- applies a low pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
+	- example:
+		- `$('example').noise(n1).lpf(1000,6).gain(0.1).play(); // low-passed noise`
+		- `$('example').noise(n1).lpf(_.sine(4).scale(10,2000)).play(); // 4-cycle LFO modulating the high pass cutoff between 10 and 2000 Hz`
+---
+- **pitch** (  _pitchShiftPattern_ )
+	- pitch-shifts the FacetPattern. `pitchShiftPattern` values between 0 and 1 will lower the pitch; e.g. a value of 0.5 will shift it down an octave. Values higher than 1 will increase the pitch; e.g. a value of 2 will be an octave higher.
+	- example:
+		- `$('example').sine(100).shift(rf(0.5,2)); // sometimes lower pitch, sometimes higher pitch`
+		- `$('example').sine(100).pitch(_.noise(16).scale(0.5,2)).play(); // pitch shifts a 100Hz wave at 16 places, sometimes lower and sometimes higher`
+---
+- **stretch** ( _shiftAmountPattern_ )
+	- time-stretches the FacetPattern while preserving pitch. `shiftAmountPattern` values less than 1 will shorten its overall length; values greater than 1 will increase its length.
+	- example:
+		- `$('example').sine(100,n4).stretch(4).play(); // stretching a quarter note sine wave to last a whole note`
+		- `$('example').noise(n1).stretch(_.ramp(0.125,4,16)).play().once(); // stretching a whole note of noise over 16 ramped values, starting at 8x faster and ending at 4x slower`
+---
+- **subtract** ( _FacetPattern_, _match_sizes_ = true )
+	- subtracts the second FacetPattern from the first. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
+	- example:
+		- `$('example').sine(100).subtract(_.cosine(50)).play();`
+---
+- **tanh** ( _gainPattern_ = 20 )
+	- outputs the hyperbolic tangent function for the input FacetPattern, always returning values between -1 and 1. Higher `gainPattern` values will create more intense distortion.
+	- example:
+		- `$('example').phasor(1,20).gain(10).tanh(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
+		- `$('example').sine(100).tanh(_.ramp(0,100,100)).play(); // ramping tanh distortion up on a 100Hz sine wave`
+---
+- **times** ( _FacetPattern_, _match_sizes_ = true)
+	- multiplies the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
+	- example:
+		- `$('example').sine(50).times(_.sine(50)).play();`
+
+### Pattern modulators that must take a second FacetPattern as an argument
+- **and** ( _FacetPattern_, _match_sizes_ = true )
 	- computes the logical AND of both FacetPattern, returning a 0 if one of the values is 0 and returning a 1 if both of the values are nonzero. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `$('example').from([1,0,1,0]).and(_.from([0,1])); // 0 0 1 0`
@@ -812,12 +850,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').randsamp().convolve(_.randsamp()).play();	// convolving random samples`
 ---
-- **divide** ( _FacetPattern_, _match_sizes_ = false )
-	- divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
-	- example:
-		- `$('example').sine(1).divide(_.from([0.5,0.25,0.1,1]));`
----
-- **equals** ( _FacetPattern_, _match_sizes_ = false )
+- **equals** ( _FacetPattern_, _match_sizes_ = true )
 	- computes the logical EQUALS of both FacetPattern, returning a 0 if the values don't equal each other and returning a 1 if they do. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `$('example').sine(1).equals(_.sine(2));`
@@ -853,25 +886,15 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').randsamp().splice(_.noise(n16),0.5).play(); // inserts a 16th note of noise halfway through the random sample`
 ---
-- **subtract** ( _FacetPattern_, _match_sizes_ = false )
-	- subtracts the second FacetPattern from the first. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
-	- example:
-		- `$('example').sine(100).subtract(_.cosine(50)).play();`
----
 - **sup** ( _FacetPattern_, _startPosition_, _maxFrameSize_ = this.length )
 	- superposes a second FacetPattern onto the first. The `startPosition` value can be any value between 0 and 1. It controls the relative position in the input FacetPattern to begin superposing the second FacetPattern. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
 	- example:
 		- `$('example').silence(n1).sup(_.randsamp(),0,n1).sup(_.randsamp(),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`
----
-- **times** ( _FacetPattern_, _match_sizes_ = false)
-	- multiplies the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
-	- example:
-		- `$('example').sine(50).times(_.sine(50)).play();`
 
 ### Pattern modulators with a function as one of the arguments
 
-- **mix** ( _wet_, _command_, _match_sizes_ = false )
-	- Mixes the input FacetPattern with a second FacetPattern generated by `command`. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
+- **mix** ( _wet_, _command_ )
+	- Mixes the input FacetPattern with a second FacetPattern generated by `command`.
 	- The command that will be mixed must start with the reserved word: `this` (see example).
 	- example:
 		- `$('example').randsamp().mix(0.5,()=>{this.reverse().speed(0.5).echo(8).speed(0.1)}).play();`

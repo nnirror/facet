@@ -1,11 +1,12 @@
-// forked JS implementation of a Karplus-Strong algorithm initially provided by ChatGPT
+const FacetConfig = require('../config.js');
+const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 
 class KarplusStrongString {
     constructor(frequency, damping, feedback) {
-        this.frequency = frequency;
+        this._frequency = frequency;
         this.damping = damping;
         this.feedback = feedback;
-        this.bufferSize = Math.round(44100 / frequency);
+        this.bufferSize = Math.round(FACET_SAMPLE_RATE / frequency);
         this.buffer = new Float32Array(this.bufferSize);
         for (let i = 0; i < this.bufferSize; i++) {
             this.buffer[i] = Math.random() * 2 - 1;
@@ -13,7 +14,24 @@ class KarplusStrongString {
         this.output = 0;
         this.index = 0;
     }
-  
+
+    set frequency(frequency) {
+        if (frequency !== this._frequency) {
+            let newBufferSize = Math.round(FACET_SAMPLE_RATE / frequency);
+            if (newBufferSize !== this.bufferSize) {
+                let newBuffer = new Float32Array(newBufferSize);
+                newBuffer.set(this.buffer.subarray(0, Math.min(this.bufferSize, newBufferSize)));
+                this.buffer = newBuffer;
+                this.bufferSize = newBufferSize;
+            }
+            this._frequency = frequency;
+        }
+    }
+
+    get frequency() {
+        return this._frequency;
+    }
+
     process() {
         let value = this.buffer[this.index];
         this.output = value;
@@ -24,8 +42,8 @@ class KarplusStrongString {
         this.index = (this.index + 1) % this.bufferSize;
         return this.output;
     }
-  }
+}
 
-  module.exports = {
+module.exports = {
     KarplusStrongString: KarplusStrongString
-  };
+};

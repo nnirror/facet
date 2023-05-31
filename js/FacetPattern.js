@@ -83,24 +83,24 @@ class FacetPattern {
     return this;
   }
 
-  sine(frequency, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+  cosine(frequencies, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
     let output = [];
+    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
+        frequencies = new FacetPattern().from(frequencies);
+    }
+    frequencies.size(length);
+    let phase = 0;
     for (let i = 0; i < length; i++) {
-      let t = i / sampleRate;
-      output[i] = Math.sin(2 * Math.PI * frequency * t);
+        let t = i / sampleRate;
+        let currentFrequency = frequencies.data[i];
+        output[i] = Math.cos(phase);
+        phase += 2 * Math.PI * currentFrequency / sampleRate;
+        if (phase >= 2 * Math.PI) {
+            phase -= 2 * Math.PI;
+        }
     }
     this.data = output;
-    return this;
-  }
-
-
-  cosine (frequency, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
-    let output = [];
-    for (let i = 0; i < length; i++) {
-      let t = i / sampleRate;
-      output[i] = Math.cos(2 * Math.PI * frequency * t);
-    }
-    this.data = output;
+    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -294,15 +294,20 @@ class FacetPattern {
     return this;
   }
 
-  phasor (frequency, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
-    frequency = Math.abs(frequency);
+  phasor(frequencies, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
+        frequencies = new FacetPattern().from(frequencies);
+    }
+    frequencies.size(duration);
     let wave = [];
-    let samplesPerCycle = sampleRate / frequency;
     for (let i = 0; i < duration; i++) {
+        let frequency = frequencies.data[i];
+        let samplesPerCycle = sampleRate / frequency;
         let t = i / samplesPerCycle;
         wave[i] = t - Math.floor(t);
     }
     this.data = wave;
+    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -373,16 +378,21 @@ class FacetPattern {
     return this;
   }
 
-  rect (frequency, duration = FACET_SAMPLE_RATE, pulseWidth = 0.5, sampleRate = FACET_SAMPLE_RATE) {
-    frequency = Math.abs(frequency);
+  rect(frequencies, duration = FACET_SAMPLE_RATE, pulseWidth = 0.5, sampleRate = FACET_SAMPLE_RATE) {
+    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
+        frequencies = new FacetPattern().from(frequencies);
+    }
+    frequencies.size(duration);
     let wave = [];
-    let samplesPerCycle = sampleRate / frequency;
     let amplitude = 1;
     for (let i = 0; i < duration; i++) {
+        let frequency = frequencies.data[i];
+        let samplesPerCycle = sampleRate / frequency;
         let t = i / samplesPerCycle;
         wave[i] = (t - Math.floor(t) < pulseWidth) ? amplitude : -amplitude;
     }
     this.data = wave;
+    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
 }
 
@@ -529,14 +539,24 @@ class FacetPattern {
     }
   }
 
-  sine (frequency, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
-    frequency = Math.abs(frequency);
+  sine (frequencies, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
     let output = [];
+    if ( typeof frequencies == 'number' || Array.isArray(frequencies) === true ) {
+      frequencies = new FacetPattern().from(frequencies);
+    }
+    frequencies.size(length);
+    let phase = 0;
     for (let i = 0; i < length; i++) {
-      let t = i / sampleRate;
-      output[i] = Math.sin(2 * Math.PI * frequency * t);
+        let t = i / sampleRate;
+        let currentFrequency = frequencies.data[i];
+        output[i] = Math.sin(phase);
+        phase += 2 * Math.PI * currentFrequency / sampleRate;
+        if (phase >= 2 * Math.PI) {
+            phase -= 2 * Math.PI;
+        }
     }
     this.data = output;
+    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -561,31 +581,43 @@ class FacetPattern {
     return this;
   }
 
-  square (frequency, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
-    frequency = Math.abs(frequency);
+  square (frequencies, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
+        frequencies = new FacetPattern().from(frequencies);
+    }
+    frequencies.size(duration);
     let wave = [];
-    let samplesPerCycle = sampleRate / frequency;
     let amplitude = 1;
+    let phase = 0;
     for (let i = 0; i < duration; i++) {
-        let t = i / samplesPerCycle;
-        wave[i] = (Math.floor(2 * t) % 2 === 0) ? amplitude : -amplitude;
+        let frequency = frequencies.data[i];
+        wave[i] = (phase < 0.5) ? amplitude : -amplitude;
+        phase += frequency / sampleRate;
+        phase -= Math.floor(phase);
     }
     this.data = wave;
+    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
-}
+  }
   
-  tri (frequency, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
-    frequency = Math.abs(frequency);
+  tri (frequencies, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
+        frequencies = new FacetPattern().from(frequencies);
+    }
+    frequencies.size(duration);
     let wave = [];
-    let samplesPerCycle = sampleRate / frequency;
     let amplitude = 1;
+    let phase = 0;
     for (let i = 0; i < duration; i++) {
-        let t = i / samplesPerCycle;
-        wave[i] = 2 * amplitude * Math.abs(2 * (t - Math.floor(t + 0.5))) - amplitude;
+        let frequency = frequencies.data[i];
+        wave[i] = 2 * amplitude * Math.abs(2 * (phase - Math.floor(phase + 0.5))) - amplitude;
+        phase += frequency / sampleRate;
+        phase -= Math.floor(phase);
     }
     this.data = wave;
+    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
-}
+  }
 
   truncate (length) {
     if ( Number(length) <= 0 ) {
@@ -617,8 +649,8 @@ class FacetPattern {
   }
 
   add (sequence2, match_sizes = true) {
-    if ( !this.isFacetPattern(sequence2) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    if ( typeof sequence2 == 'number' || Array.isArray(sequence2) === true ) {
+      sequence2 = new FacetPattern().from(sequence2);
     }
     let out = [];
     if (match_sizes != false) {
@@ -686,7 +718,7 @@ class FacetPattern {
         }
       }
     }
-    this.data = out;
+    this.data = out.map(bool => bool ? 1 : 0);
     return this;
   }
 
@@ -883,50 +915,27 @@ class FacetPattern {
     return this;
   }
 
-  crush ( crush_percent ) {
-    crush_percent = Math.abs(Number(crush_percent));
-    let original_size = this.data.length;
-    if ( crush_percent > 1 ) {
-      crush_percent = 1;
+  crush(bits, reductionFactor = 1) {
+    if (typeof bits == 'number' || Array.isArray(bits) === true) {
+        bits = new FacetPattern().from(bits);
     }
-    if ( crush_percent == 0 ) {
-      crush_percent = 0.001;
+    if (typeof reductionFactor == 'number' || Array.isArray(reductionFactor) === true) {
+        reductionFactor = new FacetPattern().from(reductionFactor);
     }
-    this.size(this.data.length * crush_percent).size(original_size);
-    return this;
-  }
-
-  fm (frequency, modulatorFrequency, durationSamples, envelopePattern, modulationIndex = 2, carrierWaveform = 0, modulatorWaveform = 0) {
-    frequency = Math.abs(frequency);
-    modulatorFrequency = Math.abs(modulatorFrequency);
-    durationSamples = Math.abs(Math.floor(durationSamples));
-    modulationIndex = Math.abs(modulationIndex);
-    carrierWaveform = Math.abs(Math.floor(carrierWaveform));
-    modulatorWaveform = Math.abs(Math.floor(modulatorWaveform));
-    if ( !this.isFacetPattern(envelopePattern) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof envelopePattern}`;
-    }
-
-    let carrierFrequency = frequency;
-    let envelopeIndex = 0;
-    let envelopeStep = Math.floor(FACET_SAMPLE_RATE / envelopePattern.data.length);
-    let envelopeCounter = 0;
-    for (let i = 0; i < durationSamples; i++) {
-        let carrierPhase = (i / FACET_SAMPLE_RATE) * carrierFrequency * 2 * Math.PI;
-        let modulatorPhase = (i / FACET_SAMPLE_RATE) * modulatorFrequency * 2 * Math.PI;
-        let carrierSample = this.waveformSample(carrierWaveform, carrierPhase);
-        let modulatorSample = this.waveformSample(modulatorWaveform, modulatorPhase);
-        let sample = carrierSample + modulationIndex * modulatorSample * envelopePattern.data[envelopeIndex];
-        this.data.push(sample);
-        envelopeCounter++;
-        if (envelopeCounter >= envelopeStep) {
-            envelopeCounter = 0;
-            envelopeIndex++;
-            if (envelopeIndex >= envelopePattern.data.length) {
-                envelopeIndex = envelopePattern.data.length - 1;
-            }
+    bits.round().abs().replace(0,1).size(this.data.length);
+    reductionFactor.round().abs().replace(0,1).size(this.data.length);
+    let wave = [];
+    let i = 0;
+    while (i < this.data.length) {
+        let step = Math.pow(2, bits.data[i]);
+        let value = Math.round(this.data[i] * step) / step;
+        let currentReductionFactor = reductionFactor.data[i];
+        for (let j = 0; j < currentReductionFactor; j++) {
+            wave[i + j] = value;
         }
+        i += currentReductionFactor;
     }
+    this.data = wave;
     return this;
 }
 
@@ -980,9 +989,9 @@ waveformSample(waveform, phase) {
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     wet = Math.abs(Number(wet));
     let dry = Math.abs(wet-1);
-    let dry_data = new FacetPattern().from(this.data).gain(dry);
+    let dry_data = new FacetPattern().from(this.data).times(dry);
     eval(this.env + this.utils + command);
-    let wet_data = new FacetPattern().from(this.data).gain(wet);
+    let wet_data = new FacetPattern().from(this.data).times(wet);
     let mixed_data = dry_data.sup(wet_data, 0);
     this.data = mixed_data.data;
     return this;
@@ -1091,8 +1100,8 @@ waveformSample(waveform, phase) {
   }
 
   divide (sequence2, match_sizes = true) {
-    if ( !this.isFacetPattern(sequence2) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    if ( typeof sequence2 == 'number' || Array.isArray(sequence2) === true ) {
+      sequence2 = new FacetPattern().from(sequence2);
     }
     let out = [];
     if (match_sizes != false) {
@@ -1147,7 +1156,7 @@ waveformSample(waveform, phase) {
     }
     let next_copy = new FacetPattern().from(this.data);
     for (var x = 0; x < num; x++) {
-      next_copy.gain(feedback)
+      next_copy.times(feedback)
       this.flatten().append(next_copy);
     }
     this.flatten();
@@ -1187,7 +1196,7 @@ waveformSample(waveform, phase) {
         }
       }
     }
-    this.data = out;
+    this.data = out.map(bool => bool ? 1 : 0);
     return this;
   }
 
@@ -1281,15 +1290,6 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  gain (amt) {
-    let gain_sequence = [];
-    for (const [key, step] of Object.entries(this.data)) {
-      gain_sequence[key] = (Number(step) * Number(amt));
-    }
-    this.data = gain_sequence;
-    return this;
-  }
-
   gt (amt) {
     let gt_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
@@ -1362,7 +1362,7 @@ waveformSample(waveform, phase) {
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
     let sequence = same_size_arrays[0];
     let mult_sequence = same_size_arrays[1];
-    this.data = sequence.gain(1 - amt).add(mult_sequence.gain(amt)).data;
+    this.data = sequence.times(1 - amt).add(mult_sequence.times(amt)).data;
     return this;
   }
 
@@ -1500,7 +1500,7 @@ waveformSample(waveform, phase) {
     baseFrequency = Math.abs(Number(baseFrequency));
     q = Math.abs(Number(q));
     wet = Math.abs(Number(wet));
-    let tail_fp = new FacetPattern().from(this.data).reverb(0.3).times(new FacetPattern().from(this.data).gain(0),false);
+    let tail_fp = new FacetPattern().from(this.data).reverb(0.3).times(new FacetPattern().from(this.data).times(0),false);
     this.sup(tail_fp,0);
     if (wet > 1 ) {
       wet = 1;
@@ -1513,21 +1513,26 @@ waveformSample(waveform, phase) {
       out_fp.sup(new FacetPattern().from(this.data).bpf(baseFrequency*coefficients.data[i],q),0);
     }
     let dry = Math.abs(1 - wet);
-    this.gain(dry);
-    out_fp.gain(wet);
+    this.times(dry);
+    out_fp.times(wet);
     this.sup(out_fp,0);
     this.full(initial_maximum_value);
     this.fadeout(0.2);
     return this;
   }
 
-  harmonics (num_harmonics) {
+  harmonics(num_harmonics) {
+    if (typeof num_harmonics == 'number' || Array.isArray(num_harmonics) === true) {
+        num_harmonics = new FacetPattern().from(num_harmonics);
+    }
+    num_harmonics.size(this.data.length);
     let initial_maximum_value = this.getMaximumValue();
-    num_harmonics = Math.abs(Math.floor(Number(num_harmonics)));
     let result = [];
     for (let i = 0; i < this.data.length; i++) {
         let harmonicSum = 0;
-        for (let j = 1; j <= num_harmonics; j++) {
+        let num_harmonicsIndex = Math.floor((i / this.data.length) * num_harmonics.data.length);
+        let numHarmonics = Math.abs(Math.floor(Number(num_harmonics.data[num_harmonicsIndex])));
+        for (let j = 1; j <= numHarmonics; j++) {
             harmonicSum += Math.sin(j * this.data[i]) + Math.cos(j * this.data[i]);
         }
         result.push(this.data[i] + harmonicSum);
@@ -1537,44 +1542,115 @@ waveformSample(waveform, phase) {
     this.audio();
     return this;
   }
-  
-  lpf (cutoff = 2000 , q = 2.5) {
-    // first argument is 0 for type = lpf. last arg is the filter gain (1)
-    BiQuadFilter.create(0,cutoff,FACET_SAMPLE_RATE,q,1);
-    let out = [];
-    for ( var i = 1; i < 6; i++ ) {
-      var v = BiQuadFilter.constants()[i-1];
-      v = BiQuadFilter.formatNumber(v,8);
-      out.push(v);
+
+  lpf (cutoffPattern, q = 2.5) {
+    if ( typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true ) {
+      cutoffPattern = new FacetPattern().from(cutoffPattern);
     }
-    this.biquad(out[2],out[3],out[4],out[0],out[1]);
+    // scale up cutoffPattern to match the size of this.data
+    cutoffPattern.size(this.data.length);
+    // apply a low-pass filter to this.data
+    // using the values in cutoffPattern as the cutoff values
+    this.data = this.lpfInner(this.data, cutoffPattern.data,q);
     return this;
   }
 
-  hpf (cutoff = 100, q = 2.5) {
-    // first argument is 1 for type = hpf. last arg is the filter gain (1)
-    BiQuadFilter.create(1,cutoff,FACET_SAMPLE_RATE,q,1);
-    let out = [];
-    for ( var i = 1; i < 6; i++ ) {
-      var v = BiQuadFilter.constants()[i-1];
-      v = BiQuadFilter.formatNumber(v,8);
-      out.push(v);
+  // runs per-sample LPF for lpmod
+  lpfInner(data, cutoffs, q) {
+    let filteredData = [];
+    let prevValue1 = data[0];
+    let prevValue2 = data[0];
+    let a0, a1, a2, b1, b2;
+    for (let i = 0; i < data.length; i++) {
+        let w0 = 2 * Math.PI * cutoffs[i] / FACET_SAMPLE_RATE;
+        let alpha = Math.sin(w0) / (2 * q);
+        a0 = 1 + alpha;
+        a1 = -2 * Math.cos(w0);
+        a2 = 1 - alpha;
+        b1 = (1 - Math.cos(w0)) / 2;
+        b2 = 1 - Math.cos(w0);
+        if (i < 2) {
+            filteredData[i] = data[i];
+        } else {
+            filteredData[i] = (b1 * data[i] + b2 * prevValue1 + b1 * prevValue2 - a1 * filteredData[i-1] - a2 * filteredData[i-2]) / a0;
+        }
+        prevValue2 = prevValue1;
+        prevValue1 = data[i];
     }
-    this.biquad(out[2],out[3],out[4],out[0],out[1]);
+    return filteredData;
+  }
+
+  hpf(cutoffPattern, q = 2.5) {
+    if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
+        cutoffPattern = new FacetPattern().from(cutoffPattern);
+    }
+    // scale up cutoffPattern to match the size of this.data
+    cutoffPattern.size(this.data.length);
+    // apply a high-pass filter to this.data
+    // using the values in cutoffPattern as the cutoff values
+    this.data = this.hpfInner(this.data, cutoffPattern.data, q);
     return this;
   }
 
-  bpf (cutoff = 1000, q = 2.5) {
-    // first argument is 2 for type = bpf. last arg is the filter gain (1)
-    BiQuadFilter.create(2,cutoff,FACET_SAMPLE_RATE,q,1);
-    let out = [];
-    for ( var i = 1; i < 6; i++ ) {
-      var v = BiQuadFilter.constants()[i-1];
-      v = BiQuadFilter.formatNumber(v,8);
-      out.push(v);
+  // runs per-sample HPF for hpmod
+  hpfInner(data, cutoffs, q) {
+    let filteredData = [];
+    let prevValue1 = data[0];
+    let prevValue2 = data[0];
+    let a0, a1, a2, b1, b2;
+    for (let i = 0; i < data.length; i++) {
+      let w0 = 2 * Math.PI * cutoffs[i] / FACET_SAMPLE_RATE;
+      let alpha = Math.sin(w0) / (2 * q);
+      a0 = 1 + alpha;
+      a1 = -2 * Math.cos(w0);
+      a2 = 1 - alpha;
+      b1 = (1 + Math.cos(w0)) / 2;
+      b2 = -(1 + Math.cos(w0));
+      if (i < 2) {
+          filteredData[i] = data[i];
+      } else {
+          filteredData[i] = (b1 * data[i] + b2 * prevValue1 + b1 * prevValue2 - a1 * filteredData[i-1] - a2 * filteredData[i-2]) / a0;
+      }
+      prevValue2 = prevValue1;
+      prevValue1 = data[i];
     }
-    this.biquad(out[2],out[3],out[4],out[0],out[1]);
+    return filteredData;
+  }
+
+  bpf(cutoffPattern, q = 2.5) {
+    if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
+        cutoffPattern = new FacetPattern().from(cutoffPattern);
+    }
+    // scale up cutoffPattern to match the size of this.data
+    cutoffPattern.size(this.data.length);
+    // apply a band-pass filter to this.data
+    // using the values in cutoffPattern as the cutoff values
+    this.data = this.bpfInner(this.data, cutoffPattern.data, q);
     return this;
+  }
+
+  // runs per-sample BPF for bpmod
+  bpfInner(data, cutoffs, q) {
+    let filteredData = [];
+    let prevValue1 = data[0];
+    let prevValue2 = data[0];
+    let a0, a1, a2, b1;
+    for (let i = 0; i < data.length; i++) {
+        let w0 = 2 * Math.PI * cutoffs[i] / FACET_SAMPLE_RATE;
+        let alpha = Math.sin(w0) / (2 * q);
+        a0 = 1 + alpha;
+        a1 = -2 * Math.cos(w0);
+        a2 = 1 - alpha;
+        b1 = alpha;
+        if (i < 2) {
+            filteredData[i] = data[i];
+        } else {
+            filteredData[i] = (b1 * data[i] - b1 * prevValue2 - a1 * filteredData[i-1] - a2 * filteredData[i-2]) / a0;
+        }
+        prevValue2 = prevValue1;
+        prevValue1 = data[i];
+    }
+    return filteredData;
   }
 
   lt (amt) {
@@ -1642,17 +1718,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  offset (amt) {
-    amt = Number(amt);
-    let offset_sequence = [];
-    for (const [key, step] of Object.entries(this.data)) {
-      offset_sequence[key] = Number(step) + Number(amt);
-    }
-    this.data = offset_sequence;
-    return this;
-  }
-
-  or (sequence2) {
+  or ( sequence2, match_sizes = true ) {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
@@ -1685,7 +1751,7 @@ waveformSample(waveform, phase) {
         }
       }
     }
-    this.data = out;
+    this.data = out.map(bool => bool ? 1 : 0);
     return this;
   }
 
@@ -1826,11 +1892,11 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  pitch (pitchShiftFactor) {
-    pitchShiftFactor = Math.abs(pitchShiftFactor);
-    if (pitchShiftFactor == 0 ) {
-      pitchShiftFactor = 0.125;
+  pitch(pitchShiftFactors) {
+    if (typeof pitchShiftFactors == 'number' || Array.isArray(pitchShiftFactors) === true) {
+        pitchShiftFactors = new FacetPattern().from(pitchShiftFactors);
     }
+    pitchShiftFactors.size(this.data.length);
     let windowSize = 1024;
     let hopSize = windowSize / 4;
     let outputArray = [];
@@ -1844,6 +1910,11 @@ waveformSample(waveform, phase) {
         for (let j = 0; j < segment.length; j++) {
             segment[j] *= window[j];
         }
+        let pitchShiftFactorIndex = Math.floor((i / this.data.length) * pitchShiftFactors.data.length);
+        let pitchShiftFactor = Math.abs(Number(pitchShiftFactors.data[pitchShiftFactorIndex]));
+        if (pitchShiftFactor == 0) {
+            pitchShiftFactor = 0.125;
+        }
         let resampledSegment = this.resample(segment, 1 / pitchShiftFactor);
         for (let j = 0; j < resampledSegment.length; j++) {
             let outputIndex = i + j;
@@ -1856,7 +1927,7 @@ waveformSample(waveform, phase) {
     }
     this.data = outputArray;
     return this;
-  }
+}
 
   hannWindow (size) {
       let window = [];
@@ -1918,9 +1989,15 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  tanh (gain = 20) {
+  tanh(gains = 20) {
+    if (typeof gains == 'number' || Array.isArray(gains) === true) {
+        gains = new FacetPattern().from(gains);
+    }
+    gains.size(this.data.length);
     for (let i = 0; i < this.data.length; i++) {
-      this.data[i] = Math.tanh(this.data[i] * gain);
+        let gainIndex = Math.floor((i / this.data.length) * gains.data.length);
+        let gain = Number(gains.data[gainIndex]);
+        this.data[i] = Math.tanh(this.data[i] * gain);
     }
     return this;
   }
@@ -2132,7 +2209,6 @@ waveformSample(waveform, phase) {
   }
 
   speed (ratio) {
-   // hard clamp stretch ratio between 0.02083 (48x) and 8
    ratio = Math.abs(Number(ratio));
    let upscaled_data = [];
    let new_samps = Math.floor(ratio * this.data.length);
@@ -2172,12 +2248,18 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  stretch (stretchFactor) {
+  stretch(stretchFactors) {
+    if (typeof stretchFactors == 'number' || Array.isArray(stretchFactors) === true) {
+        stretchFactors = new FacetPattern().from(stretchFactors);
+    }
+    stretchFactors.size(this.data.length);
     let outputArray = [];
     let chunkSize = Math.round(FACET_SAMPLE_RATE / 128);
     let skip_every = 0;
     for (let i = 0; i < this.data.length; i += chunkSize) {
         let chunk = this.data.slice(i, i + chunkSize);
+        let stretchFactorIndex = Math.floor((i / this.data.length) * stretchFactors.data.length);
+        let stretchFactor = Number(stretchFactors.data[stretchFactorIndex]);
         if (stretchFactor >= 1) {
             for (let j = 0; j < stretchFactor; j++) {
                 outputArray.push(chunk);
@@ -2289,8 +2371,8 @@ waveformSample(waveform, phase) {
   }
 
   subtract (sequence2, match_sizes = true) {
-    if ( !this.isFacetPattern(sequence2) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    if ( typeof sequence2 == 'number' || Array.isArray(sequence2) === true ) {
+      sequence2 = new FacetPattern().from(sequence2);
     }
     let out = [];
     if (match_sizes != false) {
@@ -2326,8 +2408,8 @@ waveformSample(waveform, phase) {
   }
 
   times (sequence2, match_sizes = true) {
-    if ( !this.isFacetPattern(sequence2) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+    if ( typeof sequence2 == 'number' || Array.isArray(sequence2) === true ) {
+      sequence2 = new FacetPattern().from(sequence2);
     }
     let out = [];
     if (match_sizes != false) {
@@ -2462,6 +2544,16 @@ waveformSample(waveform, phase) {
     for (let i = this.data.length - 1; i >= this.data.length - fade_length; i--) {
       this.data[i] = this.data[i] * Math.sin(((this.data.length - i) / fade_length) * (Math.PI / 2));
   }
+    return this;
+  }
+
+  fadeoutSamples(fade_samples) {
+    let fade_length = fade_samples;
+    for (let j = 0; j < 20; j++) {
+        for (let i = this.data.length - 1; i >= this.data.length - fade_length; i--) {
+            this.data[i] = this.data[i] * Math.sin(((this.data.length - i) / fade_length) * (Math.PI / 2));
+        }
+    }
     return this;
   }
   // END WINDOW operations. shimmed from https://github.com/scijs/window-function
@@ -3037,22 +3129,29 @@ waveformSample(waveform, phase) {
   // END utility functions
 
   // frequency: hz. duration: samples (converted to seconds internally). damping and feedback both scaled 0-1. 
-  pluck(frequency, duration = FACET_SAMPLE_RATE, damping, feedback) {
-    frequency = Math.abs(frequency);
+  pluck(frequencies, duration = FACET_SAMPLE_RATE, damping = 0, feedback = 0.5) {
+    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
+        frequencies = new FacetPattern().from(frequencies);
+    }
+    frequencies.size(duration);
     duration = duration / FACET_SAMPLE_RATE;
     damping = Math.abs(Number(damping));
     feedback = Math.abs(Number(feedback));
     feedback = 0.5 + feedback * 0.5;
-    let string = new KarplusStrongString(frequency, damping, feedback);
     let numSamples = FACET_SAMPLE_RATE * duration;
     let output = new Float32Array(numSamples);
+    let string = new KarplusStrongString(frequencies.data[0], damping, feedback);
     for (let i = 0; i < numSamples; i++) {
+        let frequency = frequencies.data[i];
+        string.frequency = frequency;
+        string.bufferSize = Math.round(FACET_SAMPLE_RATE / frequency);
         output[i] = string.process();
     }
     this.data = output;
-    this.flatten();
+    this.flatten().trim();
+    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
-  }
+}
 
   // maxFrameSize allows you to hard-code the range that the data will get appended to, so that if you're
   // iteratively superposing stuff, the relative positions don't change as you add stuff to the data

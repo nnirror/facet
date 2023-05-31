@@ -1,7 +1,6 @@
 const fs = require('fs');
 const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
-let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
 
 function $ (n) {
   if (!n) {
@@ -45,4 +44,26 @@ function mtos(midiNoteIn) {
   let frequency = Math.pow(2, (midiNoteIn - 69) / 12) * 440;
   let samples = FACET_SAMPLE_RATE / frequency;
   return samples;
+}
+
+function barmod(mod, values) {
+  mod = Math.round(Math.abs(Number(mod)));
+  if ( values.length % 2 != 0 ) {
+    throw (`barmod must contain an even number of values`);
+  }
+  let allNumbers = [];
+  for (let i = 0; i < mod; i++) {
+      allNumbers.push(i);
+  }
+  for (let i = 0; i < allNumbers.length; i++) {
+      if (!values.some((value, index) => index % 2 === 0 && value === allNumbers[i])) {
+          throw (`Error: every integer from 0 to ${mod-1} must be one of the even-numbered keys of the values array`);
+      }
+  }
+  let result = bars % mod;
+  for (let i = 0; i < values.length; i += 2) {
+      if (values[i] === result) {
+          return values[i + 1];
+      }
+  }
 }

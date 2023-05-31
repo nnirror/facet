@@ -2,6 +2,7 @@
 <html lang="en" dir="ltr">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Facet</title>
     <link rel="shortcut icon" type="image/png" href="img/favicon.png"/>
     <script src="node_modules/codemirror/lib/codemirror.js"></script>
@@ -21,7 +22,7 @@
     <div id="status">●</div>
     <div id="cpu">0.0% cpu</div>
     <div id="notifications">
-      <input type="number" id="bpm" name="bpm" min="1" max="10000" value="90">
+      <input type="number" id="bpm" name="bpm" min="1" max="10000" value="90" title="bpm">
       <span class="ui_label">bpm</span>
     </div>
     <div id="transport">
@@ -30,6 +31,6 @@
       <span id="restart" title="restart servers">↻</span>
       <span id="end" title="shut down">🛑</span>
     </div>
-    <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
+    <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs" title="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
   </body>
 </html>
