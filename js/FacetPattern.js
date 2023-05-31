@@ -998,7 +998,7 @@ waveformSample(waveform, phase) {
   }
 
   delay (delayAmount, feedback = 0.5) {
-    feedback = Math.min(Math.max(feedback, 0), 0.975);
+    feedback = Math.min(Math.max(feedback, 0), 0.98);
     let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
     let delayedArray = new Array(this.data.length + delayAmount * maxFeedbackIterations).fill(0);
     for (let i = 0; i < maxFeedbackIterations; i++) {
@@ -2078,18 +2078,25 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  sieve (sequence2) {
-    if ( !this.isFacetPattern(sequence2) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+  sieve (modulatorData) {
+    // scale modulator data to be the same length as input data
+    let scaledModulatorData = new Float32Array(this.data.length);
+    let scale = (modulatorData.data.length - 1) / (this.data.length - 1);
+    for (let i = 0; i < this.data.length; i++) {
+        scaledModulatorData[i] = modulatorData.data[Math.round(i * scale)];
     }
-    sequence2.normalize();
-    let sieve_sequence = [];
-    for (var i = 0; i < sequence2.data.length; i++) {
-      sieve_sequence.push(this.data[Math.round(sequence2.data[i] * (this.data.length - 1))]);
+    // clip modulator data to be within 0 and 1
+    let clippedModulatorData = scaledModulatorData.map(x => Math.max(0, Math.min(1, x)));
+
+    // Use modulator data as a lookup table
+    let output = new Float32Array(this.data.length);
+    for (let i = 0; i < this.data.length; i++) {
+        output[i] = this.data[Math.round(clippedModulatorData[i] * (this.data.length - 1))];
     }
-    this.data = sieve_sequence;
+    this.data = output;
+    this.flatten();
     return this;
-  }
+}
 
   slew (depth = 25, up_speed = 1, down_speed = 1) {
     let slewed_sequence = [];
