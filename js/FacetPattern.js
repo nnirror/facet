@@ -999,6 +999,7 @@ waveformSample(waveform, phase) {
 
   delay (delayAmount, feedback = 0.5) {
     feedback = Math.min(Math.max(feedback, 0), 0.98);
+    delayAmount = Math.round(Math.abs(Number(delayAmount)));
     let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
     let delayedArray = new Array(this.data.length + delayAmount * maxFeedbackIterations).fill(0);
     for (let i = 0; i < maxFeedbackIterations; i++) {
@@ -2079,15 +2080,15 @@ waveformSample(waveform, phase) {
   }
 
   sieve (modulatorData) {
-    // scale modulator data to be the same length as input data
-    let scaledModulatorData = new Float32Array(this.data.length);
-    let scale = (modulatorData.data.length - 1) / (this.data.length - 1);
-    for (let i = 0; i < this.data.length; i++) {
-        scaledModulatorData[i] = modulatorData.data[Math.round(i * scale)];
+    // scale modulator data to be the same length as input data. whichever is larger is what the other is scaled to
+    if (modulatorData.data.length > this.data.length ) {
+      this.stretchto(modulatorData.data.length);
+    }
+    else {
+      modulatorData.size(this.data.length);
     }
     // clip modulator data to be within 0 and 1
-    let clippedModulatorData = scaledModulatorData.map(x => Math.max(0, Math.min(1, x)));
-
+    let clippedModulatorData = modulatorData.data.map(x => Math.max(0, Math.min(1, x)));
     // Use modulator data as a lookup table
     let output = new Float32Array(this.data.length);
     for (let i = 0; i < this.data.length; i++) {
