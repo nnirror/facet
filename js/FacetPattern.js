@@ -2090,14 +2090,14 @@ waveformSample(waveform, phase) {
     // clip modulator data to be within 0 and 1
     let clippedModulatorData = modulatorData.data.map(x => Math.max(0, Math.min(1, x)));
     // Use modulator data as a lookup table
-    let output = new Float32Array(this.data.length);
+    let output = new Array(this.data.length);
     for (let i = 0; i < this.data.length; i++) {
         output[i] = this.data[Math.round(clippedModulatorData[i] * (this.data.length - 1))];
     }
     this.data = output;
     this.flatten();
     return this;
-}
+  }
 
   slew (depth = 25, up_speed = 1, down_speed = 1) {
     let slewed_sequence = [];
@@ -2297,14 +2297,14 @@ waveformSample(waveform, phase) {
   full (new_maximum = 1) {
     let maxVal = 0;
     for (let i = 0; i < this.data.length; i++) {
-        maxVal = Math.max(maxVal, Math.abs(this.data[i]));
+      maxVal = Math.max(maxVal, Math.abs(this.data[i]));
     }
     let gain = new_maximum / maxVal;
     for (let i = 0; i < this.data.length; i++) {
       this.data[i] *= gain;
     }
     return this;
-  }
+   }
 
   sort () {
     let sorted_sequence = [];
@@ -2787,6 +2787,7 @@ waveformSample(waveform, phase) {
       out_fp.sup(this,0);
     }
     this.data = out_fp.data;
+    this.fixnan();
     this.full(initial_maximum_value);
     return this;
   }
@@ -3003,6 +3004,15 @@ waveformSample(waveform, phase) {
       }
     }
     return result;
+  }
+
+  fixnan () {
+    for (var i = 0; i < this.data.length; i++) {
+      if (isNaN(this.data[i])) {
+        this.data[i] = 0;
+      }
+    }
+    return this;
   }
 
   fadeArrays (arrays) {
