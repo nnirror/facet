@@ -505,7 +505,7 @@ class FacetPattern {
         throw er;
       } 
     }
-    this.clip(-1,1);
+    this.full().audio();
     return this;
   }
 
