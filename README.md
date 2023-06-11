@@ -121,6 +121,13 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveas('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
+---
+- **stitchdir** ( _dir_, _samplesBetweenEachFile_, _saved_filename_ = 'stitched' )
+	- stitches together all the wav files in the supplied `dir` directory, in alphabetical order, creating a new wav file in the `samples/` directory or a sub-directory, as specified in `saved_filename`. If the directory doesn't exist, it will be created.
+	- The `samplesBetweenEachFile` argument can be a single number or a FacetPattern. This value specifies the exact number of samples between each file in the output file. If it's a FacetPattern, its values will be continuously cycled through while stitching together all the files in the directory.
+	- __Note__: this process can take minutes if there are a lot of wavs, so by default any time this method is called, it will be called once and only once.
+	- example:
+		- `$('example').stitchdir('mysamples',n1,'myNewStitchedFile'); // stitch together all the wavs in samples/mysamples, with a whole note between each file, creating a new file called MyNewStitchedFile.wav`
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
