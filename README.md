@@ -443,6 +443,12 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([1,2,3,4]).clip(2,3); // 2 2 3 3 `
 ---
+- **comb** ( _delaysamples_ = sample_rate / 100, _feedforward_ = 0.5, _feedback_ = 0.5 )
+	- applies a comb filter to the input data. The `delaySamples` parameter is equal to 10ms by default and specifies the number of samples to delay the input signal. The `feedforward` parameter controls the amount of the input signal that is fed directly to the output. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
+	- The `feedback` and `feedforward` values are clamped between 0 and 0.98.
+	- example:
+		- `$('example').noise(n4).comb(ms(10),0.5,0.5).play();`
+---
 - **compress** ( _ratio_, _threshold_, _attackTime_, _releaseTime_ )
 	- compresses the FacetPattern into a smaller dynamic range. `ratio` is a float between 0 and 1 corresponding to n:1 so 0.5 would be 2:1, 0.2 would be 5:1, etc. `threshold` is the sample amplitude at which compression kicks in. `attackTime` and `releaseTime` are expressed as relations to a second, so 0.1 would be 1/10th of a second.
 	- example:

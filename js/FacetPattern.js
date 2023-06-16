@@ -191,7 +191,7 @@ class FacetPattern {
                 isPrime = false;
                 break;
             }
-        }
+        } 
         if (isPrime && num >= offset) {
             if (skipped === skip) {
                 primes.push(num);
@@ -682,6 +682,7 @@ class FacetPattern {
       }
     }
     this.data = out;
+    this.fixnan();
     return this;
   }
 
@@ -997,6 +998,27 @@ waveformSample(waveform, phase) {
     return this;
   }
 
+  comb (delaySamples = FACET_SAMPLE_RATE / 100, feedforward = 0.5, feedback = 0.5) {
+    feedback = Math.min(Math.max(feedback, 0), 0.98);
+    feedforward = Math.min(Math.max(feedforward, 0), 0.98);
+    delaySamples = Math.round(Math.abs(Number(delaySamples)));
+    let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
+    let outputLength = this.data.length + delaySamples * maxFeedbackIterations;
+    let output = new Array(outputLength).fill(0);
+    for (let i = 0; i < outputLength; i++) {
+        let delayedIndex = i - delaySamples;
+        let delayedInputSample = delayedIndex < 0 ? 0 : this.data[delayedIndex];
+        let delayedOutputSample = delayedIndex < 0 ? 0 : output[delayedIndex];
+        if (i < this.data.length) {
+            output[i] = feedforward * this.data[i] + 1 * delayedInputSample + feedback * delayedOutputSample;
+        } else {
+            output[i] = feedback * delayedOutputSample;
+        }
+    }
+    this.data = output;
+    return this;
+  }
+
   delay (delayAmount, feedback = 0.5) {
     feedback = Math.min(Math.max(feedback, 0), 0.98);
     delayAmount = Math.round(Math.abs(Number(delayAmount)));
@@ -1134,6 +1156,7 @@ waveformSample(waveform, phase) {
       }
     }
     this.data = out;
+    this.fixnan();
     return this;
   }
 
@@ -1553,6 +1576,7 @@ waveformSample(waveform, phase) {
     // apply a low-pass filter to this.data
     // using the values in cutoffPattern as the cutoff values
     this.data = this.lpfInner(this.data, cutoffPattern.data,q);
+    this.fixnan();
     return this;
   }
 
@@ -1590,6 +1614,7 @@ waveformSample(waveform, phase) {
     // apply a high-pass filter to this.data
     // using the values in cutoffPattern as the cutoff values
     this.data = this.hpfInner(this.data, cutoffPattern.data, q);
+    this.fixnan();
     return this;
   }
 
@@ -1627,6 +1652,7 @@ waveformSample(waveform, phase) {
     // apply a band-pass filter to this.data
     // using the values in cutoffPattern as the cutoff values
     this.data = this.bpfInner(this.data, cutoffPattern.data, q);
+    this.fixnan();
     return this;
   }
 
@@ -2412,6 +2438,7 @@ waveformSample(waveform, phase) {
       }
     }
     this.data = out;
+    this.fixnan();
     return this;
   }
 
@@ -2449,6 +2476,7 @@ waveformSample(waveform, phase) {
       }
     }
     this.data = out;
+    this.fixnan();
     return this;
   }
 
