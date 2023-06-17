@@ -64,6 +64,10 @@ function formatCode (user_input) {
   user_input = user_input.replace(/;/g, ';\n');
   // anyonymous FacetPattern instantiation via "_." shorthand
   user_input = user_input.replace(/_\./g, '$().');
+  if ( process.platform == 'win32' ) {
+    // escape any single-slash \ characters in the command on windows only
+    user_input = user_input.replace(/\\(?!\\)/g, '\\\\');
+  }
   return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g,'');
 }
 
