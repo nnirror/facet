@@ -331,7 +331,7 @@ class FacetPattern {
 
   randsamp (dir) {
     if (!dir) {
-      dir = `.${cross_platform_slash}samples`;
+      dir = `${process.cwd()}${cross_platform_slash}samples`;
     }
     let files, chosenFile;
     try {
@@ -511,7 +511,7 @@ class FacetPattern {
 
   randfile(dir) {
     if (!dir) {
-      dir = `.${cross_platform_slash}files`;
+      dir = `${process.cwd()}${cross_platform_slash}files`;
     }
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];

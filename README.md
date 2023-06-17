@@ -119,6 +119,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 ---
 - **saveas** ( _filename_ )
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
+	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveas('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
 ---
@@ -126,6 +127,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- stitches together all the wav files in the supplied `dir` directory, in alphabetical order, creating a new wav file in the `samples/` directory or a sub-directory, as specified in `saved_filename`. If the directory doesn't exist, it will be created.
 	- The `samplesBetweenEachFile` argument can be a single number or a FacetPattern. This value specifies the exact number of samples between each file in the output file. If it's a FacetPattern, its values will be continuously cycled through while stitching together all the files in the directory.
 	- __Note__: this process can take minutes if there are a lot of wavs, so by default any time this method is called, it will be called once and only once.
+	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').stitchdir('mysamples',n1,'myNewStitchedFile'); // stitch together all the wavs in samples/mysamples, with a whole note between each file, creating a new file called MyNewStitchedFile.wav`
 
@@ -338,6 +340,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **file** ( _filename_ )
 	- loads the raw data of any file into memory. You can supply any file type.
 	- By default, it checks for a file in the `files` subdirectory. If no file exists there, it will try to load the file as an absolute path on your hard drive. 
+	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').file('my_image.png').play(); // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!`
 		- `$('example').file('/Users/my_username/Desktop/myfile.zip').play(); // example with a supplied absolute file path`
@@ -351,6 +354,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- transposes an image onto the audio spectrum by generating a sine wave lasting for samplesPerColumn samples for every pixel in the image, starting with the left-most column and moving rightwards.
 	- the default samplesPerColumn value of 10 means that each second of audio will contain 10 columns of pixels. This value can be larger or smaller, but keep in mind the potential for generating humongous files. The lowest pixels in the image correspond to the lowest frequencies in the output. Conversely, the highest pixels in the image correspond to the highest frequencies in the output. This method currently only works with JPEG files, and sometimes certain JPEG files won't even work. (I have submitted a GitHub issue: revisitors/readimage#4) Re-saving the JPEG files in GIMP seems to create JPEGs that the middleware this method uses can parse correctly.
 	- the maximumFrequency and frequencyOffset values control the range of frequencies that the pixels will map onto.
+	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').image('/path/to/file/goes/here.jpg',1024).play(); // each column lasts 1024 samples`
 ---
@@ -373,16 +377,19 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **randfile** ( _dir_ = `../files/` )
 	- loads a random file from the `files` directory into memory. The default directory is `../files/`, but you can supply any directory as an argument.
+	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').randfile().play(); // random new file converted to audio every time`
 ---
 - **randsamp** ( _dir_ = `../samples/` )
 	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument.
+	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').randsamp().reverse().play(); // random backwards sample`
 ---
 - **sample** ( _filename_ )
 	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_.
+	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').sample('1234').play(); // if 1234.wav is in the samples directory, you're good to go`
 		- `$('example').sample('./myfolder/myfile.wav'); // or point to the file with a relative path`
