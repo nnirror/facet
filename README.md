@@ -91,7 +91,7 @@ For example: `$('example').noise(FACET_SAMPLE_RATE).play(); // generate and cont
 
 ## Global event resolution
 
-By default, Facet checks every 2 milliseconds whether it needs to fire any events that produce output, such as playing audio, MIDI, or osc. You can change  `EVENT_RESOLUTION_MS` in `js/config.js` to set a different integer value. Slower speeds (e.g. 10 = 10ms) will produce less tightly-timed events but can help make it possible for Facet to run on computers with less CPU resources, at the expense of slight timing accuracy.
+By default, Facet checks every 10 milliseconds whether it needs to fire any events that produce output, such as playing audio, MIDI, or osc. You can change  `EVENT_RESOLUTION_MS` in `js/config.js` to set a different integer value. Slower speeds (e.g. 20 = 20ms) will produce less tightly-timed events but can help make it possible for Facet to run on computers with less CPU resources, at the expense of slight timing accuracy. Faster speeds (e.g. 2 = 2ms) will produce tighter event scheduling but can overload computers with less CPU resources.
 
 ## Command reference
 

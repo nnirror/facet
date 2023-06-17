@@ -18,7 +18,7 @@ let reruns = {};
 let errors = [];
 let percent_cpu = 0;
 let mousex, mousey;
-let cross_platform_move_command = process.platform == 'win32' ? 'move' : 'mv';
+let cross_platform_move_command = process.platform == 'win32' ? 'move \/y' : 'mv';
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 process.title = 'facet_pattern_generator';
 
@@ -67,7 +67,7 @@ module.exports = {
                   fp.dacs = '1 0';
                 }
                 if ( fp.sequence_data.length > 0 ) {
-                  if ( fp.dacs == '1 1' ) {
+                  if ( fp.dacs == '1 1' && process.platform != 'win32' ) {
                     // no channel processing needed
                     exec(`${cross_platform_move_command} tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav`, (error, stdout, stderr) => {
                       postToTransport(fp);

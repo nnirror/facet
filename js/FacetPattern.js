@@ -8,10 +8,10 @@ const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
 const Freeverb = require('./lib/Freeverb.js').Freeverb;
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
-const BiQuadFilter = require('./lib/BiQuadFilter.js').BiQuadFilter;
 const FFT = require('./lib/fft.js');
 const { Midi, Scale } = require('tonal');
 const readimage = require('readimage');
+let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
 class FacetPattern {
   constructor (name) {
@@ -331,7 +331,7 @@ class FacetPattern {
 
   randsamp (dir) {
     if (!dir) {
-      dir = `./samples`;
+      dir = `.${cross_platform_slash}samples`;
     }
     let files, chosenFile;
     try {
@@ -341,7 +341,7 @@ class FacetPattern {
     } catch (e) {
       // try appending './samples' to the supplied directory name
       try {
-        dir = `./samples/${dir}`;
+        dir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
         files = fs.readdirSync(dir);
         chosenFile = files[Math.floor(Math.random() * files.length)];
       } catch (er) {
@@ -357,14 +357,14 @@ class FacetPattern {
         throw `error in randsamp(): the supplied directory ${dir} failed to find a sample file 32 times in a row`
       }
       try {
-        buffer = fs.readFileSync(`${dir}/${chosenFile}`);
+        buffer = fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`);
         this.data = this.loadBuffer(buffer);
         fp_found = true;
       } catch (e) {
         try {
           // samples with a different bit depth might need to be converted to 32f
           // converted to 32f bit depth, otherise they don't load properly.
-          let wav = new WaveFile(fs.readFileSync(`${dir}/${chosenFile}`));
+          let wav = new WaveFile(fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`));
           wav.toBitDepth("32f");
           this.data = wav.getSamples();
           return this.flatten();
@@ -415,10 +415,10 @@ class FacetPattern {
 
     let stitchDir = dir;
     if (!dir) {
-      stitchDir = `./samples`;
+      stitchDir = `${process.cwd()}${cross_platform_slash}samples`;
     }
     else {
-      stitchDir = `./samples/${dir}`;
+      stitchDir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
     }
     let out_fp = new FacetPattern();
     let silence_samples_to_add = 0;
@@ -429,12 +429,12 @@ class FacetPattern {
         .filter(file => path.extname(file) === '.wav')
         .sort()
         .forEach(file => {
-          let next_fp_to_add = new FacetPattern().sample(`${dir}/${file}`).prepend(new FacetPattern().silence(silence_samples_to_add));
+          let next_fp_to_add = new FacetPattern().sample(`${dir}${cross_platform_slash}${file}`).prepend(new FacetPattern().silence(silence_samples_to_add));
           out_fp.sup(next_fp_to_add,0);
           silence_samples_to_add += samplesBetweenEachFile[iters%samplesBetweenEachFile.length]
           iters++;
         });
-        out_fp.saveas(`${dir}/${saved_filename}`);
+        out_fp.saveas(`${dir}${cross_platform_slash}${saved_filename}`);
     });
     return this;
   }
@@ -445,7 +445,7 @@ class FacetPattern {
     }
     // first, try loading from the samples directory
     try {
-      let buffer = fs.readFileSync(`./samples/${file_name}`);
+      let buffer = fs.readFileSync(`${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${file_name}`);
       this.data = this.loadBuffer(buffer);
       return this.flatten();
     } catch (e) {
@@ -467,7 +467,7 @@ class FacetPattern {
         } catch (err) {
           try {
             // then try from the samples directory
-            let wav = new WaveFile(fs.readFileSync(`./samples/${file_name}`));
+            let wav = new WaveFile(fs.readFileSync(`${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${file_name}`));
             wav.toBitDepth("32f");
             this.data = wav.getSamples();
             return this.flatten();
@@ -490,7 +490,7 @@ class FacetPattern {
   file (file_name) {
     try {
       // first try loading the file from the files directory
-      this.data = fs.readFileSync(`./files/${file_name}`, (err, data) => {
+      this.data = fs.readFileSync(`${process.cwd()}${cross_platform_slash}files${cross_platform_slash}${file_name}`, (err, data) => {
         return [...data];
       }).toJSON().data;
     }
@@ -511,7 +511,7 @@ class FacetPattern {
 
   randfile(dir) {
     if (!dir) {
-      dir = `./files`;
+      dir = `.${cross_platform_slash}files`;
     }
     var files = fs.readdirSync(dir);
     let chosenFile = files[Math.floor(Math.random() * files.length)];
@@ -521,12 +521,12 @@ class FacetPattern {
       }).toJSON().data;
     } catch (e) {
       try {
-        this.data = fs.readFileSync(`${dir}/${chosenFile}`, (err, data) => {
+        this.data = fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`, (err, data) => {
           return [...data];
         }).toJSON().data;
       } catch (er) {
         try {
-          this.data = fs.readFileSync(`${dir}/${chosenFile}`, (err, data) => {
+          this.data = fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`, (err, data) => {
             return [...data];
           }).toJSON().data;
         } catch (err) {
@@ -2918,9 +2918,9 @@ waveformSample(waveform, phase) {
 
   saveas (filename) {
     let folder = 'samples';
-    if (filename.includes('/')) {
-      folder += `/${filename.split('/')[0]}`;
-      filename = filename.split('/')[1];
+    if (filename.includes(cross_platform_slash)) {
+      folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
+      filename = filename.split(cross_platform_slash)[1];
     }
     if (!fs.existsSync(folder)) {
       fs.mkdir(folder, { recursive: true }, (err) => {
@@ -2936,21 +2936,21 @@ waveformSample(waveform, phase) {
   set (filename) {
     let a_wav = new WaveFile();
     a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', this.data);
-    fs.writeFileSync(`tmp/${filename}.wav`, a_wav.toBuffer(),(err) => {});
+    fs.writeFileSync(`tmp${cross_platform_slash}${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 
   get (filename) {
     try {
-      this.sample(`tmp/${filename}.wav`);
+      this.sample(`tmp${cross_platform_slash}${filename}.wav`);
     }
     catch (e) {
       try {
-        this.sample(`tmp/${filename}.wav`);
+        this.sample(`tmp${cross_platform_slash}${filename}.wav`);
       }
       catch (er) {
         try {
-          this.sample(`tmp/${filename}.wav`);
+          this.sample(`tmp${cross_platform_slash}${filename}.wav`);
         }
         catch (err) {
           throw err;
