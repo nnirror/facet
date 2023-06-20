@@ -59,6 +59,16 @@ Below the text editor, there are several UI elements which control the Facet ser
 - Stop playback: `[ctrl + .]` or `[ctrl + ?]`
 - Stop regenerating patterns: `[ctrl + ,]`
 
+### Running "npm run facet"
+
+When you run the `npm run facet` command in the terminal, the following sequence of events occurs:
+
+A server, known as the `process manager`, starts up on http://localhost:5831. This server is responsible for managing the startup and shutdown of the two servers listed below:
+
+1. The `transport server` starts up on http://localhost:3211. This server is responsible for handling the timing and playback of audio, MIDI, and OSC events.
+
+2. The `pattern generator` server starts up on http://localhost:1123. This server listens to requests from the text editor UI in the browser located at http://localhost:1124 and interprets those commands into data. If the pattern is intended to be played back as audio, a corresponding .wav file will be stored in the `tmp/` subdirectory in the Facet repo. Otherwise, if the pattern is intended for MIDI or OSC output, the data will be posted directly to the transport server.
+
 ### Variables
 
 #### mousex / mousey
