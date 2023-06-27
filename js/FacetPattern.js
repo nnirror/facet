@@ -28,6 +28,7 @@ class FacetPattern {
     this.loops_since_generation = 1;
     this.bpm_at_generation_time = -1;
     this.notes = [];
+    this.pan_data = false;
     this.play_once = false;
     this.regenerate_every_n_loops = 1;
     this.original_command = '';
@@ -276,7 +277,7 @@ class FacetPattern {
       length = 1;
     }
     for (var i = 0; i < length; i++) {
-      noise_sequence[i] = Math.random();
+      noise_sequence[i] = Math.random() * 2 - 1;
     }
     this.data = noise_sequence;
     return this;
@@ -1392,10 +1393,14 @@ waveformSample(waveform, phase) {
 
   invert () {
     let inverted_sequence = [];
-    let min = Math.min.apply(Math, this.data);
-    let max = Math.max.apply(Math, this.data);
+    let min = Infinity;
+    let max = -Infinity;
+    for (const step of this.data) {
+        if (step < min) min = step;
+        if (step > max) max = step;
+    }
     for (const [key, step] of Object.entries(this.data)) {
-      inverted_sequence[key] = min + (max - step);
+        inverted_sequence[key] = min + (max - step);
     }
     this.data = inverted_sequence;
     return this;
@@ -2882,6 +2887,15 @@ waveformSample(waveform, phase) {
       data:this.data,
       address:address
     };
+    return this;
+  }
+
+  pan ( pan_amt ) {
+    if ( typeof pan_amt == 'number' || Array.isArray(pan_amt) === true ) {
+      pan_amt = new FacetPattern().from(pan_amt);
+    }
+    pan_amt.clip(-1,1);
+    this.pan_data = pan_amt.data;
     return this;
   }
 

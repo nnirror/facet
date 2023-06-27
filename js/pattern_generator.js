@@ -10,6 +10,7 @@ const cors = require('cors');
 const fs = require('fs');
 const os_utils = require('os-utils');
 const WaveFile = require('wavefile').WaveFile;
+const FacetPattern = require('./FacetPattern.js');
 const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 let bpm = 90;
@@ -55,35 +56,66 @@ module.exports = {
             }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
               fp.data = sliceEndFade(fp.data);
-              // create wav file at FACET_SAMPLE_RATE, 32-bit floating point
-              let a_wav = new WaveFile();
-              a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', fp.data);
-              // store wav file in /tmp/
-              fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
-                // remix onto whatever channels via SoX
-                if ( fp.dacs == '1' ) {
+              if ( fp.dacs == '1' ) {
                   // by default, channels 1 and 2 are on. If _only_ channel 1 was
                   // specified via .channel(), turn off channel 2.
                   fp.dacs = '1 0';
+              } 
+              if ( fp.pan_data !== false ) {
+                // if a panning pattern was included, handle separately: generate files based on the number of channels and apply gain based on the panning pattern
+                let dacs = fp.dacs.split(' ');
+                let multi_channel_sox_cmd = 'sox --combine merge';
+                let pan_data = new FacetPattern().from(fp.pan_data).size(fp.data.length);
+                for (var i = 0; i < dacs.length; i++) {
+                    let panned_fp_data = new Array(fp.data.length);
+                    if (dacs[i] == 1) {
+                        // channel is on; apply gain for panning
+                        for (let j = 0; j < pan_data.data.length; j++) {
+                            let pan_value_for_channel = panning(pan_data.data[j], i, dacs.length);
+                            panned_fp_data[j] = fp.data[j] * pan_value_for_channel;
+                        }
+                    } else {
+                        // channel is off; apply gain of 0
+                        panned_fp_data.fill(0);
+                    }
+                    let channel_wav = new WaveFile();
+                    channel_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', panned_fp_data);
+                    multi_channel_sox_cmd += ` tmp${cross_platform_slash}${fp.name}-ch${i}.wav`
+                    fs.writeFile(`tmp${cross_platform_slash}${fp.name}-ch${i}.wav`, channel_wav.toBuffer(), (err) => {});
                 }
+                multi_channel_sox_cmd += ` tmp${cross_platform_slash}${fp.name}-out.wav`;
                 if ( fp.sequence_data.length > 0 ) {
-                  if ( fp.dacs == '1 1' && process.platform != 'win32' ) {
-                    // no channel processing needed
-                    exec(`${cross_platform_move_command} tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav`, (error, stdout, stderr) => {
+                  exec(`${multi_channel_sox_cmd}`, (error, stdout, stderr) => {
                       postToTransport(fp);
-                    });
+                  });
+                }
+              }
+              else {
+                // create wav file at FACET_SAMPLE_RATE, 32-bit floating point
+                let a_wav = new WaveFile();
+                a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', fp.data);
+                // store wav file in /tmp/
+                fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+                  // remix onto whatever channels via SoX
+                  if ( fp.sequence_data.length > 0 ) {
+                    if ( fp.dacs == '1 1' && process.platform != 'win32' ) {
+                      // no channel processing needed
+                      exec(`${cross_platform_move_command} tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav`, (error, stdout, stderr) => {
+                        postToTransport(fp);
+                      });
+                    }
+                    else {
+                      // run audio data through SoX, adding channels
+                      exec(`sox tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav fade 0 -0 0.03 speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
+                        postToTransport(fp);
+                      });
+                    }
                   }
                   else {
-                    // run audio data through SoX, adding channels
-                    exec(`sox tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav fade 0 -0 0.03 speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
-                      postToTransport(fp);
-                    });
+                    postToTransport(fp);
                   }
-                }
-                else {
-                  postToTransport(fp);
-                }
-              });
+                });
+              }
             }
           });
           Object.values(run_data.errors).forEach(error => {
@@ -249,6 +281,9 @@ function postMetaDataToTransport (fp,data_type) {
 }
 
 function sliceEndFade(array) {
+  if ( array.length < 1024 ) {
+    return array;
+  }
   let result = [...array];
   let fadeLength = 128;
   for (let i = array.length - fadeLength; i < array.length; i++) {
@@ -256,4 +291,19 @@ function sliceEndFade(array) {
     result[i] = array[i] * (1 - t);
   }
   return result;
+}
+
+function panning(input_value, input_channel, total_channels) {
+  let fade_range = 2 / total_channels;
+  let channel_start = (input_channel * fade_range) - 1;
+  let channel_end = ((input_channel + 1) * fade_range) - 1;
+  if (input_value >= channel_start && input_value <= channel_end) {
+      return 1;
+  } else if (input_value >= channel_start - fade_range && input_value < channel_start) {
+      return (input_value - (channel_start - fade_range)) / fade_range;
+  } else if (input_value > channel_end && input_value <= channel_end + fade_range) {
+      return 1 - ((input_value - channel_end) / fade_range);
+  } else {
+      return 0;
+  }
 }

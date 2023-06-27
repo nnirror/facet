@@ -117,9 +117,16 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().channels([1,3]).play(); // second channel only`
 		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
 ---
-- **play** ( _FacetPattern_ )
-	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in _FacetPattern_, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
-	- _FacetPattern_ should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
+- **pan** ( _PanningFacetPattern_ )
+	- dynamically moves the FacetPattern between however many channels are specified in a seperate `.channels()` call. Without a call to `.channels()`, it will default to spatially positioning the FacetPattern between channels 1 and 2.
+	- The values in `PanningFacetPattern` should be between -1 and 1. Values beyond that will be clipped to the -1 - 1 range. A value of -1 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between -1 and 1 will crossfade between all the specified active channels.
+	- example:
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).pan(_.sine(1,n1)).play(); // no channels are specified; defaults to stereo panning`
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1)).play(); // pans the noise around channels 1, 2, and 4`
+---
+- **play** ( _PlaybackFacetPattern_ )
+	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
+	- `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or press the stop button "■".
 	- example:
@@ -271,7 +278,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 
 - **sine** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate )
 	- generates a sine wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
+	- output range is from -1 - 1.
 	- example:
 		- `$('example').sine(440,n4).play(); // 440 Hz sine wave for a quarter note`
 		- `$('example').sine(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
@@ -279,7 +286,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **cosine** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
 	- generates a cosine wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
+	- output range is from -1 - 1.
 	- example:
 		- `$('example').cosine(440,n4).play(); // 440 Hz cosine wave for a quarter note`
 		- `$('example').cosine(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
@@ -287,7 +294,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **phasor** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
 	- generates a phasor wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
+	- output range is from -1 - 1.
 	- example:
 		- `$('example').phasor(440,n4).play(); // 440 Hz phasor wave for a quarter note`
 		- `$('example').phasor(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
@@ -295,14 +302,14 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **pluck** ( _frequencyPattern_, _duration_ = 1 second, _damping_ = 0, _feedback_ = 0.5 )
 	- generates a Karplus-Strong type string pluck emulation at `frequencyPattern` Hertz, lasting for `duration` samples. `damping` and `feedback` values should be between 0 and 1.
-	- Output range is from -1 - 1.
+	- output range is from -1 - 1.
 	- example:
 		- `$('example').pluck(440,n4,rf(),rf()).play(); // different 440 Hz quarter note pluck each time`
 		- `$('example').pluck(_.ramp(100,2000,300),n1,0,0.99).play(); // ramp from 100Hz to 2000 Hz over 300 values`
 ---
 - **rect** ( _frequencyPattern_, _duration_ = 1 second, _pulse_width_ = 0.5, _samplerate_ = default_sample_rate )
 	- generates a rectangle wave at `frequencyPattern` Hertz, with a pulse width defined by `pulse_width`,  lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
+	- output range is from -1 - 1.
 	- example:
 		- `$('example').rect(440,n4,rf()).play(); // 440 Hz rectangle wave for a quarter note, different bandwidth each time`
 		- `$('example').rect(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
@@ -310,7 +317,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **square** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate )
 	- generates a square wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
+	- output range is from -1 - 1.
 	- example:
 		- `$('example').square(440,n4).play(); // 440 Hz square wave for a quarter note`
 		- `$('example').square(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
@@ -327,6 +334,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ### FacetPattern generators
 - **binary** ( _integer_, _length_)
 	- Computes the binary representation of `integer`. If `length` is not present, the output FacetPattern will be the actual length of the binary representation of `integer`.
+	- output range is from 0 - 1.
 	- example:
 		- `$('example').binary(8); // 1000`
 		- `$('example').binary(490321,13); // 1110111101101: truncated at 13 values`
@@ -334,6 +342,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **drunk** ( _length_, _intensity_ )
 	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
+	- output range is from 0 - 1.
 	- example:
 		- `$('example').drunk(16,0.1); // slight random movement`
 ---
@@ -344,11 +353,13 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **euclid** ( _pulses_, _steps_ )
 	- generates a Euclidean sequence with `pulses` pulses over `steps` steps.
+	- output range is from 0 - 1.
 	- example:
 		- `$('example').sine(100).times(_.euclid(4,8)).play(); // gating a sine wave with a euclidean sequence`
 ---
 - **file** ( _filename_ )
 	- loads the raw data of any file into memory. You can supply any file type.
+	- output range is from -1 - 1.
 	- By default, it checks for a file in the `files` subdirectory. If no file exists there, it will try to load the file as an absolute path on your hard drive. 
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
@@ -364,12 +375,13 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- transposes an image onto the audio spectrum by generating a sine wave lasting for samplesPerColumn samples for every pixel in the image, starting with the left-most column and moving rightwards.
 	- the default samplesPerColumn value of 10 means that each second of audio will contain 10 columns of pixels. This value can be larger or smaller, but keep in mind the potential for generating humongous files. The lowest pixels in the image correspond to the lowest frequencies in the output. Conversely, the highest pixels in the image correspond to the highest frequencies in the output. This method currently only works with JPEG files, and sometimes certain JPEG files won't even work. (I have submitted a GitHub issue: revisitors/readimage#4) Re-saving the JPEG files in GIMP seems to create JPEGs that the middleware this method uses can parse correctly.
 	- the maximumFrequency and frequencyOffset values control the range of frequencies that the pixels will map onto.
+	- output range is from -1 - 1.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').image('/path/to/file/goes/here.jpg',1024).play(); // each column lasts 1024 samples`
 ---
 - **noise** ( _length_ )
-	- generates a random series of values between 0 and 1 for `length`.
+	- generates a random series of values between -1 and 1 for `length`.
 	- example:
 		- `$('example').noise(1024).play();`
 ---
@@ -387,6 +399,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **randfile** ( _dir_ = `../files/` )
 	- loads a random file from the `files` directory into memory. The default directory is `../files/`, but you can supply any directory as an argument.
+	- output range is from -1 - 1.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').randfile().play(); // random new file converted to audio every time`
@@ -412,6 +425,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **spiral** ( _length_, _degrees_ = 360/length, _angle_phase_offset_ = 0 )
 	- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to `360/length` which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
 	- The `angle_phase_offset` argument changes where the sequence starts. At its default value of 0, the first value will be 0. You can supply any float between 0 and 1, and the sequence will begin at that value instead.
+	- output range is from 0 - 1.
 	- example:
 		- `$('example').sine(1).times(_.spiral(1000,ri(1,360))).play(); // an interesting, modulated sine wave`
 ---
