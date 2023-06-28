@@ -83,10 +83,15 @@ module.exports = {
                     multi_channel_sox_cmd += ` tmp${cross_platform_slash}${fp.name}-ch${i}.wav`
                     fs.writeFile(`tmp${cross_platform_slash}${fp.name}-ch${i}.wav`, channel_wav.toBuffer(), (err) => {});
                 }
-                multi_channel_sox_cmd += ` tmp${cross_platform_slash}${fp.name}-out.wav`;
+                // creating the new n-channel panned file can take a bit longer than mono files, so first save it to a location that won't
+                // inadvertently get pulled into the transport during its construction. then move it to the correct name once it's ready
+                let tmp_random = Math.random();
+                multi_channel_sox_cmd += ` tmp${cross_platform_slash}${fp.name}-out${tmp_random}.wav`;
                 if ( fp.sequence_data.length > 0 ) {
                   exec(`${multi_channel_sox_cmd}`, (error, stdout, stderr) => {
-                      postToTransport(fp);
+                      exec(`${cross_platform_move_command} tmp${cross_platform_slash}${fp.name}-out${tmp_random}.wav tmp${cross_platform_slash}${fp.name}-out.wav`, (e, stdo, stde) => {
+                        postToTransport(fp);
+                      });
                   });
                 }
               }
