@@ -19,6 +19,7 @@ let reruns = {};
 let errors = [];
 let percent_cpu = 0;
 let mousex, mousey;
+let cross_platform_copy_command = process.platform == 'win32' ? 'copy \/y' : 'cp';
 let cross_platform_move_command = process.platform == 'win32' ? 'move \/y' : 'mv';
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 process.title = 'facet_pattern_generator';
@@ -71,7 +72,7 @@ module.exports = {
                     if (dacs[i] == 1) {
                         // channel is on; apply gain for panning
                         for (let j = 0; j < pan_data.data.length; j++) {
-                            let pan_value_for_channel = panning(pan_data.data[j], i, dacs.length);
+                            let pan_value_for_channel = panning(pan_data.data[j], i, dacs.length, fp.pan_mode);
                             panned_fp_data[j] = fp.data[j] * pan_value_for_channel;
                         }
                     } else {
@@ -120,6 +121,22 @@ module.exports = {
                     postToTransport(fp);
                   }
                 });
+              }
+              // now that the file has been created and posted to the transport, check if it was intended to be saved to disk somewhere else - and if so, copy it
+              if ( fp.saveas_filename !== false ) {
+                console.log(fp.saveas_filename);
+                let filename = fp.saveas_filename;
+                let folder = 'samples';
+                if (filename.includes(cross_platform_slash)) {
+                  folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
+                  filename = filename.split(cross_platform_slash)[1];
+                }
+                if (!fs.existsSync(folder)) {
+                  fs.mkdir(folder, { recursive: true }, (err) => {
+                      if (err) throw err;
+                  });
+                }
+                exec(`${cross_platform_copy_command} tmp${cross_platform_slash}${fp.name}-out.wav ${folder}${cross_platform_slash}${filename}.wav`, (error, stdout, stderr) => {});
               }
             }
           });
@@ -298,15 +315,15 @@ function sliceEndFade(array) {
   return result;
 }
 
-function panning(input_value, input_channel, total_channels) {
+function panning(input_value, input_channel, total_channels, pan_mode) {
   let fade_range = 2 / total_channels;
   let channel_start = (input_channel * fade_range) - 1;
   let channel_end = ((input_channel + 1) * fade_range) - 1;
   if (input_value >= channel_start && input_value <= channel_end) {
       return 1;
-  } else if (input_value >= channel_start - fade_range && input_value < channel_start) {
+  } else if ( pan_mode == 0 && (input_value >= channel_start - fade_range && input_value < channel_start) ) {
       return (input_value - (channel_start - fade_range)) / fade_range;
-  } else if (input_value > channel_end && input_value <= channel_end + fade_range) {
+  } else if ( pan_mode == 0 && (input_value > channel_end && input_value <= channel_end + fade_range) ) {
       return 1 - ((input_value - channel_end) / fade_range);
   } else {
       return 0;

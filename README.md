@@ -117,12 +117,14 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp().channels([1,3]).play(); // second channel only`
 		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
 ---
-- **pan** ( _PanningFacetPattern_ )
+- **pan** ( _PanningFacetPattern_, _pan_mode_ = 0 )
 	- dynamically moves the FacetPattern between however many channels are specified in a seperate `.channels()` call. Without a call to `.channels()`, it will default to spatially positioning the FacetPattern between channels 1 and 2.
-	- The values in `PanningFacetPattern` should be between -1 and 1. Values beyond that will be clipped to the -1 - 1 range. A value of -1 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between -1 and 1 will crossfade between all the specified active channels.
+	- the values in `PanningFacetPattern` should be between -1 and 1. Values beyond that will be clipped to the -1 - 1 range. A value of -1 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between -1 and 1 will crossfade between all the specified active channels.
+	- the default `pan_mode` of 0 means that the panning moves smoothly between channels, e.g., channels adjacent to the selected full-volume channel will have some signal bleeding into them. Switching the `pan_mode` to 1 makes the panning work in a discrete manner, where only one channel has a signal in it at any given time, and there is no bleed between channels.
 	- example:
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).pan(_.sine(1,n1)).play(); // no channels are specified; defaults to stereo panning`
-		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1)).play(); // pans the noise around channels 1, 2, and 4`
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1)).play(); // pans the noise smoothly around channels 1, 2, and 4`
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
 ---
 - **play** ( _PlaybackFacetPattern_ )
 	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
@@ -136,6 +138,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 ---
 - **saveas** ( _filename_ )
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
+	- if a file has been created with multiple channels via `.channels()` or with its audio panned between multiple channels via `.pan()`, the saved wav file will have that many channels.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveas('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
@@ -404,14 +407,15 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').randfile().play(); // random new file converted to audio every time`
 ---
-- **randsamp** ( _dir_ = `../samples/` )
+- **randsamp** ( _dir_ = `../samples/` _channel_index_ = 0 )
 	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument.
+	- By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').randsamp().reverse().play(); // random backwards sample`
 ---
-- **sample** ( _filename_ )
-	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_.
+- **sample** ( _filename_, _channel_index_ = 0)
+	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_. By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').sample('1234').play(); // if 1234.wav is in the samples directory, you're good to go`

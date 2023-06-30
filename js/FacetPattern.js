@@ -1,5 +1,6 @@
 "use strict";
 const fs = require('fs');
+const { exec } = require('child_process');
 const path = require('path');
 const wav = require('node-wav');
 const WaveFile = require('wavefile').WaveFile;
@@ -29,11 +30,13 @@ class FacetPattern {
     this.bpm_at_generation_time = -1;
     this.notes = [];
     this.pan_data = false;
+    this.pan_mode = 0;
     this.play_once = false;
     this.regenerate_every_n_loops = 1;
     this.original_command = '';
     this.osc_data = [];
     this.pitchbend_data = [];
+    this.saveas_filename = false;
     this.sequence_data = [];
     this.skipped = false;
     this.utils = this.env + this.getUtils();
@@ -330,7 +333,7 @@ class FacetPattern {
     return this;
   }
 
-  randsamp (dir) {
+  randsamp (dir, channel_index = 0) {
     if (!dir) {
       dir = `${process.cwd()}${cross_platform_slash}samples`;
     }
@@ -359,7 +362,7 @@ class FacetPattern {
       }
       try {
         buffer = fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`);
-        this.data = this.loadBuffer(buffer);
+        this.data = this.loadBuffer(buffer, channel_index);
         fp_found = true;
       } catch (e) {
         try {
@@ -368,6 +371,9 @@ class FacetPattern {
           let wav = new WaveFile(fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`));
           wav.toBitDepth("32f");
           this.data = wav.getSamples();
+          if ( typeof this.data[channel_index] == 'object' ) {
+            this.data = this.data[channel_index];
+          }
           return this.flatten();
         } catch (err) {
           load_attempts++;
@@ -397,7 +403,7 @@ class FacetPattern {
     return this;
 }
 
-  stitchdir (dir, samplesBetweenEachFile, saved_filename = 'stitched') {
+  stitchdir (dir, samplesBetweenEachFile, saved_filename = 'stitched', num_channels = 1) {
     if ( !samplesBetweenEachFile ) {
       throw `the second argument to stitchdir() is required: you must specify the number of samples separating each file`;
     }
@@ -421,39 +427,51 @@ class FacetPattern {
     else {
       stitchDir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
     }
-    let out_fp = new FacetPattern();
-    let silence_samples_to_add = 0;
-    let iters = 0;
-    fs.readdir(stitchDir, (err, files) => {
-      if (err) throw err;
-      files
-        .filter(file => path.extname(file) === '.wav')
-        .sort()
-        .forEach(file => {
-          let next_fp_to_add = new FacetPattern().sample(`${dir}${cross_platform_slash}${file}`).prepend(new FacetPattern().silence(silence_samples_to_add));
-          out_fp.sup(next_fp_to_add,0);
-          silence_samples_to_add += samplesBetweenEachFile[iters%samplesBetweenEachFile.length]
-          iters++;
-        });
-        out_fp.saveas(`${dir}${cross_platform_slash}${saved_filename}`);
-    });
+
+    let wav_files_to_stitch = [];
+    let original_files = fs.readdirSync(stitchDir);
+    original_files.filter(file => path.extname(file) === '.wav')
+      .sort()
+      .forEach(file => {
+        if (path.extname(file) == ".wav") {
+          wav_files_to_stitch.push(file);
+        }
+      });
+    
+    let multi_channel_sox_cmd = 'sox --combine merge';
+    for (var n = 0; n < num_channels; n++) {
+      let silence_samples_to_add = 0;
+      let iters = 0;
+      let out_fp = new FacetPattern();
+      for (var i = 0; i < wav_files_to_stitch.length; i++) {
+        let file = wav_files_to_stitch[i];
+        let next_fp_to_add = new FacetPattern().sample(`${dir}${cross_platform_slash}${file}`,n).prepend(new FacetPattern().silence(silence_samples_to_add));
+        out_fp.sup(next_fp_to_add,0);
+        silence_samples_to_add += samplesBetweenEachFile[iters%samplesBetweenEachFile.length]
+        iters++;
+      }
+      out_fp.savemono(`${dir}${cross_platform_slash}${saved_filename}-ch${n}`);
+      multi_channel_sox_cmd += ` ${stitchDir}${cross_platform_slash}${saved_filename}-ch${n}.wav`
+    }
+    multi_channel_sox_cmd += ` ${stitchDir}${cross_platform_slash}${saved_filename}-out.wav`;
+    exec(`${multi_channel_sox_cmd}`, (error, stdout, stderr) => {});
     return this;
   }
 
-  sample (file_name) {
+  sample (file_name, channel_index = 0) {
     if ( !file_name.includes('.wav') ) {
       file_name = `${file_name}.wav`;
     }
     // first, try loading from the samples directory
     try {
       let buffer = fs.readFileSync(`${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${file_name}`);
-      this.data = this.loadBuffer(buffer);
+      this.data = this.loadBuffer(buffer, channel_index);
       return this.flatten();
     } catch (e) {
       try {
         // next, try loading from an absolute file location
         let buffer = fs.readFileSync(`${file_name}`);
-        this.data = this.loadBuffer(buffer);
+        this.data = this.loadBuffer(buffer, channel_index);
         return this.flatten();
       }
       catch (er) {
@@ -464,6 +482,9 @@ class FacetPattern {
           let wav = new WaveFile(fs.readFileSync(`${file_name}`));
           wav.toBitDepth("32f");
           this.data = wav.getSamples();
+          if ( typeof this.data[channel_index] == 'object' ) {
+            this.data = this.data[channel_index];
+          }
           return this.flatten();
         } catch (err) {
           try {
@@ -471,6 +492,9 @@ class FacetPattern {
             let wav = new WaveFile(fs.readFileSync(`${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${file_name}`));
             wav.toBitDepth("32f");
             this.data = wav.getSamples();
+            if ( typeof this.data[channel_index] == 'object' ) {
+              this.data = this.data[channel_index];
+            }
             return this.flatten();
           }
           catch (error) {
@@ -2890,12 +2914,13 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  pan ( pan_amt ) {
+  pan ( pan_amt, mode = 0 ) {
     if ( typeof pan_amt == 'number' || Array.isArray(pan_amt) === true ) {
       pan_amt = new FacetPattern().from(pan_amt);
     }
     pan_amt.clip(-1,1);
     this.pan_data = pan_amt.data;
+    this.pan_mode = mode;
     return this;
   }
 
@@ -2931,6 +2956,11 @@ waveformSample(waveform, phase) {
   }
 
   saveas (filename) {
+    this.saveas_filename = filename;
+    return this;
+  }
+
+  savemono (filename) {
     let folder = 'samples';
     if (filename.includes(cross_platform_slash)) {
       folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
@@ -3154,7 +3184,7 @@ waveformSample(waveform, phase) {
     return [sequence1, sequence2];
   }
 
-  loadBuffer (in_buffer) {
+  loadBuffer (in_buffer,channel_index = 0) {
     let out_buffer;
     let num_samples_to_add = Buffer.byteLength(in_buffer) % 4;
     let new_buff_str = '';
@@ -3166,11 +3196,11 @@ waveformSample(waveform, phase) {
     let decodedAudio = wav.decode(out_buffer);
     if ( decodedAudio.sampleRate != FACET_SAMPLE_RATE ) {
       // adjust for sample rate
-      return new FacetPattern().from(decodedAudio.channelData[0]).speed(FACET_SAMPLE_RATE/decodedAudio.sampleRate).data;
+      return new FacetPattern().from(decodedAudio.channelData[channel_index]).speed(FACET_SAMPLE_RATE/decodedAudio.sampleRate).data;
     }
     else {
       // no adjustment needed
-      return new FacetPattern().from(decodedAudio.channelData[0]).data;
+      return new FacetPattern().from(decodedAudio.channelData[channel_index]).data;
     }
   }
 
