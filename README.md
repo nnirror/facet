@@ -143,9 +143,10 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveas('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
 ---
-- **stitchdir** ( _dir_, _samplesBetweenEachFile_, _saved_filename_ = 'stitched' )
+- **stitchdir** ( _dir_, _samplesBetweenEachFile_, _saved_filename_ = 'stitched', _num_channels_ = 1 )
 	- stitches together all the wav files in the supplied `dir` directory, in alphabetical order, creating a new wav file in the `samples/` directory or a sub-directory, as specified in `saved_filename`. If the directory doesn't exist, it will be created.
-	- The `samplesBetweenEachFile` argument can be a single number or a FacetPattern. This value specifies the exact number of samples between each file in the output file. If it's a FacetPattern, its values will be continuously cycled through while stitching together all the files in the directory.
+	- the `samplesBetweenEachFile` argument can be a single number or a FacetPattern. This value specifies the exact number of samples between each file in the output file. If it's a FacetPattern, its values will be continuously cycled through while stitching together all the files in the directory.
+	- all files in the directory should have the same number of channels. The stitched wav file will have `num_channels` channels (default = 1).
 	- __Note__: this process can take minutes if there are a lot of wavs, so by default any time this method is called, it will be called once and only once.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
