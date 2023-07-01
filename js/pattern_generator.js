@@ -88,10 +88,11 @@ module.exports = {
                 // inadvertently get pulled into the transport during its construction. then move it to the correct name once it's ready
                 let tmp_random = Math.random();
                 multi_channel_sox_cmd += ` tmp${cross_platform_slash}${fp.name}-out${tmp_random}.wav`;
-                if ( fp.sequence_data.length > 0 ) {
+                if ( fp.sequence_data.length > 0 || fp.saveas_filename !== false ) {
                   exec(`${multi_channel_sox_cmd}`, (error, stdout, stderr) => {
                       exec(`${cross_platform_move_command} tmp${cross_platform_slash}${fp.name}-out${tmp_random}.wav tmp${cross_platform_slash}${fp.name}-out.wav`, (e, stdo, stde) => {
                         postToTransport(fp);
+                        checkToSave(fp);
                       });
                   });
                 }
@@ -103,17 +104,19 @@ module.exports = {
                 // store wav file in /tmp/
                 fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
                   // remix onto whatever channels via SoX
-                  if ( fp.sequence_data.length > 0 ) {
+                  if ( fp.sequence_data.length > 0 || fp.saveas_filename !== false ) {
                     if ( fp.dacs == '1 1' && process.platform != 'win32' ) {
                       // no channel processing needed
                       exec(`${cross_platform_move_command} tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav`, (error, stdout, stderr) => {
                         postToTransport(fp);
+                        checkToSave(fp);
                       });
                     }
                     else {
                       // run audio data through SoX, adding channels
                       exec(`sox tmp${cross_platform_slash}${fp.name}.wav tmp${cross_platform_slash}${fp.name}-out.wav fade 0 -0 0.03 speed 1 rate -q remix ${fp.dacs}`, (error, stdout, stderr) => {
                         postToTransport(fp);
+                        checkToSave(fp);
                       });
                     }
                   }
@@ -121,22 +124,6 @@ module.exports = {
                     postToTransport(fp);
                   }
                 });
-              }
-              // now that the file has been created and posted to the transport, check if it was intended to be saved to disk somewhere else - and if so, copy it
-              if ( fp.saveas_filename !== false ) {
-                console.log(fp.saveas_filename);
-                let filename = fp.saveas_filename;
-                let folder = 'samples';
-                if (filename.includes(cross_platform_slash)) {
-                  folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
-                  filename = filename.split(cross_platform_slash)[1];
-                }
-                if (!fs.existsSync(folder)) {
-                  fs.mkdir(folder, { recursive: true }, (err) => {
-                      if (err) throw err;
-                  });
-                }
-                exec(`${cross_platform_copy_command} tmp${cross_platform_slash}${fp.name}-out.wav ${folder}${cross_platform_slash}${filename}.wav`, (error, stdout, stderr) => {});
               }
             }
           });
@@ -327,5 +314,22 @@ function panning(input_value, input_channel, total_channels, pan_mode) {
       return 1 - ((input_value - channel_end) / fade_range);
   } else {
       return 0;
+  }
+}
+
+function checkToSave (fp) {
+  if ( fp.saveas_filename !== false ) {
+    let filename = fp.saveas_filename;
+    let folder = 'samples';
+    if (filename.includes(cross_platform_slash)) {
+      folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
+      filename = filename.split(cross_platform_slash)[1];
+    }
+    if (!fs.existsSync(folder)) {
+      fs.mkdir(folder, { recursive: true }, (err) => {
+          if (err) throw err;
+      });
+    }
+    exec(`${cross_platform_copy_command} tmp${cross_platform_slash}${fp.name}-out.wav ${folder}${cross_platform_slash}${filename}.wav`, (error, stdout, stderr) => {});
   }
 }
