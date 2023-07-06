@@ -210,10 +210,10 @@ class FacetPattern {
     return this;
   }
 
-  image (imagePath, samplesPerColumn = Math.floor(FACET_SAMPLE_RATE / 10), minimumFrequency = 20, maximumFrequency = FACET_SAMPLE_RATE / 2) {
+  image (imagePath, columnsPerSecond = 512, minimumFrequency = 20, maximumFrequency = FACET_SAMPLE_RATE / 2) {
     const fileData = fs.readFileSync(imagePath);
-    samplesPerColumn = Math.round(samplesPerColumn);
     let imageData;
+    let samplesPerColumn = Math.round(FACET_SAMPLE_RATE / columnsPerSecond);
     readimage(fileData, function (err, image) {
       if (err) {
         throw `image file: ${imagePath} could not be read correctly. Make sure the file is a JPEG, and try re-exporting it with GIMP or another image editor.`;

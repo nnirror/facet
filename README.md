@@ -375,11 +375,11 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([1,2,3,4]);`
 ---
-- **image** ( _filepath_, _samplesPerColumn_ = sample_rate / 10, _minimumFrequency_ = 20, _maximumFrequency_ = sample_rate / 2 )
-	- transposes an image onto the audio spectrum by generating a sine wave lasting for `samplesPerColumn` samples for every pixel in the image, starting with the left-most column and moving rightwards.
-	- the lowest pixels in the image correspond to the lowest frequencies in the output. Conversely, the highest pixels in the image correspond to the highest frequencies in the output.
-	- the default `samplesPerColumn` value of 10 means that each second of audio will contain 10 columns of pixels. This value can be larger or smaller, but keep in mind that as this value increases, the file will take more time to generate.
-	- This method is CPU intensive and works best with smaller image files.
+- **image** ( _filepath_, _columnsPerSecond_ = 512, _minimumFrequency_ = 20, _maximumFrequency_ = sample_rate / 2 )
+	- transposes an image into audio by superposing sine waves across the audio spectrum, with one sine wave for each row of pixels in the image. The amplitudes of each sine wave are modulated by the corresponding brightness of each pixel in the image, producing an analog of the image in the audio spectrum.
+	- the lowest pixels in the image correspond to the lowest frequencies in the output, and the highest pixels in the image correspond to the highest frequencies in the output.
+	- the default `columnsPerSecond` value of 512 means that each second of audio will contain 512 columns of pixels. This value can be larger or smaller, but keep in mind that as this value decreases, the file will take more time to generate. This method can be CPU intensive and works best with smaller image files or larger `columnsPerSecond values`.
+	- since pixel brightness corresponds with loudness, images with dark backgrounds and high contrast will produce clearer tones.
 	- This method currently only works with JPEG files, and sometimes even certain JPEG files won't work. (I have submitted a GitHub issue: https://github.com/revisitors/readimage/issues/4) Re-saving the JPEG files in GIMP seems to create files that the middleware this method uses can parse correctly.
 	- the `minimumFrequency` and `maximumFrequency` values control the range of frequencies that the pixels will map onto.
 	- output range is from -1 - 1.
