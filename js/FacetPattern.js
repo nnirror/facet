@@ -210,66 +210,33 @@ class FacetPattern {
     return this;
   }
 
-  image (imagePath, samplesPerColumn = Math.floor(FACET_SAMPLE_RATE / 10), nyquistFrequency = FACET_SAMPLE_RATE / 2, frequencyOffset = 0) {
+  image (imagePath, samplesPerColumn = Math.floor(FACET_SAMPLE_RATE / 10), minimumFrequency = 20, maximumFrequency = FACET_SAMPLE_RATE / 2) {
     const fileData = fs.readFileSync(imagePath);
+    samplesPerColumn = Math.round(samplesPerColumn);
     let imageData;
-
     readimage(fileData, function (err, image) {
       if (err) {
         throw `image file: ${imagePath} could not be read correctly. Make sure the file is a JPEG, and try re-exporting it with GIMP or another image editor.`;
       }
       imageData = image;
     });
-    samplesPerColumn = Math.round(samplesPerColumn);
-    const frequencyStep = nyquistFrequency / imageData.height;
-    const audioData = [];
-  
-    for (let x = 0; x < imageData.width; x++) {
-      const columnData = new Array(samplesPerColumn).fill(0);
-  
-      for (let y = 0; y < imageData.height; y++) {
-        const pixelIndex = (y * imageData.width + x) * 4;
-        const r = imageData.frames[0].data[pixelIndex];
-        const g = imageData.frames[0].data[pixelIndex + 1];
-        const b = imageData.frames[0].data[pixelIndex + 2];
-        const brightness = (r + g + b) / (255 * 3);
-  
-        const frequency = y * frequencyStep;
-  
-        for (let i = 0; i < samplesPerColumn; i++) {
-          const sineWave = Math.sin(Math.abs((nyquistFrequency-frequency) + frequencyOffset) * i * Math.PI * 2 / FACET_SAMPLE_RATE);
-          columnData[i] += sineWave * brightness;
-        }
+    const frequencyStep = maximumFrequency / imageData.height;
+    this.silence(samplesPerColumn*imageData.width);
+    for (let y = 0; y < imageData.height; y++) {
+      let brightness_data = [];
+      let frequency = y * frequencyStep;
+      frequency = Math.abs((maximumFrequency-frequency)) + minimumFrequency;
+      for (let x = 0; x < imageData.width; x++) {
+        let pixelIndex = (y * imageData.height + x) * 4;
+        let r = imageData.frames[0].data[pixelIndex];
+        let g = imageData.frames[0].data[pixelIndex + 1];
+        let b = imageData.frames[0].data[pixelIndex + 2];
+        let brightness = (r + g + b) / (255 * 3);
+        brightness_data.push(brightness);
       }
-
-      const fadeInLength = Math.floor(FACET_SAMPLE_RATE / 33);
-      const fadeOutLength = Math.floor(FACET_SAMPLE_RATE / 33);
-      for (let i = 0; i < fadeInLength; i++) {
-          columnData[i] *= i / fadeInLength;
-      }
-      for (let i = 0; i < fadeOutLength; i++) {
-          columnData[samplesPerColumn - 1 - i] *= i / fadeOutLength;
-      }
-      audioData.push(columnData);
+      this.sup(new FacetPattern().sine(frequency,samplesPerColumn*imageData.width).times(new FacetPattern().from(brightness_data).curve()),0);
     }
-
-    let maxAmplitude = 0;
-    for (let x = 0; x < audioData.length; x++) {
-        for (let y = 0; y < samplesPerColumn; y++) {
-            maxAmplitude = Math.max(maxAmplitude, Math.abs(audioData[x][y]));
-        }
-    }
-
-    for (let x = 0; x < audioData.length; x++) {
-        for (let y = 0; y < samplesPerColumn; y++) {
-            audioData[x][y] /= maxAmplitude;
-        }
-    }
-
-    this.data = audioData;
-    this.data = this.fadeArrays(this.data);
-    this.data = this.sliceEndFade(this.data);
-    this.flatten();
+    this.full();
     return this;
   }
 

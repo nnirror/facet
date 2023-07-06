@@ -361,7 +361,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').sine(100).times(_.euclid(4,8)).play(); // gating a sine wave with a euclidean sequence`
 ---
-- **file** ( _filename_ )
+- **file** ( _filepath_ )
 	- loads the raw data of any file into memory. You can supply any file type.
 	- output range is from -1 - 1.
 	- By default, it checks for a file in the `files` subdirectory. If no file exists there, it will try to load the file as an absolute path on your hard drive. 
@@ -375,10 +375,13 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([1,2,3,4]);`
 ---
-- **image** ( _values_, _samplesPerColumn_ = sample_rate / 10, _maximumFrequency_ = sample_rate / 2, _frequencyOffset_ = 0 )
-	- transposes an image onto the audio spectrum by generating a sine wave lasting for samplesPerColumn samples for every pixel in the image, starting with the left-most column and moving rightwards.
-	- the default samplesPerColumn value of 10 means that each second of audio will contain 10 columns of pixels. This value can be larger or smaller, but keep in mind the potential for generating humongous files. The lowest pixels in the image correspond to the lowest frequencies in the output. Conversely, the highest pixels in the image correspond to the highest frequencies in the output. This method currently only works with JPEG files, and sometimes certain JPEG files won't even work. (I have submitted a GitHub issue: revisitors/readimage#4) Re-saving the JPEG files in GIMP seems to create JPEGs that the middleware this method uses can parse correctly.
-	- the maximumFrequency and frequencyOffset values control the range of frequencies that the pixels will map onto.
+- **image** ( _filepath_, _samplesPerColumn_ = sample_rate / 10, _minimumFrequency_ = 20, _maximumFrequency_ = sample_rate / 2 )
+	- transposes an image onto the audio spectrum by generating a sine wave lasting for `samplesPerColumn` samples for every pixel in the image, starting with the left-most column and moving rightwards.
+	- the lowest pixels in the image correspond to the lowest frequencies in the output. Conversely, the highest pixels in the image correspond to the highest frequencies in the output.
+	- the default `samplesPerColumn` value of 10 means that each second of audio will contain 10 columns of pixels. This value can be larger or smaller, but keep in mind that as this value increases, the file will take more time to generate.
+	- This method is CPU intensive and works best with smaller image files.
+	- This method currently only works with JPEG files, and sometimes even certain JPEG files won't work. (I have submitted a GitHub issue: https://github.com/revisitors/readimage/issues/4) Re-saving the JPEG files in GIMP seems to create files that the middleware this method uses can parse correctly.
+	- the `minimumFrequency` and `maximumFrequency` values control the range of frequencies that the pixels will map onto.
 	- output range is from -1 - 1.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
@@ -415,7 +418,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').randsamp().reverse().play(); // random backwards sample`
 ---
-- **sample** ( _filename_, _channel_index_ = 0)
+- **sample** ( _filepath_, _channel_index_ = 0)
 	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_. By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
