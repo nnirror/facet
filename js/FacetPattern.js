@@ -227,7 +227,7 @@ class FacetPattern {
       let frequency = y * frequencyStep;
       frequency = Math.abs((maximumFrequency-frequency)) + minimumFrequency;
       for (let x = 0; x < imageData.width; x++) {
-        let pixelIndex = (y * imageData.height + x) * 4;
+        let pixelIndex = (y * imageData.width + x) * 4;
         let r = imageData.frames[0].data[pixelIndex];
         let g = imageData.frames[0].data[pixelIndex + 1];
         let b = imageData.frames[0].data[pixelIndex + 2];
