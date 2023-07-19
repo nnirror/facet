@@ -210,7 +210,7 @@ class FacetPattern {
     return this;
   }
 
-  image (imagePath, columnsPerSecond = 512, minimumFrequency = 20, maximumFrequency = FACET_SAMPLE_RATE / 2) {
+  image (imagePath, columnsPerSecond = 512, minimumFrequency = 20, maximumFrequency = FACET_SAMPLE_RATE / 2, frequencyPattern = false) {
     const fileData = fs.readFileSync(imagePath);
     let imageData;
     let samplesPerColumn = Math.round(FACET_SAMPLE_RATE / columnsPerSecond);
@@ -220,12 +220,22 @@ class FacetPattern {
       }
       imageData = image;
     });
-    const frequencyStep = maximumFrequency / imageData.height;
     this.silence(samplesPerColumn*imageData.width);
+    if ( frequencyPattern !== false ) {
+      // custom frequencyPattern
+      if ( !this.isFacetPattern(frequencyPattern) ) {
+        throw `frequencyPattern for image() must be a FacetPattern object if included as an argument; type found: ${typeof frequencyPattern}`;
+      }
+      frequencyPattern.size(imageData.height);
+    }
+    else {
+      // linear frequencyPattern based on ramp from minimumFrequency to maximumFrequency
+      frequencyPattern = new FacetPattern().ramp(0,1,imageData.height);
+    }
+    frequencyPattern.reverse();
     for (let y = 0; y < imageData.height; y++) {
       let brightness_data = [];
-      let frequency = y * frequencyStep;
-      frequency = Math.abs((maximumFrequency-frequency)) + minimumFrequency;
+      let frequency = (frequencyPattern.data[y] * (maximumFrequency - minimumFrequency)) + minimumFrequency;
       for (let x = 0; x < imageData.width; x++) {
         let pixelIndex = (y * imageData.width + x) * 4;
         let r = imageData.frames[0].data[pixelIndex];
