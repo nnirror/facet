@@ -18,7 +18,7 @@ Facet currently runs on MacOS, Linux, and Windows.
 
 ### Syntax
 
-Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. In order to produce audio or MIDI output, simply create an instance of a FacetPattern, and run some methods:
+Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. In order to produce audio or MIDI output, create an instance of a FacetPattern, and run some methods:
 
 `new FacetPattern('example').sine(100).play();`
 
@@ -127,7 +127,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
 ---
 - **play** ( _PlaybackFacetPattern_ )
-	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, simply select it as your computer's default audio output device.
+	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, select it as your computer's default audio output device.
 	- `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or press the stop button "■".
