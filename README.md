@@ -76,7 +76,7 @@ A server, known as the `process manager`, starts up on http://localhost:5831. Th
 Both `mousex` and `mousey`, as floating-point number representations of your cursor's position _in the browser window_, are available for use in commands, e.g.:
 
 ```
-$('example').sine(100).gain(mousey).play(); // cursor y position controls volume every time the code runs
+$('example').sine(100).times(mousey).play(); // cursor y position controls volume every time the code runs
 ```
 
 #### notevalues
@@ -228,7 +228,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **every** ( _n_loops_ )
 	- only regenerate the pattern after `n_loops` loops. By default, patterns regenerate each loop, so this function only needs to be included if you wish to regenerate a pattern less frequently.
 	- example:
-		- `$('example').sine(ri(10,500)).gain(rf()).every(4).play(); // slightly different sine wave tone every 4 loops`
+		- `$('example').sine(ri(10,500)).times(rf()).every(4).play(); // slightly different sine wave tone every 4 loops`
 ---
 - **keep** (  )
 	- preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
@@ -483,7 +483,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([1,2,3,4]).clip(2,3); // 2 2 3 3 `
 ---
-- **comb** ( _delaysamples_ = sample_rate / 100, _feedforward_ = 0.5, _feedback_ = 0.5 )
+- **comb** ( _delaysamples_ = sample_rate / 100, _feedforward_ = 0f5, _feedback_ = 0.5 )
 	- applies a comb filter to the input data. The `delaySamples` parameter is equal to 10ms by default and specifies the number of samples to delay the input signal. The `feedforward` parameter controls the amount of the input signal that is fed directly to the output. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
 	- The `feedback` and `feedforward` values are clamped between 0 and 0.98.
 	- example:
@@ -577,7 +577,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **full** ( )
 	- rescales the FacetPattern to a full dynamic range between -1 and 1, without any dynamic range compression, in a more efficient way than `scale(-1,1)`.
 	- example:
-		- `$('example').noise(n2).gain(0.1).loud().play(); // remove loud() to hear the difference`
+		- `$('example').noise(n2).times(0.1).loud().play(); // remove loud() to hear the difference`
 ---
 - **gate** (  _threshold_, _attackSamples_, _releaseSamples_ )
 	- gates the incoming FacetPattern so that any values below `threshold`, after `attackSamples` have occurred, will be set to 0, until the values go back above `threshold` for `releaseSamples`. 
@@ -642,7 +642,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **normalize** ( )
 	- scales the FacetPattern to the 0 - 1 range.
 	- example:
-		- `$('example').sine(1).gain(4000).normalize(); // the gain is undone!`
+		- `$('example').sine(1).times(4000).normalize(); // the gain is undone!`
 		- `$('example').sine(1).scale(-10,10).normalize(); // works with negative values`
 ---
 - **nonzero** ( )
@@ -820,7 +820,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 - **bpf** ( _cutoffPattern_ = 1000, _q_ = 2.5 )
 	- applies a bandpass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 	- example:
-		- `$('example').noise(n1).bpf(1000,6).gain(0.1).play(); // band-passed noise`
+		- `$('example').noise(n1).bpf(1000,6).times(0.1).play(); // band-passed noise`
 		- `$('example').noise(n1).bpf(_.sine(4).scale(10,1000)).play(); // 4-cycle LFO modulating the bandpass cutoff between 10 and 1000 Hz`
 ---
 - **crush** ( _numberOfBitsPattern_, _downsamplingPattern_ )
@@ -846,13 +846,13 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 - **hpf** ( _cutoffPattern_ = 100, _q_ = 2.5 )
 	- applies a high pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 	- example:
-		- `$('example').noise(n1).hpf(2000,6).gain(0.1).play(); // high-passed noise`
+		- `$('example').noise(n1).hpf(2000,6).times(0.1).play(); // high-passed noise`
 		- `$('example').noise(n1).hpf(_.sine(4).scale(10000,20000)).play(); // 4-cycle LFO modulating the high pass cutoff between 10000 and 20000 Hz`
 ---
 - **lpf** ( _cutoffPattern_ )
 	- applies a low pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 	- example:
-		- `$('example').noise(n1).lpf(1000,6).gain(0.1).play(); // low-passed noise`
+		- `$('example').noise(n1).lpf(1000,6).times(0.1).play(); // low-passed noise`
 		- `$('example').noise(n1).lpf(_.sine(4).scale(10,2000)).play(); // 4-cycle LFO modulating the high pass cutoff between 10 and 2000 Hz`
 ---
 - **pitch** (  _pitchShiftPattern_ )
@@ -875,7 +875,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 - **tanh** ( _gainPattern_ = 20 )
 	- outputs the hyperbolic tangent function for the input FacetPattern, always returning values between -1 and 1. Higher `gainPattern` values will create more intense distortion.
 	- example:
-		- `$('example').phasor(1,20).gain(10).tanh(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
+		- `$('example').phasor(1,20).times(10).tanh(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
 		- `$('example').sine(100).tanh(_.ramp(0,100,100)).play(); // ramping tanh distortion up on a 100Hz sine wave`
 ---
 - **times** ( _FacetPattern_, _match_sizes_ = true)

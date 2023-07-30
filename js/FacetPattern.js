@@ -1575,12 +1575,17 @@ waveformSample(waveform, phase) {
     if ( typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true ) {
       cutoffPattern = new FacetPattern().from(cutoffPattern);
     }
+    let initial_size = this.data.length;
+    cutoffPattern.size(initial_size);
+    let silencePattern = new FacetPattern().silence(FACET_SAMPLE_RATE);
+    this.prepend(silencePattern);
     // scale up cutoffPattern to match the size of this.data
-    cutoffPattern.size(this.data.length);
+    cutoffPattern.prepend(silencePattern);
     // apply a low-pass filter to this.data
     // using the values in cutoffPattern as the cutoff values
     this.data = this.lpfInner(this.data, cutoffPattern.data,q);
     this.fixnan();
+    this.reverse().truncate(initial_size).reverse();
     return this;
   }
 
@@ -1613,12 +1618,17 @@ waveformSample(waveform, phase) {
     if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
         cutoffPattern = new FacetPattern().from(cutoffPattern);
     }
+    let initial_size = this.data.length;
+    cutoffPattern.size(initial_size);
+    let silencePattern = new FacetPattern().silence(FACET_SAMPLE_RATE);
+    this.prepend(silencePattern);
     // scale up cutoffPattern to match the size of this.data
-    cutoffPattern.size(this.data.length);
+    cutoffPattern.prepend(silencePattern);
     // apply a high-pass filter to this.data
     // using the values in cutoffPattern as the cutoff values
     this.data = this.hpfInner(this.data, cutoffPattern.data, q);
     this.fixnan();
+    this.reverse().truncate(initial_size).reverse();
     return this;
   }
 
@@ -1651,12 +1661,17 @@ waveformSample(waveform, phase) {
     if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
         cutoffPattern = new FacetPattern().from(cutoffPattern);
     }
+    let initial_size = this.data.length;
+    cutoffPattern.size(initial_size);
+    let silencePattern = new FacetPattern().silence(FACET_SAMPLE_RATE);
+    this.prepend(silencePattern);
     // scale up cutoffPattern to match the size of this.data
-    cutoffPattern.size(this.data.length);
+    cutoffPattern.prepend(silencePattern);
     // apply a band-pass filter to this.data
     // using the values in cutoffPattern as the cutoff values
     this.data = this.bpfInner(this.data, cutoffPattern.data, q);
     this.fixnan();
+    this.reverse().truncate(initial_size).reverse();
     return this;
   }
 
@@ -2051,7 +2066,12 @@ waveformSample(waveform, phase) {
     let output = [];
     for (let i = 0; i < this.data.length; i++) {
         let normalized = (this.data[i] - inMin) / (inMax - inMin);
-        let transformed = Math.pow(normalized, exponent);
+        let transformed;
+        if (exponent >= 0 && exponent <= 1) {
+            transformed = 1 - Math.pow(1 - normalized, exponent);
+        } else {
+            transformed = Math.pow(normalized, exponent);
+        }
         let scaled = transformed * (outMax - outMin) + outMin;
         output.push(scaled);
     }
