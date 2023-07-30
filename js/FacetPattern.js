@@ -1919,6 +1919,7 @@ waveformSample(waveform, phase) {
     if (size <= 0 ) {
       size = 0.01;
     }
+    let initial_maximum_value = this.getMaximumValue();
     let tap_in = new FacetPattern().from(this.data).audio().allpass(347).allpass(113).allpass(37);
     let out_fp = new FacetPattern();
     let tap1_fp = new FacetPattern().from(tap_in.data).delay(1687*size,feedback);
@@ -1927,6 +1928,7 @@ waveformSample(waveform, phase) {
     let tap4_fp = new FacetPattern().from(tap_in.data).delay(2251*size,feedback);
     out_fp.sup(tap1_fp,0).sup(tap2_fp,0).sup(tap3_fp,0).sup(tap4_fp,0);
     this.data = out_fp.data;
+    this.full(initial_maximum_value);
     return this;
   }
 
