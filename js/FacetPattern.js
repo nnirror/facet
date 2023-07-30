@@ -7,7 +7,6 @@ const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
 const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
-const Freeverb = require('./lib/Freeverb.js').Freeverb;
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const FFT = require('./lib/fft.js');
 const { Midi, Scale } = require('tonal');
@@ -119,9 +118,8 @@ class FacetPattern {
     return this;
   }
 
-  drunk (length, intensity = 0.1 ) {
+  drunk (length, intensity = 0.1, d = Math.random() ) {
     let drunk_sequence = [];
-    let d = Math.random();
     length = Math.abs(Number(length));
     if (length < 1 ) {
       length = 1;
@@ -1530,7 +1528,7 @@ waveformSample(waveform, phase) {
     baseFrequency = Math.abs(Number(baseFrequency));
     q = Math.abs(Number(q));
     wet = Math.abs(Number(wet));
-    let tail_fp = new FacetPattern().from(this.data).reverb(0.3).times(new FacetPattern().from(this.data).times(0),false);
+    let tail_fp = new FacetPattern().from(this.data).reverb().times(new FacetPattern().from(this.data).times(0),false);
     this.sup(tail_fp,0);
     if (wet > 1 ) {
       wet = 1;
@@ -1911,17 +1909,24 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  reverb (size) {
-    if ( size > 1) {
-      size = 1;
+  reverb (size = 1, feedback = 0.85) {
+    if ( feedback > 0.999 ) {
+      feedback = 0.999;
     }
-    if (size <= 0) {
+    else if ( feedback < 0 ) {
+      feedback = 0;
+    }
+    if (size <= 0 ) {
       size = 0.01;
     }
-    let silence_at_end = new FacetPattern().silence(FACET_SAMPLE_RATE*10);
-    this.append(silence_at_end);
-    this.data = new Freeverb(size).process(this.data,size);
-    this.flatten().trim();
+    let tap_in = new FacetPattern().from(this.data).audio().allpass(347).allpass(113).allpass(37);
+    let out_fp = new FacetPattern();
+    let tap1_fp = new FacetPattern().from(tap_in.data).delay(1687*size,feedback);
+    let tap2_fp = new FacetPattern().from(tap_in.data).delay(1601*size,feedback);
+    let tap3_fp = new FacetPattern().from(tap_in.data).delay(2053*size,feedback);
+    let tap4_fp = new FacetPattern().from(tap_in.data).delay(2251*size,feedback);
+    out_fp.sup(tap1_fp,0).sup(tap2_fp,0).sup(tap3_fp,0).sup(tap4_fp,0);
+    this.data = out_fp.data;
     return this;
   }
 
@@ -2035,23 +2040,20 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  scale (new_min, new_max) {
-    if (this.data.length === 1) {
-        if (this.data[0] < new_min) {
-          // if only a single value is in the data, and it's below new_min, output new_min
-          this.data = [new_min];
-        }
-        else if (this.data[0] > new_max) {
-          // if only a single value is in the data, and it's above new_max, output new_max
-          this.data = [new_max];
-        }
-        // do nothing if the data is already in the range of new_min and new_max
-        return this;
+  scale (outMin, outMax, exponent = 1) {
+    if ( this.data.length == 1 ) {
+      return (outMin + outMax) / 2;
     }
-    const min = Math.min(...this.data);
-    const max = Math.max(...this.data);
-    const scaledData = this.data.map(value => ((value - min) / (max - min)) * (new_max - new_min) + new_min);
-    this.data = scaledData;
+    let inMin = this.minimum();
+    let inMax = this.maximum();
+    let output = [];
+    for (let i = 0; i < this.data.length; i++) {
+        let normalized = (this.data[i] - inMin) / (inMax - inMin);
+        let transformed = Math.pow(normalized, exponent);
+        let scaled = transformed * (outMax - outMin) + outMin;
+        output.push(scaled);
+    }
+    this.data = output;
     return this;
   }
 
@@ -3191,6 +3193,26 @@ waveformSample(waveform, phase) {
         count += 1;
       }
       return 1 << count;
+  }
+
+  minimum () {
+    let min = this.data[0];
+    for (let i = 1; i < this.data.length; i++) {
+        if (this.data[i] < min) {
+            min = this.data[i];
+        }
+    }
+    return min;
+  }
+
+  maximum () {
+    let max = this.data[0];
+    for (let i = 1; i < this.data.length; i++) {
+        if (this.data[i] > max) {
+            max = this.data[i];
+        }
+    }
+    return max;
   }
 
   // END utility functions

@@ -344,8 +344,8 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').binary(490321,13); // 1110111101101: truncated at 13 values`
 		- `$('example').binary(8,12); // 000000001000: padded with 0s`
 ---
-- **drunk** ( _length_, _intensity_ )
-	- generates a random walk of values between 0 and 1 for `length` values. `intensity` controls how much to add.
+- **drunk** ( _length_, _intensity_, _starting_value_ = Math.random() )
+	- generates a random walk of values between 0 and 1 for `length` values, starting at `starting_value` which is a random value between 0 and 1 by default. `intensity` controls how much to add.
 	- output range is from 0 - 1.
 	- example:
 		- `$('example').drunk(16,0.1); // slight random movement`
@@ -698,8 +698,9 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').noise(n16).times(_.ramp(1,0,n16)).resonate(mtof(36),_.ramp(1,20,20),80).play(); // 16th note transient noise burst, resonating at its first 20 harmonics starting at 65.41 Hz (MIDI note C2, mtof(36))`
 ---
-- **reverb** (  _reverb_size_ )
-	- applies a reverb effect to the FacetPattern,  using the Freeverb algorithm. Acceptable values for `reverb_size` are between 0 (very small) and 1 (huge).
+- **reverb** (  _size_ = 1, _feedback_ = 0.85 )
+	- applies the Schroeder reverb algorithm to the FacetPattern. The `size` argument should be between 0 and 2 for most use cases but can go up to 10.
+	- the `feedback` argument controls feedback in the reverb algorithm. It should be between 0 and 0.999.
 	- example:
 		- `$('example').randsamp().reverb(rf()).play(); // different reverb size for random sample each loop`
 ---
@@ -723,8 +724,8 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').noise(1000).size(n1).play(); // upscaling 1000 samples of noise to be 1 whole note long`
 ---
-- **scale** ( _new_min_, _new_max_ )
-	- moves the FacetPattern to a new range, from `new_min` to `new_max`. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
+- **scale** ( _new_min_, _new_max_, _exponent_ = 1 )
+	- moves the FacetPattern to a new range, from `new_min` to `new_max`, with `exponent` allowing for nonlinear transformations. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
 	- example:
 		- `$('example').sine(10,100).scale(0,1); // unipolar signal`
 ---
