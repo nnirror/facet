@@ -3296,7 +3296,6 @@ waveformSample(waveform, phase) {
     // startPosition = Math.abs(startPosition);
     for (let j = 0; j < startPositions.length; j++) {
       let startPosition = startPositions[j];
-      console.log(startPosition);
       let start = Math.floor(startPosition * maxFrameSize);
       for (let i = 0; i < addPattern.data.length; i++) {
         if (start + i < this.data.length) {
