@@ -104,6 +104,7 @@ class FacetPattern {
     }
     this.data = output;
     this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -287,6 +288,7 @@ class FacetPattern {
     }
     this.data = wave;
     this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -375,6 +377,7 @@ class FacetPattern {
     }
     this.data = wave;
     this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
 }
 
@@ -557,6 +560,7 @@ class FacetPattern {
     }
     this.data = output;
     this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -597,6 +601,7 @@ class FacetPattern {
     }
     this.data = wave;
     this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
   
@@ -616,6 +621,7 @@ class FacetPattern {
     }
     this.data = wave;
     this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -1925,8 +1931,8 @@ waveformSample(waveform, phase) {
   }
 
   reverb (size = 1, feedback = 0.85) {
-    if ( feedback > 0.999 ) {
-      feedback = 0.999;
+    if ( feedback >= 0.98 ) {
+      feedback = 0.98;
     }
     else if ( feedback < 0 ) {
       feedback = 0;
@@ -2602,6 +2608,16 @@ waveformSample(waveform, phase) {
     return this;
   }
 
+  fadeinSamples(fade_samples) {
+    let fade_length = fade_samples;
+    for (let j = 0; j < 20; j++) {
+        for (let i = 0; i < fade_length; i++) {
+            this.data[i] = this.data[i] * Math.sin((i / fade_length) * (Math.PI / 2));
+        }
+    }
+    return this;
+  }
+
   fadeout(fade_amount) {
     let fade_length = Math.floor(this.data.length * fade_amount);
     for (let i = this.data.length - 1; i >= this.data.length - fade_length; i--) {
@@ -3261,25 +3277,34 @@ waveformSample(waveform, phase) {
     this.data = output;
     this.flatten().trim();
     this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
     return this;
 }
 
   // maxFrameSize allows you to hard-code the range that the data will get appended to, so that if you're
   // iteratively superposing stuff, the relative positions don't change as you add stuff to the data
-  sup (addPattern, startPosition, maxFrameSize = this.data.length ) {
+  sup (addPattern, startPositions, maxFrameSize = this.data.length ) {
     if ( !this.isFacetPattern(addPattern) ) {
       throw `input must be a FacetPattern object; type found: ${typeof addPattern}`;
     }
-    startPosition = Math.abs(startPosition);
+    if (typeof startPositions == 'number' || Array.isArray(startPositions) === true) {
+      startPositions = new FacetPattern().from(startPositions);
+    }
+    startPositions = startPositions.data;
     maxFrameSize = Math.abs(Math.floor(maxFrameSize));
-    let start = Math.floor(startPosition * maxFrameSize);
     let output = this.data.slice();
-    for (let i = 0; i < addPattern.data.length; i++) {
+    // startPosition = Math.abs(startPosition);
+    for (let j = 0; j < startPositions.length; j++) {
+      let startPosition = startPositions[j];
+      console.log(startPosition);
+      let start = Math.floor(startPosition * maxFrameSize);
+      for (let i = 0; i < addPattern.data.length; i++) {
         if (start + i < this.data.length) {
             output[start + i] += addPattern.data[i];
         } else {
             output.push(addPattern.data[i]);
         }
+      }
     }
     this.data = output;
     return this;

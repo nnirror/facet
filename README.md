@@ -700,7 +700,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 - **reverb** (  _size_ = 1, _feedback_ = 0.85 )
 	- applies the Schroeder reverb algorithm to the FacetPattern. The `size` argument should be between 0 and 2 for most use cases but can go up to 10.
-	- the `feedback` argument controls feedback in the reverb algorithm. It should be between 0 and 0.999.
+	- the `feedback` argument controls feedback in the reverb algorithm. It should be between 0 and 0.98.
 	- example:
 		- `$('example').randsamp().reverb(rf()).play(); // different reverb size for random sample each loop`
 ---
@@ -940,8 +940,8 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').randsamp().splice(_.noise(n16),0.5).play(); // inserts a 16th note of noise halfway through the random sample`
 ---
-- **sup** ( _FacetPattern_, _startPosition_, _maxFrameSize_ = this.length )
-	- superposes a second FacetPattern onto the first. The `startPosition` value can be any value between 0 and 1. It controls the relative position in the input FacetPattern to begin superposing the second FacetPattern. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
+- **sup** ( _FacetPattern_, _startPositionPattern_, _maxFrameSize_ = this.length )
+	- superposes a second FacetPattern onto the first. The `startPositionPattern` value can be any value between 0 and 1, or an array, or a FacetPattern. It controls the relative position(s) in the input FacetPattern to begin superposing `FacetPattern`. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
 	- example:
 		- `$('example').silence(n1).sup(_.randsamp(),0,n1).sup(_.randsamp(),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`
 

@@ -239,7 +239,6 @@ function tick() {
     current_relative_step_position = 0;
     bars_elapsed++;
     // tell pattern server to start processing next loop
-    reportTransportMetaData();
     requestNewPatterns();
   }
 
