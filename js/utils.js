@@ -15,6 +15,10 @@ function choose (list) {
   return list[Math.floor(Math.random()*list.length)];
 }
 
+function ftom(frequency) {
+  return Math.round(12 * Math.log2(frequency / 440) + 69);
+}
+
 function ms (ms) {
   return Math.round(Math.abs(Number(ms)) * (FACET_SAMPLE_RATE*0.001));
 }

@@ -9,11 +9,12 @@ const app = express();
 const axios = require('axios');
 const FacetConfig = require('./config.js');
 const OSC = require('osc-js')
-const osc = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
-osc.open({ port: 2134 });
+const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
+udp_osc_server.open({ port: 2134 });
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 let bars_elapsed = 0;
 let bpm = 90;
+let prev_bpm = 90;
 let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
 let current_relative_step_position = 0;
 let event_register = [];
@@ -25,6 +26,12 @@ let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
 let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
 process.title = 'facet_transport';
+
+const editor_osc_server = new OSC({
+  discardLateMessages: false,
+  plugin: new OSC.WebsocketServerPlugin()
+});
+editor_osc_server.open();
 
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
@@ -61,6 +68,8 @@ app.post('/meta', (req, res) => {
 
 app.post('/play', (req, res) => {
   transport_on = true;
+  // open audio playback gate in Max
+  udp_osc_server.send(new OSC.Message(`/play`, 1));
   res.sendStatus(200);
 });
 
@@ -69,15 +78,17 @@ app.post('/update', (req, res) => {
   if (transport_on === true) {
 
     let posted_pattern = JSON.parse(req.body.pattern);
+    let facet_pattern_name = posted_pattern.name.split('---')[0];
 
     if ( posted_pattern.sequence_data.length > 0 ) {
-      event_register[posted_pattern.name] = [];
+      event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step) => {
-        event_register[posted_pattern.name].push(
+        event_register[facet_pattern_name].push(
           {
             position: step,
             type: "audio",
             data: [],
+            filename: posted_pattern.name,
             bpm_at_generation_time: posted_pattern.bpm_at_generation_time,
             play_once: posted_pattern.play_once
           }
@@ -86,11 +97,11 @@ app.post('/update', (req, res) => {
     }
 
     if ( posted_pattern.notes.length > 0 ) {
-      event_register[posted_pattern.name] = [];
+      event_register[facet_pattern_name] = [];
       for (var i = 0; i < posted_pattern.notes.length; i++) {
         let note_data = posted_pattern.notes[i];
         if ( note_data.note >= 0 ) {
-          event_register[posted_pattern.name].push(
+          event_register[facet_pattern_name].push(
             {
               position: (i/posted_pattern.notes.length),
               type: "note",
@@ -105,7 +116,7 @@ app.post('/update', (req, res) => {
               note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
             }
 
-            event_register[posted_pattern.name].push(
+            event_register[facet_pattern_name].push(
               {
                 position: (i/posted_pattern.notes.length),
                 type: "note",
@@ -124,14 +135,14 @@ app.post('/update', (req, res) => {
     }
 
     if ( typeof posted_pattern.cc_data.data !== 'undefined' ) {
-      event_register[posted_pattern.name] = [];
+      event_register[facet_pattern_name] = [];
       for (var i = 0; i < posted_pattern.cc_data.data.length; i++) {
         let cc_object = {
           data: posted_pattern.cc_data.data[i],
           controller: posted_pattern.cc_data.controller,
           channel: posted_pattern.cc_data.channel,
         };
-        event_register[posted_pattern.name].push(
+        event_register[facet_pattern_name].push(
           {
             position: (i/posted_pattern.cc_data.data.length),
             type: "cc",
@@ -143,13 +154,13 @@ app.post('/update', (req, res) => {
     }
 
     if ( typeof posted_pattern.pitchbend_data.data !== 'undefined' ) {
-      event_register[posted_pattern.name] = [];
+      event_register[facet_pattern_name] = [];
       for (var i = 0; i < posted_pattern.pitchbend_data.data.length; i++) {
         let pb_object = {
           data: posted_pattern.pitchbend_data.data[i],
           channel: posted_pattern.pitchbend_data.channel,
         };
-        event_register[posted_pattern.name].push(
+        event_register[facet_pattern_name].push(
           {
             position: (i/posted_pattern.pitchbend_data.data.length),
             type: "pitchbend",
@@ -161,13 +172,13 @@ app.post('/update', (req, res) => {
     }
 
     if ( typeof posted_pattern.osc_data.data !== 'undefined' ) {
-      event_register[posted_pattern.name] = [];
+      event_register[facet_pattern_name] = [];
       for (var i = 0; i < posted_pattern.osc_data.data.length; i++) {
         let osc_object = {
           data: posted_pattern.osc_data.data[i],
           address: posted_pattern.osc_data.address,
         };
-        event_register[posted_pattern.name].push(
+        event_register[facet_pattern_name].push(
           {
             position: (i/posted_pattern.osc_data.data.length),
             type: "osc",
@@ -215,6 +226,8 @@ app.post('/stop', (req, res) => {
   if ( typeof midioutput !== 'undefined' ) {
     midioutput.sendAllNotesOff();
   }
+  // close audio playback gate in Max
+  udp_osc_server.send(new OSC.Message(`/play`, 0));
   // clear out any dynamic BPM patterns, so BPM stays at whatever value it was prior to stopping
   meta_data.bpm = bpm;
   res.sendStatus(200);
@@ -223,6 +236,9 @@ app.post('/stop', (req, res) => {
 const server = app.listen(3211);
 
 let expectedTime = Date.now() + EVENT_RESOLUTION_MS;
+// send bpm to Max
+udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
+editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 
 function tick() {
   // calculate based on bpm how many ticks at EVENT_RESOLUTION_MS equal a full loop
@@ -240,6 +256,9 @@ function tick() {
     bars_elapsed++;
     // tell pattern server to start processing next loop
     requestNewPatterns();
+    // send bpm to Max
+    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
+    editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
   }
 
   let scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
@@ -254,6 +273,11 @@ function tick() {
 
   }
 
+  if ( prev_bpm != bpm ) {
+    prev_bpm = bpm;
+    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
+    editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
+  }
 
   if ( transport_on === true ) {
     for (const [fp_name, fp_data] of Object.entries(event_register)) {
@@ -266,7 +290,8 @@ function tick() {
             // play any audio files at this step
             // include a calculated "tempo" argument to handle the possibility of a difference between the fp.bpm_at_generation_time and the current bpm
             if ( count_times_fp_played < 1 ) {
-              exec(`${cross_platform_play_command} tmp${cross_platform_slash}${fp_name}-out.wav ${cross_platform_sox_config} gain -6 tempo ${bpm / event.bpm_at_generation_time}`, (error, stdout, stderr) => {});
+              // osc event to play back audio file in Max (or elsewhere)
+              udp_osc_server.send(new OSC.Message(`/facet_play_audio_file`, `${event.filename}-out.wav ${event.bpm_at_generation_time}`));
             }
             count_times_fp_played++;
           }
@@ -309,7 +334,7 @@ function tick() {
           if ( event.type === "osc" ) {
             // send any osc data at this step
             try {
-              osc.send(new OSC.Message(`${event.data.address}`, event.data.data));
+              udp_osc_server.send(new OSC.Message(`${event.data.address}`, event.data.data));
             } catch (e) {}
           }
 
@@ -323,6 +348,7 @@ function tick() {
     }
   }
   let delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
+  editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
   setTimeout(tick, delay);
 }

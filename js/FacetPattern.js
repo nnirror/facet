@@ -17,6 +17,7 @@ class FacetPattern {
   constructor (name) {
     this.name = name ? name : Math.random();
     this.bpm_pattern = false;
+    this.bpm_at_generation_time = false;
     this.cc_data = [];
     this.chord_intervals = [];
     this.dacs = '1 1';
@@ -91,6 +92,7 @@ class FacetPattern {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
+    length = Math.round(length);
     frequencies.size(length);
     let phase = 0;
     for (let i = 0; i < length; i++) {
@@ -278,6 +280,7 @@ class FacetPattern {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
+    duration = Math.round(duration);
     frequencies.size(duration);
     let wave = [];
     for (let i = 0; i < duration; i++) {
@@ -362,10 +365,11 @@ class FacetPattern {
     return this;
   }
 
-  rect(frequencies, duration = FACET_SAMPLE_RATE, pulseWidth = 0.5, sampleRate = FACET_SAMPLE_RATE) {
+  rect (frequencies, duration = FACET_SAMPLE_RATE, pulseWidth = 0.5, sampleRate = FACET_SAMPLE_RATE) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
+    duration = Math.round(duration);
     frequencies.size(duration);
     let wave = [];
     let amplitude = 1;
@@ -547,6 +551,7 @@ class FacetPattern {
     if ( typeof frequencies == 'number' || Array.isArray(frequencies) === true ) {
       frequencies = new FacetPattern().from(frequencies);
     }
+    length = Math.round(length);
     frequencies.size(length);
     let phase = 0;
     for (let i = 0; i < length; i++) {
@@ -589,6 +594,7 @@ class FacetPattern {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
+    duration = Math.round(duration);
     frequencies.size(duration);
     let wave = [];
     let amplitude = 1;
@@ -609,6 +615,7 @@ class FacetPattern {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
+    duration = Math.round(duration);
     frequencies.size(duration);
     let wave = [];
     let amplitude = 1;
@@ -2648,7 +2655,6 @@ waveformSample(waveform, phase) {
 
   channels (chans) {
     this.dacs = '';
-    let output_channel_str = '';
     if ( typeof chans == 'number' ) {
       chans = [chans];
     }
@@ -3260,6 +3266,7 @@ waveformSample(waveform, phase) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
+    duration = Math.round(duration);
     frequencies.size(duration);
     duration = duration / FACET_SAMPLE_RATE;
     damping = Math.abs(Number(damping));

@@ -227,12 +227,9 @@ function checkStatus() {
       Object.values(data.data.errors).forEach(error => {
         $.growl.error({ message: error });
       });
-      let cpu_percent = parseFloat(data.data.cpu).toFixed(2) * 100;
+      let cpu_percent = Math.round(parseFloat(data.data.cpu).toFixed(2) * 100);
       cpu_percent = cpu_percent.toString().substring(0,4);
       $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
-      if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
-        $('#bpm').val(`${data.data.bpm}`);
-      }
       setStatus(`connected`);
     })
     .fail(function(data) {
@@ -270,3 +267,26 @@ setInterval(()=>{
 }, 10);
 
 $('#bpm').val(90);
+
+const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
+osc.open();
+
+osc.on('/bpm', message => {
+  if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
+    $('#bpm').val(`${message.args[0]}`);
+  }
+});
+
+osc.on('/progress', message => {
+  $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
+});
+
+// close down osc server when window shuts down or tab is closed
+window.addEventListener("beforeunload", function (e) {
+  osc.close();
+});
+
+// attempt to restart osc server when tab is focused
+window.onfocus = function() {
+  osc.open();
+};
