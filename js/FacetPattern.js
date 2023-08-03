@@ -3145,11 +3145,6 @@ waveformSample(waveform, phase) {
     return (Math.round((samps / FACET_SAMPLE_RATE) * 1000) / 1000);
   }
 
-  scale1D (arr, n) {
-    for (var i = arr.length *= n; i;)
-      arr[--i] = arr[i / n | 0]
-  }
-
   flatten () {
     let out = [];
     Object.values(this.data).forEach(step => {

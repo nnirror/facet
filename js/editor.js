@@ -155,7 +155,9 @@ $('body').on('click', '#midi_refresh', function() {
 });
 
 $('body').on('click', '#stop', function() {
-  $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {})
+  $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {
+    $.growl.notice({ message: 'system muted' });
+  })
   .fail(function(data) {
     if ( data.statusText == 'error' ) {
       $.growl.error({ message: 'no connection to the Facet server' });
@@ -164,7 +166,9 @@ $('body').on('click', '#stop', function() {
 });
 
 $('body').on('click', '#clear', function() {
-  $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+  $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {
+    $.growl.notice({ message: 'hooks cleared' });
+  });
 });
 
 $('body').on('click', '#rerun', function() {
@@ -281,6 +285,12 @@ osc.on('/progress', message => {
   $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
 });
 
+setInterval(() => {
+  if (osc.status != 1) {
+    osc.open();
+  }
+}, 250);
+
 // close down osc server when window shuts down or tab is closed
 window.addEventListener("beforeunload", function (e) {
   osc.close();
@@ -290,3 +300,41 @@ window.addEventListener("beforeunload", function (e) {
 window.onfocus = function() {
   osc.open();
 };
+
+// autocomplete
+var facet_methods  =  [];
+// on load, get all available FP methods from the pattern generator server
+
+
+document.addEventListener('keydown', function(event) {
+  if (event.ctrlKey && event.code === 'Space') {
+    $.post('http://127.0.0.1:1123/autocomplete', {}).done(function( data, status ) {
+      facet_methods = data.data.methods;
+      // forked custom hinting from: https://stackoverflow.com/a/39973139
+      var options = {
+        hint: function (editor) {
+          var list = facet_methods;
+          var cursor = editor.getCursor();
+          var currentLine = editor.getLine(cursor.line);
+          var start = cursor.ch;
+          var end = start;
+          while (end < currentLine.length && /[\w$]+/.test(currentLine.charAt(end))) ++end;
+          while (start && /[\w$]+/.test(currentLine.charAt(start - 1))) --start;
+          var curWord = start != end && currentLine.slice(start, end);
+          var regex = new RegExp('^' + curWord, 'i');
+          var result = {
+              list: (!curWord ? list : list.filter(function (item) {
+                  return item.match(regex);
+              })).sort(),
+              from: CodeMirror.Pos(cursor.line, start),
+              to: CodeMirror.Pos(cursor.line, end)
+          };
+          return result;
+        }
+      };
+      cm.showHint(options); 
+    }).fail(function(data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+  }
+});

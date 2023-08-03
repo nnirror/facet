@@ -63,7 +63,10 @@ module.exports = {
                   // by default, channels 1 and 2 are on. If _only_ channel 1 was
                   // specified via .channel(), turn off channel 2.
                   fp.dacs = '1 0';
-              } 
+              }
+              if ( fp.dacs != '1' && fp.pan_data === false && fp.sequence_data.length > 0 ) {
+                fp.pan_data = 0;
+              }
               if ( fp.pan_data !== false ) {
                 // if a panning pattern was included, handle separately: generate files based on the number of channels and apply gain based on the panning pattern
                 let dacs = fp.dacs.split(' ');
@@ -188,6 +191,24 @@ app.post('/meta', (req, res) => {
       ()=> {}
     );
   res.sendStatus(200);
+});
+
+app.post('/autocomplete', (req, res) => {
+  let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf"]
+  let all_methods = getAllFuncs(new FacetPattern());
+  let available_methods = []
+  for (var i = 0; i < all_methods.length; i++) {
+    let method = all_methods[i];
+    if ( !blacklist.includes(method.name) ) {
+      available_methods.push(method.example);
+    }
+  }
+  res.send({
+    data: {
+      methods: available_methods
+    },
+    status: 200
+  });
 });
 
 app.post('/status', (req, res) => {
@@ -337,3 +358,22 @@ function checkToSave (fp) {
     exec(`${cross_platform_copy_command} tmp${cross_platform_slash}${fp.name}-out.wav ${folder}${cross_platform_slash}${filename}.wav`, (error, stdout, stderr) => {});
   }
 }
+
+// list all properties of a class that are functions, from: https://stackoverflow.com/a/31055217
+function getAllFuncs(toCheck) {
+  const props = [];
+  let obj = toCheck;
+  do {
+    props.push(...Object.getOwnPropertyNames(obj));
+  } while (obj = Object.getPrototypeOf(obj));
+
+  return props.sort().filter((e, i, arr) => {
+    if (e != arr[i + 1] && typeof toCheck[e] == 'function') return true;
+  }).map(funcName => {
+    const funcStr = toCheck[funcName].toString();
+    const argsStr = funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')'));
+    const args = argsStr.split(',').map(arg => arg.trim()).join(', ');
+    return { name: funcName, example: `${funcName}(${args})` };
+  });
+}
+
