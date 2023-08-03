@@ -198,16 +198,24 @@ $('body').on('click', '#end', function() {
 });
 
 $(document).ready(function() {
+  setTimeout(() => {
+    initializeMIDISelection();
+}, 100);
+});
+
+setInterval(() => {
+  initializeMIDISelection();
+}, 1000);
+
+function initializeMIDISelection () {
   // retrieve the previously stored MIDI out destination from localstorage
   var storedValue = localStorage.getItem('midi_outs_value');
   if (storedValue) {
-      // reset the most recently used MIDI out destination
-      setTimeout(function() {
-        $('#midi_outs').val(storedValue);
-    }, 100);
-      $.post('http://127.0.0.1:3211/midi_select', {output:storedValue}).done(function( data, status ) {});
+    // reset the most recently used MIDI out destination
+    $('#midi_outs').val(storedValue);
+    $.post('http://127.0.0.1:3211/midi_select', {output:storedValue}).done(function( data, status ) {});
   }
-});
+}
 
 let blockBpmUpdateFromServer;
 let bpmCanBeUpdatedByServer = true;
@@ -286,7 +294,7 @@ osc.on('/progress', message => {
 });
 
 setInterval(() => {
-  if (osc.status != 1) {
+  if ( osc.status() == 3 ) {
     osc.open();
   }
 }, 250);
@@ -304,7 +312,6 @@ window.onfocus = function() {
 // autocomplete
 var facet_methods  =  [];
 // on load, get all available FP methods from the pattern generator server
-
 
 document.addEventListener('keydown', function(event) {
   if (event.ctrlKey && event.code === 'Space') {
