@@ -236,20 +236,18 @@ app.post('/stop', (req, res) => {
 const server = app.listen(3211);
 
 let expectedTime = Date.now() + EVENT_RESOLUTION_MS;
+let loop_start_time = Date.now();
 // send bpm to Max
 udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 
 function tick() {
   // calculate based on bpm how many ticks at EVENT_RESOLUTION_MS equal a full loop
-  // first need to figure out how many events per second run at EVENT_RESOLUTION_MS = Math.round(1000 / EVENT_RESOLUTION_MS)
-  let events_per_second = 1000 / EVENT_RESOLUTION_MS; // for test purposes, 100 events per second at 10ms global event resolution
-  // now figure out how many seconds it will take for 4 quarter notes to occur: BPM / 4.
-  let loops_per_minute = bpm / 4; // in this case = 15
-  let loops_per_second = loops_per_minute / 60; // in this case = 0.25
-  let seconds_per_loop = 60 / loops_per_minute; // in this case = 4
-  let events_per_loop = seconds_per_loop * events_per_second; //  in this case, 4 * 100 = 400
-  let relative_step_amount_to_add_per_loop = 1 / events_per_loop; // in this case, 1/400 = 0.0025
+  let events_per_second = 1000 / EVENT_RESOLUTION_MS;
+  let loops_per_minute = bpm / 4;
+  let seconds_per_loop = 60 / loops_per_minute;
+  let events_per_loop = seconds_per_loop * events_per_second;
+  let relative_step_amount_to_add_per_loop = 1 / events_per_loop;
   current_relative_step_position += relative_step_amount_to_add_per_loop;
   if ( current_relative_step_position > 1.00001 ) {
     current_relative_step_position = 0;
@@ -259,10 +257,10 @@ function tick() {
     // send bpm to Max
     udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
+    loop_start_time = Date.now();
   }
 
   let scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
-
   let calcBpm = typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ? scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] : bpm;
   try {
     // when the bpm is scaled to match steps, it can have more than 1 value per step - this always selects the first
@@ -350,6 +348,27 @@ function tick() {
   let delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
   editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
+
+  if ( meta_data.bpm.length < 1 ) {
+    if (Date.now() - loop_start_time > seconds_per_loop * 1000) {
+      current_relative_step_position = 1;
+      loop_start_time = Date.now();
+    }
+    if (current_relative_step_position >= .2 && current_relative_step_position < .25 + relative_step_amount_to_add_per_loop) {
+      if (Date.now() - loop_start_time > seconds_per_loop * .25 * 1000) {
+        current_relative_step_position = 0.25;
+      }
+    } else if (current_relative_step_position >= .45 && current_relative_step_position < .5 + relative_step_amount_to_add_per_loop) {
+      if (Date.now() - loop_start_time > seconds_per_loop * .5 * 1000) {
+        current_relative_step_position = 0.5;
+      }
+    } else if (current_relative_step_position >= .7 && current_relative_step_position < .75 + relative_step_amount_to_add_per_loop) {
+      if (Date.now() - loop_start_time > seconds_per_loop * .75 * 1000) {
+        current_relative_step_position = 0.75;
+      }
+    } 
+  }
+
   setTimeout(tick, delay);
 }
 

@@ -502,14 +502,8 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- returns a curved version of the FacetPattern. Tension and number of segments in the curve can be included but default to 0.5 and 25, respectively.
 	- example:
 		- `$('example').noise(16).curve();				// not so noisy`
-		- `$('example').noise(16).curve(0.5, 10);	// fewer segments per curve`
+		- `$('example').noise(16).curve(0.5, 10);		// fewer segments per curve`
 		- `$('example').noise(16).curve(0.9);			// different curve type`
----
-- **delay** ( _samples_, _feedback_ = 0.5 )
-	- delays the input FacetPattern by `samples` samples. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
-	- the maximum `feedback` value is 0.975.
-	- example:
-		- `$('example').randsamp().delay(random(1700,10000)).play();`
 ---
 - **distavg** ( )
 	- computes the distance from the average of the FacetPattern, for each element in the FacetPattern.
@@ -835,6 +829,12 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').sine(100).crush(2).play(); // redux on the sine wave`
 		- `$('example').sine(100,n1).crush(_.ramp(8,1,8)).play(); // ramping bit depth on 100Hz sine wave from 8 bits to 1`
 		- `$('example').sine(100,n1).crush(_.ramp(8,1,8),_.noise(16).scale(1,40)).play(); // ramping bit depth on 100Hz sine wave from 8 bits to 1, and dynamically changing the downsampling amount between 1 and 40 samples`
+---
+- **delay** ( _delaySamplesPattern_, _feedback_ = 0.5 )
+	- delays the input FacetPattern by `delaySamplesPattern` samples. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
+	- the maximum `feedback` value is 0.975.
+	- example:
+		- `$('example').randsamp().delay(random(1700,10000)).play();`
 ---
 - **divide** ( _FacetPattern_, _match_sizes_ = true )
 	- divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.

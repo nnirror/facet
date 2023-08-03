@@ -146,11 +146,15 @@ class FacetPattern {
   }
 
   euclid (pulses, steps) {
+    if (pulses >= steps ) {
+      throw `argument 1 to euclid() must be smaller than argument 2`;
+    }
     pulses = Math.abs(Math.floor(Number(pulses)));
     steps = Math.abs(Math.floor(Number(steps)));
     let sequence = [];
     let counts = new Array(pulses).fill(1);
-    let remainders = new Array(steps - pulses).fill(0);
+    let remainders = [];
+    remainders = new Array(steps - pulses).fill(0);
     let divisor = Math.floor(steps / pulses);
     let max_iters = 100;
     let current_iter = 0;
@@ -1034,15 +1038,21 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  delay (delayAmount, feedback = 0.5) {
+  delay(delayAmount, feedback = 0.5) {
     feedback = Math.min(Math.max(feedback, 0), 0.98);
-    delayAmount = Math.round(Math.abs(Number(delayAmount)));
+    if (typeof delayAmount == 'number' || Array.isArray(delayAmount) === true) {
+        delayAmount = new FacetPattern().from(delayAmount);
+    }
+    delayAmount.size(this.data.length);
     let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
-    let delayedArray = new Array(this.data.length + delayAmount * maxFeedbackIterations).fill(0);
+    let maxDelayAmount = Math.max(...delayAmount.data);
+    let delayedArray = new Array(this.data.length + maxDelayAmount * maxFeedbackIterations).fill(0);
     for (let i = 0; i < maxFeedbackIterations; i++) {
         let gain = Math.pow(feedback, i);
         for (let j = 0; j < this.data.length; j++) {
-            delayedArray[j + i * delayAmount] += this.data[j] * gain;
+            let delayAmountIndex = Math.floor((j / this.data.length) * delayAmount.data.length);
+            let currentDelayAmount = Math.round(Math.abs(Number(delayAmount.data[delayAmountIndex])));
+            delayedArray[j + i * currentDelayAmount] += this.data[j] * gain;
         }
     }
     this.data = delayedArray;
@@ -1997,7 +2007,7 @@ waveformSample(waveform, phase) {
     }
     this.data = outputArray;
     return this;
-}
+  }
 
   hannWindow (size) {
       let window = [];
@@ -3173,6 +3183,11 @@ waveformSample(waveform, phase) {
     return fs.readFileSync('js/utils.js', 'utf8', (err, data) => {
       return data;
     });
+  }
+
+  getWholeNoteNumSamples () {
+    let n1Value = this.env.match(/n1\s*=\s*(\d+)/)[1];
+    return n1Value;
   }
 
   stringLeftRotate(str, d) {
