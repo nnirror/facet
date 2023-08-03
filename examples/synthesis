@@ -1,0 +1,35 @@
+// 100Hz sine wave lasting a whole note
+$('example').sine(100,n1).play();
+
+// each loop, the sine wave has a random frequency between 100Hz and 1000Hz and lasts a whole note
+$('example').sine(ri(100,1000),n1).play();
+
+// multiply that by a 30Hz triangle wave
+$('example').sine(ri(100,1000),n1).times(_.tri(30)).play();
+
+// via .ramp(), add an envelope to modulate amplitude from 1 to 0
+$('example').sine(ri(100,1000),n1).times(_.tri(30)).times(_.ramp(1,0,512)).play();
+
+// via .scale(), modify the ramp so its values are still between 0 and 1, but are exponentially curved by a factor of 16, so the envelope values will stay closer to 0 for more of the ramp, producing a snappier envelope
+$('example').sine(ri(100,1000),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).play();
+
+// via .delay(), add an 8th note delay
+$('example').sine(ri(100,1000),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).delay(n8).play();
+
+// via .crab(), superpose a reversed copy over the sine wave prior to delay
+$('example').sine(ri(100,1000),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).crab().delay(n8,0.5).play();
+
+// make the sine wave frequency a dynamic pattern so its frequency changes over time, ramping from a random start point between 100-2000Hz to a random end point between 100-2000Hz, over 512 positions
+$('example').sine(_.ramp(ri(100,2000),ri(100,2000),512),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).crab().delay(n8,0.5).play();
+
+// via .stretchto(), timestretch the entire pattern so it lasts exactly a whole note, including the delay at the end
+$('example').sine(_.ramp(ri(100,2000),ri(100,2000),512),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).crab().delay(n8,0.5).stretchto(n1).play();
+
+// via .pitch(), apply a dynamic pitch shift to the output, going up and down octaves
+$('example').sine(_.ramp(ri(100,2000),ri(100,2000),512),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).crab().delay(n8,0.5).stretchto(n1).pitch(_.from([0.5,1,2,4,2,1,0.5])).play();
+
+// via .pitch(), apply a dynamic pitch shift to the output, going up and down octaves
+$('example').sine(_.ramp(ri(100,2000),ri(100,2000),512),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).crab().delay(n8,0.5).stretchto(n1).pitch(_.from([0.5,1,2,4,2,1,0.5])).play();
+
+// via .reverb(), change the reverb size every iteration
+$('example').sine(_.ramp(ri(100,2000),ri(100,2000),512),n1).times(_.tri(30)).times(_.ramp(1,0,512).scale(0,1,16)).crab().delay(n8,0.5).stretchto(n1).pitch(_.from([0.5,1,2,4,2,1,0.5])).reverb(rf(),0.95).play();

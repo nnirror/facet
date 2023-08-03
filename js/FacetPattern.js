@@ -1038,14 +1038,18 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  delay(delayAmount, feedback = 0.5) {
-    feedback = Math.min(Math.max(feedback, 0), 0.98);
+  delay (delayAmount, feedback = 0.5) {
+    feedback = Math.min(Math.max(feedback, 0), 0.999);
     if (typeof delayAmount == 'number' || Array.isArray(delayAmount) === true) {
         delayAmount = new FacetPattern().from(delayAmount);
     }
-    delayAmount.size(this.data.length);
+    let maxDelayAmount = Math.round(Math.max(...delayAmount.data));
+    feedback *= (1-(maxDelayAmount / this.getWholeNoteNumSamples()))*0.975;
+    delayAmount.size(this.data.length).round();
+    if ( maxDelayAmount > (SAMPLE_RATE/2) ) {
+      feedback *= 0.75;
+    }
     let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
-    let maxDelayAmount = Math.max(...delayAmount.data);
     let delayedArray = new Array(this.data.length + maxDelayAmount * maxFeedbackIterations).fill(0);
     for (let i = 0; i < maxFeedbackIterations; i++) {
         let gain = Math.pow(feedback, i);
@@ -1950,8 +1954,8 @@ waveformSample(waveform, phase) {
   }
 
   reverb (size = 1, feedback = 0.85) {
-    if ( feedback >= 0.98 ) {
-      feedback = 0.98;
+    if ( feedback >= 0.999 ) {
+      feedback = 0.999;
     }
     else if ( feedback < 0 ) {
       feedback = 0;
@@ -2030,6 +2034,16 @@ waveformSample(waveform, phase) {
           outputArray.push(value);
       }
       return outputArray;
+  }
+
+  crab () {
+    let initial_maximum_value = this.getMaximumValue();
+    let copy = new FacetPattern().from(this.data);
+    this.silence(this.data.length);
+    this.sup(copy,0);
+    this.sup(copy.reverse(),0);
+    this.full(initial_maximum_value);
+    return this;
   }
 
   reverse () {

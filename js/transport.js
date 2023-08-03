@@ -237,6 +237,8 @@ const server = app.listen(3211);
 
 let expectedTime = Date.now() + EVENT_RESOLUTION_MS;
 let loop_start_time = Date.now();
+let bpm_allow_recalc = -1;
+let scaledBpm;
 // send bpm to Max
 udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
@@ -248,6 +250,7 @@ function tick() {
   let seconds_per_loop = 60 / loops_per_minute;
   let events_per_loop = seconds_per_loop * events_per_second;
   let relative_step_amount_to_add_per_loop = 1 / events_per_loop;
+  bpm_allow_recalc++;
   current_relative_step_position += relative_step_amount_to_add_per_loop;
   if ( current_relative_step_position > 1.00001 ) {
     current_relative_step_position = 0;
@@ -260,7 +263,9 @@ function tick() {
     loop_start_time = Date.now();
   }
 
-  let scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
+  if ( bpm_allow_recalc % 8 == 0 ) {
+    scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
+  }
   let calcBpm = typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ? scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] : bpm;
   try {
     // when the bpm is scaled to match steps, it can have more than 1 value per step - this always selects the first
@@ -349,25 +354,23 @@ function tick() {
   editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
 
-  if ( meta_data.bpm.length < 1 ) {
-    if (Date.now() - loop_start_time > seconds_per_loop * 1000) {
-      current_relative_step_position = 1;
-      loop_start_time = Date.now();
-    }
-    if (current_relative_step_position >= .2 && current_relative_step_position < .25 + relative_step_amount_to_add_per_loop) {
-      if (Date.now() - loop_start_time > seconds_per_loop * .25 * 1000) {
-        current_relative_step_position = 0.25;
-      }
-    } else if (current_relative_step_position >= .45 && current_relative_step_position < .5 + relative_step_amount_to_add_per_loop) {
-      if (Date.now() - loop_start_time > seconds_per_loop * .5 * 1000) {
-        current_relative_step_position = 0.5;
-      }
-    } else if (current_relative_step_position >= .7 && current_relative_step_position < .75 + relative_step_amount_to_add_per_loop) {
-      if (Date.now() - loop_start_time > seconds_per_loop * .75 * 1000) {
-        current_relative_step_position = 0.75;
-      }
-    } 
+  if (Date.now() - loop_start_time > seconds_per_loop * 1000) {
+    current_relative_step_position = 1;
+    loop_start_time = Date.now();
   }
+  if (current_relative_step_position >= .2 && current_relative_step_position < .25 + relative_step_amount_to_add_per_loop) {
+    if (Date.now() - loop_start_time > seconds_per_loop * .25 * 1000) {
+      current_relative_step_position = 0.25;
+    }
+  } else if (current_relative_step_position >= .45 && current_relative_step_position < .5 + relative_step_amount_to_add_per_loop) {
+    if (Date.now() - loop_start_time > seconds_per_loop * .5 * 1000) {
+      current_relative_step_position = 0.5;
+    }
+  } else if (current_relative_step_position >= .7 && current_relative_step_position < .75 + relative_step_amount_to_add_per_loop) {
+    if (Date.now() - loop_start_time > seconds_per_loop * .75 * 1000) {
+      current_relative_step_position = 0.75;
+    }
+  } 
 
   setTimeout(tick, delay);
 }

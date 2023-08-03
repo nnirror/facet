@@ -7,12 +7,14 @@ Facet currently runs on MacOS, Linux, and Windows.
 ## Installation and getting started
 
 1. Download and install Node.js (must be v14 or greater) and npm: https://www.npmjs.com/get-npm
-2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that sox can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed properly.
+2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that sox can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed.
 3. Download or clone the Facet repository.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
-5. After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
+5. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
 6. In a browser tab, navigate to http://localhost:1124. This is the browser window with the code editor.
-7. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
+7. If using Max: Open File Preferences, click "Add Path", and add the Facet repo directory. Make sure to select the Subfolders checkbox. Create a new patcher, and add a "facet" object. Connect its left outlet (audio channel 1) and middle outlet (audio channel 2) to a DAC.
+8. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set. Check that the track is not muted.
+9. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing. Hit `[ctrl + .]` to stop.
 
 ## Facet commands
 
@@ -497,6 +499,11 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- compresses the FacetPattern into a smaller dynamic range. `ratio` is a float between 0 and 1 corresponding to n:1 so 0.5 would be 2:1, 0.2 would be 5:1, etc. `threshold` is the sample amplitude at which compression kicks in. `attackTime` and `releaseTime` are expressed as relations to a second, so 0.1 would be 1/10th of a second.
 	- example:
 		- `$('example').randsamp().compress(0.1,0.001,0.01,0.01).play();`
+---
+- **crab** ( )
+	- superposes a reversed copy of the FacetPattern on top of iself, so it plays backwards and forwards at the same time..
+	- example:
+		- `$('example').sine(_.ramp(20,2000,1000)).crab().full().play(); // sine wave ramps from 20Hz to 2000Hz both backwards and forwards at the same time`
 ---
 - **curve** ( _tension_ = 0.5, _segments_ = 25 )
 	- returns a curved version of the FacetPattern. Tension and number of segments in the curve can be included but default to 0.5 and 25, respectively.

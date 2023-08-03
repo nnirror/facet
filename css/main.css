@@ -6,7 +6,7 @@ body {
 }
 .CodeMirror {
   height: calc(100% - 50px);
-  font-size: 2em;
+  font-size: 1em;
 }
 #status, #bpm_control, #cpu, #midi, #transport {
   float: left;
