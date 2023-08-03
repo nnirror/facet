@@ -254,6 +254,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(choose([10,200,1000])).play(); // sine wave with either 10, 200, or 1000 cycles`
 ---
+- **ftom** ( _hzfrequency_ )
+	- converts the supplied `hzfrequency` value to its corresponding MIDI note number.
+	- example:
+		- `$('example').sine(220).times(_.sine(ftom(ri(400,1200)))).play(); // 220Hz sine wave (A) multplied by a chromatically related higher sine wave`
 - **ms** ( _milliseconds_ )
 	- converts the supplied `milliseconds` value to that many samples, at whatever sample rate the user has configured.
 	- example:
