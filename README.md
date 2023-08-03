@@ -42,7 +42,7 @@ Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`) allow you
 
 ### UI controls in the browser
 
-Below the text editor, there are several UI elements which control the Facet server running in the background. Moving from left to right:
+Below the text editor, there are several UI elements which control the servers running in the background. Moving from left to right:
 
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
@@ -405,7 +405,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('s').noise(n4).times(_.ramp(1,0,n4)).iter(12,()=>{this.allpass().delay(_.primes(60,1000,ri(20,2000)).data[i]).full()}).full().play(); // generates a quarter note transient burst of noise, then iteratively sends it through delays that are all primes`
 - **ramp** ( _from_, _to_, _size_, _curve_type_ = 0.5 )
-	- moves from `from` to `to` over `size` values. With a default `curve_type` of 0.5, the ramp is linear. Curve types lower than 0.5 will produce a logarithmic ramp contour, with more values weighted towards the initial `from` value. Curve types greater than 0.5 will produce an exponential ramp contour, with more values weighted towards the destination `to` value.
+	- moves from `from` to `to` over `size` values.
 	- example:
 		- `$('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
 ---

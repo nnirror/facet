@@ -295,21 +295,23 @@ class FacetPattern {
     return this;
   }
 
-  ramp (from, to, size, curveType = 0.5) {
+  ramp (from, to, size) {
+    let ramp_sequence = [];
     from = Number(from);
     to = Number(to);
     size = Math.abs(Number(size));
-    curveType = Number(curveType);
-    for (let i = 0; i < size; i++) {
-        let t = i / (size - 1);
-        if (curveType < 0.5) {
-            t = Math.pow(t, 1 + (0.5 - curveType) * 2);
-        } else if (curveType > 0.5) {
-            t = Math.pow(t, 1 / (1 + (curveType - 0.5) * 2));
-        }
-        let value = from + t * (to - from);
-        this.data.push(value);
+    if ( size < 1 ) {
+      size = 1;
     }
+    let amount_to_add = parseFloat(Math.abs(to - from) / size);
+    if ( to < from ) {
+      amount_to_add *= -1;
+    }
+    for (var i = 0; i < size; i++) {
+      ramp_sequence[i] = from;
+      from += amount_to_add;
+    }
+    this.data = ramp_sequence;
     return this;
   }
 
