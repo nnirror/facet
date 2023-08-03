@@ -1,6 +1,6 @@
 const fs = require('fs');
 const FacetConfig = require('./config.js');
-const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 
 function $ (n) {
   if (!n) {
@@ -20,7 +20,7 @@ function ftom(frequency) {
 }
 
 function ms (ms) {
-  return Math.round(Math.abs(Number(ms)) * (FACET_SAMPLE_RATE*0.001));
+  return Math.round(Math.abs(Number(ms)) * (SAMPLE_RATE*0.001));
 }
 
 function mtof(note) {
@@ -46,7 +46,7 @@ function random(min = 0, max = 1, int_mode = 0, weight = 1) {
 
 function mtos(midiNoteIn) {
   let frequency = Math.pow(2, (midiNoteIn - 69) / 12) * 440;
-  let samples = FACET_SAMPLE_RATE / frequency;
+  let samples = SAMPLE_RATE / frequency;
   return samples;
 }
 

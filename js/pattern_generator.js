@@ -12,7 +12,7 @@ const os_utils = require('os-utils');
 const WaveFile = require('wavefile').WaveFile;
 const FacetPattern = require('./FacetPattern.js');
 const FacetConfig = require('./config.js');
-const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 let bpm = 90;
 let bars_elapsed = 0;
 let reruns = {};
@@ -85,7 +85,7 @@ module.exports = {
                         panned_fp_data.fill(0);
                     }
                     let channel_wav = new WaveFile();
-                    channel_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', panned_fp_data);
+                    channel_wav.fromScratch(1, SAMPLE_RATE, '32f', panned_fp_data);
                     multi_channel_sox_cmd += ` tmp${cross_platform_slash}${fp.name}-ch${i}.wav`
                     fs.writeFileSync(`tmp${cross_platform_slash}${fp.name}-ch${i}.wav`, channel_wav.toBuffer(), (err) => {});
                 }
@@ -105,9 +105,9 @@ module.exports = {
                 }
               }
               else {
-                // create wav file at FACET_SAMPLE_RATE, 32-bit floating point
+                // create wav file at SAMPLE_RATE, 32-bit floating point
                 let a_wav = new WaveFile();
-                a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', fp.data);
+                a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
                 // store wav file in /tmp/
                 fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
                   // remix onto whatever channels via SoX
@@ -272,7 +272,7 @@ process.on('SIGINT', () => {
 function calculateNoteValues(bpm) {
   let out = '';
   for (var i = 1; i <= 128; i++) {
-    let calculated_nv = Math.round((((60000/bpm)/i)*4)*(FACET_SAMPLE_RATE*0.001));
+    let calculated_nv = Math.round((((60000/bpm)/i)*4)*(SAMPLE_RATE*0.001));
     out += `var n${i} = ${calculated_nv};`
   }
   return out;

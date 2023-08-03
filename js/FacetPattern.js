@@ -5,7 +5,7 @@ const path = require('path');
 const wav = require('node-wav');
 const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
-const FACET_SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const FFT = require('./lib/fft.js');
@@ -87,7 +87,7 @@ class FacetPattern {
     return this;
   }
 
-  cosine(frequencies, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+  cosine(frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
     let output = [];
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
@@ -105,8 +105,8 @@ class FacetPattern {
         }
     }
     this.data = output;
-    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -211,10 +211,10 @@ class FacetPattern {
     return this;
   }
 
-  image (imagePath, columnsPerSecond = 512, minimumFrequency = 20, maximumFrequency = FACET_SAMPLE_RATE / 2, frequencyPattern = false) {
+  image (imagePath, columnsPerSecond = 512, minimumFrequency = 20, maximumFrequency = SAMPLE_RATE / 2, frequencyPattern = false) {
     const fileData = fs.readFileSync(imagePath);
     let imageData;
-    let samplesPerColumn = Math.round(FACET_SAMPLE_RATE / columnsPerSecond);
+    let samplesPerColumn = Math.round(SAMPLE_RATE / columnsPerSecond);
     readimage(fileData, function (err, image) {
       if (err) {
         throw `image file: ${imagePath} could not be read correctly. Make sure the file is a JPEG, and try re-exporting it with GIMP or another image editor.`;
@@ -276,7 +276,7 @@ class FacetPattern {
     return this;
   }
 
-  phasor(frequencies, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+  phasor(frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -290,8 +290,8 @@ class FacetPattern {
         wave[i] = t - Math.floor(t);
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -365,7 +365,7 @@ class FacetPattern {
     return this;
   }
 
-  rect (frequencies, duration = FACET_SAMPLE_RATE, pulseWidth = 0.5, sampleRate = FACET_SAMPLE_RATE) {
+  rect (frequencies, duration = SAMPLE_RATE, pulseWidth = 0.5, sampleRate = SAMPLE_RATE) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -380,8 +380,8 @@ class FacetPattern {
         wave[i] = (t - Math.floor(t) < pulseWidth) ? amplitude : -amplitude;
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
 }
 
@@ -541,12 +541,12 @@ class FacetPattern {
         }
       }
     } finally {
-      this.reduce(FACET_SAMPLE_RATE).scale(-1,1);
+      this.reduce(SAMPLE_RATE).scale(-1,1);
       return this;
     }
   }
 
-  sine (frequencies, length = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+  sine (frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
     let output = [];
     if ( typeof frequencies == 'number' || Array.isArray(frequencies) === true ) {
       frequencies = new FacetPattern().from(frequencies);
@@ -564,8 +564,8 @@ class FacetPattern {
         }
     }
     this.data = output;
-    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -590,7 +590,7 @@ class FacetPattern {
     return this;
   }
 
-  square (frequencies, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+  square (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -606,12 +606,12 @@ class FacetPattern {
         phase -= Math.floor(phase);
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
   
-  tri (frequencies, duration = FACET_SAMPLE_RATE, sampleRate = FACET_SAMPLE_RATE) {
+  tri (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -627,8 +627,8 @@ class FacetPattern {
         phase -= Math.floor(phase);
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -1011,7 +1011,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  comb (delaySamples = FACET_SAMPLE_RATE / 100, feedforward = 0.5, feedback = 0.5) {
+  comb (delaySamples = SAMPLE_RATE / 100, feedforward = 0.5, feedback = 0.5) {
     feedback = Math.min(Math.max(feedback, 0), 0.98);
     feedforward = Math.min(Math.max(feedforward, 0), 0.98);
     delaySamples = Math.round(Math.abs(Number(delaySamples)));
@@ -1053,8 +1053,8 @@ waveformSample(waveform, phase) {
   // 
   compress (ratio, threshold, attackTime, releaseTime) {
     let initial_maximum_value = this.getMaximumValue();
-    let attack = Math.pow(0.01, 1.0 / (attackTime * FACET_SAMPLE_RATE));
-    let release = Math.pow(0.01, 1.0 / (releaseTime * FACET_SAMPLE_RATE));
+    let attack = Math.pow(0.01, 1.0 / (attackTime * SAMPLE_RATE));
+    let release = Math.pow(0.01, 1.0 / (releaseTime * SAMPLE_RATE));
     let envelope = 0;
     let gain = 1;
     let compressedAudio = [];
@@ -1091,8 +1091,8 @@ waveformSample(waveform, phase) {
       throw `input must be a FacetPattern object; type found: ${typeof impulseResponse}`;
     }
     // maximum IR size is 1 second; otherwise it quickly becomes way too much computation
-    if (impulseResponse.data.length > FACET_SAMPLE_RATE) {
-      impulseResponse.size(FACET_SAMPLE_RATE)
+    if (impulseResponse.data.length > SAMPLE_RATE) {
+      impulseResponse.size(SAMPLE_RATE)
     }
     let output = new Array(this.data.length + impulseResponse.data.length - 1).fill(0);
     for (let i = 0; i < this.data.length; i++) {
@@ -1278,7 +1278,7 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  follow (attackTime = FACET_SAMPLE_RATE / 0.1, releaseTime = FACET_SAMPLE_RATE / 4) {
+  follow (attackTime = SAMPLE_RATE / 0.1, releaseTime = SAMPLE_RATE / 4) {
     let envelope = [];
     let attack = Math.exp(-1 / attackTime);
     let release = Math.exp(-1 / releaseTime);
@@ -1509,9 +1509,9 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  allpass(frequency = FACET_SAMPLE_RATE / 2) {
+  allpass(frequency = SAMPLE_RATE / 2) {
     let outputArray = [];
-    let a = (Math.tan(Math.PI * frequency / FACET_SAMPLE_RATE) - 1) / (Math.tan(Math.PI * frequency / FACET_SAMPLE_RATE) + 1);
+    let a = (Math.tan(Math.PI * frequency / SAMPLE_RATE) - 1) / (Math.tan(Math.PI * frequency / SAMPLE_RATE) + 1);
     for (let i = 0; i < this.data.length; i++) {
         let x = this.data[i];
         let y;
@@ -1590,7 +1590,7 @@ waveformSample(waveform, phase) {
     }
     let initial_size = this.data.length;
     cutoffPattern.size(initial_size);
-    let silencePattern = new FacetPattern().silence(FACET_SAMPLE_RATE);
+    let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
     this.prepend(silencePattern);
     // scale up cutoffPattern to match the size of this.data
     cutoffPattern.prepend(silencePattern);
@@ -1609,7 +1609,7 @@ waveformSample(waveform, phase) {
     let prevValue2 = data[0];
     let a0, a1, a2, b1, b2;
     for (let i = 0; i < data.length; i++) {
-        let w0 = 2 * Math.PI * cutoffs[i] / FACET_SAMPLE_RATE;
+        let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
         let alpha = Math.sin(w0) / (2 * q);
         a0 = 1 + alpha;
         a1 = -2 * Math.cos(w0);
@@ -1633,7 +1633,7 @@ waveformSample(waveform, phase) {
     }
     let initial_size = this.data.length;
     cutoffPattern.size(initial_size);
-    let silencePattern = new FacetPattern().silence(FACET_SAMPLE_RATE);
+    let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
     this.prepend(silencePattern);
     // scale up cutoffPattern to match the size of this.data
     cutoffPattern.prepend(silencePattern);
@@ -1652,7 +1652,7 @@ waveformSample(waveform, phase) {
     let prevValue2 = data[0];
     let a0, a1, a2, b1, b2;
     for (let i = 0; i < data.length; i++) {
-      let w0 = 2 * Math.PI * cutoffs[i] / FACET_SAMPLE_RATE;
+      let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
       let alpha = Math.sin(w0) / (2 * q);
       a0 = 1 + alpha;
       a1 = -2 * Math.cos(w0);
@@ -1676,7 +1676,7 @@ waveformSample(waveform, phase) {
     }
     let initial_size = this.data.length;
     cutoffPattern.size(initial_size);
-    let silencePattern = new FacetPattern().silence(FACET_SAMPLE_RATE);
+    let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
     this.prepend(silencePattern);
     // scale up cutoffPattern to match the size of this.data
     cutoffPattern.prepend(silencePattern);
@@ -1695,7 +1695,7 @@ waveformSample(waveform, phase) {
     let prevValue2 = data[0];
     let a0, a1, a2, b1;
     for (let i = 0; i < data.length; i++) {
-        let w0 = 2 * Math.PI * cutoffs[i] / FACET_SAMPLE_RATE;
+        let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
         let alpha = Math.sin(w0) / (2 * q);
         a0 = 1 + alpha;
         a1 = -2 * Math.cos(w0);
@@ -1737,7 +1737,7 @@ waveformSample(waveform, phase) {
     // scale the data so it's in the range of the new_values
     this.scale(Math.min.apply(Math, fp.data),Math.max.apply(Math, fp.data));
     // safeguard against mapping more than 1 second's worth samples to another pattern.
-    this.reduce(FACET_SAMPLE_RATE);
+    this.reduce(SAMPLE_RATE);
     let same_size_arrays = this.makePatternsTheSameSize(this, fp);
     let sequence = same_size_arrays[0];
     let new_values = same_size_arrays[1];
@@ -2331,7 +2331,7 @@ waveformSample(waveform, phase) {
     }
     stretchFactors.size(this.data.length);
     let outputArray = [];
-    let chunkSize = Math.round(FACET_SAMPLE_RATE / 128);
+    let chunkSize = Math.round(SAMPLE_RATE / 128);
     let skip_every = 0;
     for (let i = 0; i < this.data.length; i += chunkSize) {
         let chunk = this.data.slice(i, i + chunkSize);
@@ -2995,14 +2995,14 @@ waveformSample(waveform, phase) {
       });
     }
     let a_wav = new WaveFile();
-    a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', this.data);
+    a_wav.fromScratch(1, SAMPLE_RATE, '32f', this.data);
     fs.writeFileSync(`${folder}/${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 
   set (filename) {
     let a_wav = new WaveFile();
-    a_wav.fromScratch(1, FACET_SAMPLE_RATE, '32f', this.data);
+    a_wav.fromScratch(1, SAMPLE_RATE, '32f', this.data);
     fs.writeFileSync(`tmp${cross_platform_slash}${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
@@ -3090,7 +3090,7 @@ waveformSample(waveform, phase) {
       return array;
     }
     let result = [...array];
-    let fadeLength = Math.floor(0.002 * FACET_SAMPLE_RATE);
+    let fadeLength = Math.floor(0.002 * SAMPLE_RATE);
     for (let i = array.length - fadeLength; i < array.length; i++) {
       let t = (i - (array.length - fadeLength)) / fadeLength;
       result[i] = array[i] * (1 - t);
@@ -3120,7 +3120,7 @@ waveformSample(waveform, phase) {
       return arrays;
     }
     let result = [];
-    let fadeLength = Math.floor(0.002 * FACET_SAMPLE_RATE);
+    let fadeLength = Math.floor(0.002 * SAMPLE_RATE);
     for (let i = 0; i < arrays.length; i++) {
       result.push(...arrays[i].slice(0, -fadeLength));
       if (i < arrays.length - 1) {
@@ -3142,7 +3142,7 @@ waveformSample(waveform, phase) {
   }
 
   convertSamplesToSeconds(samps) {
-    return (Math.round((samps / FACET_SAMPLE_RATE) * 1000) / 1000);
+    return (Math.round((samps / SAMPLE_RATE) * 1000) / 1000);
   }
 
   flatten () {
@@ -3212,9 +3212,9 @@ waveformSample(waveform, phase) {
     let new_buff = Buffer.from(new_buff_str)
     out_buffer = Buffer.concat([in_buffer,new_buff]);
     let decodedAudio = wav.decode(out_buffer);
-    if ( decodedAudio.sampleRate != FACET_SAMPLE_RATE ) {
+    if ( decodedAudio.sampleRate != SAMPLE_RATE ) {
       // adjust for sample rate
-      return new FacetPattern().from(decodedAudio.channelData[channel_index]).speed(FACET_SAMPLE_RATE/decodedAudio.sampleRate).data;
+      return new FacetPattern().from(decodedAudio.channelData[channel_index]).speed(SAMPLE_RATE/decodedAudio.sampleRate).data;
     }
     else {
       // no adjustment needed
@@ -3257,29 +3257,29 @@ waveformSample(waveform, phase) {
   // END utility functions
 
   // frequency: hz. duration: samples (converted to seconds internally). damping and feedback both scaled 0-1. 
-  pluck(frequencies, duration = FACET_SAMPLE_RATE, damping = 0, feedback = 0.5) {
+  pluck(frequencies, duration = SAMPLE_RATE, damping = 0, feedback = 0.5) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
     duration = Math.round(duration);
     frequencies.size(duration);
-    duration = duration / FACET_SAMPLE_RATE;
+    duration = duration / SAMPLE_RATE;
     damping = Math.abs(Number(damping));
     feedback = Math.abs(Number(feedback));
     feedback = 0.5 + feedback * 0.5;
-    let numSamples = FACET_SAMPLE_RATE * duration;
+    let numSamples = SAMPLE_RATE * duration;
     let output = new Float32Array(numSamples);
     let string = new KarplusStrongString(frequencies.data[0], damping, feedback);
     for (let i = 0; i < numSamples; i++) {
         let frequency = frequencies.data[i];
         string.frequency = frequency;
-        string.bufferSize = Math.round(FACET_SAMPLE_RATE / frequency);
+        string.bufferSize = Math.round(SAMPLE_RATE / frequency);
         output[i] = string.process();
     }
     this.data = output;
     this.flatten().trim();
-    this.fadeoutSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((FACET_SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
 }
 
