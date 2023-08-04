@@ -17,16 +17,13 @@ let bpm = 90;
 let prev_bpm = 90;
 let voice_number_to_load = 1;
 let VOICES = 8;
-let voice_pattern_index = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: ""};
+let voice_allocator = initializeVoiceAllocator();;
 let current_relative_step_position = 0;
 let event_register = [];
 let transport_on = true;
 let meta_data = {
   bpm: [90]
 };
-let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
-let cross_platform_play_command = process.platform == 'win32' ? 'sox' : 'play';
-let cross_platform_sox_config = process.platform == 'win32' ? '-t waveaudio' : '';
 process.title = 'facet_transport';
 
 const editor_osc_server = new OSC({
@@ -78,13 +75,10 @@ app.post('/play', (req, res) => {
 app.post('/update', (req, res) => {
   // only set data if the transport was not stopped while the pattern was generated
   if (transport_on === true) {
-
     let posted_pattern = JSON.parse(req.body.pattern);
     let facet_pattern_name = posted_pattern.name.split('---')[0];
-
     if ( posted_pattern.sequence_data.length > 0 ) {
-      // set the voice this will play back on, send to Max and store for use in the tick() function
-      voice_pattern_index[voice_number_to_load] = posted_pattern.name;
+      allocateVoice(posted_pattern);
       udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`));
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step) => {
@@ -94,15 +88,11 @@ app.post('/update', (req, res) => {
             type: "audio",
             data: [],
             play_once: posted_pattern.play_once,
-            voice: voice_number_to_load
+            voice: voice_number_to_load,
+            fired: false
           }
         )
       });
-
-      voice_number_to_load++;
-      if ( voice_number_to_load > VOICES ) {
-        voice_number_to_load = 1;
-      }
     }
 
     if ( posted_pattern.notes.length > 0 ) {
@@ -115,7 +105,8 @@ app.post('/update', (req, res) => {
               position: (i/posted_pattern.notes.length),
               type: "note",
               data: note_data,
-              play_once: posted_pattern.play_once
+              play_once: posted_pattern.play_once,
+              fired: false
             }
           )
           for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
@@ -134,7 +125,8 @@ app.post('/update', (req, res) => {
                   channel: note_data.channel,
                   velocity: note_data.velocity,
                   duration: note_data.duration,
-                  play_once: posted_pattern.play_once
+                  play_once: posted_pattern.play_once,
+                  fired: false
                 },
               }
             )
@@ -156,7 +148,8 @@ app.post('/update', (req, res) => {
             position: (i/posted_pattern.cc_data.data.length),
             type: "cc",
             data: cc_object,
-            play_once: posted_pattern.play_once
+            play_once: posted_pattern.play_once,
+            fired: false
           }
         )
       }
@@ -174,7 +167,8 @@ app.post('/update', (req, res) => {
             position: (i/posted_pattern.pitchbend_data.data.length),
             type: "pitchbend",
             data: pb_object,
-            play_once: posted_pattern.play_once
+            play_once: posted_pattern.play_once,
+            fired: false
           }
         )
       }
@@ -192,7 +186,8 @@ app.post('/update', (req, res) => {
             position: (i/posted_pattern.osc_data.data.length),
             type: "osc",
             data: osc_object,
-            play_once: posted_pattern.play_once
+            play_once: posted_pattern.play_once,
+            fired: false
           }
         )
       }
@@ -232,6 +227,7 @@ app.post('/bpm', (req, res) => {
 app.post('/stop', (req, res) => {
   event_register = [];
   transport_on = false;
+  voice_allocator = initializeVoiceAllocator();
   if ( typeof midioutput !== 'undefined' ) {
     midioutput.sendAllNotesOff();
   }
@@ -242,12 +238,13 @@ app.post('/stop', (req, res) => {
   res.sendStatus(200);
 });
 
-const server = app.listen(3211);
+app.listen(3211);
 
 let expectedTime = Date.now() + EVENT_RESOLUTION_MS;
 let loop_start_time = Date.now();
-let bpm_allow_recalc = -1;
+let bpm_recalculation_counter = -1;
 let scaledBpm;
+let delay;
 // send bpm to Max
 udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
@@ -258,43 +255,35 @@ function tick() {
   let seconds_per_loop = 60 / loops_per_minute;
   let events_per_loop = seconds_per_loop * events_per_second;
   let relative_step_amount_to_add_per_loop = 1 / events_per_loop;
-  bpm_allow_recalc++;
+  bpm_recalculation_counter++;
   current_relative_step_position += relative_step_amount_to_add_per_loop;
   if ( current_relative_step_position > 1.00001 ) {
     current_relative_step_position = 0;
     bars_elapsed++;
     // tell pattern server to start processing next loop
     requestNewPatterns();
+    // increment loops since generation for all voices
+    updateVoiceAllocator();
+    // set all "fired" values to false at beginning of loop
+    resetEventRegister();
     udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     loop_start_time = Date.now();
   }
 
-  if ( bpm_allow_recalc % 8 == 0 ) {
-    scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
-  }
-  let calcBpm = typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ? scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] : bpm;
-  try {
-    // when the bpm is scaled to match steps, it can have more than 1 value per step - this always selects the first
-    if (typeof calcBpm == 'object') {
-      bpm = calcBpm[0];
-    }
-  } catch (e) {
-
-  }
-
-  if ( prev_bpm != bpm ) {
-    prev_bpm = bpm;
-    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
-    editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
-  }
+  checkForBpmRecalculation(events_per_loop);
+  loops_per_minute = bpm / 4;
+  seconds_per_loop = 60 / loops_per_minute;
+  events_per_loop = seconds_per_loop * events_per_second;
+  relative_step_amount_to_add_per_loop = 1 / events_per_loop;
 
   if ( transport_on === true ) {
     for (const [fp_name, fp_data] of Object.entries(event_register)) {
       let count_times_fp_played = 0;
       fp_data.forEach((event) => {
         if ( event.position >= current_relative_step_position
-          && event.position < (current_relative_step_position + relative_step_amount_to_add_per_loop) ) {
+          && (event.position < (current_relative_step_position + (relative_step_amount_to_add_per_loop * 16)) && event.fired === false ) ) {
+            event.fired = true;
           // fire all events for this facetpattern matching the current step
           if ( event.type === "audio" ) {
             // play any audio files at this step
@@ -356,11 +345,64 @@ function tick() {
       });
     }
   }
-  let delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
+  delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
   editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
 
-  // immediately move to next quarter step if delays start adding up
+  checkIfTransportShouldMoveToNextQuarterNote(seconds_per_loop,relative_step_amount_to_add_per_loop);
+
+  setTimeout(tick, delay);
+}
+
+tick();
+
+function reportTransportMetaData() {
+  // pass along the current bpm and bars elapsed, if the transport is running
+  if ( transport_on === true ) {
+    axios.post('http://localhost:1123/meta',
+    {
+      bpm: JSON.stringify(bpm),
+      bars_elapsed: JSON.stringify(bars_elapsed)
+    }
+  )
+  .catch(function (error) {
+    console.log(`error posting metadata to pattern server: ${error}`);
+  });
+  }
+}
+
+function requestNewPatterns () {
+  if ( bars_elapsed > 0 ) {
+    // tell server to generate any new patterns
+    axios.get('http://localhost:1123/update');
+  }
+}
+
+function resetEventRegister() {
+  for (const [fp_name, fp_data] of Object.entries(event_register)) {
+    for (let i = 0; i < event_register[fp_name].length; i++) {
+      event_register[fp_name][i].fired = false;
+    }
+  }
+}
+
+function checkForBpmRecalculation (events_per_loop) {
+  if ( bpm_recalculation_counter % 8 == 0 ) {
+    scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
+  }
+  let calcBpm = typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ? scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] : bpm;
+  if (Array.isArray(calcBpm)) {
+    bpm = Number(calcBpm[0]);
+  }
+  if ( prev_bpm != bpm || bpm_recalculation_counter % 8 == 0 ) {
+    prev_bpm = bpm;
+    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
+    editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
+  }
+}
+
+function checkIfTransportShouldMoveToNextQuarterNote(seconds_per_loop,relative_step_amount_to_add_per_loop) {
+  // immediately move to next quarter note if delays start adding up
   if ( Date.now() - loop_start_time > seconds_per_loop * 1000 ) {
     current_relative_step_position = 1;
     loop_start_time = Date.now();
@@ -391,32 +433,51 @@ function tick() {
       current_relative_step_position = 0.75;
     }
   }
-
-  setTimeout(tick, delay);
 }
 
-tick();
-
-function reportTransportMetaData() {
-  // pass along the current bpm and bars elapsed, if the transport is running
-  if ( transport_on === true ) {
-    axios.post('http://localhost:1123/meta',
-    {
-      bpm: JSON.stringify(bpm),
-      bars_elapsed: JSON.stringify(bars_elapsed)
+function allocateVoice(posted_pattern) {
+  let new_voice = new AudioPlaybackVoice(posted_pattern);
+  // determine the voice number where new_voice can go
+  let new_voice_found = false;
+  let voice_checks = 0;
+  while ( new_voice_found == false && voice_checks < VOICES ) {
+    if ( voice_allocator[voice_number_to_load].overwritable === true || voice_allocator[voice_number_to_load] === false ) {
+      // new voice found
+      voice_allocator[voice_number_to_load] = new_voice;
+      new_voice_found = true;
     }
-  )
-  .catch(function (error) {
-    console.log(`error posting metadata to pattern server: ${error}`);
-  });
+    else {
+      // continue looking for available voices
+      voice_checks++;
+    }
+    voice_number_to_load++;
+      if ( voice_number_to_load > VOICES ) {
+        voice_number_to_load = 1;
+      }
+  }
+  if ( new_voice_found === false ) {
+    // all voices busy - steal the one at the current index after looping through
+    voice_allocator[voice_number_to_load] = new_voice;
   }
 }
 
-function requestNewPatterns () {
-  if ( bars_elapsed > 0 ) {
-    // tell server to generate any new patterns
-    axios.get('http://localhost:1123/update');
-  }
+function initializeVoiceAllocator() {
+	let obj = {};
+	for (let i = 1; i <= VOICES; i++) {
+		obj[i] = false;
+	}
+	return obj;
+}
+
+function updateVoiceAllocator() {
+	for (let key in voice_allocator) {
+		if (voice_allocator[key] instanceof AudioPlaybackVoice) {
+			voice_allocator[key].loops_since_generation++;
+			if (voice_allocator[key].loops_since_generation >= voice_allocator[key].every) {
+				voice_allocator[key] = false;
+			}
+		}
+	}
 }
 
 function scalePatternToSteps(pattern,steps) {
@@ -457,3 +518,14 @@ function simpleReduce (data, new_size) {
   return new FacetPattern().from(reduced_sequence).reduce(new_size).data;
 }
 
+class AudioPlaybackVoice {
+	constructor(posted_pattern) {
+		this.name = posted_pattern.name;
+		this.keep = posted_pattern.do_not_regenerate;
+		this.every = posted_pattern.regenerate_every_n_loops;
+    this.loops_since_generation = 0;
+		this.once = posted_pattern.play_once;
+		this.bpm = posted_pattern.bpm_at_generation_time;
+		this.overwritable = posted_pattern.do_not_regenerate === true || posted_pattern.regenerate_every_n_loops > 1 ? false : true;
+	}
+}

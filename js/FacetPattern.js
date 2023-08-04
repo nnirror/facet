@@ -17,7 +17,6 @@ class FacetPattern {
   constructor (name) {
     this.name = name ? name : Math.random();
     this.bpm_pattern = false;
-    this.bpm_at_generation_time = false;
     this.cc_data = [];
     this.chord_intervals = [];
     this.dacs = '1 1';
@@ -2385,7 +2384,25 @@ waveformSample(waveform, phase) {
   stretchto(samps) {
     let stretchFactor = samps / this.data.length;
     this.stretch(stretchFactor);
-    this.reduce(samps);
+    this.resizeInner(samps);
+    return this;
+  }
+
+  resizeInner (newSize) {
+    let newData = [];
+    let origSize = this.data.length;
+    let scale = (origSize - 1) / (newSize - 1);
+    for (let i = 0; i < newSize; i++) {
+        let j = i * scale;
+        let index = Math.floor(j);
+        let fraction = j - index;
+        if (index + 1 < origSize) {
+            newData[i] = this.data[index] * (1 - fraction) + this.data[index + 1] * fraction;
+        } else {
+            newData[i] = this.data[index];
+        }
+    }
+    this.data = newData;
     return this;
   }
 
@@ -3202,6 +3219,11 @@ waveformSample(waveform, phase) {
   getWholeNoteNumSamples () {
     let n1Value = this.env.match(/n1\s*=\s*(\d+)/)[1];
     return n1Value;
+  }
+
+  getBPM () {
+    let bpmValue = this.env.match(/bpm\s*=\s*(\d+)/)[1];
+    return bpmValue;
   }
 
   stringLeftRotate(str, d) {
