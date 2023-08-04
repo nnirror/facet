@@ -58,7 +58,6 @@ module.exports = {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
             }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
-              fp.data = sliceEndFade(fp.data);
               if ( fp.dacs == '1' ) {
                   // by default, channels 1 and 2 are on. If _only_ channel 1 was
                   // specified via .channel(), turn off channel 2.

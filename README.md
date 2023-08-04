@@ -951,7 +951,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').randsamp().splice(_.noise(n16),0.5).play(); // inserts a 16th note of noise halfway through the random sample`
 ---
-- **sup** ( _FacetPattern_, _startPositionPattern_, _maxFrameSize_ = this.length )
+- **sup** ( _FacetPattern_, _startPositionPattern_, _maxFrameSize_ = whole_note_samples )
 	- superposes a second FacetPattern onto the first. The `startPositionPattern` value can be any value between 0 and 1, or an array, or a FacetPattern. It controls the relative position(s) in the input FacetPattern to begin superposing `FacetPattern`. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
 	- example:
 		- `$('example').silence(n1).sup(_.randsamp(),0,n1).sup(_.randsamp(),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`

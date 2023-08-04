@@ -15,7 +15,9 @@ const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 let bars_elapsed = 0;
 let bpm = 90;
 let prev_bpm = 90;
-let next_step_expected_run_time = new Date().getTime() + EVENT_RESOLUTION_MS;
+let voice_number_to_load = 1;
+let VOICES = 8;
+let voice_pattern_index = {1: "", 2: "", 3: "", 4: "", 5: "", 6: "", 7: "", 8: ""};
 let current_relative_step_position = 0;
 let event_register = [];
 let transport_on = true;
@@ -69,7 +71,7 @@ app.post('/meta', (req, res) => {
 app.post('/play', (req, res) => {
   transport_on = true;
   // open audio playback gate in Max
-  udp_osc_server.send(new OSC.Message(`/play`, 1));
+  udp_osc_server.send(new OSC.Message(`/on`, 1));
   res.sendStatus(200);
 });
 
@@ -81,6 +83,9 @@ app.post('/update', (req, res) => {
     let facet_pattern_name = posted_pattern.name.split('---')[0];
 
     if ( posted_pattern.sequence_data.length > 0 ) {
+      // set the voice this will play back on, send to Max and store for use in the tick() function
+      voice_pattern_index[voice_number_to_load] = posted_pattern.name;
+      udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`));
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step) => {
         event_register[facet_pattern_name].push(
@@ -88,12 +93,16 @@ app.post('/update', (req, res) => {
             position: step,
             type: "audio",
             data: [],
-            filename: posted_pattern.name,
-            bpm_at_generation_time: posted_pattern.bpm_at_generation_time,
-            play_once: posted_pattern.play_once
+            play_once: posted_pattern.play_once,
+            voice: voice_number_to_load
           }
         )
       });
+
+      voice_number_to_load++;
+      if ( voice_number_to_load > VOICES ) {
+        voice_number_to_load = 1;
+      }
     }
 
     if ( posted_pattern.notes.length > 0 ) {
@@ -227,7 +236,7 @@ app.post('/stop', (req, res) => {
     midioutput.sendAllNotesOff();
   }
   // close audio playback gate in Max
-  udp_osc_server.send(new OSC.Message(`/play`, 0));
+  udp_osc_server.send(new OSC.Message(`/on`, 0));
   // clear out any dynamic BPM patterns, so BPM stays at whatever value it was prior to stopping
   meta_data.bpm = bpm;
   res.sendStatus(200);
@@ -244,7 +253,6 @@ udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 
 function tick() {
-  // calculate based on bpm how many ticks at EVENT_RESOLUTION_MS equal a full loop
   let events_per_second = 1000 / EVENT_RESOLUTION_MS;
   let loops_per_minute = bpm / 4;
   let seconds_per_loop = 60 / loops_per_minute;
@@ -257,7 +265,6 @@ function tick() {
     bars_elapsed++;
     // tell pattern server to start processing next loop
     requestNewPatterns();
-    // send bpm to Max
     udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     loop_start_time = Date.now();
@@ -291,10 +298,9 @@ function tick() {
           // fire all events for this facetpattern matching the current step
           if ( event.type === "audio" ) {
             // play any audio files at this step
-            // include a calculated "tempo" argument to handle the possibility of a difference between the fp.bpm_at_generation_time and the current bpm
             if ( count_times_fp_played < 1 ) {
               // osc event to play back audio file in Max (or elsewhere)
-              udp_osc_server.send(new OSC.Message(`/facet_play_audio_file`, `${event.filename}-out.wav ${event.bpm_at_generation_time}`));
+              udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`));
             }
             count_times_fp_played++;
           }
@@ -354,23 +360,37 @@ function tick() {
   editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
 
-  if (Date.now() - loop_start_time > seconds_per_loop * 1000) {
+  // immediately move to next quarter step if delays start adding up
+  if ( Date.now() - loop_start_time > seconds_per_loop * 1000 ) {
     current_relative_step_position = 1;
     loop_start_time = Date.now();
+    delay = 0;
   }
-  if (current_relative_step_position >= .2 && current_relative_step_position < .25 + relative_step_amount_to_add_per_loop) {
+  if (current_relative_step_position >= .99 && current_relative_step_position < 1) {
+    if (Date.now() - loop_start_time > seconds_per_loop * 1000) {
+      current_relative_step_position = 1;
+      loop_start_time = Date.now();
+      delay = 0;
+    }
+  }
+  else if (current_relative_step_position >= .2 && current_relative_step_position < .25 + relative_step_amount_to_add_per_loop) {
     if (Date.now() - loop_start_time > seconds_per_loop * .25 * 1000) {
+      delay = 0;
       current_relative_step_position = 0.25;
     }
-  } else if (current_relative_step_position >= .45 && current_relative_step_position < .5 + relative_step_amount_to_add_per_loop) {
+  }
+  else if (current_relative_step_position >= .45 && current_relative_step_position < .5 + relative_step_amount_to_add_per_loop) {
     if (Date.now() - loop_start_time > seconds_per_loop * .5 * 1000) {
+      delay = 0;
       current_relative_step_position = 0.5;
     }
-  } else if (current_relative_step_position >= .7 && current_relative_step_position < .75 + relative_step_amount_to_add_per_loop) {
+  }
+  else if (current_relative_step_position >= .7 && current_relative_step_position < .75 + relative_step_amount_to_add_per_loop) {
     if (Date.now() - loop_start_time > seconds_per_loop * .75 * 1000) {
+      delay = 0;
       current_relative_step_position = 0.75;
     }
-  } 
+  }
 
   setTimeout(tick, delay);
 }
