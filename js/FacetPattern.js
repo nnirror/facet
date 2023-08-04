@@ -1744,10 +1744,13 @@ waveformSample(waveform, phase) {
     this.data = lte_sequence;
     return this;
   }
-
+f
   map (fp) {
-    if ( !this.isFacetPattern(fp) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof fp}`;
+    if ( !this.isFacetPattern(fp) && !Array.isArray(fp) ) {
+      throw `input must be a FacetPattern or array; type found: ${typeof fp}`;
+    }
+    if ( Array.isArray(fp) === true ) {
+      fp = new FacetPattern().from(fp);
     }
     // scale the data so it's in the range of the new_values
     this.scale(Math.min.apply(Math, fp.data),Math.max.apply(Math, fp.data));
