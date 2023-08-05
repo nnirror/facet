@@ -553,7 +553,7 @@ function updateVoiceAllocator() {
 	for (let key in voice_allocator) {
 		if (voice_allocator[key] instanceof AudioPlaybackVoice) {
 			voice_allocator[key].loops_since_generation++;
-			if (voice_allocator[key].loops_since_generation >= voice_allocator[key].every) {
+			if (voice_allocator[key].loops_since_generation >= voice_allocator[key].every && voice_allocator[key].every > 1 ) {
 				voice_allocator[key] = false;
 			}
 		}
