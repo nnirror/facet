@@ -14,6 +14,11 @@ function runCode (code) {
   user_input = commentStripper.stripComments(code);
   user_input = delimitEndsOfCommands(user_input);
   let commands = splitCommandsOnDelimiter(user_input);
+  if (env.length == 0) {
+    // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
+    // in that case, try loading again
+    env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
+  }
   Object.values(commands).forEach(command => {
     let original_command = replaceDelimiterWithSemicolon(command);
     command = formatCode(command);

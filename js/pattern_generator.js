@@ -53,7 +53,6 @@ module.exports = {
               }
             }
             fp.name = fp.name + `---${Date.now()}`;
-            fp.bpm_at_generation_time = bpm;
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
             }
