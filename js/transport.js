@@ -16,7 +16,7 @@ let bars_elapsed = 0;
 let bpm = 90;
 let prev_bpm = 90;
 let voice_number_to_load = 1;
-let VOICES = 8;
+let VOICES = 16;
 let voice_allocator = initializeVoiceAllocator();;
 let current_relative_step_position = 0;
 let event_register = [];
@@ -410,12 +410,6 @@ function checkForBpmRecalculation (events_per_loop) {
 }
 
 function checkIfTransportShouldMoveToNextQuarterNote(seconds_per_loop,relative_step_amount_to_add_per_loop) {
-  // immediately move to next quarter note if delays start adding up
-  if ( Date.now() - loop_start_time > seconds_per_loop * 1000 ) {
-    current_relative_step_position = 1;
-    loop_start_time = Date.now();
-    delay = 0;
-  }
   if (current_relative_step_position >= .99 && current_relative_step_position < 1) {
     if (Date.now() - loop_start_time > seconds_per_loop * 1000) {
       current_relative_step_position = 1;

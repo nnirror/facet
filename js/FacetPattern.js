@@ -9,7 +9,7 @@ const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const curve_calc = require('./lib/curve_calc.js');
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const FFT = require('./lib/fft.js');
-const { Midi, Scale } = require('tonal');
+const { Scale } = require('tonal');
 const readimage = require('readimage');
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
@@ -757,7 +757,6 @@ class FacetPattern {
   }
 
   key (key_string = "C major") {
-    // get the chroma: Midi.pcsetNearest(Scale.get(key_string).chroma)
     let chroma_key = Scale.get(key_string).chroma;
     let key_letter = key_string.split(' ')[0].toLowerCase();
 
