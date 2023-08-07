@@ -289,7 +289,7 @@ function tick() {
       let count_times_fp_played = 0;
       fp_data.forEach((event) => {
         if ( event.position >= current_relative_step_position
-          && (event.position < (current_relative_step_position + (relative_step_amount_to_add_per_loop * range_of_steps_to_check)) && event.fired === false ) ) {
+          && (event.position < (current_relative_step_position + (relative_step_amount_to_add_per_loop * range_of_steps_to_check)) && (event.fired === false || event.type != "audio") ) ) {
             event.fired = true;
           // fire all events for this facetpattern matching the current step
           if ( event.type === "audio" ) {
@@ -297,9 +297,9 @@ function tick() {
             if ( count_times_fp_played < 1 ) {
               let pre_send_delay_ms = 0;
               // if the /play message is sent less than 100ms after the /load message, the file might not have finished
-              //  loading into sfplay~ yet, so set a 30ms delay to give the loading time to complete
+              //  loading into sfplay~ yet, so set a 10ms delay to give the loading time to complete
               if (Date.now() - event.loadtime < 100) {
-                pre_send_delay_ms = 30;
+                pre_send_delay_ms = 10;
               }
               // osc event to play back audio file in Max (or elsewhere)
               setTimeout(()=>{

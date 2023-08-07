@@ -169,6 +169,8 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
 
+You need to connect the MIDI device you want to use before starting Facet.
+
 - **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1 )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
 	- The `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
@@ -228,9 +230,9 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitchbend event for every value in the FacetPattern's data.
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
-	- _Note_: This function is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between 0 and 1.
+	- _Note_: This function is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between -1 and 1, with 0 meaning no pitchbend.
 	- example:
-		- `$('example').sine(1).scale(0,1).size(128).pitchbend();`
+		- `$('example').sine(1).size(128).pitchbend();`
 
 ### Methods for controlling transport BPM
 - **bpm** ( )

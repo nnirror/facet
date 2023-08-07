@@ -1,0 +1,51 @@
+Be sure to connect the MIDI device you want to use before starting Facet!
+
+1. MIDI notes
+
+// create 16 values of noise, scale those values between 36 and 80, and play them over the course of the loop, resulting in 16th notes:
+$('mynotes').noise(16).scale(36,80).note();
+
+// via .key(), move all notes to the closet note in c major
+$('mynotes').noise(16).scale(36,80).key('c major').note();
+
+// via .chord(), make each note a maj7 chord
+$('mynotes').noise(16).scale(36,80).key('c major').chord('maj7').note();
+
+// use a sine wave with 64 values to play those same notes
+$('mynotes').sine(1).size(64).scale(36,80).key('c major').chord('maj7').note();
+
+// add dynamic velocity, ramping from 0 to 127 over the course of the loop
+$('mynotes').sine(1).size(64).scale(36,80).key('c major').chord('maj7').note(_.ramp(0,127,64));
+
+// add dynamic duration as well, starting at 65ms per note at the beginning of the loop, ending at 1000ms per note
+$('mynotes').sine(1).size(64).scale(36,80).key('c major').chord('maj7').note(_.ramp(0,127,64),_.from([65,125,250,500,1000]));
+
+// send out MIDI channel 16
+$('mynotes').sine(1).size(64).scale(36,80).key('c major').chord('maj7').note(_.ramp(0,127,64),_.from([65,125,250,500,1000]),16);
+
+// via .shuffle(), randomize the note order
+$('mynotes').sine(1).size(64).scale(36,80).shuffle().key('c major').chord('maj7').note(_.ramp(0,127,64),_.from([65,125,250,500,1000]),16);
+
+// via .sort(), sort the note order ascending
+$('mynotes').sine(1).size(64).scale(36,80).sort().key('c major').chord('maj7').note(_.ramp(0,127,64),_.from([65,125,250,500,1000]),16);
+
+// descending note order
+$('mynotes').sine(1).size(64).scale(36,80).sort().reverse().key('c major').chord('maj7').note(_.ramp(0,127,64),_.from([65,125,250,500,1000]),16);
+
+2. MIDI cc
+
+You can use build MIDI mappings by sending one command at a time into a DAW.
+
+// send a ramp from 0 to 1 out default cc number 70
+$('cc').ramp(0,1,128).cc();
+
+// send it out cc 71 instead
+$('cc').ramp(0,1,128).cc(71);
+
+3. MIDI pitchbend
+
+// LFO pitchbend
+$('mypitchbend').sine(1).size(128).pitchbend();
+
+// out channel 16
+$('mypitchbend').sine(1).size(128).pitchbend(16);
