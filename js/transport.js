@@ -90,7 +90,8 @@ app.post('/update', (req, res) => {
             data: [],
             play_once: posted_pattern.play_once,
             voice: voice_number_to_load,
-            fired: false
+            fired: false,
+            loadtime: Date.now()
           }
         )
       });
@@ -294,8 +295,16 @@ function tick() {
           if ( event.type === "audio" ) {
             // play any audio files at this step
             if ( count_times_fp_played < 1 ) {
+              let pre_send_delay_ms = 0;
+              // if the /play message is sent less than 100ms after the /load message, the file might not have finished
+              //  loading into sfplay~ yet, so set a 30ms delay to give the loading time to complete
+              if (Date.now() - event.loadtime < 100) {
+                pre_send_delay_ms = 30;
+              }
               // osc event to play back audio file in Max (or elsewhere)
-              udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`));
+              setTimeout(()=>{
+                udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
+              },pre_send_delay_ms);
             }
             count_times_fp_played++;
           }
