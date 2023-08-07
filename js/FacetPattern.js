@@ -1048,7 +1048,7 @@ waveformSample(waveform, phase) {
       feedback *= 0.75;
     }
     let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
-    let delayedArray = new Array(this.data.length + maxDelayAmount * maxFeedbackIterations).fill(0);
+    let delayedArray = new Array(Math.max(0, this.data.length + maxDelayAmount * maxFeedbackIterations)).fill(0);
     for (let i = 0; i < maxFeedbackIterations; i++) {
         let gain = Math.pow(feedback, i);
         for (let j = 0; j < this.data.length; j++) {
@@ -2802,6 +2802,7 @@ f
   // BEGIN special operations
   bpm () {
     this.bpm_pattern = new FacetPattern().from(this.data);
+    this.reduce(256);
     return this;
   }
 
@@ -3207,9 +3208,13 @@ f
   }
 
   getEnv() {
-    return fs.readFileSync('js/env.js', 'utf8', (err, data) => {
-      return data;
-    });
+    let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
+    if (env.length == 0) {
+      // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
+      // in that case, try loading again
+      env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
+    }
+    return env;
   }
 
   getUtils() {

@@ -223,6 +223,7 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 ### Methods for controlling transport BPM
 - **bpm** ( )
 	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
+	- BPM patterns have a 256 value maximum.
 	- example:
 		- `$('example').from([20,40,80,160,320]).shuffle().bpm(); // each loop will be all 5 of these BPM, randomly ordered`
 
