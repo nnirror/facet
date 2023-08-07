@@ -79,7 +79,8 @@ app.post('/update', (req, res) => {
     let facet_pattern_name = posted_pattern.name.split('---')[0];
     if ( posted_pattern.sequence_data.length > 0 ) {
       allocateVoice(posted_pattern);
-      udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`));
+      let is_mono = posted_pattern.pan_data === false && posted_pattern.dacs == '1 1' ? 1 : 0;
+      udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time} ${is_mono}`));
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step) => {
         event_register[facet_pattern_name].push(

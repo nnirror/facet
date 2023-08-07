@@ -62,9 +62,6 @@ module.exports = {
                   // specified via .channel(), turn off channel 2.
                   fp.dacs = '1 0';
               }
-              if ( fp.dacs != '1' && fp.pan_data === false && fp.sequence_data.length > 0 ) {
-                fp.pan_data = 0;
-              }
               if ( fp.pan_data !== false ) {
                 // if a panning pattern was included, handle separately: generate files based on the number of channels and apply gain based on the panning pattern
                 let dacs = fp.dacs.split(' ');
