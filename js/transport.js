@@ -299,7 +299,7 @@ function tick() {
               // if the /play message is sent less than 100ms after the /load message, the file might not have finished
               //  loading into sfplay~ yet, so set a 10ms delay to give the loading time to complete
               if (Date.now() - event.loadtime < 100) {
-                pre_send_delay_ms = 10;
+                pre_send_delay_ms = 30;
               }
               // osc event to play back audio file in Max (or elsewhere)
               setTimeout(()=>{
@@ -404,10 +404,11 @@ function checkForBpmRecalculation (events_per_loop) {
   if ( bpm_recalculation_counter % 8 == 0 ) {
     scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
   }
-  let calcBpm = typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ? scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] : bpm;
-  if (Array.isArray(calcBpm)) {
-    bpm = Number(calcBpm[0]);
+
+  if ( typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ) {
+    bpm = scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1];
   }
+
   if ( prev_bpm != bpm ) {
     bpm_was_changed_this_tick = true;
     prev_bpm = bpm;
@@ -564,42 +565,14 @@ function updateVoiceAllocator() {
 	}
 }
 
-function scalePatternToSteps(pattern,steps) {
-  // scale note pattern onto a bar of length _steps_.
-  if (pattern.length < steps ) {
-    let upscaled_data = [];
-    let copies_of_each_value = Math.floor(steps/pattern.length) + 1;
-    for (var n = 0; n < pattern.length; n++) {
-      let i = 0;
-      while (i < copies_of_each_value) {
-        upscaled_data.push(pattern[n]);
-        i++;
-      }
-    }
-    return simpleReduce(upscaled_data, steps);
+function scalePatternToSteps(pattern, steps) {
+  let result = [];
+  let scale = steps / pattern.length;
+  for (let i = 0; i < steps; i++) {
+      let index = Math.floor(i / scale);
+      result.push(pattern[index]);
   }
-  else {
-    // downscale
-    return simpleReduce(pattern, steps);
-  }
-}
-
-function simpleReduce (data, new_size) {
-  let orig_size = data.length;
-  let num_values_per_step = Math.floor(orig_size / new_size);
-  if (num_values_per_step < 1) {
-    num_values_per_step = 1;
-  }
-  let reduced_sequence = [];
-  for ( let i = 0; i < data.length; i+= num_values_per_step ) {
-    let step_data = [];
-    for (var a = 0; a < num_values_per_step; a++) {
-      step_data.push(data[i+a]);
-      // add each step
-    }
-    reduced_sequence.push(step_data);
-  }
-  return new FacetPattern().from(reduced_sequence).reduce(new_size).data;
+  return result;
 }
 
 class AudioPlaybackVoice {
