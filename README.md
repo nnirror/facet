@@ -12,9 +12,10 @@ Facet currently runs on MacOS, Linux, and Windows.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
 5. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
 6. In a browser tab, navigate to http://localhost:1124. This is the browser window with the code editor.
-7. If using Max: Open File Preferences, click "Add Path", and add the Facet repo directory. Make sure to select the Subfolders checkbox. Create a new patcher, and add a "facet" object. Connect its left outlet (audio channel 1) and middle outlet (audio channel 2) to a DAC.
-8. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set. Check that the track is not muted.
-9. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing. Hit `[ctrl + .]` to stop.
+7. Open Max, or if using Max for Live, click the Edit Button to launch the Max Editor. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
+8. If using Max: Create a new patcher, and add a "facet" object. Connect its left outlet (audio channel 1) and middle outlet (audio channel 2) to a DAC.
+9. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set.
+10. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
 
 ## Facet commands
 
@@ -58,8 +59,9 @@ Below the text editor, there are several UI elements which control the servers r
 ### Key commands
 
 - Run command(s): `[ctrl + enter]` or `[ctrl + r]`. All commands not separated by multiple newlines will run together.
-- Stop playback: `[ctrl + .]` or `[ctrl + ?]`
+- Stop playback: `[ctrl + .]` or `[ctrl + /]`
 - Stop regenerating patterns: `[ctrl + ,]`
+- Autocomplete / list methods: `[ctrl + space]`. This will list all available methods including their arguments in a dropdown menu, filtered by the text preceding the cursor position. If only one matching method is found, it will autocomplete that method.
 
 ### Running "npm run facet"
 
@@ -70,6 +72,16 @@ A server, known as the `process manager`, starts up on http://localhost:5831. Th
 1. The `transport server` starts up on http://localhost:3211. This server is responsible for handling the timing and playback of audio, MIDI, and OSC events.
 
 2. The `pattern generator` server starts up on http://localhost:1123. This server listens to requests from the text editor UI in the browser located at http://localhost:1124 and interprets those commands into data. If the pattern is intended to be played back as audio, a corresponding .wav file will be stored in the `tmp/` subdirectory in the Facet repo. Otherwise, if the pattern is intended for MIDI or OSC output, the data will be posted directly to the transport server.
+
+### Max / Max for Live
+
+In order to play audio files generated with Facet, Max or Max for Live is required. (It is possible, however, to use Facet without Max, for only MIDI and OSC output.)
+
+The necessary Max patchers are included in this repo. Make sure to configure File Preferences in Max (step 7 from the getting started section above) in order for these patchers to work properly.
+
+If running Max: the `facet.maxpat` patcher has 4 individual channels of audio output plus a fifth outlet for passing OSC commands into your patcher.
+
+If running Max for Live: the `facet.axmd` and `facet_4ch.amxd` Max for Live devices allow for stereo and 4 channel audio outputs in Ableton Live, respectively. To access the third and fourth channels of `facet_4ch.amxd`, create a second track and select input channels 3/4 from the input track where `facet_4ch.amxd` is running.
 
 ### Variables
 
@@ -103,13 +115,13 @@ For example: `$('example').noise(SAMPLE_RATE).play(); // generate and continuall
 
 ## Global event resolution
 
-By default, Facet checks every 4 milliseconds whether it needs to fire any events that produce output, such as playing audio, MIDI, or osc. You can change  `EVENT_RESOLUTION_MS` in `js/config.js` to set a different integer value. Slower speeds (e.g. 20 = 20ms) will produce less tightly-timed events but can help make it possible for Facet to run on computers with less CPU resources, at the expense of slight timing accuracy. Faster speeds (e.g. 2 = 2ms) will produce tighter event scheduling but can overload computers with less CPU resources.
+By default, Facet checks every 10 milliseconds whether it needs to fire any events that produce output, such as playing audio, MIDI, or osc. You can change  `EVENT_RESOLUTION_MS` in `js/config.js` to set a different integer value. Slower speeds (e.g. 20 = 20ms) will produce less tightly-timed events but can help make it possible for Facet to run on computers with less CPU resources, at the expense of slight timing accuracy. Faster speeds (e.g. 4 = 4ms) will produce tighter event scheduling but can overload computers with less CPU resources.
 
 ## Command reference
 
 ### Outputs
 
-Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default. In order to only regenerate every n loops, use the `.every()` function. In order to only play back once, use the `.once()` function.
+Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. By default, patterns will continually regenerate each loop. In order to only regenerate every n loops, use the `.every()` function. In order to only play back once, use the `.once()` function.
 
 ### Audio output
 - **channel** ( _channels_ )
