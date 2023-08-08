@@ -3356,7 +3356,7 @@ f
 
   // maxFrameSize allows you to hard-code the range that the data will get appended to, so that if you're
   // iteratively superposing stuff, the relative positions don't change as you add stuff to the data
-  sup (addPattern, startPositions, maxFrameSize = this.getWholeNoteNumSamples() ) {
+  sup (addPattern, startPositions = 0, maxFrameSize = this.getWholeNoteNumSamples() ) {
     if ( !this.isFacetPattern(addPattern) ) {
       throw `input must be a FacetPattern object; type found: ${typeof addPattern}`;
     }

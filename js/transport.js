@@ -244,6 +244,7 @@ let bpm_recalculation_counter = -1;
 let scaledBpm;
 let delay;
 let bpm_was_changed_this_tick = false;
+let bpm_was_changed_this_loop = false;
 // send bpm to Max
 udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
@@ -268,6 +269,7 @@ function tick() {
     udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     loop_start_time = Date.now();
+    bpm_was_changed_this_loop = false;
   }
 
   checkForBpmRecalculation(events_per_loop);
@@ -359,6 +361,14 @@ function tick() {
   delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
   editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
+
+  // hard-reset loop position if bpm has been static for the entire loop and an entire loop of time has passed
+  if ( bpm_was_changed_this_loop === false && Date.now() - loop_start_time > seconds_per_loop * 1000 ) {
+    current_relative_step_position = 1;
+    loop_start_time = Date.now();
+    delay = 0;
+  }
+
   setTimeout(tick, delay);
 }
 
@@ -405,6 +415,7 @@ function checkForBpmRecalculation (events_per_loop) {
 
   if ( prev_bpm != bpm ) {
     bpm_was_changed_this_tick = true;
+    bpm_was_changed_this_loop = true;
     prev_bpm = bpm;
     udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
