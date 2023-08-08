@@ -359,8 +359,6 @@ function tick() {
   delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
   editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
-
-  checkIfTransportShouldMoveToNextQuarterNote(seconds_per_loop,relative_step_amount_to_add_per_loop);
   setTimeout(tick, delay);
 }
 
@@ -413,106 +411,6 @@ function checkForBpmRecalculation (events_per_loop) {
   }
   else {
     bpm_was_changed_this_tick = false;
-  }
-}
-
-function checkIfTransportShouldMoveToNextQuarterNote(seconds_per_loop,relative_step_amount_to_add_per_loop) {
-  if (current_relative_step_position >= .99 && current_relative_step_position < 1) {
-    if (Date.now() - loop_start_time > seconds_per_loop * 1000) {
-      current_relative_step_position = 1;
-      loop_start_time = Date.now();
-      delay = 0;
-    }
-  }
-  else if (current_relative_step_position >= .0525 && current_relative_step_position < .0625 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .125 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.0625;
-    }
-  }
-  else if (current_relative_step_position >= .115 && current_relative_step_position < .125 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .125 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.125;
-    }
-  }
-  else if (current_relative_step_position >= .1775 && current_relative_step_position < .1875 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .1875 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.1875;
-    }
-  }
-  else if (current_relative_step_position >= .24 && current_relative_step_position < .25 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .25 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.25;
-    }
-  }
-  else if (current_relative_step_position >= .3025 && current_relative_step_position < .3125 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .3125 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.3125;
-    }
-  }
-  else if (current_relative_step_position >= .365 && current_relative_step_position < .375 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .375 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.375;
-    }
-  }
-  else if (current_relative_step_position >= .4275 && current_relative_step_position < .4375 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .4375 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.4375;
-    }
-  }
-  else if (current_relative_step_position >= .49 && current_relative_step_position < .5 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .5 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.5;
-    }
-  }
-  else if (current_relative_step_position >= .5525 && current_relative_step_position < .5625 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .5625 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.5625;
-    }
-  }
-  else if (current_relative_step_position >= .615 && current_relative_step_position < .625 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .625 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.625;
-    }
-  }
-  else if (current_relative_step_position >= .6775 && current_relative_step_position < .6875 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .6875 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.6875;
-    }
-  }
-  else if (current_relative_step_position >= .74 && current_relative_step_position < .75 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .75 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.75;
-    }
-  }
-  else if (current_relative_step_position >= .8025 && current_relative_step_position < .8125 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .8125 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.8125;
-    }
-  }
-  else if (current_relative_step_position >= .865 && current_relative_step_position < .875 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .875 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.875;
-    }
-  }
-  else if (current_relative_step_position >= .9275 && current_relative_step_position < .9375 + relative_step_amount_to_add_per_loop) {
-    if (Date.now() - loop_start_time > seconds_per_loop * .9375 * 1000) {
-      delay = 0;
-      current_relative_step_position = 0.9375;
-    }
   }
 }
 
