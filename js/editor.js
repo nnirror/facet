@@ -2,7 +2,8 @@ var cm = CodeMirror(document.body, {
   value: ``,
   mode:  "javascript",
   theme: "mbo",
-  lineWrapping: true
+  lineWrapping: true,
+  lint: {options: {esversion: 2021, asi: true}}
 });
 
 let mousex = 1, mousey = 1;
