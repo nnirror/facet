@@ -1923,6 +1923,13 @@ f
     return this;
   }
 
+  rangesamps(start, length) {
+    let startIndex = Math.floor(start * this.data.length);
+    let endIndex = startIndex + length;
+    this.data = this.data.slice(startIndex, endIndex);
+    return this;
+  }
+
   reduce (new_size) {
     let orig_size = this.data.length;
     new_size = Number(new_size);
@@ -3018,9 +3025,13 @@ f
     if ( Array.isArray(sequence) === false ) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
+    let out_fp = new FacetPattern().silence(this.getWholeNoteNumSamples());
+    let copy_fp = new FacetPattern().from(this.data);
     Object.values(sequence).forEach(s => {
-      this.sequence_data.push(s);
+      out_fp.sup(copy_fp,s);
     });
+    this.data = out_fp.data;
+    this.sequence_data = [0];
     return this;
   }
 

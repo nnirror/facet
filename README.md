@@ -698,6 +698,12 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([0.1,0.2,0.3,0.4]).range(0.5,1); // 0.3 0.4`
 ---
+- **rangesamps** ( _start_, _length_ )
+	- returns a subset of the FacetPattern, using a relative `start` position (between 0 - 1) and a total length in samples.
+	- example:
+		- `$('example').sine(n1).log(0.9).rangesamps(rf(0,0.875),n8).play(); // plays a different 8th note from the same de-pitched sine wave every time`
+		- `$('example').silence(n1).iter(128,()=>{this.sup(_.noise(n64).lpf(_.ramp(250,40,20),50).times(_.ramp(1,0,n64)).rangesamps(rf(),n64).fade(0.1),rf())}).play(); // granular synthesis of 128 synthesized kick drums`
+---
 - **rechunk** ( _chunks_ )
 	- slices the input FacetPattern into `chunks` chunks and shuffles the chunks around. __Note__: this is intended for use with FacetPatterns with a large enough amount of data to be played back at audio rate. For a similar effect on smaller FacetPatterns, use `shuffle()` or `fracture`.
 	- example:

@@ -67,8 +67,6 @@ app.post('/meta', (req, res) => {
 
 app.post('/play', (req, res) => {
   transport_on = true;
-  // open audio playback gate in Max
-  udp_osc_server.send(new OSC.Message(`/on`, 1));
   res.sendStatus(200);
 });
 
@@ -233,8 +231,6 @@ app.post('/stop', (req, res) => {
   if ( typeof midioutput !== 'undefined' ) {
     midioutput.sendAllNotesOff();
   }
-  // close audio playback gate in Max
-  udp_osc_server.send(new OSC.Message(`/on`, 0));
   // clear out any dynamic BPM patterns, so BPM stays at whatever value it was prior to stopping
   meta_data.bpm = bpm;
   res.sendStatus(200);
