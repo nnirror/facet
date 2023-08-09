@@ -7,13 +7,13 @@ Facet runs on MacOS, Linux, and Windows.
 ## Installation and getting started
 
 1. Download and install Node.js (must be v14 or greater) and npm: https://www.npmjs.com/get-npm
-2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that sox can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed.
+2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that SoX can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed.
 3. Download or clone the Facet repository.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
 5. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
 6. In a browser tab, navigate to http://localhost:1124. This is the browser window with the code editor.
 7. Open Max, or if using Max for Live, click the Edit Button to launch the Max Editor. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
-8. If using Max: Create a new patcher, and add a "facet" object. Connect its left outlet (audio channel 1) and middle outlet (audio channel 2) to a DAC.
+8. If using Max: Create a new patcher, and add a "facet" object. Connect its leftmost two outlets (audio channel 1 and audio channel 2) to a DAC.
 9. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set.
 10. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
 
@@ -121,11 +121,11 @@ By default, Facet checks every 10 milliseconds whether it needs to fire any even
 
 ### Outputs
 
-Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. By default, patterns will continually regenerate each loop. In order to only regenerate every n loops, use the `.every()` function. In order to only play back once, use the `.once()` function.
+Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. By default, patterns will continually regenerate each loop. In order to only regenerate every n loops, use the `.every()` method. In order to continue playing a pattern and not regenerate, use the `.keep()` method. In order to only play back once, use the `.once()` method.
 
 ### Audio output
 - **channel** ( _channels_ )
-	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` function (and equivalent `channels()` function) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
+	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
 	- example:
 		- `$('example').randsamp().channel(1).play(); // first channel only`
 		- `$('example').randsamp().channels([1,3]).play(); // second channel only`
@@ -141,10 +141,10 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
 ---
 - **play** ( _PlaybackFacetPattern_ )
-	- plays the FacetPattern as audio to your computer's currently selected default audio output device, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note. If you want to use a different audio output device with Facet, select it as your computer's default audio output device.
+	- plays the FacetPattern as audio through an open "facet" abstraction in Max or Max for Live, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note.
 	- `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
-	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or press the stop button "■".
+	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or `[ctrl + /]`, or press the stop button "■".
 	- example:
 		- `$('example').randsamp().play();	// plays once at beginning of loop`
 		- `$('example').randsamp().play(0.5);	// plays once at middle point`
@@ -153,7 +153,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 - **saveas** ( _filename_ )
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
 	- if a file has been created with multiple channels via `.channels()` or with its audio panned between multiple channels via `.pan()`, the saved wav file will have that many channels.
-	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveas('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
 ---
@@ -162,7 +162,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- the `samplesBetweenEachFile` argument can be a single number or a FacetPattern. This value specifies the exact number of samples between each file in the output file. If it's a FacetPattern, its values will be continuously cycled through while stitching together all the files in the directory.
 	- all files in the directory should have the same number of channels. The stitched wav file will have `num_channels` channels (default = 1).
 	- __Note__: this process can take minutes if there are a lot of wavs, so by default any time this method is called, it will be called once and only once.
-	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').stitchdir('mysamples',n1,'myNewStitchedFile'); // stitch together all the wavs in samples/mysamples, with a whole note between each file, creating a new file called MyNewStitchedFile.wav`
 
@@ -181,7 +181,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 ---
 - **cc** ( _controller_number_ = 70, _channel_ = 1 )
 	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.
-	- _Note_: This function is automatically scaled into the expected data range for MIDI CC data. It expects a FacetPattern of values between 0 and 1.
+	- _Note_: This method is automatically scaled into the expected data range for MIDI CC data. It expects a FacetPattern of values between 0 and 1.
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 	- example:
 		- `$('example').drunk(64,0.1).cc();`
@@ -214,7 +214,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 		- `$('example').ramp(36,72,32).chord('maj7').add((bars%4)*12).key('F# major').note(50,100,1);`
 ---
 - **key** ( _key_and_scale_ )
-	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` function uses the TonalJS npm package as a scale dictionary.
+	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` method uses the TonalJS npm package as a scale dictionary.
 	- possible keys: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
 	- possible scales: ["ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian", "bebop", "bebop dominant", "bebop major", "chromatic", "ichikosucho", "ionian pentatonic", "major pentatonic", "ritusen"]
 	- example: `$('example').randsamp().reduce(32).scale(36,51).key("F# bebop").note();`
@@ -223,14 +223,14 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
 	- The OSC server sends output to port 5813 by default. You can change to a different port by modifying `OSC_OUTPORT` in `js/config.js` to whatever port number you need.
 	- The `address` argument must begin with a backslash: `/`.
-	- _Note_: This function does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
+	- _Note_: This method does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
 	- example:
 		- `$('example').noise(128).osc('/test');`
 ---
 - **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitchbend event for every value in the FacetPattern's data.
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
-	- _Note_: This function is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between -1 and 1, with 0 meaning no pitchbend.
+	- _Note_: This method is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between -1 and 1, with 0 meaning no pitchbend.
 	- example:
 		- `$('example').sine(1).size(128).pitchbend();`
 
@@ -243,7 +243,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 
 ### Methods for controlling pattern regeneration
 - **every** ( _n_loops_ )
-	- only regenerate the pattern after `n_loops` loops. By default, patterns regenerate each loop, so this function only needs to be included if you wish to regenerate a pattern less frequently.
+	- only regenerate the pattern after `n_loops` loops. By default, patterns regenerate each loop, so this method only needs to be included if you wish to regenerate a pattern less frequently.
 	- example:
 		- `$('example').sine(ri(10,500)).times(rf()).every(4).play(); // slightly different sine wave tone every 4 loops`
 ---
@@ -260,9 +260,9 @@ You need to connect the MIDI device you want to use before starting Facet.
 ### Single number generators
 - **barmod** ( _modulo_, _values_ )
 	- returns values that depend on the current value of `bars`. (`bars` is a global variable that starts at 0 and increments at the completion of a loop.)
-	- selects a value from the `values` array, based on `bars % modulo`.  If the `bars` value currently is 9, and the `modulo` argument to this function is 4, since 9 % 4 = 1, this function will return the value from the `values` array immediately following the number 1.
-	- **NOTE**: The function first checks if the `values` array contains an even number of elements. If not, it throws an error.
-	- **NOTE**: The function checks if every integer from 0 to (mod-1) is one of the even-numbered keys of the values array. If not, it throws an error.
+	- selects a value from the `values` array, based on `bars % modulo`.  If the `bars` value currently is 9, and the `modulo` argument to this method is 4, since 9 % 4 = 1, this method will return the value from the `values` array immediately following the number 1.
+	- **NOTE**: It first checks if the `values` array contains an even number of elements. If not, it throws an error.
+	- **NOTE**: It also checks if every integer from 0 to (mod-1) is one of the even-numbered keys of the values array. If not, it throws an error.
 	- example:
 		- `$('example').sine(barmod(4,[0,100,1,150,2,200,3,300])).play(); // when bars % 4 == 0, plays a 100Hz sine. when bars % 4 == 1, plays a 150 Hz sine. when bars % 4 == 2, plays a 200Hz sine. when bars % 4 == 3, plays a 300Hz sine.`
 ---
@@ -372,7 +372,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').drunk(16,0.1); // slight random movement`
 ---
 - **envelope** ( _values_ )
-	- Generates an envelope using the supplied array `values`, which must have a total number of entries equal to a multiple of 3. The numbers inside the `values` array should be continually ordered in groups of three: `from`, `to`, `size`, just like the `ramp()` function.
+	- Generates an envelope using the supplied array `values`, which must have a total number of entries equal to a multiple of 3. The numbers inside the `values` array should be continually ordered in groups of three: `from`, `to`, `size`, just like the `ramp()` method.
 	- example:
 		- ` $('example').noise(ms(500)).times(_.envelope([0,1,ms(10),1,0.1,ms(200),0.1,0,ms(290)])).play(); // transient noise burst`
 ---
@@ -386,7 +386,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- loads the raw data of any file into memory. You can supply any file type.
 	- output range is from -1 - 1.
 	- By default, it checks for a file in the `files` subdirectory. If no file exists there, it will try to load the file as an absolute path on your hard drive. 
-	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').file('my_image.png').play(); // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!`
 		- `$('example').file('/Users/my_username/Desktop/myfile.zip').play(); // example with a supplied absolute file path`
@@ -405,7 +405,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- the `minimumFrequency` and `maximumFrequency` values control the range of frequencies that the pixels will map onto.
 	- the `frequencyPattern` argument allows you to remap the rows of pixels with a FacetPattern. It should be scaled between 0 and 1. It will automatically be resized so its data length matches the height of the image in pixels. Lower values in `frequencyPattern` will map onto lower frequencies inside the range of `minimumFrequency` and `maximumFrequency`. Higher values in `frequencyPattern` will map onto higher frequencies inside the range of `minimumFrequency` and `maximumFrequency`.
 	- output range is from -1 - 1.
-	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').image('/path/to/file/goes/here.jpg',1024).play(); // each column lasts 1024 samples`
 ---
@@ -421,7 +421,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- `skip` specifies the number of prime numbers to skip before including the next one in the list. The default value is 1.
 	- example:
 		- `$('s').noise(n4).times(_.ramp(1,0,n4)).iter(12,()=>{this.allpass().delay(_.primes(60,1000,ri(20,2000)).data[i]).full()}).full().play(); // generates a quarter note transient burst of noise, then iteratively sends it through delays that are all primes`
-- **ramp** ( _from_, _to_, _size_, _curve_type_ = 0.5 )
+- **ramp** ( _from_, _to_, _size_ )
 	- moves from `from` to `to` over `size` values.
 	- example:
 		- `$('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
@@ -429,20 +429,20 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **randfile** ( _dir_ = `../files/` )
 	- loads a random file from the `files` directory into memory. The default directory is `../files/`, but you can supply any directory as an argument.
 	- output range is from -1 - 1.
-	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').randfile().play(); // random new file converted to audio every time`
 ---
 - **randsamp** ( _dir_ = `../samples/` _channel_index_ = 0 )
 	- loads a random wav file from the `dir` directory into memory. The default directory is `../samples/`, but you can supply any directory as an argument.
 	- By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
-	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').randsamp().reverse().play(); // random backwards sample`
 ---
 - **sample** ( _filepath_, _channel_index_ = 0)
-	- loads a wav file from the `samples/` directory into memory. You can specify other subdirectories inside the Facet repo as well. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_. By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
-	- __Note__: this examples uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- loads a wav file from the `samples/` directory into memory. You can also specify any file with an absolute file path. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_. By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').sample('1234').play(); // if 1234.wav is in the samples directory, you're good to go`
 		- `$('example').sample('./myfolder/myfile.wav'); // or point to the file with a relative path`
@@ -490,7 +490,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **bitshift** ( _shift_ = 16 )
 	- performs a bitwise rotation on the elements of the FacetPattern object’s data array by shift bits.
 	- `shift` is an optional parameter that specifies the number of bits to rotate. It defaults to 16 if not provided. The value of shift is converted to a non-negative integer and taken modulo 32 before being used.
-	- The function first scales the values in the data array to a range of 0 to 1000000 and rounds them to integers. It then performs a bitwise rotation on each element using a combination of the left shift (<<) and right shift (>>>) operators. Finally, it restores the original scale of the data.
+	- The method first scales the values in the data array to a range of 0 to 1000000 and rounds them to integers. It then performs a bitwise rotation on each element using a combination of the left shift (<<) and right shift (>>>) operators. Finally, it restores the original scale of the data.
 	- example:
 		- `$('example').sine(1000,n2).bitshift(16).play(); // rotates the bits of a 1000Hz sine wave by 16 positions`
 ---
@@ -751,7 +751,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').noise(1000).size(n1).play(); // upscaling 1000 samples of noise to be 1 whole note long`
 ---
 - **scale** ( _new_min_, _new_max_, _exponent_ = 1 )
-	- moves the FacetPattern to a new range, from `new_min` to `new_max`, with `exponent` allowing for nonlinear transformations. **NOTE**: this function will return the average of new_min and new_max if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
+	- moves the FacetPattern to a new range, from `new_min` to `new_max`, with `exponent` allowing for nonlinear transformations. **NOTE**: this method will return the average of `new_min` and `new_max` if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
 	- example:
 		- `$('example').sine(10,100).scale(0,1); // unipolar signal`
 ---
@@ -905,7 +905,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').sine(100).subtract(_.cosine(50)).play();`
 ---
 - **tanh** ( _gainPattern_ = 20 )
-	- outputs the hyperbolic tangent function for the input FacetPattern, always returning values between -1 and 1. Higher `gainPattern` values will create more intense distortion.
+	- outputs the hyperbolic tangent method for the input FacetPattern, always returning values between -1 and 1. Higher `gainPattern` values will create more intense distortion.
 	- example:
 		- `$('example').phasor(1,20).times(10).tanh(6); // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1`
 		- `$('example').sine(100).tanh(_.ramp(0,100,100)).play(); // ramping tanh distortion up on a 100Hz sine wave`
@@ -978,14 +978,15 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').silence(n1).sup(_.randsamp(),0,n1).sup(_.randsamp(),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`
 
 ### Pattern modulators with a function as one of the arguments
+For more examples, refer to the `examples/this.md` file.
 
-- **mix** ( _wet_, _command_ )
+- **mix** ( _wet_, _command_ = function )
 	- Mixes the input FacetPattern with a second FacetPattern generated by `command`.
 	- The command that will be mixed must start with the reserved word: `this` (see example).
 	- example:
 		- `$('example').randsamp().mix(0.5,()=>{this.reverse().speed(0.5).echo(8).speed(0.1)}).play();`
 ---
-- **iter** ( _num_times_, _commands_ = function(), _prob_ = 1 )
+- **iter** ( _num_times_, _command_ = function, _prob_ = 1 )
 	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
 	- You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
 	- The variable `i`, referring to the current iteration number starting at 0, is also available for use in commands.
@@ -993,33 +994,34 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').randsamp().iter(8,()=>{this.delay(ri(1,2000))}).play(); // 8 delay lines between 1 and 2000 samples`
 ---
-- **parallel** ( _commands_ )
+- **parallel** ( _commands_ = [function, function] )
 	- applies multiple commands in parallel to the input FacetPattern. The `commands` parameter is an array where each entry is a function. Each `command` is applied to a copy of the original input data, and the results are combined back together afterwards. The final output is normalized to have the same maximum value as the original input data.
 	- example: `$('s').noise(n4).scale(-1,1).allpass(347).allpass(113).allpass(37).parallel([()=>{this.delay(1687,0.999)},()=>{this.delay(1601,0.999)},()=>{this.delay(2053,0.999)},()=>{this.delay(2251,0.999)}]).play().full(); // schroeder reverb on a quarter note of noise`
 ---
-- **slices** ( _num_slices_, _commands_ = function, _prob_ = 1 )
-	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `commands`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
+- **slices** ( _num_slices_, _command_ = function, _prob_ = 1 )
+	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `command`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
 	- The variable `s`, referring to the current slice number starting at 0, is also available for use in commands.
 	- The variable `num_slices`, referring to the number of slices, is also available for use in commands.
 	- example:
 		- `$('example').randsamp().slices(32,()=>{this.fft().shift(random()).ifft()}).play();`
 ---
-- **sometimes** (_prob_, _operations_)
-	- runs a chain of operations only some of the time, at a probability set by `prob`.
-	- The command that will be mixed must start with the reserved word: `this` (see example).
+- **sometimes** ( _prob_, _command_ = function() )
+	- runs `command` only some of the time, at a probability set by `prob`.
+	- `command` must start with the reserved word: `this` (see example).
 	- example:
 		- `$('example').phasor(1).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());`
 ---
 
 ### Setting and getting patterns during a session
+This can be useful when you want to access the same pattern across multiple commands.
 
 - **get** ( _name_ )
-	- retrieves a FacetPattern previously stored in memory by a `.set()` command.
+	- retrieves a FacetPattern previously stored to disk by a `.set()` command.
 		- example:
 		- `$('example').randsamp().set('my_pattern'); // first, set a random sample, in a separate command`
 		- `$('example').get('my_pattern').reverse().dup(1).play(); // then in a new command, run this`
 ---
 - **set** ( _name_ )
-	- stores a FacetPattern in memory for temporary reference in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+	- saves a FacetPattern to disk for temporary reference in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
 		- example:
 		- `$('example').noise(32).set('my_pattern').once();`
