@@ -1,18 +1,21 @@
 ## Overview
 
-Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser and a pair of NodeJS servers running locally on your machine, Facet can generate and sequence audio, MIDI, and OSC data in real-time.
+Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser, a pair of NodeJS servers running locally on your machine, and Max or Max for Live, Facet can generate and sequence audio, MIDI, and OSC data in real-time.
 
-Facet currently runs on MacOS, Linux, and Windows.
+Facet runs on MacOS, Linux, and Windows.
 
 ## Installation and getting started
 
 1. Download and install Node.js (must be v14 or greater) and npm: https://www.npmjs.com/get-npm
-2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that sox can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed properly.
+2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that sox can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed.
 3. Download or clone the Facet repository.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
-5. After the previous command completes, run `npm run facet`. This will start both servers that run in the background for Facet to work. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
+5. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
 6. In a browser tab, navigate to http://localhost:1124. This is the browser window with the code editor.
-7. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing out of your computer's default sound card.
+7. Open Max, or if using Max for Live, click the Edit Button to launch the Max Editor. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
+8. If using Max: Create a new patcher, and add a "facet" object. Connect its left outlet (audio channel 1) and middle outlet (audio channel 2) to a DAC.
+9. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set.
+10. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
 
 ## Facet commands
 
@@ -42,7 +45,7 @@ Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`) allow you
 
 ### UI controls in the browser
 
-Below the text editor, there are several UI elements which control the Facet server running in the background. Moving from left to right:
+Below the text editor, there are several UI elements which control the servers running in the background. Moving from left to right:
 
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
@@ -56,8 +59,9 @@ Below the text editor, there are several UI elements which control the Facet ser
 ### Key commands
 
 - Run command(s): `[ctrl + enter]` or `[ctrl + r]`. All commands not separated by multiple newlines will run together.
-- Stop playback: `[ctrl + .]` or `[ctrl + ?]`
+- Stop playback: `[ctrl + .]` or `[ctrl + /]`
 - Stop regenerating patterns: `[ctrl + ,]`
+- Autocomplete / list methods: `[ctrl + space]`. This will list all available methods including their arguments in a dropdown menu, filtered by the text preceding the cursor position. If only one matching method is found, it will autocomplete that method.
 
 ### Running "npm run facet"
 
@@ -68,6 +72,16 @@ A server, known as the `process manager`, starts up on http://localhost:5831. Th
 1. The `transport server` starts up on http://localhost:3211. This server is responsible for handling the timing and playback of audio, MIDI, and OSC events.
 
 2. The `pattern generator` server starts up on http://localhost:1123. This server listens to requests from the text editor UI in the browser located at http://localhost:1124 and interprets those commands into data. If the pattern is intended to be played back as audio, a corresponding .wav file will be stored in the `tmp/` subdirectory in the Facet repo. Otherwise, if the pattern is intended for MIDI or OSC output, the data will be posted directly to the transport server.
+
+### Max / Max for Live
+
+In order to play audio files generated with Facet, Max or Max for Live is required. (It is possible, however, to use Facet without Max, for only MIDI and OSC output.)
+
+The necessary Max patchers are included in this repo. Make sure to configure File Preferences in Max (step 7 from the getting started section above) in order for these patchers to work properly.
+
+If running Max: the `facet.maxpat` patcher has 4 individual channels of audio output plus a fifth outlet for passing OSC commands into your patcher.
+
+If running Max for Live: the `facet.axmd` and `facet_4ch.amxd` Max for Live devices allow for stereo and 4 channel audio outputs in Ableton Live, respectively. To access the third and fourth channels of `facet_4ch.amxd`, create a second track and select input channels 3/4 from the input track where `facet_4ch.amxd` is running.
 
 ### Variables
 
@@ -95,19 +109,19 @@ The variable `bars` (representing how many loops have occurred since the time th
 
 You can change the sample rate for the audio generated and played back with Facet by modifying `SAMPLE_RATE` in `js/config.js` to whatever integer you want.
 
-In Facet commands, you can use the variable `FACET_SAMPLE_RATE` to refer to the configured sample rate, which is useful when you want to do something for a specific number of seconds. 
+In Facet commands, you can use the constant `SAMPLE_RATE` to refer to the configured sample rate, which is useful when you want to do something for a specific number of seconds. 
 
-For example: `$('example').noise(FACET_SAMPLE_RATE).play(); // generate and continually play back exactly 1 second of noise`
+For example: `$('example').noise(SAMPLE_RATE).play(); // generate and continually play back exactly 1 second of noise`
 
 ## Global event resolution
 
-By default, Facet checks every 10 milliseconds whether it needs to fire any events that produce output, such as playing audio, MIDI, or osc. You can change  `EVENT_RESOLUTION_MS` in `js/config.js` to set a different integer value. Slower speeds (e.g. 20 = 20ms) will produce less tightly-timed events but can help make it possible for Facet to run on computers with less CPU resources, at the expense of slight timing accuracy. Faster speeds (e.g. 2 = 2ms) will produce tighter event scheduling but can overload computers with less CPU resources.
+By default, Facet checks every 10 milliseconds whether it needs to fire any events that produce output, such as playing audio, MIDI, or osc. You can change  `EVENT_RESOLUTION_MS` in `js/config.js` to set a different integer value. Slower speeds (e.g. 20 = 20ms) will produce less tightly-timed events but can help make it possible for Facet to run on computers with less CPU resources, at the expense of slight timing accuracy. Faster speeds (e.g. 4 = 4ms) will produce tighter event scheduling but can overload computers with less CPU resources.
 
 ## Command reference
 
 ### Outputs
 
-Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. The patterns will continually regenerate each loop by default. In order to only regenerate every n loops, use the `.every()` function. In order to only play back once, use the `.once()` function.
+Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. By default, patterns will continually regenerate each loop. In order to only regenerate every n loops, use the `.every()` function. In order to only play back once, use the `.once()` function.
 
 ### Audio output
 - **channel** ( _channels_ )
@@ -154,6 +168,8 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 
 ### MIDI / OSC output
 You might need to activate a MIDI driver on your machine in order to send MIDI from Facet to a DAW. If Facet finds no MIDI drivers, the dropdown select UI in the browser will be empty, and if you try the below commands they will produce no output. Google "install MIDI driver {your OS goes here}" for more information.
+
+You need to connect the MIDI device you want to use before starting Facet.
 
 - **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1 )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
@@ -214,13 +230,14 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 - **pitchbend** ( _channel_ = 1 )
 	- sends a MIDI pitchbend event for every value in the FacetPattern's data.
 	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
-	- _Note_: This function is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between 0 and 1.
+	- _Note_: This function is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between -1 and 1, with 0 meaning no pitchbend.
 	- example:
-		- `$('example').sine(1).scale(0,1).size(128).pitchbend();`
+		- `$('example').sine(1).size(128).pitchbend();`
 
 ### Methods for controlling transport BPM
 - **bpm** ( )
 	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
+	- BPM patterns have a 256 value maximum.
 	- example:
 		- `$('example').from([20,40,80,160,320]).shuffle().bpm(); // each loop will be all 5 of these BPM, randomly ordered`
 
@@ -254,6 +271,10 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 	- example:
 		- `$('example').sine(choose([10,200,1000])).play(); // sine wave with either 10, 200, or 1000 cycles`
 ---
+- **ftom** ( _hzfrequency_ )
+	- converts the supplied `hzfrequency` value to its corresponding MIDI note number.
+	- example:
+		- `$('example').sine(220).times(_.sine(ftom(ri(400,1200)))).play(); // 220Hz sine wave (A) multplied by a chromatically related higher sine wave`
 - **ms** ( _milliseconds_ )
 	- converts the supplied `milliseconds` value to that many samples, at whatever sample rate the user has configured.
 	- example:
@@ -401,7 +422,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('s').noise(n4).times(_.ramp(1,0,n4)).iter(12,()=>{this.allpass().delay(_.primes(60,1000,ri(20,2000)).data[i]).full()}).full().play(); // generates a quarter note transient burst of noise, then iteratively sends it through delays that are all primes`
 - **ramp** ( _from_, _to_, _size_, _curve_type_ = 0.5 )
-	- moves from `from` to `to` over `size` values. With a default `curve_type` of 0.5, the ramp is linear. Curve types lower than 0.5 will produce a logarithmic ramp contour, with more values weighted towards the initial `from` value. Curve types greater than 0.5 will produce an exponential ramp contour, with more values weighted towards the destination `to` value.
+	- moves from `from` to `to` over `size` values.
 	- example:
 		- `$('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
 ---
@@ -494,18 +515,17 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').randsamp().compress(0.1,0.001,0.01,0.01).play();`
 ---
+- **crab** ( )
+	- superposes a reversed copy of the FacetPattern on top of iself, so it plays backwards and forwards at the same time..
+	- example:
+		- `$('example').sine(_.ramp(20,2000,1000)).crab().full().play(); // sine wave ramps from 20Hz to 2000Hz both backwards and forwards at the same time`
+---
 - **curve** ( _tension_ = 0.5, _segments_ = 25 )
 	- returns a curved version of the FacetPattern. Tension and number of segments in the curve can be included but default to 0.5 and 25, respectively.
 	- example:
 		- `$('example').noise(16).curve();				// not so noisy`
-		- `$('example').noise(16).curve(0.5, 10);	// fewer segments per curve`
+		- `$('example').noise(16).curve(0.5, 10);		// fewer segments per curve`
 		- `$('example').noise(16).curve(0.9);			// different curve type`
----
-- **delay** ( _samples_, _feedback_ = 0.5 )
-	- delays the input FacetPattern by `samples` samples. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
-	- the maximum `feedback` value is 0.975.
-	- example:
-		- `$('example').randsamp().delay(random(1700,10000)).play();`
 ---
 - **distavg** ( )
 	- computes the distance from the average of the FacetPattern, for each element in the FacetPattern.
@@ -678,6 +698,12 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([0.1,0.2,0.3,0.4]).range(0.5,1); // 0.3 0.4`
 ---
+- **rangesamps** ( _start_, _length_ )
+	- returns a subset of the FacetPattern, using a relative `start` position (between 0 - 1) and a total length in samples.
+	- example:
+		- `$('example').sine(n1).log(0.9).rangesamps(rf(0,0.875),n8).play(); // plays a different 8th note from the same de-pitched sine wave every time`
+		- `$('example').silence(n1).iter(128,()=>{this.sup(_.noise(n64).lpf(_.ramp(250,40,20),50).times(_.ramp(1,0,n64)).rangesamps(rf(),n64).fade(0.1),rf())}).play(); // granular synthesis of 128 synthesized kick drums`
+---
 - **rechunk** ( _chunks_ )
 	- slices the input FacetPattern into `chunks` chunks and shuffles the chunks around. __Note__: this is intended for use with FacetPatterns with a large enough amount of data to be played back at audio rate. For a similar effect on smaller FacetPatterns, use `shuffle()` or `fracture`.
 	- example:
@@ -832,6 +858,12 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').sine(100,n1).crush(_.ramp(8,1,8)).play(); // ramping bit depth on 100Hz sine wave from 8 bits to 1`
 		- `$('example').sine(100,n1).crush(_.ramp(8,1,8),_.noise(16).scale(1,40)).play(); // ramping bit depth on 100Hz sine wave from 8 bits to 1, and dynamically changing the downsampling amount between 1 and 40 samples`
 ---
+- **delay** ( _delaySamplesPattern_, _feedback_ = 0.5 )
+	- delays the input FacetPattern by `delaySamplesPattern` samples. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
+	- the maximum `feedback` value is 0.975.
+	- example:
+		- `$('example').randsamp().delay(random(1700,10000)).play();`
+---
 - **divide** ( _FacetPattern_, _match_sizes_ = true )
 	- divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
@@ -940,7 +972,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').randsamp().splice(_.noise(n16),0.5).play(); // inserts a 16th note of noise halfway through the random sample`
 ---
-- **sup** ( _FacetPattern_, _startPositionPattern_, _maxFrameSize_ = this.length )
+- **sup** ( _FacetPattern_, _startPositionPattern_, _maxFrameSize_ = whole_note_samples )
 	- superposes a second FacetPattern onto the first. The `startPositionPattern` value can be any value between 0 and 1, or an array, or a FacetPattern. It controls the relative position(s) in the input FacetPattern to begin superposing `FacetPattern`. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
 	- example:
 		- `$('example').silence(n1).sup(_.randsamp(),0,n1).sup(_.randsamp(),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`

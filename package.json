@@ -1,6 +1,6 @@
 {
   "name": "facet",
-  "version": "0.5.48",
+  "version": "1.0.0",
   "description": "Facet is a live coding system for algorithmic music",
   "main": "index.js",
   "directories": {
@@ -14,6 +14,7 @@
     "codemirror": "^5.65.13",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "jshint": "^2.13.6",
     "node-wav": "^0.0.2",
     "open": "^8.4.2",
     "os-utils": "0.0.14",
@@ -45,7 +46,7 @@
     "audio"
   ],
   "author": "Michael Cella",
-  "license": "ISC",
+  "license": "GPL-3.0 license",
   "bugs": {
     "url": "https://github.com/mjcella/facet/issues"
   },

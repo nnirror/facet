@@ -2,7 +2,8 @@ var cm = CodeMirror(document.body, {
   value: ``,
   mode:  "javascript",
   theme: "mbo",
-  lineWrapping: true
+  lineWrapping: true,
+  lint: {options: {esversion: 2021, asi: true}}
 });
 
 let mousex = 1, mousey = 1;
@@ -155,7 +156,9 @@ $('body').on('click', '#midi_refresh', function() {
 });
 
 $('body').on('click', '#stop', function() {
-  $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {})
+  $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {
+    $.growl.notice({ message: 'system muted' });
+  })
   .fail(function(data) {
     if ( data.statusText == 'error' ) {
       $.growl.error({ message: 'no connection to the Facet server' });
@@ -164,7 +167,9 @@ $('body').on('click', '#stop', function() {
 });
 
 $('body').on('click', '#clear', function() {
-  $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+  $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {
+    $.growl.notice({ message: 'hooks cleared' });
+  });
 });
 
 $('body').on('click', '#rerun', function() {
@@ -194,16 +199,24 @@ $('body').on('click', '#end', function() {
 });
 
 $(document).ready(function() {
+  setTimeout(() => {
+    initializeMIDISelection();
+}, 100);
+});
+
+setInterval(() => {
+  initializeMIDISelection();
+}, 1000);
+
+function initializeMIDISelection () {
   // retrieve the previously stored MIDI out destination from localstorage
   var storedValue = localStorage.getItem('midi_outs_value');
   if (storedValue) {
-      // reset the most recently used MIDI out destination
-      setTimeout(function() {
-        $('#midi_outs').val(storedValue);
-    }, 100);
-      $.post('http://127.0.0.1:3211/midi_select', {output:storedValue}).done(function( data, status ) {});
+    // reset the most recently used MIDI out destination
+    $('#midi_outs').val(storedValue);
+    $.post('http://127.0.0.1:3211/midi_select', {output:storedValue}).done(function( data, status ) {});
   }
-});
+}
 
 let blockBpmUpdateFromServer;
 let bpmCanBeUpdatedByServer = true;
@@ -227,12 +240,9 @@ function checkStatus() {
       Object.values(data.data.errors).forEach(error => {
         $.growl.error({ message: error });
       });
-      let cpu_percent = parseFloat(data.data.cpu).toFixed(2) * 100;
+      let cpu_percent = Math.round(parseFloat(data.data.cpu).toFixed(2) * 100);
       cpu_percent = cpu_percent.toString().substring(0,4);
       $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
-      if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
-        $('#bpm').val(`${data.data.bpm}`);
-      }
       setStatus(`connected`);
     })
     .fail(function(data) {
@@ -270,3 +280,69 @@ setInterval(()=>{
 }, 10);
 
 $('#bpm').val(90);
+
+const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
+osc.open();
+
+osc.on('/bpm', message => {
+  if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
+    $('#bpm').val(`${message.args[0]}`);
+  }
+});
+
+osc.on('/progress', message => {
+  $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
+});
+
+setInterval(() => {
+  if ( osc.status() == 3 ) {
+    osc.open();
+  }
+}, 250);
+
+// close down osc server when window shuts down or tab is closed
+window.addEventListener("beforeunload", function (e) {
+  osc.close();
+});
+
+// attempt to restart osc server when tab is focused
+window.onfocus = function() {
+  osc.open();
+};
+
+// autocomplete
+var facet_methods  =  [];
+// on load, get all available FP methods from the pattern generator server
+
+document.addEventListener('keydown', function(event) {
+  if (event.ctrlKey && event.code === 'Space') {
+    $.post('http://127.0.0.1:1123/autocomplete', {}).done(function( data, status ) {
+      facet_methods = data.data.methods;
+      // forked custom hinting from: https://stackoverflow.com/a/39973139
+      var options = {
+        hint: function (editor) {
+          var list = facet_methods;
+          var cursor = editor.getCursor();
+          var currentLine = editor.getLine(cursor.line);
+          var start = cursor.ch;
+          var end = start;
+          while (end < currentLine.length && /[\w$]+/.test(currentLine.charAt(end))) ++end;
+          while (start && /[\w$]+/.test(currentLine.charAt(start - 1))) --start;
+          var curWord = start != end && currentLine.slice(start, end);
+          var regex = new RegExp('^' + curWord, 'i');
+          var result = {
+              list: (!curWord ? list : list.filter(function (item) {
+                  return item.match(regex);
+              })).sort(),
+              from: CodeMirror.Pos(cursor.line, start),
+              to: CodeMirror.Pos(cursor.line, end)
+          };
+          return result;
+        }
+      };
+      cm.showHint(options); 
+    }).fail(function(data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+  }
+});
