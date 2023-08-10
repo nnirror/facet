@@ -390,11 +390,7 @@ class FacetPattern {
     return this;
 }
 
-  stitchdir (dir, samplesBetweenEachFile, saved_filename = 'stitched', num_channels = 1) {
-    if ( !samplesBetweenEachFile ) {
-      throw `the second argument to stitchdir() is required: you must specify the number of samples separating each file`;
-    }
-
+  stitchdir (dir, samplesBetweenEachFile = this.getWholeNoteNumSamples(), saved_filename = 'stitched', num_channels = 1) {
     if ( typeof samplesBetweenEachFile == 'number' ) {
       samplesBetweenEachFile = [samplesBetweenEachFile];
     }
@@ -825,6 +821,7 @@ class FacetPattern {
     }
     this.key_data = key_string;
     this.data = key_sequence;
+    this.clip(0,127);
     return this;
   }
 
