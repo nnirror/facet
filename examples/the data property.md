@@ -44,3 +44,56 @@ $('example').silence(n1)
         ,i/iters)})
     .play();
 ```
+
+---
+
+# FacetPattern.data.length
+
+
+Since the `FacetPattern.data` property is a standard JavaScript array, we can also access its length property:
+
+`$('example').noise(16).data.length // === 16`
+
+This can be useful when developing certain algorithms, especially when the pattern length might be variable.
+
+For example, say we want to always create 32-note pattern, but with a variable-size input pattern that can be 4, 8, 16, or 32 values long. Here is a description of one way to do that:
+
+If the noise pattern is 4 values long, `.dup()` each value 7 times.
+If the noise pattern is 8 values long,  `.dup()` each value 3 times.
+If the noise pattern is 16 values long, `.dup()` each value 1 time.
+If the noise pattern is 32 values long, do not `.dup()` each value.
+
+Since the keyword `this` is only accessible inside certain functions (see the `using "this" methods.md` example file), we first run `.slices(1)` which will pass the entire pattern into a context where we can access its data via `this.data`.
+
+Then we can run a JavaScript if-else statement, checking `this.data.length` and running `this.dup()` the appropriate number of times:
+
+
+```
+$('example')
+  .noise(choose([4, 8, 16, 32]))
+  .iter(1, () => {
+  	if (this.data.length == 4) {
+      this.dup(7)
+    }
+  	else if (this.data.length == 8) {
+      this.dup(3)
+    }
+	else if (this.data.length === 16) {
+      this.dup(1);
+    }
+  })
+  .scale(36, 80)
+  .note();
+  ```
+
+  Here's a more concise way to do the same thing without if-else:
+
+  ```
+$('example')
+  .noise(choose([4, 8, 16, 32]))
+  .iter(1, () => {
+  	this.dup((32/this.data.length)-1)
+  })
+  .scale(36, 80)
+  .note();
+  ```

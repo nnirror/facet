@@ -1185,6 +1185,9 @@ waveformSample(waveform, phase) {
   }
 
   dup (num) {
+    if ( num <= 0 ) {
+      return this;
+    }
     this.data = Array.from({length: Number(num+1)}).flatMap(a => this.data)
     this.flatten();
     return this;

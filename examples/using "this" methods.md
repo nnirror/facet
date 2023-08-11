@@ -1,6 +1,6 @@
 # what's this?
 
-Some Facet commands accept a function as one of the arguments, and in certain cases, the keyword `this` is used to refer to the current iteration of that function.
+Some Facet commands accept a function as one of the arguments, and in certain cases, the keyword `this` is used to refer to the current FacetPattern that the function is processing. The keyword `this` does not have a global scope; it's only accessible inside of the below functions.
 
 - `slices()`: slice a pattern into `n` slices and apply a different operation to each of them.
 ```
