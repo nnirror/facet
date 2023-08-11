@@ -62,6 +62,7 @@ Below the text editor, there are several UI elements which control the servers r
 - Stop playback: `[ctrl + .]` or `[ctrl + /]`
 - Stop regenerating patterns: `[ctrl + ,]`
 - Autocomplete / list methods: `[ctrl + space]`. This will list all available methods including their arguments in a dropdown menu, filtered by the text preceding the cursor position. If only one matching method is found, it will autocomplete that method.
+- Autoformat code: `[ctrl + f]`
 
 ### Running "npm run facet"
 
