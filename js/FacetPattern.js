@@ -2356,15 +2356,19 @@ f
     return this;
   }
 
-  stretch(stretchFactors) {
+  stretch ( stretchFactors, chunksPerSecond = new FacetPattern().from(128) ) {
     if (typeof stretchFactors == 'number' || Array.isArray(stretchFactors) === true) {
         stretchFactors = new FacetPattern().from(stretchFactors);
     }
+    if (typeof chunksPerSecond == 'number' || Array.isArray(chunksPerSecond) === true) {
+        chunksPerSecond = new FacetPattern().from(chunksPerSecond);
+    }
     stretchFactors.size(this.data.length);
+    chunksPerSecond.clip(1, Math.round(SAMPLE_RATE / (SAMPLE_RATE * .002)-2)).size(this.data.length);
     let outputArray = [];
-    let chunkSize = Math.round(SAMPLE_RATE / 128);
     let skip_every = 0;
-    for (let i = 0; i < this.data.length; i += chunkSize) {
+    for (let i = 0; i < this.data.length; i += Math.round(SAMPLE_RATE / chunksPerSecond.data[i])) {
+        let chunkSize = Math.round(SAMPLE_RATE / chunksPerSecond.data[i]);
         let chunk = this.data.slice(i, i + chunkSize);
         let stretchFactorIndex = Math.floor((i / this.data.length) * stretchFactors.data.length);
         let stretchFactor = Number(stretchFactors.data[stretchFactorIndex]);
@@ -2385,11 +2389,11 @@ f
     this.data = this.sliceEndFade(this.data);
     this.flatten();
     return this;
-  }
+}
 
-  stretchto(samps) {
+  stretchto ( samps, chunksPerSecond = new FacetPattern().from(128) ) {
     let stretchFactor = samps / this.data.length;
-    this.stretch(stretchFactor);
+    this.stretch(stretchFactor, chunksPerSecond);
     this.resizeInner(samps);
     return this;
   }

@@ -3,6 +3,7 @@ var cm = CodeMirror(document.body, {
   mode:  "javascript",
   theme: "mbo",
   lineWrapping: true,
+  matchBrackets: true,
   lint: {options: {esversion: 2021, asi: true}}
 });
 

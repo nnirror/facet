@@ -893,8 +893,8 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').sine(100).shift(rf(0.5,2)); // sometimes lower pitch, sometimes higher pitch`
 		- `$('example').sine(100).pitch(_.noise(16).scale(0.5,2)).play(); // pitch shifts a 100Hz wave at 16 places, sometimes lower and sometimes higher`
 ---
-- **stretch** ( _shiftAmountPattern_ )
-	- time-stretches the FacetPattern while preserving pitch. `shiftAmountPattern` values less than 1 will shorten its overall length; values greater than 1 will increase its length.
+- **stretch** ( _shiftAmountPattern_, _chunksPerSecondPattern_ = 128 )
+	- time-stretches the FacetPattern while preserving pitch. `shiftAmountPattern` values less than 1 will shorten its overall length; values greater than 1 will increase its length. `chunksPerSecondPattern` is the number of chunks that the timestretching algorithm will generate per second. Smaller values will produce more discrete repetitions; larger values will produce more of a bitcrushing, harmonic distortion effect. The largest `chunksPerSecondPattern` value is `SAMPLE_RATE / (SAMPLE_RATE * 0.002)`, which is 500 a sample rate of 44100.
 	- example:
 		- `$('example').sine(100,n4).stretch(4).play(); // stretching a quarter note sine wave to last a whole note`
 		- `$('example').noise(n1).stretch(_.ramp(0.125,4,16)).play().once(); // stretching a whole note of noise over 16 ramped values, starting at 8x faster and ending at 4x slower`
