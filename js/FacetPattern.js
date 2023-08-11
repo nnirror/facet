@@ -1768,6 +1768,26 @@ f
     return this;
   }
 
+  mtof() {
+    let mtof_sequence = [];
+    for (let [key, step] of Object.entries(this.data)) {
+      step = Math.abs(Number(step));
+      mtof_sequence[key] = Math.pow(2,(step-69)/12) * 440;
+    }
+    this.data = mtof_sequence;
+    return this;
+  }
+
+  ftom() {
+    let ftom_sequence = [];
+    for (let [key, step] of Object.entries(this.data)) {
+      step = Math.abs(Number(step));
+      ftom_sequence[key] = Math.round(12 * Math.log2(step / 440) + 69);
+    }
+    this.data = ftom_sequence;
+    return this;
+  }
+
   modulo (amt) {
     let modulo_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {

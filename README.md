@@ -595,6 +595,11 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').sine(100).fracture(10).play(); // the sine has shattered into 10 pieces!`
 ---
+- **ftom** ( )
+	- converts all values in the FacetPattern from frequency values (Hz) to MIDI note values.
+	- example:
+		- `$('example').ramp(1000,250,16).ftom(); // 83, 82, 82, 81, 80, 79, 77, 76, 75, 74, 72, 71, 69, 67, 65, 62`
+---
 - **full** ( )
 	- rescales the FacetPattern to a full dynamic range between -1 and 1, without any dynamic range compression, in a more efficient way than `scale(-1,1)`.
 	- example:
@@ -649,6 +654,11 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- stretches a FacetPattern according to a logarithmic curve, where the values at the end can be stretched for a significant portion of the FacetPattern, and the values at the beginning can be squished together. The intensity of the curve is controlled by `intensity`, which accepts a float between 0 and 1. If `direction` is negative, it returns the FacetPattern in reverse.
 	- example:
 		- `$('example').noise(n8).log(rf()).play(); // each time a different logarithmic curve on the 8th note of noise`
+---
+- **mtof** ( )
+	- converts all values in the FacetPattern from MIDI note values to frequency values (Hz).
+	- example:
+		- `$('example').from([60,55,76,100]).mtof(); // 261.63, 220, 659.26, 2637.02`
 ---
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.
