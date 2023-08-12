@@ -145,6 +145,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- plays the FacetPattern as audio through an open "facet" abstraction in Max or Max for Live, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note.
 	- `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
+	- This command should go at the end of the chain of commands. Applying further operations after it could alter the sound. This is because `play()` works by superposing copies of the input FacetPattern at all the playback positions, rather than creating discrete events to fire at each playback position. This helps to keep timing tight, as there is only one event that fires per loop to actually play each voice of audio, and it's always at position 0, where it plays the entire superposed pattern.
 	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or `[ctrl + /]`, or press the stop button "■".
 	- example:
 		- `$('example').randsamp().play();	// plays once at beginning of loop`
@@ -505,12 +506,6 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([1,2,3,4]).clip(2,3); // 2 2 3 3 `
 ---
-- **comb** ( _delaysamples_ = sample_rate / 100, _feedforward_ = 0f5, _feedback_ = 0.5 )
-	- applies a comb filter to the input data. The `delaySamples` parameter is equal to 10ms by default and specifies the number of samples to delay the input signal. The `feedforward` parameter controls the amount of the input signal that is fed directly to the output. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
-	- The `feedback` and `feedforward` values are clamped between 0 and 0.98.
-	- example:
-		- `$('example').noise(n4).comb(ms(10),0.5,0.5).play();`
----
 - **compress** ( _ratio_, _threshold_, _attackTime_, _releaseTime_ )
 	- compresses the FacetPattern into a smaller dynamic range. `ratio` is a float between 0 and 1 corresponding to n:1 so 0.5 would be 2:1, 0.2 would be 5:1, etc. `threshold` is the sample amplitude at which compression kicks in. `attackTime` and `releaseTime` are expressed as relations to a second, so 0.1 would be 1/10th of a second.
 	- example:
@@ -859,6 +854,12 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').noise(n1).bpf(1000,6).times(0.1).play(); // band-passed noise`
 		- `$('example').noise(n1).bpf(_.sine(4).scale(10,1000)).play(); // 4-cycle LFO modulating the bandpass cutoff between 10 and 1000 Hz`
+---
+- **comb** ( _delaySamplesPattern_ = sample_rate / 100, _feedforward_ = 0.5, _feedback_ = 0.5 )
+	- applies a comb filter to the input data. The `_delaySamplesPattern_` parameter is equal to 10ms by default and specifies the number of samples to delay the input signal. The `feedforward` parameter controls the amount of the input signal that is fed directly to the output. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
+	- The `feedback` and `feedforward` values are clamped between 0 and 0.98.
+	- example:
+		- `$('example').noise(n4).comb(ms(10),0.5,0.5).play();`
 ---
 - **crush** ( _numberOfBitsPattern_, _downsamplingPattern_ )
 	- applies bit crushing and / or downsampling to the incoming FacetPattern.

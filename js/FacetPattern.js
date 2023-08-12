@@ -1015,12 +1015,18 @@ waveformSample(waveform, phase) {
   comb (delaySamples = SAMPLE_RATE / 100, feedforward = 0.5, feedback = 0.5) {
     feedback = Math.min(Math.max(feedback, 0), 0.98);
     feedforward = Math.min(Math.max(feedforward, 0), 0.98);
-    delaySamples = Math.round(Math.abs(Number(delaySamples)));
+    if (typeof delaySamples == 'number' || Array.isArray(delaySamples) === true) {
+        delaySamples = new FacetPattern().from(delaySamples);
+    }
+    let maxDelaySamples = Math.round(Math.max(...delaySamples.data));
+    delaySamples.size(this.data.length).round();
     let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
-    let outputLength = this.data.length + delaySamples * maxFeedbackIterations;
+    let outputLength = this.data.length + maxDelaySamples * maxFeedbackIterations;
     let output = new Array(outputLength).fill(0);
     for (let i = 0; i < outputLength; i++) {
-        let delayedIndex = i - delaySamples;
+        let delaySamplesIndex = Math.floor((i / this.data.length) * delaySamples.data.length);
+        let currentDelaySamples = Math.round(Math.abs(Number(delaySamples.data[delaySamplesIndex])));
+        let delayedIndex = i - currentDelaySamples;
         let delayedInputSample = delayedIndex < 0 ? 0 : this.data[delayedIndex];
         let delayedOutputSample = delayedIndex < 0 ? 0 : output[delayedIndex];
         if (i < this.data.length) {
@@ -1030,6 +1036,8 @@ waveformSample(waveform, phase) {
         }
     }
     this.data = output;
+    this.fixnan();
+    this.trim();
     return this;
   }
 
