@@ -554,12 +554,20 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').noise(20000).fadeout().play();`
 ---
-- **fft** ( )
-	- computes the FFT of the FacetPattern, translating the FacetPattern data into "phase data" that could theoretically reconstruct it using sine waves.
-	- **NOTE**: by default, this command will compute the FFT for the entire input FacetPattern, which can produce artifacts with patterns larger than the typical FFT window sample sizes (> 8192). In order to avoid this, first use the `slices()` command to slice the pattern into smaller chunks, then run the FFT on each of those chunks.
+- **ffilter** ( _min_freq_, _max_freq_ )
+	- applies a spectral filter to the FacetPattern, passing only the frequency bins between `min_freq` and `max_freq`.
 	- example:
-		- `$('example').randsamp().slices(32,()=>{this.fft().shift(rf()).ifft()}).play(); // break the sample into 32 slices, compute the FFT for each slice, shift each slice's spectral data by a random amount, and run IFFT to return back into the audio realm before playback`
-		- `$('example').from([1,0,1,1]).fft(); // 3 0 0 1 1 0 0 -1`
+		- `$('example').noise(n16).ffilter(200,2000).play(); // noise between 200Hz - 2000Hz`
+---
+- **fgate** ( _gate_threshold_ = 0.1 )
+	- applies a spectral gate to the FacetPattern, muting any frequency bins lower than `gate_theshold`. The magnitudes of each FFT bin are normalized from 0 - 1. A `gate_threshold` of 0 will pass every bin, and a `gate_threshold` of 1 will mute every bin.
+	- example:
+		- `$('example').noise(n16).fgate(0.7).play(); // try experimenting with different threshold values `
+---
+- **fshift** ( _shift_amount_ )
+	- applies a spectral bin shift to the FacetPattern. Values lower than 1 will cause the bottom to wrap the top, and the rest of the spectrum moves downwards. Values higher than 1 will cause the top of the spectrum to wrap to the bottom, and the rest of the spectrum moves upwards.
+	- example:
+		- `$('example').sine(100).fshift(0.04).play(); // try experimenting with different shift values `
 ---
 - **flange** ( _delaySamples_ = 220, _depth_ = 110 )
 	- applies a flanger effect to the FacetPattern.
@@ -614,11 +622,6 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- returns `1` for every value in the FacetPattern greater than or equal to `amt` and `0` for all other values.
 	- example:
 		- `$('example').from([0.1,0.3,0.5,0.7]).gte(0.5); // 0 0 1 1`
----
-- **ifft** ( )
-	- computes the IFFT of the FacetPattern. Typically it would be used to reconstruct a FacetPattern after it had been translated into "phase data". But you can run an IFFT on any data.
-	- example:
-		- `$('example').randsamp().fft().shift(0.2).ifft().play(); // FFT bin shifting`
 ---
 - **interp** ( _weight_ = 0.5, _name_ )
 	- interpolates the FacetPattern with a FacetPattern. A weight of 0.5 gives equal weight to both patterns.
