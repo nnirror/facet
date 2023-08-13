@@ -391,12 +391,11 @@ class FacetPattern {
 }
 
   stitchdir (dir, samplesBetweenEachFile = this.getWholeNoteNumSamples(), saved_filename = 'stitched', num_channels = 1) {
-    if ( typeof samplesBetweenEachFile == 'number' ) {
-      samplesBetweenEachFile = [samplesBetweenEachFile];
-    }
-
     if ( this.isFacetPattern(samplesBetweenEachFile) ) {
       samplesBetweenEachFile = samplesBetweenEachFile.data;
+    }
+    else {
+      samplesBetweenEachFile = [Number(samplesBetweenEachFile)];
     }
 
     // these are safeguards so this command runs when and only when the user initializes it, rather than each loop
