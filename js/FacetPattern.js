@@ -3450,8 +3450,6 @@ f
     this.data = resynthesizedSignal;
     this.reverse();
     this.truncate(original_size);
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -3502,8 +3500,6 @@ f
     this.data = resynthesizedSignal;
     this.reverse();
     this.truncate(original_size);
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 
@@ -3563,8 +3559,6 @@ f
     this.data = resynthesizedSignal;
     this.reverse();
     this.truncate(original_size);
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 
