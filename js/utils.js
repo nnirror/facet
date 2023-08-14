@@ -1,6 +1,7 @@
 const fs = require('fs');
 const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const NYQUIST = SAMPLE_RATE / 2;
 
 function $ (n) {
   if (!n) {

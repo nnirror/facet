@@ -3099,7 +3099,6 @@ f
   }
 
   slices (num_slices, command, prob = 1) {
-    let out = [];
     let out_fp = new FacetPattern();
     prob = Math.abs(Number(prob));
     num_slices = Math.abs(Math.round(Number(num_slices)));
@@ -3452,6 +3451,85 @@ f
     this.truncate(original_size);
     return this;
   }
+
+  fkey (midiNotes, binThreshold = 0.005, maxHarmonic = 10) {
+    if (typeof midiNotes == 'number' || Array.isArray(midiNotes) === true) {
+      midiNotes = new FacetPattern().from(midiNotes);
+    }
+    midiNotes = midiNotes.data;
+
+    let original_size = this.data.length;
+    let next_power_of_two = Complex.nextPowerOfTwo(this.data.length);
+    this.append(new FacetPattern().silence(next_power_of_two-this.data.length));
+    let n = this.data.length;
+    let m = Math.log2(n);
+
+    if (Math.pow(2, m) !== n) {
+        throw new Error('Input size must be a power of 2');
+    }
+    let inputComplex = this.data.map(x => new Complex.Complex(x, 0));
+    let output = new Array(n);
+    for (let i = 0; i < n; i++) {
+        let j = Complex.reverseBits(i, m);
+        output[j] = inputComplex[i];
+    }
+    for (let s = 1; s <= m; s++) {
+        let m = Math.pow(2, s);
+        let wm = new Complex.Complex(Math.cos(-2 * Math.PI / m), Math.sin(-2 * Math.PI / m));
+        for (let k = 0; k < n; k += m) {
+            let w = new Complex.Complex(1, 0);
+            for (let j = 0; j < m / 2; j++) {
+                let t = w.mul(output[k + j + m / 2]);
+                let u = output[k + j];
+                output[k + j] = u.add(t);
+                output[k + j + m / 2] = u.sub(t);
+                w = w.mul(wm);
+            }
+        }
+    }
+  
+    // convert MIDI notes to frequencies
+    let midiFrequencies = midiNotes.map(note => 440 * Math.pow(2, (note - 69) / 12));
+
+    // get the bin frequencies
+    let binFrequencies = [];
+    for (let i = 0; i < n/2; i++) {
+        binFrequencies.push(i * SAMPLE_RATE/n);
+    }
+
+    // gate the bins
+    for (let i = 0; i < binFrequencies.length; i++) {
+        let binFrequency = binFrequencies[i];
+        let isCloseToMidiFrequency = false;
+        for (let j = 0; j < midiFrequencies.length; j++) {
+            let midiFrequency = midiFrequencies[j];
+            if (Math.abs(binFrequency - midiFrequency) <= binThreshold * midiFrequency) {
+                isCloseToMidiFrequency = true;
+                break;
+            }
+            // check harmonics
+            for (let k = 2; k <= maxHarmonic; k++) {
+                if (Math.abs(binFrequency - k*midiFrequency) <= binThreshold * k*midiFrequency) {
+                    isCloseToMidiFrequency = true;
+                    break;
+                }
+            }
+            if (isCloseToMidiFrequency) break;
+        }
+        if (!isCloseToMidiFrequency) {
+            output[i] = new Complex.Complex(0,0);
+            output[n-i-1] = new Complex.Complex(0,0);
+        }
+    }
+
+    let ifftOutput = Complex.ifft(output);
+    let resynthesizedSignal = ifftOutput.map(x => x.real);
+    this.data = resynthesizedSignal;
+    this.reverse();
+    this.truncate(original_size);
+    return this;
+}
+
 
   ffilter(minFreq, maxFreq) {
     let original_size = this.data.length;

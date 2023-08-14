@@ -110,7 +110,7 @@ The variable `bars` (representing how many loops have occurred since the time th
 
 You can change the sample rate for the audio generated and played back with Facet by modifying `SAMPLE_RATE` in `js/config.js` to whatever integer you want.
 
-In Facet commands, you can use the constant `SAMPLE_RATE` to refer to the configured sample rate, which is useful when you want to do something for a specific number of seconds. 
+In Facet commands, you can use the constant `SAMPLE_RATE` to refer to the configured sample rate, which is useful when you want to do something for a specific number of seconds. The constant `NYQUIST` refers to the Nyquist frequency which is `SAMPLE_RATE/2`.
 
 For example: `$('example').noise(SAMPLE_RATE).play(); // generate and continually play back exactly 1 second of noise`
 
@@ -563,6 +563,13 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- applies a spectral gate to the FacetPattern, muting any frequency bins lower than `gate_theshold`. The magnitudes of each FFT bin are normalized from 0 - 1. A `gate_threshold` of 0 will pass every bin, and a `gate_threshold` of 1 will mute every bin.
 	- example:
 		- `$('example').noise(n16).fgate(0.7).play(); // try experimenting with different threshold values `
+---
+- **fkey** ( _MIDI_note_scale_, _binThreshold_ = 0.005, _maxHarmonic_ = 10 )
+	- applies a spectral gate to the FacetPattern, muting any frequency bins that do not closely map onto a MIDI note frequency included in `MIDI_note_scale`.
+	- `binThreshold` controls how close a bin frequency must be to a MIDI note frequency or its harmonic in order to be kept. For example, if `binThreshold` is set to 0.1, then a bin frequency must be within 10% of a MIDI note frequency or its harmonic in order to be kept.
+	- `maxHarmonic` controls how many integer harmonics of MIDI notes in `MIDI_note_scale` to include in the output.
+	- example:
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).fkey(_.from([48,50,52,53,55,57,59,60]),0.005,6).play(); // noise spectrally filtered to bins matching C major notes 48,50,52,53,55,57,59,60 and their 6 next harmonics`
 ---
 - **fshift** ( _shift_amount_ )
 	- applies a spectral bin shift to the FacetPattern. Values lower than 1 will cause the bottom to wrap the top, and the rest of the spectrum moves downwards. Values higher than 1 will cause the top of the spectrum to wrap to the bottom, and the rest of the spectrum moves upwards.
