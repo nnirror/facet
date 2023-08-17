@@ -560,27 +560,12 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').noise(20000).fadeout().play();`
 ---
-- **ffilter** ( _min_freq_, _max_freq_ )
-	- applies a spectral filter to the FacetPattern, passing only the frequency bins between `min_freq` and `max_freq`.
-	- example:
-		- `$('example').noise(n16).ffilter(200,2000).play(); // noise between 200Hz - 2000Hz`
----
-- **fgate** ( _gate_threshold_ = 0.1 )
-	- applies a spectral gate to the FacetPattern, muting any frequency bins lower than `gate_theshold`. The magnitudes of each FFT bin are normalized from 0 - 1. A `gate_threshold` of 0 will pass every bin, and a `gate_threshold` of 1 will mute every bin.
-	- example:
-		- `$('example').noise(n16).fgate(0.7).play(); // try experimenting with different threshold values `
----
 - **fkey** ( _MIDI_note_scale_, _binThreshold_ = 0.005, _maxHarmonic_ = 10 )
 	- applies a spectral gate to the FacetPattern, muting any frequency bins that do not closely map onto a MIDI note frequency included in `MIDI_note_scale`.
 	- `binThreshold` controls how close a bin frequency must be to a MIDI note frequency or its harmonic in order to be kept. For example, if `binThreshold` is set to 0.1, then a bin frequency must be within 10% of a MIDI note frequency or its harmonic in order to be kept.
 	- `maxHarmonic` controls how many integer harmonics of MIDI notes in `MIDI_note_scale` to include in the output.
 	- example:
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).fkey(_.from([48,50,52,53,55,57,59,60]),0.005,6).play(); // noise spectrally filtered to bins matching C major notes 48,50,52,53,55,57,59,60 and their 6 next harmonics`
----
-- **fshift** ( _shift_amount_ )
-	- applies a spectral bin shift to the FacetPattern. Values lower than 1 will cause the bottom to wrap the top, and the rest of the spectrum moves downwards. Values higher than 1 will cause the top of the spectrum to wrap to the bottom, and the rest of the spectrum moves upwards.
-	- example:
-		- `$('example').sine(100).fshift(0.04).play(); // try experimenting with different shift values `
 ---
 - **flange** ( _delaySamples_ = 220, _depth_ = 110 )
 	- applies a flanger effect to the FacetPattern.
@@ -896,6 +881,21 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
 		- `$('example').sine(1).divide(_.from([0.5,0.25,0.1,1]));`
+---
+- **ffilter** ( _minFreqPattern_, _maxFreqPattern_ )
+	- applies a spectral filter to the FacetPattern, passing only the frequency bins between `minFreqPattern` and `maxFreqPattern`.
+	- example:
+		- `$('example').noise(n16).ffilter(200,2000).play(); // noise between 200Hz - 2000Hz`
+---
+- **fgate** ( _gateThresholdPattern_ = 0.1 )
+	- applies a spectral gate to the FacetPattern, muting any frequency bins lower than `gateThresholdPattern`. The magnitudes of each FFT bin are normalized from 0 - 1. A `gateThresholdPattern` of 0 will pass every bin, and a `gateThresholdPattern` of 1 will mute every bin.
+	- example:
+		- `$('example').noise(n16).fgate(0.7).play(); // try experimenting with different threshold values `
+---
+- **fshift** ( _shiftAmountPattern_ )
+	- applies a spectral bin shift to the FacetPattern. `shiftAmountPattern` values lower than 0 will cause the bottom to wrap the top, and the rest of the spectrum moves downwards. `shiftAmountPattern` values higher than 0 will cause the top of the spectrum to wrap to the bottom, and the rest of the spectrum moves upwards.
+	- example:
+		- `$('example').sine(100).fshift(0.04).play(); // try experimenting with different shift values `
 ---
 - **harmonics** ( _numHarmonicsPattern_ )
 	- adds `numHarmonicsPattern` harmonics to the input signal.
