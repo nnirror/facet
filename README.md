@@ -325,6 +325,14 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').cosine(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
 		- `$('example').cosine(_.cosine(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
 ---
+- **circle** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
+	- generates a half-circle wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
+	- output range is from 0 - 1.
+	- example:
+		- `$('example').circle(440,n4).play(); // 440 Hz cosine wave for a quarter note`
+		- `$('example').noise(n1).times(_.circle(4)).play().once(); // amplitude modulation of noise with a quarter note circular waveform`
+		- `$('example').noise(n1).ffilter(_.circle(1).invert().size(128).scale(0, NYQUIST/2),_.circle(1).size(128).scale(NYQUIST / 2, NYQUIST)).play().once(); // circular spectral filtering of a whole note of noise`
+---
 - **phasor** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
 	- generates a phasor wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- output range is from -1 - 1.

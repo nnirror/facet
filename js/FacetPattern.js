@@ -570,6 +570,34 @@ class FacetPattern {
     return this;
   }
 
+  circle(frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
+    let output = [];
+    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
+        frequencies = new FacetPattern().from(frequencies);
+    }
+    length = Math.round(length);
+    frequencies.size(length);
+    let phase = 0;
+    for (let i = 0; i < length; i++) {
+        let t = i / sampleRate;
+        let currentFrequency = frequencies.data[i];
+        let x = phase / (2 * Math.PI);
+        let y;
+        if (x <= 0.5) {
+            y = Math.sqrt(1 - (2 * (0.5 - x)) * (2 * (0.5 - x)));
+        } else {
+            y = Math.sqrt(1 - (2 * (x - 0.5)) * (2 * (x - 0.5)));
+        }
+        output[i] = y;
+        phase += 2 * Math.PI * currentFrequency / sampleRate;
+        if (phase >= 2 * Math.PI) {
+            phase -= 2 * Math.PI;
+        }
+    }
+    this.data = output;
+    return this;
+  }
+
   spiral (length, angle_degrees = 360/length, angle_phase_offset = 0) {
     angle_phase_offset = Math.abs(Number(angle_phase_offset));
     let spiral_sequence = [], i = 1, angle = 360 * angle_phase_offset;
