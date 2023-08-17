@@ -2,6 +2,8 @@ const {parentPort, workerData} = require("worker_threads");
 const commentStripper = require('./lib/strip_comments.js');
 const fs = require('fs');
 const FacetPattern = require('./FacetPattern.js')
+const stop_called_regex = /(?<!{[^}]*)\.stop\(\)(?![^{}]*})/;
+const fp_name_regex = /\$\((['"])(.+?)\1\)/;
 let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
 let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
 let bpm_from_env;
@@ -23,7 +25,17 @@ function runCode (code) {
     let original_command = replaceDelimiterWithSemicolon(command);
     command = formatCode(command);
     try {
-      let fp = eval(env + utils + command);
+      let fp;
+      let should_be_stopped = stop_called_regex.test(command);
+      if ( should_be_stopped === true ) {
+        // without processing the command, create a FacetPattern that will be passed 
+        // to the transport where it will stop playback for this pattern
+        fp = new FacetPattern(command.match(fp_name_regex)[2]);
+        fp.is_stopped = true;
+      }
+      else {
+        fp = eval(env + utils + command);
+      }
       // parse the current BPM and add it as a property of the FP.
       // the BPM at generation time is needed in the transport - if BPM has changed
       // since the pattern was generated, it will play back at a corresponding

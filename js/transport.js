@@ -75,6 +75,12 @@ app.post('/update', (req, res) => {
   if (transport_on === true) {
     let posted_pattern = JSON.parse(req.body.pattern);
     let facet_pattern_name = posted_pattern.name.split('---')[0];
+
+    if ( posted_pattern.is_stopped === true ) {
+      stopVoice(posted_pattern);
+      return;
+    }
+
     if ( posted_pattern.sequence_data.length > 0 ) {
       allocateVoice(posted_pattern);
       let is_mono = posted_pattern.pan_data === false && posted_pattern.dacs == '1 1' ? 1 : 0;
@@ -423,6 +429,14 @@ function checkForBpmRecalculation (events_per_loop) {
   else {
     bpm_was_changed_this_tick = false;
   }
+}
+
+function stopVoice (posted_pattern) {
+  // delete pattern from the event register matching this name
+  try {
+    delete event_register[posted_pattern.name];
+  }
+  catch (e) {}
 }
 
 function allocateVoice(posted_pattern) {

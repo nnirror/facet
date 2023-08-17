@@ -25,6 +25,7 @@ class FacetPattern {
     this.env = this.getEnv();
     this.executed_successfully = true;
     this.key_data = false;
+    this.is_stopped = false;
     this.loops_since_generation = 1;
     this.bpm_at_generation_time = -1;
     this.notes = [];
@@ -2330,21 +2331,21 @@ f
   }
 
   speed (ratio) {
-   ratio = Math.abs(Number(ratio));
-   let upscaled_data = [];
-   let new_samps = Math.floor(ratio * this.data.length);
-   let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
-   for (var n = 0; n < this.data.length; n++) {
-     let i = 0;
-     while (i < copies_of_each_value) {
-       upscaled_data.push(this.data[n]);
-       i++;
-     }
-   }
-   this.data = upscaled_data;
-   this.reduce(new_samps);
-   return this;
-  }
+    ratio = Math.abs(Number(ratio));
+    let upscaled_data = [];
+    let new_samps = Math.floor(this.data.length / ratio);
+    let copies_of_each_value = Math.floor(new_samps/this.data.length) + 1;
+    for (var n = 0; n < this.data.length; n++) {
+      let i = 0;
+      while (i < copies_of_each_value) {
+        upscaled_data.push(this.data[n]);
+        i++;
+      }
+    }
+    this.data = upscaled_data;
+    this.reduce(new_samps);
+    return this;
+  } 
 
   flange (delaySamples = 220, depth = 110) {
     const output = [];
@@ -2364,7 +2365,7 @@ f
   size (new_size) {
     new_size = Math.round(Math.abs(Number(new_size)));
     // get ratio between current size and new size
-    let change_ratio = new_size / this.data.length;
+    let change_ratio = this.data.length / new_size;
     this.speed(change_ratio);
     return this;
   }
@@ -2490,7 +2491,7 @@ f
       throw `stutter end_pos value must be between 0 and 1, value found: ${end_pos}`;
     }
     let original_length = this.data.length;
-    let stutter_fp = new FacetPattern().from(this.range(start_pos,end_pos).data).speed(1/repeats).dup(repeats-1).size(original_length);
+    let stutter_fp = new FacetPattern().from(this.range(start_pos,end_pos).data).speed(repeats).dup(repeats-1).size(original_length);
     this.data = stutter_fp.data;
     return this;
   }
@@ -3141,6 +3142,11 @@ f
     }
     return this;
   }
+
+  stop () {
+    this.is_stopped = true;
+    return this;
+  }
   // END special operations
 
   // BEGIN utility functions used in other methods
@@ -3278,10 +3284,10 @@ f
   makePatternsTheSameSize (sequence1, sequence2) {
     // make whichever one is smaller, fit the larger one's size.
     if ( sequence1.data.length > sequence2.data.length ) {
-      sequence2 = sequence2.speed((sequence1.data.length / sequence2.data.length));
+      sequence2 = sequence2.speed(sequence2.data.length / sequence1.data.length);
     }
     else if ( sequence2.data.length > sequence1.data.length ) {
-      sequence1 = sequence1.speed((sequence2.data.length / sequence1.data.length));
+      sequence1 = sequence1.speed(sequence1.data.length / sequence2.data.length);
     }
     return [sequence1, sequence2];
   }
@@ -3298,7 +3304,7 @@ f
     let decodedAudio = wav.decode(out_buffer);
     if ( decodedAudio.sampleRate != SAMPLE_RATE ) {
       // adjust for sample rate
-      return new FacetPattern().from(decodedAudio.channelData[channel_index]).speed(SAMPLE_RATE/decodedAudio.sampleRate).data;
+      return new FacetPattern().from(decodedAudio.channelData[channel_index]).speed(decodedAudio.sampleRate/SAMPLE_RATE).data;
     }
     else {
       // no adjustment needed
