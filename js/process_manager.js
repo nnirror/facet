@@ -12,31 +12,24 @@ process.title = 'facet_process_manager';
 
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
-app.post('/shutdown', (req, res) => {
-  console.log(`shutting down Facet...`);
-  // first, run cleanup on the pattern_generator
-  axios.get('http://localhost:1123/cleanup').then(response => {
-    // then, shut down both other servers
-    exec(`${crossPlatformkillProcessCommand('facet_transport')}`, (error, stdout, stderr) => {
-      exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
-        res.sendStatus(200);
-        // then, shut down this server
-        server.close(() => {
-          console.log(`Facet has shut down.`);
-        });
-      });
+setInterval(()=>{
+  axios.get('http://localhost:1123/ping')
+  .then(response => {
+    // do nothing
+  })
+  .catch(error => {
+    exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
+      runCommand(commands[0].command, commands[0].name, (err, res) => {});
     });
   });
-});
+},500);
 
 app.post('/restart', (req, res) => {
   console.log(`restarting Facet...`);
-  exec(`${crossPlatformkillProcessCommand('facet_transport')}`, (error, stdout, stderr) => {
-    exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
-      main();
-      res.sendStatus(200);
-      console.log(`Facet has restarted.`);
-    });
+  exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
+    runCommand(commands[0].command, commands[0].name, (err, res) => {});
+    res.sendStatus(200);
+    console.log(`Facet has restarted.`);
   });
 });
 

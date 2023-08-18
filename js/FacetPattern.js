@@ -16,6 +16,7 @@ let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 class FacetPattern {
   constructor (name) {
     this.name = name ? name : Math.random();
+    this.available_for_next_request = false;
     this.bpm_at_generation_time = -1;
     this.bpm_pattern = false;
     this.cc_data = [];

@@ -229,17 +229,6 @@ $('body').on('click', '#restart', function() {
   });
 });
 
-$('body').on('click', '#end', function() {
-  $.post('http://127.0.0.1:5831/shutdown', {}).done(function( data, status ) {
-    if (status == 'success') {
-      $.growl.notice({ message: 'Facet shut down successfully'});
-    }
-    else {
-      $.growl.error({ message: 'There was an error while shutting down Facet'});
-    }
-  });
-});
-
 $(document).ready(function() {
   setTimeout(() => {
     initializeMIDISelection();

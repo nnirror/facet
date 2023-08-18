@@ -60,6 +60,9 @@ module.exports = {
                 reruns[fp.name]  = fp;
               }
             }
+            if (reruns[fp.name]) {
+              reruns[fp.name].available_for_next_request = true;
+            }
             fp.name = fp.name + `---${Date.now()}`;
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
@@ -231,12 +234,15 @@ app.post('/status', (req, res) => {
 
 app.get('/update', (req, res) => {
   for (const [fp_name, fp] of Object.entries(reruns)) {
-    // determine which patterns to rerun
+    // determine which patterns to rerun  
     if ( fp.regenerate_every_n_loops == 1
       || ((fp.loops_since_generation > 0) && ((fp.loops_since_generation % fp.regenerate_every_n_loops) == 0 ))
     ) {
-      module.exports.run(fp.original_command,true);
-      fp.loops_since_generation = 1;
+      if ( fp.available_for_next_request == true ) {
+        module.exports.run(fp.original_command,true);
+        fp.available_for_next_request == false;
+        fp.loops_since_generation = 1;
+      }
     }
     else {
       fp.loops_since_generation++;
@@ -250,11 +256,15 @@ app.get('/cleanup', (req, res) => {
   res.sendStatus(200);
 });
 
+app.get('/ping', (req, res) => {
+  res.sendStatus(200);
+});
+
 // run the server
 const server = app.listen(1123);
 
 // reports CPU usage of the process every 500ms
-setInterval(getCpuUsage, 500);
+setInterval(getCpuUsage, 50);
 
 // initialize and open a window in the browser with the text editor
 frontEndWebApp.use(express.static(path.join(__dirname, '../')));

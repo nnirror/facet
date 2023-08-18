@@ -54,7 +54,6 @@ Below the text editor, there are several UI elements which control the servers r
 - ■ = stop playback
 - ⊖ = stop regenerating patterns but continue playback
 - ↻ = restart system (in case it becomes unresponsive)
-- 🛑 = shut down system
 
 ### Key commands
 
