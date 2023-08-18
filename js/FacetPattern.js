@@ -1799,6 +1799,18 @@ f
     return this;
   }
 
+  mtos () {
+    let samples = [];
+    for (let i = 0; i < this.data.length; i++) {
+      let midiNote = this.data[i];
+      let frequency = Math.pow(2, (midiNote - 69) / 12) * 440;
+      let numSamples = Math.round(SAMPLE_RATE / frequency);
+      samples.push(numSamples);
+    }
+    this.data = samples;
+    return this;
+  }
+
   ftom() {
     let ftom_sequence = [];
     for (let [key, step] of Object.entries(this.data)) {
@@ -3581,6 +3593,7 @@ fkey (midiNotes, binThreshold = 0.005, maxHarmonic = 10) {
   this.data = resynthesizedSignal;
   this.reverse();
   this.truncate(original_size);
+  this.fadeinSamples(Math.round(SAMPLE_RATE*.002)).fadeoutSamples(Math.round(SAMPLE_RATE*.002));
   return this;
 }
 

@@ -663,6 +663,11 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([60,55,76,100]).mtof(); // 261.63, 220, 659.26, 2637.02`
 ---
+- **mtos** ( )
+	- converts all values in the FacetPattern from MIDI note values to samples.
+	- example:
+		- `$('example').noise(n4).comb(_.noise(128).scale(0,127).key('c major').mtos().sort()).play(); // comb filter delayed by sample values in c major on a quarter note of noise`
+---
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.
 	- example:
