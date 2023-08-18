@@ -1027,6 +1027,7 @@ For more examples, refer to the `examples/this.md` file.
 	- You can refer to the current iteration of the algorithm via the reserved word: `this` (see example).
 	- The variable `i`, referring to the current iteration number starting at 0, is also available for use in commands.
 	- The variable `iters`, referring to the total number of iterations, is also available for use in commands.
+	- The variable `this.original_data`, referring to the original data before any iterations are proessed, is also available for use in commands.
 	- example:
 		- `$('example').randsamp().iter(8,()=>{this.delay(ri(1,2000))}).play(); // 8 delay lines between 1 and 2000 samples`
 ---

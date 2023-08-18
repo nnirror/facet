@@ -16,6 +16,7 @@ let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 class FacetPattern {
   constructor (name) {
     this.name = name ? name : Math.random();
+    this.bpm_at_generation_time = -1;
     this.bpm_pattern = false;
     this.cc_data = [];
     this.chord_intervals = [];
@@ -27,7 +28,7 @@ class FacetPattern {
     this.key_data = false;
     this.is_stopped = false;
     this.loops_since_generation = 1;
-    this.bpm_at_generation_time = -1;
+    this.original_data = [];
     this.notes = [];
     this.pan_data = false;
     this.pan_mode = 0;
@@ -2969,6 +2970,7 @@ f
   }
 
   iter (iters, command, prob = 1) {
+    this.original_data = this.data;
     prob = Math.abs(Number(prob));
     iters = Math.abs(Math.round(Number(iters)));
     if ( iters == 0 ) {
@@ -3662,7 +3664,7 @@ ffilter(minFreqs, maxFreqs) {
 
     for (let s = 0; s < shiftAmounts.length; s++) {
         let shiftAmount = Math.min(Math.max(shiftAmounts[s], -1), 1);
-        if (shiftAmount > 0) {
+        if (shiftAmount >= 0) {
             shiftAmount = Math.abs(shiftAmount) * 0.5;
         } else {
             shiftAmount = (1 + shiftAmount) * 0.5;
