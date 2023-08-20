@@ -370,9 +370,9 @@ function tick() {
 
   // hard-reset loop position if bpm has been static for the entire loop and an entire loop of time has passed
   if ( bpm_was_changed_this_loop === false && Date.now() - loop_start_time > ((seconds_per_loop * 1000) - EVENT_RESOLUTION_MS) ) {
+    delay = Math.round((seconds_per_loop * 1000) - (Date.now() - loop_start_time));
     current_relative_step_position = 1;
     loop_start_time = Date.now();
-    delay = 0;
   }
 
   setTimeout(tick, delay);

@@ -16,6 +16,9 @@ const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 let bpm = 90;
 let bars_elapsed = 0;
 let reruns = {};
+let stored_variables = [];
+let new_variables_stored = false;
+let stored_variable_string = '';
 let errors = [];
 let percent_cpu = 0;
 let mousex, mousey;
@@ -63,6 +66,15 @@ module.exports = {
             if (reruns[fp.name]) {
               reruns[fp.name].available_for_next_request = true;
             }
+            if ( fp.variables_to_set.length > 0 ) {
+              for (var i = 0; i < fp.variables_to_set.length; i++ ) {
+                let name = fp.variables_to_set[i].name;
+                let data = fp.variables_to_set[i].data;
+                stored_variables[name] = data;
+              }
+              new_variables_stored = true;
+            }
+
             fp.name = fp.name + `---${Date.now()}`;
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
@@ -191,9 +203,17 @@ app.post('/meta', (req, res) => {
   bars_elapsed = req.body.bars_elapsed;
     // rewrite env.js, the environment variables that can be accessed in all future evals.
     // it's loaded into each FacetPattern instance on consruction
+    if ( new_variables_stored === true ) {
+      stored_variable_string = '';
+      for (let key in stored_variables) {
+        stored_variable_string += `var ${key} = [${stored_variables[key]}];`;
+      }
+      new_variables_stored = false;
+    }
+    
     fs.writeFileSync('js/env.js',
       calculateNoteValues(bpm) +
-      `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};`,
+      `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};${stored_variable_string}`,
       ()=> {}
     );
   res.sendStatus(200);

@@ -264,6 +264,19 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- example:
 		- `$('example').noise(4096).play().once();`
 
+### Methods for setting variables
+This can be useful when you want to access the same pattern across multiple commands.
+
+- **set** ( _name_ )
+	- saves a FacetPattern's data in memory on the pattern generator server, for reference in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, an error might display: `{your_variable_name_here} is undefined`. This will resolve after the first loop, after the variable you just set has fully propagated into the environment.
+		- example:
+		-  ```
+		$('set_example').noise(32).curve().set('my_var').once(); // first, set the variable here
+
+		$('example').noise(100).times(my_var).play(); // now, you can use my_var in commands
+		``` 
+
 ### Single number generators
 - **barmod** ( _modulo_, _values_ )
 	- returns values that depend on the current value of `bars`. (`bars` is a global variable that starts at 0 and increments at the completion of a loop.)
@@ -1051,18 +1064,3 @@ For more examples, refer to the `examples/this.md` file.
 	- `command` must start with the reserved word: `this` (see example).
 	- example:
 		- `$('example').phasor(1).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());`
----
-
-### Setting and getting patterns during a session
-This can be useful when you want to access the same pattern across multiple commands.
-
-- **get** ( _name_ )
-	- retrieves a FacetPattern previously stored to disk by a `.set()` command.
-		- example:
-		- `$('example').randsamp().set('my_pattern'); // first, set a random sample, in a separate command`
-		- `$('example').get('my_pattern').reverse().dup(1).play(); // then in a new command, run this`
----
-- **set** ( _name_ )
-	- saves a FacetPattern to disk for temporary reference in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
-		- example:
-		- `$('example').noise(32).set('my_pattern').once();`

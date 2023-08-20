@@ -42,6 +42,7 @@ class FacetPattern {
     this.sequence_data = [];
     this.skipped = false;
     this.utils = this.env + this.getUtils();
+    this.variables_to_set = [];
   }
 
   // BEGIN generator operations
@@ -2790,8 +2791,8 @@ f
   }
 
   ichunk (lookupPattern) {
-    if ( !this.isFacetPattern(lookupPattern) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof lookupPattern}`;
+    if ( typeof lookupPattern == 'number' || Array.isArray(lookupPattern) === true ) {
+      lookupPattern = new FacetPattern().from(lookupPattern);
     }
     let outputArray = [];
     let chunkSize = Math.round(this.data.length / lookupPattern.data.length);
@@ -3115,30 +3116,8 @@ f
     return this;
   }
 
-  set (filename) {
-    let a_wav = new WaveFile();
-    a_wav.fromScratch(1, SAMPLE_RATE, '32f', this.data);
-    fs.writeFileSync(`tmp${cross_platform_slash}${filename}.wav`, a_wav.toBuffer(),(err) => {});
-    return this;
-  }
-
-  get (filename) {
-    try {
-      this.sample(`tmp${cross_platform_slash}${filename}.wav`);
-    }
-    catch (e) {
-      try {
-        this.sample(`tmp${cross_platform_slash}${filename}.wav`);
-      }
-      catch (er) {
-        try {
-          this.sample(`tmp${cross_platform_slash}${filename}.wav`);
-        }
-        catch (err) {
-          throw err;
-        }
-      }
-    }
+  set (pattern_name) {
+    this.variables_to_set.push({name:pattern_name,data:this.data});
     return this;
   }
 
