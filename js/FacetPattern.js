@@ -638,8 +638,6 @@ class FacetPattern {
         phase -= Math.floor(phase);
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
   
@@ -3144,7 +3142,13 @@ f
       if ( Math.random() < prob ) {
         current_slice = eval(this.utils + command);
       }
-      out_fp.sup(current_slice.fadeout(0.01),s/num_slices,this.data.length);
+      if (this.data.length >= 1024) {
+        out_fp.sup(current_slice.fadeout(0.01),s/num_slices,this.data.length);
+      }
+      else {
+        // no fade on sizes < 1024 so that it can run on control data too
+        out_fp.sup(current_slice,s/num_slices,this.data.length);
+      }
     }
     this.data = out_fp.data;
     this.flatten();

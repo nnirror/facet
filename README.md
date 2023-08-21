@@ -1056,6 +1056,7 @@ For more examples, refer to the `examples/this.md` file.
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `command`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
 	- The variable `s`, referring to the current slice number starting at 0, is also available for use in commands.
 	- The variable `num_slices`, referring to the number of slices, is also available for use in commands.
+	- If the FacetPattern's data is >= 1024 samples, the last 1% of each slice will be faded out to prevent clicks in audio slices. If the FacetPattern's data is < 1024 samples, no fading is applied, and each slice is processed exactly as-is.
 	- example:
 		- `$('example').randsamp().slices(32,()=>{this.fft().shift(random()).ifft()}).play();`
 ---
