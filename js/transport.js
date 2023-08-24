@@ -18,6 +18,8 @@ let prev_bpm = 90;
 let voice_number_to_load = 1;
 let VOICES = 16;
 let voice_allocator = initializeVoiceAllocator();;
+let patterns_for_next_loop = {};
+let stopped_patterns = [];
 let current_relative_step_position = 0;
 let event_register = [];
 let transport_on = true;
@@ -77,6 +79,7 @@ app.post('/update', (req, res) => {
     let facet_pattern_name = posted_pattern.name.split('---')[0];
 
     if ( posted_pattern.is_stopped === true ) {
+      stopped_patterns.push(facet_pattern_name);
       stopVoice(posted_pattern);
       return;
     }
@@ -100,105 +103,9 @@ app.post('/update', (req, res) => {
         )
       });
     }
-
-    if ( posted_pattern.notes.length > 0 ) {
-      event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.notes.length; i++) {
-        let note_data = posted_pattern.notes[i];
-        if ( note_data.note >= 0 ) {
-          event_register[facet_pattern_name].push(
-            {
-              position: (i/posted_pattern.notes.length),
-              type: "note",
-              data: note_data,
-              play_once: posted_pattern.play_once,
-              fired: false
-            }
-          )
-          for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
-            let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
-            // check if key needs to be locked
-            if ( posted_pattern.key_data !== false ) {
-              note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
-            }
-
-            event_register[facet_pattern_name].push(
-              {
-                position: (i/posted_pattern.notes.length),
-                type: "note",
-                data: {
-                  note: note_to_add,
-                  channel: note_data.channel,
-                  velocity: note_data.velocity,
-                  duration: note_data.duration,
-                  play_once: posted_pattern.play_once,
-                  fired: false
-                },
-              }
-            )
-          }
-        }
-      }
+    else {
+      patterns_for_next_loop[facet_pattern_name] = posted_pattern;
     }
-
-    if ( typeof posted_pattern.cc_data.data !== 'undefined' ) {
-      event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.cc_data.data.length; i++) {
-        let cc_object = {
-          data: posted_pattern.cc_data.data[i],
-          controller: posted_pattern.cc_data.controller,
-          channel: posted_pattern.cc_data.channel,
-        };
-        event_register[facet_pattern_name].push(
-          {
-            position: (i/posted_pattern.cc_data.data.length),
-            type: "cc",
-            data: cc_object,
-            play_once: posted_pattern.play_once,
-            fired: false
-          }
-        )
-      }
-    }
-
-    if ( typeof posted_pattern.pitchbend_data.data !== 'undefined' ) {
-      event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.pitchbend_data.data.length; i++) {
-        let pb_object = {
-          data: posted_pattern.pitchbend_data.data[i],
-          channel: posted_pattern.pitchbend_data.channel,
-        };
-        event_register[facet_pattern_name].push(
-          {
-            position: (i/posted_pattern.pitchbend_data.data.length),
-            type: "pitchbend",
-            data: pb_object,
-            play_once: posted_pattern.play_once,
-            fired: false
-          }
-        )
-      }
-    }
-
-    if ( typeof posted_pattern.osc_data.data !== 'undefined' ) {
-      event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.osc_data.data.length; i++) {
-        let osc_object = {
-          data: posted_pattern.osc_data.data[i],
-          address: posted_pattern.osc_data.address,
-        };
-        event_register[facet_pattern_name].push(
-          {
-            position: (i/posted_pattern.osc_data.data.length),
-            type: "osc",
-            data: osc_object,
-            play_once: posted_pattern.play_once,
-            fired: false
-          }
-        )
-      }
-    }
-
   }
   res.sendStatus(200);
 });
@@ -266,6 +173,8 @@ function tick() {
   if ( current_relative_step_position > 1.00001 ) {
     current_relative_step_position = 0;
     bars_elapsed++;
+    applyNextPatterns();
+    patterns_for_next_loop = {};
     // tell pattern server to start processing next loop
     requestNewPatterns();
     // increment loops since generation for all voices
@@ -393,6 +302,112 @@ function reportTransportMetaData() {
     console.log(`error posting metadata to pattern server: ${error}`);
   });
   }
+}
+
+function applyNextPatterns () {
+  for (const [facet_pattern_name, posted_pattern] of Object.entries(patterns_for_next_loop)) {
+    if ( stopped_patterns.includes(facet_pattern_name)) {
+      return;
+    }
+    if ( posted_pattern.notes.length > 0 ) {
+      event_register[facet_pattern_name] = [];
+      for (var i = 0; i < posted_pattern.notes.length; i++) {
+        let note_data = posted_pattern.notes[i];
+        if ( note_data.note >= 0 ) {
+          event_register[facet_pattern_name].push(
+            {
+              position: (i/posted_pattern.notes.length),
+              type: "note",
+              data: note_data,
+              play_once: posted_pattern.play_once,
+              fired: false
+            }
+          )
+          for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
+            let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
+            // check if key needs to be locked
+            if ( posted_pattern.key_data !== false ) {
+              note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
+            }
+  
+            event_register[facet_pattern_name].push(
+              {
+                position: (i/posted_pattern.notes.length),
+                type: "note",
+                data: {
+                  note: note_to_add,
+                  channel: note_data.channel,
+                  velocity: note_data.velocity,
+                  duration: note_data.duration,
+                  play_once: posted_pattern.play_once,
+                  fired: false
+                },
+              }
+            )
+          }
+        }
+      }
+    }
+  
+    if ( typeof posted_pattern.cc_data.data !== 'undefined' ) {
+      event_register[facet_pattern_name] = [];
+      for (var i = 0; i < posted_pattern.cc_data.data.length; i++) {
+        let cc_object = {
+          data: posted_pattern.cc_data.data[i],
+          controller: posted_pattern.cc_data.controller,
+          channel: posted_pattern.cc_data.channel,
+        };
+        event_register[facet_pattern_name].push(
+          {
+            position: (i/posted_pattern.cc_data.data.length),
+            type: "cc",
+            data: cc_object,
+            play_once: posted_pattern.play_once,
+            fired: false
+          }
+        )
+      }
+    }
+  
+    if ( typeof posted_pattern.pitchbend_data.data !== 'undefined' ) {
+      event_register[facet_pattern_name] = [];
+      for (var i = 0; i < posted_pattern.pitchbend_data.data.length; i++) {
+        let pb_object = {
+          data: posted_pattern.pitchbend_data.data[i],
+          channel: posted_pattern.pitchbend_data.channel,
+        };
+        event_register[facet_pattern_name].push(
+          {
+            position: (i/posted_pattern.pitchbend_data.data.length),
+            type: "pitchbend",
+            data: pb_object,
+            play_once: posted_pattern.play_once,
+            fired: false
+          }
+        )
+      }
+    }
+  
+    if ( typeof posted_pattern.osc_data.data !== 'undefined' ) {
+      event_register[facet_pattern_name] = [];
+      for (var i = 0; i < posted_pattern.osc_data.data.length; i++) {
+        let osc_object = {
+          data: posted_pattern.osc_data.data[i],
+          address: posted_pattern.osc_data.address,
+        };
+        event_register[facet_pattern_name].push(
+          {
+            position: (i/posted_pattern.osc_data.data.length),
+            type: "osc",
+            data: osc_object,
+            play_once: posted_pattern.play_once,
+            fired: false
+          }
+        )
+      }
+    }
+  }
+  stopped_patterns = [];
 }
 
 function requestNewPatterns () {
