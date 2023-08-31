@@ -1,6 +1,6 @@
 ## Overview
 
-Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser, a pair of NodeJS servers running locally on your machine, and Max or Max for Live, Facet can generate and sequence audio, MIDI, and OSC data in real-time.
+Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser, a pair of NodeJS servers running locally on your machine, and Max or Max for Live, Facet can generate and sequence audio, MIDI, OSC, and image data.
 
 Facet runs on MacOS, Linux, and Windows.
 
