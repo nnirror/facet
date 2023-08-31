@@ -94,10 +94,18 @@ $(document).keydown(function(e) {
   }
 
   if ( e.ctrlKey && e.keyCode === 70 ) {
+    var cursor = cm.getCursor();
+    var currentLine = cursor.line;
+    let scroll_info = cm.getScrollInfo();
     cm.setValue(js_beautify(cm.getValue(), {
       indent_size: 2,
       break_chained_methods: true
     }))
+    cm.focus();
+    cm.setCursor({
+      line: currentLine-1
+    });
+    cm.scrollTo(scroll_info.left,scroll_info.top);
   }
 
   if ( e.ctrlKey && e.code === 'Space' ) {
