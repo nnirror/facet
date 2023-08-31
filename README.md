@@ -268,7 +268,8 @@ You need to connect the MIDI device you want to use before starting Facet.
 This can be useful when you want to access the same pattern across multiple commands.
 
 - **set** ( _name_ )
-	- saves a FacetPattern's data in memory on the pattern generator server, for reference in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+	- saves a FacetPattern's data in memory on the pattern generator server, for reference as a variable in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If  the pattern has one piece of data in it, the corresponding variable will be a float.
 	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, an error might display: `{your_variable_name_here} is undefined`. This will resolve after the first loop, after the variable you just set has fully propagated into the environment.
 		- example:
 		-  ```
@@ -1065,3 +1066,48 @@ For more examples, refer to the `examples/this.md` file.
 	- `command` must start with the reserved word: `this` (see example).
 	- example:
 		- `$('example').phasor(1).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());`
+
+### Methods for image generation and processing
+
+- **layer2d** ( _brightness_data_, _xCoords_, _yCoords_, _width_, _height_ )
+	- superposes a FacetPattern in 2 dimensions on top of the existing data in a FacetPattern.
+	- `brightness_data` is a FacetPattern that should be normalized between 0 and 1. It controls how bright the corresponding pixels will be.
+	- `xCoords` and `yCoords` are FacetPatterns that allow the user to control the x,y position of the pixels in `brightness_data`.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. Other values will rotate the data in a different way, around a different center point.
+	- example:
+		- `$('example').sine(1).size(10000).scale(0,1).layer2d(_.noise(10000), _.ramp(0,100,128), _.ramp(0,100,128)).saveimg('example').once(); // layers a ramp from 0,0 to 100,100 over a sine wave background`
+- **rotate** ( _angle_, _width_, _height_ )
+	- rotates the FacetPattern `angle` degrees around a center point, as if it were suspended in 2D space.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. Other values will rotate the data in a different way, around a different center point.
+	- example:
+		- `$('example').sine(1).scale(0,1).size(512*512).rotate(35).saveimg('example').once(); // rotates a sine wave background 35 degrees`
+- **saveimg** ( _filepath_, _rgbData_, _width_, _height_ )
+	- saves the FacetPattern data as a PNG file in the `img/` directory or a sub-directory. If a sub-directory is specified in the `filepath` argument and it doesn't exist, it will be created.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. They control the width and height of the PNG image file, in pixels. If the FacetPattern has more data `d` than there are total pixels `p` in the image, the data will be truncated after `p`.
+	- the `rgbData` argument is optional. Without it, the image will be greyscaled. If `rgbData` is included, it should be an array containing three FacetPatterns normalized to between 0 and 1, representing the R, G, and B amounts. The FacetPattern data will be multipled by the three `rgbData` patterns to create colored pixels in the image. Values between 0 and 1 will be mapped onto RGB values 0-255.
+	- example:
+		- ```
+			$('example')
+			// create black background
+			.silence(512 * 512)
+			// add the 512 brightest-possible pixels (1s) that will be used to create a circle
+			.layer2d(_.from(1).size(512),
+			// the circle x coordinates move from left edge (0) to right edge (512) and back
+			_.ramp(0, 511, 512)
+			.palindrome(),
+			// the circle y coordinates, pt. 1: create a half-circle out of 512 values, defaulting to between 0 and 1
+			_.circle(1)
+			.size(512)
+			// the circle y coordinates, pt. 2: append another half-circle out of 512 values, scaled between -1 and 0 and inverted
+			.append(_.circle(1)
+			.size(512)
+			.scale(-1, 0)
+			.invert())
+			// scale the y coordinates so they move between 0 and 511
+			.scale(0, 511))
+			.saveimg('circle',
+              // use 3 random ramps, 1 for each RGB channel, to create a gradient in the circle's pixels
+              [_.ramp(rf(),rf(),512),_.ramp(rf(),rf(),512),_.ramp(rf(),rf(),512)]
+            )
+			.once();
+		```

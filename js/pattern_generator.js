@@ -206,7 +206,8 @@ app.post('/meta', (req, res) => {
     if ( new_variables_stored === true ) {
       stored_variable_string = '';
       for (let key in stored_variables) {
-        stored_variable_string += `var ${key} = [${stored_variables[key]}];`;
+        let variable_string = stored_variables[key].length > 1 ? `[${stored_variables[key]}]` : `${stored_variables[key]}`;
+        stored_variable_string += `var ${key} = ${variable_string};`;
       }
       new_variables_stored = false;
     }

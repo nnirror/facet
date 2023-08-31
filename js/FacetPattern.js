@@ -10,6 +10,7 @@ const curve_calc = require('./lib/curve_calc.js');
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const Complex = require('./lib/Complex.js');
 const { Scale } = require('tonal');
+const PNG = require('pngjs').PNG;
 const readimage = require('readimage');
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
@@ -920,7 +921,7 @@ class FacetPattern {
     return this;
   }
 
-  chaosInner (zx,zy,cx,cy,iterations) {
+  chaosInner (cx,cy,zx,zy,iterations) {
     let n = 0, px = 0, py = 0, d = 0;
     while (n < iterations) {
       px = (zx*zx) - (zy*zy);
@@ -3110,7 +3111,7 @@ f
     }
     let a_wav = new WaveFile();
     a_wav.fromScratch(1, SAMPLE_RATE, '32f', this.data);
-    fs.writeFileSync(`${folder}/${filename}.wav`, a_wav.toBuffer(),(err) => {});
+    fs.writeFileSync(`${folder}${cross_platform_slash}${filename}.wav`, a_wav.toBuffer(),(err) => {});
     return this;
   }
 
@@ -3722,6 +3723,187 @@ ffilter(minFreqs, maxFreqs) {
 
     this.data = resynthesizedSignal.data;
     this.truncate(original_size);
+    return this;
+  }
+
+  saveimg (filename, rgbData, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
+    width = Math.round(width);
+    height = Math.round(height);
+
+    const png = new PNG({
+      width: width,
+      height: height,
+      filterType: -1
+    });
+
+    let folder = 'img';
+    if (filename.includes(cross_platform_slash)) {
+      folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
+      filename = filename.split(cross_platform_slash)[1];
+    }
+    if (!fs.existsSync(folder)) {
+      fs.mkdir(folder, { recursive: true }, (err) => {
+          if (err) throw err;
+      });
+    }
+    if ( !filename.includes('.png') ) {
+      filename = `${filename}.png`;
+    }
+
+    if ( !rgbData ) {
+      rgbData = [
+        new FacetPattern().from(1),
+        new FacetPattern().from(1),
+        new FacetPattern().from(1)
+      ]
+    }
+    if ( rgbData.length != 3 ) {
+      throw `saveimg() requires an array of 3 FacetPatterns for RGB data`;
+    }
+    rgbData[0].size(this.data.length);
+    rgbData[1].size(this.data.length);
+    rgbData[2].size(this.data.length);
+  
+    // Set the pixel data from the float array
+    for (let y = 0; y < png.height; y++) {
+      for (let x = 0; x < png.width; x++) {
+        const idx = (png.width * y + x) << 2;
+        png.data[idx] = this.data[y * png.width + x] * (rgbData[0].data[y * png.width + x]*255);
+        png.data[idx + 1] = this.data[y * png.width + x] * (rgbData[1].data[y * png.width + x]*255);
+        png.data[idx + 2] = this.data[y * png.width + x] * (rgbData[2].data[y * png.width + x]*255);
+        png.data[idx + 3] = 255;
+      }
+    }
+    // Save the PNG to disk
+    png.pack().pipe(fs.createWriteStream(`${folder}${cross_platform_slash}${filename}`));
+    return this;
+  }
+
+  rotate (angle, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
+    width = Math.round(width);
+    height = Math.round(height);
+    if (!angle || angle < 0 ) {
+      throw `rotate() cannot be called without a positive angle value`;
+    }
+    angle = Math.round(angle);
+    
+    // Step 1: Scale up the image by a factor of 2
+    const scale = 2;
+    const scaledWidth = width * scale;
+    const scaledHeight = height * scale;
+    
+    const scaledFloatArray = new Float32Array(scaledWidth * scaledHeight);
+    
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const srcIdx = y * width + x;
+        for (let sy = y * scale; sy < (y + 1) * scale; sy++) {
+          for (let sx = x * scale; sx < (x + 1) * scale; sx++) {
+            const dstIdx = sy * scaledWidth + sx;
+            scaledFloatArray[dstIdx] = this.data[srcIdx];
+          }
+        }
+      }
+    }
+    
+    // Step 2: Rotate the scaled image using a standard rotation algorithm
+    const rotatedScaledFloatArray = new Float32Array(scaledWidth * scaledHeight);
+    
+    const centerX = scaledWidth / 2;
+    const centerY = scaledHeight / 2;
+    
+    const rad = (angle % 360) * Math.PI / 180;
+    
+    for (let y = 0; y < scaledHeight; y++) {
+      for (let x = 0; x < scaledWidth; x++) {
+        const tx = x - centerX;
+        const ty = y - centerY;
+        const rx = tx * Math.cos(rad) - ty * Math.sin(rad);
+        const ry = tx * Math.sin(rad) + ty * Math.cos(rad);
+        const ux = Math.round(rx + centerX);
+        const uy = Math.round(ry + centerY);
+        
+        if (ux >= 0 && ux < scaledWidth && uy >= 0 && uy < scaledHeight) {
+          const srcIdx = uy * scaledWidth + ux;
+          const dstIdx = y * scaledWidth + x;
+          rotatedScaledFloatArray[dstIdx] = scaledFloatArray[srcIdx];
+        }
+      }
+    }
+    
+    // Step3: Scale down the rotated image to its original size
+     this.size(width*height);
+     const rotatedFloatArray = new Float32Array(this.data.length);
+     
+     for (let y = 0; y < height; y++) {
+       for (let x = 0; x < width; x++) {
+         let sum = 0;
+         let count = 0;
+         for (let sy = y * scale; sy < (y +1) * scale; sy++) {
+           for (let sx= x*scale; sx< (x+1)*scale;sx++){
+             sum += rotatedScaledFloatArray[sy*scaledWidth+sx];
+             count++;
+           }
+         }
+         rotatedFloatArray[y*width+x]=sum/count;
+       }
+     }
+     
+     this.data=rotatedFloatArray;
+     this.fixnan();
+     return this;
+    }  
+
+  layer2d ( brightness_data, xCoords, yCoords, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length)) ) {
+    if ( !brightness_data ) {
+      throw `layer2d() cannot be called without a brightness argument`;
+    }
+    if ( !xCoords ) {
+      throw `layer2d() cannot be called without a xCoords argument`;
+    }
+    if ( !yCoords ) {
+      throw `layer2d() cannot be called without a yCoords argument`;
+    }
+    if (!width || width <= 0 ) {
+      throw `layer2d() cannot be called without a width value < 0`;
+    }
+    width = Math.round(width);
+    if (!height || height <= 0 ) {
+      throw `layer2d() cannot be called without a height value < 0`;
+    }
+    height = Math.round(height);
+
+    // create a new array with the specified dimensions
+    let screen = new Array(height);
+    for (let i = 0; i < height; i++) {
+        screen[i] = new Array(width);
+    }
+
+    if (typeof brightness_data == 'number' || Array.isArray(brightness_data) === true) {
+      brightness_data = new FacetPattern().from(brightness_data);
+    }
+    if (typeof xCoords == 'number' || Array.isArray(xCoords) === true) {
+      xCoords = new FacetPattern().from(xCoords);
+    }
+    if (typeof yCoords == 'number' || Array.isArray(yCoords) === true) {
+      yCoords = new FacetPattern().from(yCoords);
+    }
+
+    xCoords.size(brightness_data.data.length);
+    yCoords.size(brightness_data.data.length);
+
+    // write the brightness data to the screen
+    for (let i = 0; i < brightness_data.data.length; i++) {
+        let x = Math.round(xCoords.data[i]);
+        let y = Math.round(yCoords.data[i]);
+        if (x >= 0 && x < width && y >= 0 && y < height) {
+          screen[y][x] = brightness_data.data[i];
+        }
+    }
+    brightness_data.data = screen;
+    brightness_data.flatten().fixnan();
+    this.sup(brightness_data);
+    this.fixnan();
     return this;
   }
 

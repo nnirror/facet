@@ -1,6 +1,6 @@
 {
   "name": "facet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Facet is a live coding system for algorithmic music",
   "main": "index.js",
   "directories": {
@@ -19,6 +19,7 @@
     "open": "^8.4.2",
     "os-utils": "0.0.14",
     "osc-js": "^2.4.0",
+    "pngjs": "^7.0.0",
     "readimage": "^1.1.1",
     "sync-request": "^6.1.0",
     "tonal": "^4.14.2",

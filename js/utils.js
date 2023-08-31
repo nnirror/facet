@@ -1,7 +1,7 @@
 const fs = require('fs');
 const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
-const NYQUIST = SAMPLE_RATE / 2;
+const NYQUIST = SAMPLE_RATE / 2;  
 
 function $ (n) {
   if (!n) {
@@ -71,4 +71,8 @@ function barmod(mod, values) {
           return values[i + 1];
       }
   }
+}
+
+function scale(oldValue, oldMin, oldMax, newMin, newMax) {
+  return (newMax - newMin) * (oldValue - oldMin) / (oldMax - oldMin) + newMin;
 }
