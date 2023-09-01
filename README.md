@@ -1111,3 +1111,8 @@ For more examples, refer to the `examples/this.md` file.
             )
 			.once();
 		```
+- **shift2d** ( _xAmt_, _yAmt_, _width_ )
+	- shifts the FacetPattern in 2D space, by `xAmt` pixels to the left/right, and by `yAmt` pixels up/down.
+	- the `width` argument is optional. It defaults to the square root of the FacetPattern's length. Other values will shift the data in a different way.
+	- example:
+		- `$('example').noise(100*100).prob(0.001).iter(4,()=>{this.mix(0.5,()=>{this.shift2d(0,1)})}).saveimg('example').once(); // slides all the pixels up 4`

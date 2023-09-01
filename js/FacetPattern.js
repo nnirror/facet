@@ -1032,6 +1032,7 @@ waveformSample(waveform, phase) {
     }
     command = command.toString();
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+    command = command.replace(/current_slice./g, 'this.');
     wet = Math.abs(Number(wet));
     let dry = Math.abs(wet-1);
     let dry_data = new FacetPattern().from(this.data).times(dry);
@@ -3782,7 +3783,7 @@ ffilter(minFreqs, maxFreqs) {
   rotate (angle, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
     width = Math.round(width);
     height = Math.round(height);
-    if (!angle || angle < 0 ) {
+    if ( angle < 0 ) {
       throw `rotate() cannot be called without a positive angle value`;
     }
     angle = Math.round(angle);
@@ -3907,5 +3908,26 @@ ffilter(minFreqs, maxFreqs) {
     return this;
   }
 
+  shift2d (x, y, width = Math.round(Math.sqrt(this.data.length))) {
+    // calculate the height of the 2D space
+    let height = this.data.length / width;
+    // create a new array to hold the moved values
+    let movedArr = new Array(this.data.length);
+    // loop through each value in the original array
+    for (let i = 0; i < this.data.length; i++) {
+        // calculate the current row and column in the 2D space
+        let row = Math.floor(i / width);
+        let col = i % width;
+        // calculate the new row and column after moving
+        let newRow = (row + y + height) % height;
+        let newCol = (col + x + width) % width;
+        // move the value to the new position in the moved array
+        let newIndex = newRow * width + newCol;
+        movedArr[newIndex] = this.data[i];
+    }
+    this.data = movedArr;
+    return this;
+  }
+  
 }
 module.exports = FacetPattern;
