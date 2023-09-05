@@ -22,6 +22,10 @@ class FacetPattern {
     this.bpm_pattern = false;
     this.cc_data = [];
     this.chord_intervals = [];
+    this.current_iteration_number = 0;
+    this.current_slice_number = 0;
+    this.current_total_slices = 0;
+    this.current_total_iterations = 0;
     this.dacs = '1 1';
     this.data = [];
     this.do_not_regenerate = false;
@@ -1036,6 +1040,10 @@ waveformSample(waveform, phase) {
     wet = Math.abs(Number(wet));
     let dry = Math.abs(wet-1);
     let dry_data = new FacetPattern().from(this.data).times(dry);
+    let i = this.current_iteration_number;
+    let iters = this.current_total_iterations;
+    let s = this.current_slice_number;
+    let num_slices = this.current_total_slices;
     eval(this.env + this.utils + command);
     let wet_data = new FacetPattern().from(this.data).times(wet);
     let mixed_data = dry_data.sup(wet_data, 0);
@@ -2969,6 +2977,10 @@ f
     let initial_maximum_value = this.getMaximumValue();
     let out_fp = new FacetPattern();
     let initial_fp = new FacetPattern().from(this.data);
+    let i = this.current_iteration_number;
+    let iters = this.current_total_iterations;
+    let s = this.current_slice_number;
+    let num_slices = this.current_total_slices;
     for (let [key, command] of Object.entries(commands)) {
       this.data = initial_fp.data;
       command = command.toString();
@@ -2993,10 +3005,14 @@ f
     if ( typeof command != 'function' ) {
       throw `3rd argument to .iter() must be a function, type found: ${typeof command}`;
     }
+    this.current_total_iterations = iters;
     command = command.toString();
     command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+    let s = this.current_slice_number;
+    let num_slices = this.current_total_slices;
     for (var i = 0; i < iters; i++) {
+      this.current_iteration_number = i;
       if ( Math.random() < prob ) {
         eval(this.env + this.utils + command);
       }
@@ -3131,13 +3147,17 @@ f
     if ( typeof command != 'function' ) {
       throw `3rd argument must be a function, type found: ${typeof command}`;
     }
+    this.current_total_slices = num_slices;
     command = command.toString();
     command = command.replace(/this./g, 'current_slice.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     let calc_slice_size = Math.round(this.data.length / num_slices);
     let slice_start_pos, slice_end_pos;
     let current_slice;
+    let i = this.current_iteration_number;
+    let iters = this.current_total_iterations;
     for (var s = 0; s < num_slices; s++) {
+      this.current_slice_number = s;
       slice_start_pos = s * calc_slice_size;
       slice_end_pos = slice_start_pos + calc_slice_size;
       current_slice = new FacetPattern().from(this.data).range(slice_start_pos/this.data.length, slice_end_pos/this.data.length);
@@ -3165,6 +3185,10 @@ f
     command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     prob = Math.abs(Number(prob));
+    let i = this.current_iteration_number;
+    let iters = this.current_total_iterations;
+    let s = this.current_slice_number;
+    let num_slices = this.current_total_slices;
     if ( Math.random() < prob ) {
       eval(this.utils + command);
     }
@@ -3786,7 +3810,6 @@ ffilter(minFreqs, maxFreqs) {
     if ( angle < 0 ) {
       throw `rotate() cannot be called without a positive angle value`;
     }
-    angle = Math.round(angle);
     
     // Step 1: Scale up the image by a factor of 2
     const scale = 2;
@@ -3809,12 +3832,12 @@ ffilter(minFreqs, maxFreqs) {
     
     // Step 2: Rotate the scaled image using a standard rotation algorithm
     const rotatedScaledFloatArray = new Float32Array(scaledWidth * scaledHeight);
-    
+
     const centerX = scaledWidth / 2;
     const centerY = scaledHeight / 2;
-    
+
     const rad = (angle % 360) * Math.PI / 180;
-    
+
     for (let y = 0; y < scaledHeight; y++) {
       for (let x = 0; x < scaledWidth; x++) {
         const tx = x - centerX;
@@ -3824,8 +3847,12 @@ ffilter(minFreqs, maxFreqs) {
         const ux = Math.round(rx + centerX);
         const uy = Math.round(ry + centerY);
         
-        if (ux >= 0 && ux < scaledWidth && uy >= 0 && uy < scaledHeight) {
-          const srcIdx = uy * scaledWidth + ux;
+        // Wrap the values around the image using modulo operation
+        const wrappedUx = ((ux % scaledWidth) + scaledWidth) % scaledWidth;
+        const wrappedUy = ((uy % scaledHeight) + scaledHeight) % scaledHeight;
+        
+        if (wrappedUx >= 0 && wrappedUx < scaledWidth && wrappedUy >= 0 && wrappedUy < scaledHeight) {
+          const srcIdx = wrappedUy * scaledWidth + wrappedUx;
           const dstIdx = y * scaledWidth + x;
           rotatedScaledFloatArray[dstIdx] = scaledFloatArray[srcIdx];
         }
@@ -3852,6 +3879,7 @@ ffilter(minFreqs, maxFreqs) {
      
      this.data=rotatedFloatArray;
      this.fixnan();
+     this.flatten();
      return this;
     }  
 
@@ -3928,6 +3956,79 @@ ffilter(minFreqs, maxFreqs) {
     this.data = movedArr;
     return this;
   }
-  
+
+  rechunk2d( chunks) {
+    if (Math.sqrt(chunks) % 1 !== 0) {
+        throw new Error('The number of chunks must have an integer square root');
+    }
+    let nextLargerSquare = Math.ceil(Math.sqrt(this.data.length));
+    while (nextLargerSquare * nextLargerSquare % chunks !== 0) {
+      nextLargerSquare++;
+    }
+    this.size(nextLargerSquare * nextLargerSquare);
+    const chunkSize = this.data.length / chunks;
+    const chunkSide = Math.sqrt(chunkSize);
+    const side = Math.sqrt(this.data.length);
+    let result = new Array(this.data.length);
+    let chunkOrder = [...Array(chunks).keys()];
+    for (let i = chunkOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [chunkOrder[i], chunkOrder[j]] = [chunkOrder[j], chunkOrder[i]];
+    }
+    for (let i = 0; i < chunks; i++) {
+        let chunkStartRow = Math.floor(chunkOrder[i] / Math.sqrt(chunks)) * chunkSide;
+        let chunkStartCol = (chunkOrder[i] % Math.sqrt(chunks)) * chunkSide;
+        let resultStartRow = Math.floor(i / Math.sqrt(chunks)) * chunkSide;
+        let resultStartCol = (i % Math.sqrt(chunks)) * chunkSide;
+        for (let j = 0; j < chunkSide; j++) {
+            for (let k = 0; k < chunkSide; k++) {
+                result[(resultStartRow + j) * side + resultStartCol + k] = this.data[(chunkStartRow + j) * side + chunkStartCol + k];
+            }
+        }
+    }
+    this.data = result;
+    return this;
+  }
+
+  mutechunks2d (chunks, probability) {
+    if (Math.sqrt(chunks) % 1 !== 0) {
+        throw new Error('The number of chunks must have an integer square root');
+    }
+    let nextLargerSquare = Math.ceil(Math.sqrt(this.data.length));
+    while (nextLargerSquare * nextLargerSquare % chunks !== 0) {
+      nextLargerSquare++;
+    }
+    this.size(nextLargerSquare * nextLargerSquare);
+    const chunkSize = this.data.length / chunks;
+    const chunkSide = Math.sqrt(chunkSize);
+    const side = Math.sqrt(this.data.length);
+    let result = new Array(this.data.length);
+    let chunkOrder = [...Array(chunks).keys()];
+    for (let i = chunkOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [chunkOrder[i], chunkOrder[j]] = [chunkOrder[j], chunkOrder[i]];
+    }
+    for (let i = 0; i < chunks; i++) {
+        let chunkStartRow = Math.floor(chunkOrder[i] / Math.sqrt(chunks)) * chunkSide;
+        let chunkStartCol = (chunkOrder[i] % Math.sqrt(chunks)) * chunkSide;
+        let resultStartRow = Math.floor(i / Math.sqrt(chunks)) * chunkSide;
+        let resultStartCol = (i % Math.sqrt(chunks)) * chunkSide;
+        if (Math.random() < probability) {
+            for (let j = 0; j < chunkSide; j++) {
+                for (let k = 0; k < chunkSide; k++) {
+                    result[(resultStartRow + j) * side + resultStartCol + k] = 0;
+                }
+            }
+        } else {
+            for (let j = 0; j < chunkSide; j++) {
+                for (let k = 0; k < chunkSide; k++) {
+                    result[(resultStartRow + j) * side + resultStartCol + k] = this.data[(chunkStartRow + j) * side + chunkStartCol + k];
+                }
+            }
+        }
+    }
+    this.data = result;
+    return this;
+  }
 }
 module.exports = FacetPattern;

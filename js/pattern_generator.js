@@ -43,7 +43,7 @@ module.exports = {
   },
   run: (code, is_rerun) => {
     if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
-      const worker = new Worker("./js/run.js", {workerData:{code:code},resourceLimits:{stackSizeMb:16}});
+      const worker = new Worker("./js/run.js", {workerData:{code:code},resourceLimits:{stackSizeMb:128}});
       worker.once("message", run_data => {
           let fps = run_data.fps;
           Object.values(fps).forEach(fp => {
@@ -405,7 +405,8 @@ function getAllFuncs(toCheck) {
     if (e != arr[i + 1] && typeof toCheck[e] == 'function') return true;
   }).map(funcName => {
     const funcStr = toCheck[funcName].toString();
-    const argsStr = funcStr.slice(funcStr.indexOf('(') + 1, funcStr.indexOf(')'));
+    const argsMatch = funcStr.match(/\(([^()]*|\(([^()]*|\([^()]*\))*\))*\)/);
+    const argsStr = argsMatch ? argsMatch[0].slice(1, -1) : '';
     const args = argsStr.split(',').map(arg => arg.trim()).join(', ');
     return { name: funcName, example: `${funcName}(${args})` };
   });

@@ -1076,6 +1076,11 @@ For more examples, refer to the `examples/this.md` file.
 	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. Other values will rotate the data in a different way, around a different center point.
 	- example:
 		- `$('example').sine(1).size(10000).scale(0,1).layer2d(_.noise(10000), _.ramp(0,100,128), _.ramp(0,100,128)).saveimg('example').once(); // layers a ramp from 0,0 to 100,100 over a sine wave background`
+- **mutechunks2d** ( _num_chunks_, _probabilty_ )
+	- slices the input FacetPattern into `chunks` chunks in 2D space and mutes `prob` percent of them.
+	- `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
+	- example:
+		`$('example').sine(0.3,1000).scale(0,1).mutechunks2d(36,0.5).saveimg('example').once();`
 - **rotate** ( _angle_, _width_, _height_ )
 	- rotates the FacetPattern `angle` degrees around a center point, as if it were suspended in 2D space.
 	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. Other values will rotate the data in a different way, around a different center point.
@@ -1111,6 +1116,11 @@ For more examples, refer to the `examples/this.md` file.
             )
 			.once();
 		```
+- **rechunk2d** ( _num_chunks_ )
+	- slices the input FacetPattern into `chunks` chunks in 2D space and shuffles the chunks around.
+	- `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
+	- example:
+		`$('example').sine(0.3,1000).scale(0,1).rechunk2d(36).saveimg('example').once();`
 - **shift2d** ( _xAmt_, _yAmt_, _width_ )
 	- shifts the FacetPattern in 2D space, by `xAmt` pixels to the left/right, and by `yAmt` pixels up/down.
 	- the `width` argument is optional. It defaults to the square root of the FacetPattern's length. Other values will shift the data in a different way.
