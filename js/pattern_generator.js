@@ -55,13 +55,10 @@ module.exports = {
             if ( fp.do_not_regenerate === true ) {
               delete reruns[fp.name];
             }
-            // if failed execution BUT doesnt exist in reruns yet, you can add it. otherwise skip any failed executions
-            if ( fp.do_not_regenerate === false && ( fp.executed_successfully == true || ( fp.executed_successfully == false && reruns.hasOwnProperty(fp.name) == false ) ) ) {
-              // don't add to reruns if it's meant to not regenerate via .keep()
-              if ( is_rerun === false ) {
-                // and only add to reruns the first time the code is POSTed
-                reruns[fp.name]  = fp;
-              }
+
+            if ( fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false && reruns.hasOwnProperty(fp.name) == false ) {
+              // and only add to reruns the first time the code is POSTed and runs successfully
+              reruns[fp.name]  = fp;
             }
             if (reruns[fp.name]) {
               reruns[fp.name].available_for_next_request = true;

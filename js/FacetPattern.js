@@ -4030,5 +4030,35 @@ ffilter(minFreqs, maxFreqs) {
     this.data = result;
     return this;
   }
+
+  size2d ( size ) {
+    let original_size = this.data.length;
+    // Calculate the dimensions of the square
+    let squareSize = Math.ceil(Math.sqrt(this.data.length));
+    let padding = 0;
+    if (size > 1 || size < 0 )  {
+      throw new Error('size2d() requires a size between 0 and 1');
+    }
+    padding = (1 - size) / 2;
+
+    // Create the 2D square array
+    let square = [];
+    for (let i = 0; i < squareSize; i++) {
+        let row = [];
+        for (let j = 0; j < squareSize; j++) {
+            if (i < padding*squareSize || i >= squareSize - padding*squareSize || j < padding*squareSize || j >= squareSize - padding*squareSize) {
+                row.push(0);
+            } else {
+                let index = Math.floor((i - padding*squareSize) * (squareSize - 2 * padding*squareSize) + (j - padding*squareSize));
+                row.push(this.data[index]);
+            }
+        }
+        square.push(row);
+    }
+    this.data = square;
+    this.flatten();
+    return this;
+  }
+
 }
 module.exports = FacetPattern;

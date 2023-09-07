@@ -1126,3 +1126,8 @@ For more examples, refer to the `examples/this.md` file.
 	- the `width` argument is optional. It defaults to the square root of the FacetPattern's length. Other values will shift the data in a different way.
 	- example:
 		- `$('example').noise(100*100).prob(0.001).iter(4,()=>{this.mix(0.5,()=>{this.shift2d(0,1)})}).saveimg('example').once(); // slides all the pixels up 4`
+- **size2d** ( _size_ )
+	- creates a smaller image of the FacetPattern in 2D Space, according to the relative amount `size`.
+	- `size` must be between 0 and 1. The new pattern will be a smaller 2D image of the input, surrounded by padding of black pixels (0s).
+	- example:
+		- `$('example').noise(10000).size2d(0.5).saveimg('example'); // 100 x 100 image with a square of noise in the center`
