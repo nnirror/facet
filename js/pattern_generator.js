@@ -56,7 +56,7 @@ module.exports = {
               delete reruns[fp.name];
             }
 
-            if ( fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false && reruns.hasOwnProperty(fp.name) == false ) {
+            if ( fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false ) {
               // and only add to reruns the first time the code is POSTed and runs successfully
               reruns[fp.name]  = fp;
             }
