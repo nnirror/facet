@@ -322,17 +322,19 @@ This can be useful when you want to access the same pattern across multiple comm
 ### FacetPattern generators that can take a FacetPattern, number, or array as an argument
 When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').sine(440).play();`, the output is a static 440Hz wave. But with the command `$('example').sine(_.sine(5).scale(20,2000))).play();`, the frequency of the sine wave is being modulated by a 5 Hz sine wave which is generating values between 20 and 2000. This produces a classic frequency modulation sound, but since you can supply any FacetPattern as an argument, there are lots of sound design possibilities.
 
-- **sine** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+- **sine** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate, _fade_in_and_out_ = true )
 	- generates a sine wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- output range is from -1 - 1.
+	- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
 	- example:
 		- `$('example').sine(440,n4).play(); // 440 Hz sine wave for a quarter note`
 		- `$('example').sine(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
 		- `$('example').sine(_.sine(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
 ---
-- **cosine** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
+- **cosine** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate, _fade_in_and_out_ = true )
 	- generates a cosine wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- output range is from -1 - 1.
+	- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
 	- example:
 		- `$('example').cosine(440,n4).play(); // 440 Hz cosine wave for a quarter note`
 		- `$('example').cosine(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
@@ -346,24 +348,27 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').noise(n1).times(_.circle(4)).play().once(); // amplitude modulation of noise with a quarter note circular waveform`
 		- `$('example').noise(n1).ffilter(_.circle(1).invert().size(128).scale(0, NYQUIST/2),_.circle(1).size(128).scale(NYQUIST / 2, NYQUIST)).play().once(); // circular spectral filtering of a whole note of noise`
 ---
-- **phasor** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate )
+- **phasor** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate, _fade_in_and_out_ = true )
 	- generates a phasor wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- output range is from -1 - 1.
+	- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
 	- example:
 		- `$('example').phasor(440,n4).play(); // 440 Hz phasor wave for a quarter note`
 		- `$('example').phasor(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
 		- `$('example').phasor(_.phasor(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
 ---
-- **pluck** ( _frequencyPattern_, _duration_ = 1 second, _damping_ = 0, _feedback_ = 0.5 )
+- **pluck** ( _frequencyPattern_, _duration_ = 1 second, _damping_ = 0, _feedback_ = 0.5, _fade_in_and_out_ = true )
 	- generates a Karplus-Strong type string pluck emulation at `frequencyPattern` Hertz, lasting for `duration` samples. `damping` and `feedback` values should be between 0 and 1.
 	- output range is from -1 - 1.
+	- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
 	- example:
 		- `$('example').pluck(440,n4,rf(),rf()).play(); // different 440 Hz quarter note pluck each time`
 		- `$('example').pluck(_.ramp(100,2000,300),n1,0,0.99).play(); // ramp from 100Hz to 2000 Hz over 300 values`
 ---
-- **rect** ( _frequencyPattern_, _duration_ = 1 second, _pulse_width_ = 0.5, _samplerate_ = default_sample_rate )
+- **rect** ( _frequencyPattern_, _duration_ = 1 second, _pulse_width_ = 0.5, _samplerate_ = default_sample_rate, _fade_in_and_out_ = true )
 	- generates a rectangle wave at `frequencyPattern` Hertz, with a pulse width defined by `pulse_width`,  lasting for `duration` samples, at the sample rate defined by `samplerate`.
 	- output range is from -1 - 1.
+	- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
 	- example:
 		- `$('example').rect(440,n4,rf()).play(); // 440 Hz rectangle wave for a quarter note, different bandwidth each time`
 		- `$('example').rect(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
@@ -377,9 +382,10 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').square(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
 		- `$('example').square(_.square(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
 ---
-- **tri** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate )
+- **tri** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate, _fade_in_and_out_ = true )
 	- generates a triangle wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
-	- Output range is from -1 - 1.
+	- output range is from -1 - 1.
+	- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
 	- example:
 		- `$('example').tri(440,n4).play(); // 440 Hz triangle wave for a quarter note`
 		- `$('example').tri(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`

@@ -95,7 +95,7 @@ class FacetPattern {
     return this;
   }
 
-  cosine(frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
+  cosine(frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true) {
     let output = [];
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
@@ -113,8 +113,10 @@ class FacetPattern {
         }
     }
     this.data = output;
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    if ( fade_in_and_out == true ) {
+      this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+      this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    }
     return this;
   }
 
@@ -288,7 +290,7 @@ class FacetPattern {
     return this;
   }
 
-  phasor(frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
+  phasor(frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -302,8 +304,10 @@ class FacetPattern {
         wave[i] = t - Math.floor(t);
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    if ( fade_in_and_out == true ) {
+      this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+      this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    }
     return this;
   }
 
@@ -379,7 +383,7 @@ class FacetPattern {
     return this;
   }
 
-  rect (frequencies, duration = SAMPLE_RATE, pulseWidth = 0.5, sampleRate = SAMPLE_RATE) {
+  rect (frequencies, duration = SAMPLE_RATE, pulseWidth = 0.5, sampleRate = SAMPLE_RATE, fade_in_and_out = true) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -394,8 +398,10 @@ class FacetPattern {
         wave[i] = (t - Math.floor(t) < pulseWidth) ? amplitude : -amplitude;
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    if ( fade_in_and_out == true ) {
+      this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+      this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    }
     return this;
 }
 
@@ -555,7 +561,7 @@ class FacetPattern {
     }
   }
 
-  sine (frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
+  sine (frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true ) {
     let output = [];
     if ( typeof frequencies == 'number' || Array.isArray(frequencies) === true ) {
       frequencies = new FacetPattern().from(frequencies);
@@ -573,8 +579,10 @@ class FacetPattern {
         }
     }
     this.data = output;
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    if ( fade_in_and_out == true ) {
+      this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+      this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    }
     return this;
   }
 
@@ -646,7 +654,7 @@ class FacetPattern {
     return this;
   }
   
-  tri (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
+  tri (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true ) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -662,8 +670,10 @@ class FacetPattern {
         phase -= Math.floor(phase);
     }
     this.data = wave;
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    if ( fade_in_and_out == true ) {
+      this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+      this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    }
     return this;
   }
 
@@ -3399,7 +3409,7 @@ f
   // END utility functions
 
   // frequency: hz. duration: samples (converted to seconds internally). damping and feedback both scaled 0-1. 
-  pluck(frequencies, duration = SAMPLE_RATE, damping = 0, feedback = 0.5) {
+  pluck(frequencies, duration = SAMPLE_RATE, damping = 0, feedback = 0.5, fade_in_and_out = true ) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -3420,8 +3430,10 @@ f
     }
     this.data = output;
     this.flatten().trim();
-    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    if ( fade_in_and_out == true ) {
+      this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+      this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    }
     return this;
 }
 
