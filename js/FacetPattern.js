@@ -1152,23 +1152,46 @@ waveformSample(waveform, phase) {
     // automatically set gain to match loudest value in original data
     this.full(initial_maximum_value);
     return this;
-}
-  
-  convolve (impulseResponse) {
-    if ( !this.isFacetPattern(impulseResponse) ) {
-      throw `input must be a FacetPattern object; type found: ${typeof impulseResponse}`;
+  }
+
+  convolve ( impulseResponse ) {
+    if (!this.isFacetPattern(impulseResponse)) {
+        throw `input must be a FacetPattern object; type found: ${typeof impulseResponse}`;
     }
-    // maximum IR size is 1 second; otherwise it quickly becomes way too much computation
-    if (impulseResponse.data.length > SAMPLE_RATE) {
-      impulseResponse.size(SAMPLE_RATE)
+
+    let this_next_power_of_two = Complex.nextPowerOfTwo(this.data.length);
+    this.append(new FacetPattern().silence(this_next_power_of_two-this.data.length));
+    let ir_next_power_of_two = Complex.nextPowerOfTwo(impulseResponse.data.length);
+    impulseResponse.append(new FacetPattern().silence(ir_next_power_of_two-impulseResponse.data.length));
+    if ( impulseResponse.data.length > this.data.length ) {
+      impulseResponse.stretchto(this.data.length)
     }
-    let output = new Array(this.data.length + impulseResponse.data.length - 1).fill(0);
-    for (let i = 0; i < this.data.length; i++) {
-        for (let j = 0; j < impulseResponse.data.length; j++) {
-            output[i + j] += this.data[i] * impulseResponse.data[j];
-        }
+
+    // compute FFTs
+    let fftThis = Complex.fft(this.data);
+    let fftImpulse = Complex.fft(impulseResponse.data);
+
+    // pad zeros to make lengths equal
+    while (fftThis.length < fftImpulse.length) {
+        fftThis.push(new Complex.Complex(0, 0));
     }
-    this.data = output;
+    while (fftImpulse.length < fftThis.length) {
+        fftImpulse.push(new Complex.Complex(0, 0));
+    }
+
+    // multiply in frequency domain
+    for (let i = 0; i < fftThis.length; i++) {
+        fftThis[i] = fftThis[i].mul(fftImpulse[i]);
+    }
+
+    // compute IFFT
+    let output = Complex.ifft(fftThis);
+
+    // extract real part of output
+    this.data = output.map(c => c.real);
+    this.reverse();
+    this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
+    this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
     return this;
   }
 

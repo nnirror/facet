@@ -24,6 +24,34 @@ class Complex {
 
 module.exports = {
     Complex: Complex,
+    fft: (input) => {
+        let n = input.length;
+        let m = Math.log2(n);
+        if (Math.pow(2, m) !== n) {
+            throw new Error('Input size must be a power of 2');
+        }
+        let inputComplex = input.map(x => new Complex(x, 0));
+        let output = new Array(n);
+        for (let i = 0; i < n; i++) {
+            let j = module.exports.reverseBits(i, m);
+            output[j] = inputComplex[i];
+        }
+        for (let s = 1; s <= m; s++) {
+            let m2 = Math.pow(2, s);
+            let wm = new Complex(Math.cos(-2 * Math.PI / m2), Math.sin(-2 * Math.PI / m2));
+            for (let k = 0; k < n; k += m2) {
+                let w = new Complex(1, 0);
+                for (let j = 0; j < m2 / 2; j++) {
+                    let t = w.mul(output[k + j + m2 / 2]);
+                    let u = output[k + j];
+                    output[k + j] = u.add(t);
+                    output[k + j + m2 / 2] = u.sub(t);
+                    w = w.mul(wm);
+                }
+            }
+        }
+        return output;
+    },
     ifft: (input) => {
         let n = input.length;
         let m = Math.log2(n);
