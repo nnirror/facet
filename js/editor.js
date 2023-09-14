@@ -361,7 +361,7 @@ osc.on('/bpm', message => {
   }
   
   if ( browser_sound_output === true ) {
-    // Adjust the playback speed of all voices
+    // adjust the playback speed of all voices
     for (let i = 1; i <= 16; i++) {
       if (wavesurferPools[i]) {
         let current_bpm = $('#bpm').val();
@@ -377,20 +377,20 @@ osc.on('/progress', message => {
 });
 
 let voices = [];
-let wavesurferPools = {}; // Store pools of WaveSurfer instances
-let poolSize = 4; // Number of WaveSurfer instances in each pool
+let wavesurferPools = {}; // store pools of WaveSurfer instances
+let poolSize = 1; // number of WaveSurfer instances in each pool
 
 osc.on('/load', message => {
   if ( browser_sound_output === true ) {
     let load_data = message.args[0].split(' ');
     voices[load_data[0]] = {file: `tmp/${load_data[1]}`, bpm: load_data[2]};
 
-    // If a pool already exists for this voice, destroy all its WaveSurfer instances
+    // if a pool already exists for this voice, destroy all its WaveSurfer instances
     if (wavesurferPools[load_data[0]]) {
       wavesurferPools[load_data[0]].forEach(wavesurfer => wavesurfer.destroy());
     }
 
-    // Create a new pool of WaveSurfer instances
+    // create a new pool of WaveSurfer instances
     wavesurferPools[load_data[0]] = Array(poolSize).fill().map((_, i) => {
       let wavesurfer = WaveSurfer.create({
         container: '#waveform' + load_data[0] + String.fromCharCode(97 + i), // 'a', 'b', 'c', 'd'
@@ -403,26 +403,26 @@ osc.on('/load', message => {
   }
 });
 
-let lastPlayed = {}; // Store the index of the last played WaveSurfer instance for each voice
+let lastPlayed = {}; // store the index of the last played WaveSurfer instance for each voice
 
 osc.on('/play', message => {
   if ( browser_sound_output === true ) {
     let voice_to_play = message.args[0];
 
-    // Determine which WaveSurfer instance to play
+    // determine which WaveSurfer instance to play
     let index = (lastPlayed[voice_to_play] || 0) % poolSize;
     
-    // Make sure the WaveSurfer instance is defined
+    // make sure the WaveSurfer instance is defined
     if (wavesurferPools[voice_to_play] && wavesurferPools[voice_to_play][index]) {
-      // Calculate the playback rate based on the current BPM and the voice's BPM
+      // calculate the playback rate based on the current BPM and the voice's BPM
       let current_bpm = $('#bpm').val();
       let voice_bpm = voices[voice_to_play].bpm;
       wavesurferPools[voice_to_play][index].setPlaybackRate(current_bpm / voice_bpm);
 
-      // Play the audio
+      // play the audio
       wavesurferPools[voice_to_play][index].play();
 
-      // Update lastPlayed
+      // update lastPlayed
       lastPlayed[voice_to_play] = index + 1;
     }
   }
