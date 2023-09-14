@@ -205,6 +205,17 @@ $('body').on('click', '#midi_refresh', function() {
   });
 });
 
+$('body').on('click', '#sound', function() {
+  if ( localStorage.getItem('facet_browser_sound_output') === 'true' ) {
+    localStorage.setItem('facet_browser_sound_output', 'false');
+    setBrowserSound('false');
+  }
+  else {
+    localStorage.setItem('facet_browser_sound_output', 'true');
+    setBrowserSound('true');
+  }
+});
+
 $('body').on('click', '#stop', function() {
   $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {
     $.growl.notice({ message: 'system muted' });
@@ -237,15 +248,36 @@ $('body').on('click', '#restart', function() {
   });
 });
 
+let browser_sound_output = true;
+
 $(document).ready(function() {
   setTimeout(() => {
     initializeMIDISelection();
 }, 100);
+try {
+  setBrowserSound(localStorage.getItem('facet_browser_sound_output'));
+}
+catch (e) {
+  // do nothing because there's nothing saved in localStorage
+}
 });
 
 setInterval(() => {
   initializeMIDISelection();
 }, 1000);
+
+function setBrowserSound(true_or_false_local_storage_string) {
+  if ( true_or_false_local_storage_string === 'true' ) {
+    browser_sound_output = true;
+    $('#sound').css('background',"url('../spkr.png') no-repeat");
+    $('#sound').css('background-size',"100% 200%");
+  }
+  else {
+    browser_sound_output = false;
+    $('#sound').css('background',"url('../spkr-off.png') no-repeat");
+    $('#sound').css('background-size',"100% 200%");
+  }
+}
 
 function initializeMIDISelection () {
   // retrieve the previously stored MIDI out destination from localstorage
@@ -328,12 +360,14 @@ osc.on('/bpm', message => {
     $('#bpm').val(`${message.args[0]}`);
   }
   
-  // Adjust the playback speed of all voices
-  for (let i = 1; i <= 16; i++) {
-    if (wavesurferPools[i]) {
-      let current_bpm = $('#bpm').val();
-      let voice_bpm = voices[i].bpm;
-      wavesurferPools[i].forEach(wavesurfer => wavesurfer.setPlaybackRate(current_bpm / voice_bpm));
+  if ( browser_sound_output === true ) {
+    // Adjust the playback speed of all voices
+    for (let i = 1; i <= 16; i++) {
+      if (wavesurferPools[i]) {
+        let current_bpm = $('#bpm').val();
+        let voice_bpm = voices[i].bpm;
+        wavesurferPools[i].forEach(wavesurfer => wavesurfer.setPlaybackRate(current_bpm / voice_bpm));
+      }
     }
   }
 });
@@ -347,47 +381,50 @@ let wavesurferPools = {}; // Store pools of WaveSurfer instances
 let poolSize = 4; // Number of WaveSurfer instances in each pool
 
 osc.on('/load', message => {
-  let load_data = message.args[0].split(' ');
-  voices[load_data[0]] = {file: `tmp/${load_data[1]}`, bpm: load_data[2]};
+  if ( browser_sound_output === true ) {
+    let load_data = message.args[0].split(' ');
+    voices[load_data[0]] = {file: `tmp/${load_data[1]}`, bpm: load_data[2]};
 
-  // If a pool already exists for this voice, destroy all its WaveSurfer instances
-  if (wavesurferPools[load_data[0]]) {
-    wavesurferPools[load_data[0]].forEach(wavesurfer => wavesurfer.destroy());
-  }
+    // If a pool already exists for this voice, destroy all its WaveSurfer instances
+    if (wavesurferPools[load_data[0]]) {
+      wavesurferPools[load_data[0]].forEach(wavesurfer => wavesurfer.destroy());
+    }
 
-  // Create a new pool of WaveSurfer instances
-  wavesurferPools[load_data[0]] = Array(poolSize).fill().map((_, i) => {
-    let wavesurfer = WaveSurfer.create({
-      container: '#waveform' + load_data[0] + String.fromCharCode(97 + i), // 'a', 'b', 'c', 'd'
-      waveColor: 'violet',
-      progressColor: 'purple'
+    // Create a new pool of WaveSurfer instances
+    wavesurferPools[load_data[0]] = Array(poolSize).fill().map((_, i) => {
+      let wavesurfer = WaveSurfer.create({
+        container: '#waveform' + load_data[0] + String.fromCharCode(97 + i), // 'a', 'b', 'c', 'd'
+        waveColor: 'violet',
+        progressColor: 'purple'
+      });
+      wavesurfer.load(voices[load_data[0]].file);
+      return wavesurfer;
     });
-    wavesurfer.load(voices[load_data[0]].file);
-    return wavesurfer;
-  });
+  }
 });
 
 let lastPlayed = {}; // Store the index of the last played WaveSurfer instance for each voice
 
 osc.on('/play', message => {
-  let voice_to_play = message.args[0];
+  if ( browser_sound_output === true ) {
+    let voice_to_play = message.args[0];
 
-  // Determine which WaveSurfer instance to play
-  let index = (lastPlayed[voice_to_play] || 0) % poolSize;
-  
-  // Make sure the WaveSurfer instance is defined
-  if (wavesurferPools[voice_to_play] && wavesurferPools[voice_to_play][index]) {
-    // Calculate the playback rate based on the current BPM and the voice's BPM
-    let current_bpm = $('#bpm').val();
-    let voice_bpm = voices[voice_to_play].bpm;
-    wavesurferPools[voice_to_play][index].setPlaybackRate(current_bpm / voice_bpm);
+    // Determine which WaveSurfer instance to play
+    let index = (lastPlayed[voice_to_play] || 0) % poolSize;
+    
+    // Make sure the WaveSurfer instance is defined
+    if (wavesurferPools[voice_to_play] && wavesurferPools[voice_to_play][index]) {
+      // Calculate the playback rate based on the current BPM and the voice's BPM
+      let current_bpm = $('#bpm').val();
+      let voice_bpm = voices[voice_to_play].bpm;
+      wavesurferPools[voice_to_play][index].setPlaybackRate(current_bpm / voice_bpm);
 
-    // Play the audio
-    console.log(`playing ${voice_to_play}[${index}]`);
-    wavesurferPools[voice_to_play][index].play();
+      // Play the audio
+      wavesurferPools[voice_to_play][index].play();
 
-    // Update lastPlayed
-    lastPlayed[voice_to_play] = index + 1;
+      // Update lastPlayed
+      lastPlayed[voice_to_play] = index + 1;
+    }
   }
 });
 

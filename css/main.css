@@ -19,6 +19,19 @@ body {
   width: 4em;
   text-align: center;
 }
+#sound {
+  width: 1.75em;
+  height: 1.75em;
+  display: inline-block;
+  position: relative;
+  top: 4px;
+  background: url('../spkr.png') no-repeat;
+  background-size: 100% 200%;
+  cursor: pointer;
+}
+#sound:hover {
+  background-position: 0 -1.75em !important;
+}
 #status {
   top: 10px;
 }
