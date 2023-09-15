@@ -355,6 +355,10 @@ $('#bpm').val(90);
 const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 osc.open();
 
+osc.on('/progress', message => {
+  $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
+});
+
 osc.on('/bpm', message => {
   if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
     $('#bpm').val(`${message.args[0]}`);
@@ -363,71 +367,60 @@ osc.on('/bpm', message => {
   if ( browser_sound_output === true ) {
     // adjust the playback speed of all voices
     for (let i = 1; i <= 16; i++) {
-      if (wavesurferPools[i]) {
+      if (wavesurfers[i]) {
         let current_bpm = $('#bpm').val();
         let voice_bpm = voices[i].bpm;
-        wavesurferPools[i].forEach(wavesurfer => wavesurfer.setPlaybackRate(current_bpm / voice_bpm));
+        wavesurfers[i].setPlaybackRate(current_bpm / voice_bpm);
       }
     }
   }
 });
 
-osc.on('/progress', message => {
-  $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
-});
-
 let voices = [];
-let wavesurferPools = {}; // store pools of WaveSurfer instances
-let poolSize = 1; // number of WaveSurfer instances in each pool
+let wavesurfers = {};
 
 osc.on('/load', message => {
   if ( browser_sound_output === true ) {
     let load_data = message.args[0].split(' ');
     voices[load_data[0]] = {file: `tmp/${load_data[1]}`, bpm: load_data[2]};
 
-    // if a pool already exists for this voice, destroy all its WaveSurfer instances
-    if (wavesurferPools[load_data[0]]) {
-      wavesurferPools[load_data[0]].forEach(wavesurfer => wavesurfer.destroy());
+    // if a WaveSurfer instance already exists for this voice, destroy it
+    if (wavesurfers[load_data[0]]) {
+      wavesurfers[load_data[0]].destroy();
     }
 
-    // create a new pool of WaveSurfer instances
-    wavesurferPools[load_data[0]] = Array(poolSize).fill().map((_, i) => {
-      let wavesurfer = WaveSurfer.create({
-        container: '#waveform' + load_data[0] + String.fromCharCode(97 + i), // 'a', 'b', 'c', 'd'
-        waveColor: 'violet',
-        progressColor: 'purple'
-      });
-      wavesurfer.load(voices[load_data[0]].file);
-      return wavesurfer;
+    // create a new WaveSurfer instance
+    wavesurfers[load_data[0]] = WaveSurfer.create({
+      container: '#waveform' + load_data[0]
     });
+
+    // load the audio file into the WaveSurfer instance
+    wavesurfers[load_data[0]].load(voices[load_data[0]].file);
   }
 });
 
-let lastPlayed = {}; // store the index of the last played WaveSurfer instance for each voice
+let prev_voice_played;
 
 osc.on('/play', message => {
   if ( browser_sound_output === true ) {
     let voice_to_play = message.args[0];
-
-    // determine which WaveSurfer instance to play
-    let index = (lastPlayed[voice_to_play] || 0) % poolSize;
-    
+    if ( voice_to_play === prev_voice_played ) {
+      // rewind voice if playing again
+      wavesurfers[voice_to_play].seekTo(0);
+    }
     // make sure the WaveSurfer instance is defined
-    if (wavesurferPools[voice_to_play] && wavesurferPools[voice_to_play][index]) {
+    if (wavesurfers[voice_to_play]) {
       // calculate the playback rate based on the current BPM and the voice's BPM
       let current_bpm = $('#bpm').val();
       let voice_bpm = voices[voice_to_play].bpm;
-      wavesurferPools[voice_to_play][index].setPlaybackRate(current_bpm / voice_bpm);
+      wavesurfers[voice_to_play].setPlaybackRate(current_bpm / voice_bpm);
 
       // play the audio
-      wavesurferPools[voice_to_play][index].play();
-
-      // update lastPlayed
-      lastPlayed[voice_to_play] = index + 1;
+      wavesurfers[voice_to_play].play();
+      prev_voice_played = voice_to_play;
     }
   }
 });
-
 
 setInterval(() => {
   if ( osc.status() == 3 ) {
