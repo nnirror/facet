@@ -8,6 +8,7 @@ const cors = require('cors');
 const app = express();
 const axios = require('axios');
 const FacetConfig = require('./config.js');
+const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const OSC = require('osc-js')
 const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
 udp_osc_server.open({ port: 2134 });
@@ -87,7 +88,8 @@ app.post('/update', (req, res) => {
     if ( posted_pattern.sequence_data.length > 0 ) {
       allocateVoice(posted_pattern);
       let is_mono = posted_pattern.pan_data === false && posted_pattern.dacs == '1 1' ? 1 : 0;
-      editor_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time} ${is_mono}`));
+      editor_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.data} ${SAMPLE_RATE} ${posted_pattern.pan_data} ${is_mono} ${posted_pattern.bpm_at_generation_time}`));
+      udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time} ${is_mono}`));
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step) => {
         event_register[facet_pattern_name].push(
@@ -159,6 +161,7 @@ let delay;
 let bpm_was_changed_this_tick = false;
 let bpm_was_changed_this_loop = false;
 // send bpm to Max
+udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 
 function tick() {
@@ -180,6 +183,7 @@ function tick() {
     updateVoiceAllocator();
     // set all "fired" values to false at beginning of loop
     resetEventRegister();
+    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     loop_start_time = Date.now();
     bpm_was_changed_this_loop = false;
@@ -215,6 +219,7 @@ function tick() {
               // osc event to play back audio file in Max (or elsewhere)
               setTimeout(()=>{
                 editor_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
+                udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
               },pre_send_delay_ms);
             }
             count_times_fp_played++;
@@ -436,6 +441,7 @@ function checkForBpmRecalculation (events_per_loop) {
     bpm_was_changed_this_tick = true;
     bpm_was_changed_this_loop = true;
     prev_bpm = bpm;
+    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
   }
   else {

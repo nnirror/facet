@@ -337,6 +337,17 @@ function setStatus(status) {
   $('#status').html(colored_span);
 }
 
+function upscaleArray(data, newLength) {
+  let factor = Math.floor(newLength / data.length);
+  let newData = [];
+  for (let i = 0; i < data.length; i++) {
+    for (let j = 0; j < factor; j++) {
+      newData.push(data[i]);
+    }
+  }
+  return newData;
+}
+
 let bpm=90;
 // check every 10ms for bpm change and send if changed
 setInterval(()=>{
@@ -363,62 +374,77 @@ osc.on('/bpm', message => {
   if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
     $('#bpm').val(`${message.args[0]}`);
   }
-  
   if ( browser_sound_output === true ) {
     // adjust the playback speed of all voices
     for (let i = 1; i <= 16; i++) {
-      if (wavesurfers[i]) {
-        let current_bpm = $('#bpm').val();
-        let voice_bpm = voices[i].bpm;
-        wavesurfers[i].setPlaybackRate(current_bpm / voice_bpm);
+      if (voices[i] && sources[i]) {
+          let current_bpm = $('#bpm').val();
+          let voice_bpm = voices[i].bpm;
+          // set the playback rate based on the current and original BPM
+          sources[i].playbackRate.value = current_bpm / voice_bpm;
       }
     }
   }
 });
 
 let voices = [];
-let wavesurfers = {};
+let sources = [];
+const ac = new AudioContext();
 
 osc.on('/load', message => {
   if ( browser_sound_output === true ) {
     let load_data = message.args[0].split(' ');
-    voices[load_data[0]] = {file: `tmp/${load_data[1]}`, bpm: load_data[2]};
+    let voice_number = load_data[0];
+    let fp = load_data[1].split(',');
+    let sample_rate = load_data[2];
+    let pan_data = load_data[3].split(',');;
+    let is_mono = load_data[4] == 1 ? true : false;
+    let voice_bpm = Number(load_data[5]);
+    fp = fp.map(Number);
+    
+    // upscale pan_data to match the length of fp
+    pan_data = upscaleArray(pan_data, fp.length);
 
-    // if a WaveSurfer instance already exists for this voice, destroy it
-    if (wavesurfers[load_data[0]]) {
-      wavesurfers[load_data[0]].destroy();
+    if (is_mono) {
+      // if mono, create a single mono buffer
+      let buffer = ac.createBuffer(1, fp.length, sample_rate);
+      let data = buffer.getChannelData(0);
+      for (let i = 0; i < fp.length; i++) {
+        data[i] = fp[i];
+      }
+      voices[voice_number] = {buffer: buffer, bpm: voice_bpm};
+    } else {
+      // if stereo, create two identical buffers from fp and apply amplitude modulation
+      let leftBuffer = ac.createBuffer(1, fp.length, sample_rate);
+      let rightBuffer = ac.createBuffer(1, fp.length, sample_rate);
+      
+      for (let i = 0; i < fp.length; i++) {
+        // apply amplitude modulation based on pan_data
+        let panValue = parseFloat(pan_data[i]);
+        leftBuffer.getChannelData(0)[i] = fp[i] * (panValue < 0 ? 1 : 1 - panValue);
+        rightBuffer.getChannelData(0)[i] = fp[i] * (panValue > 0 ? 1 : 1 + panValue);
+      }
+
+      // combine the two mono buffers into a stereo buffer
+      let stereoBuffer = ac.createBuffer(2, fp.length, sample_rate);
+      stereoBuffer.copyToChannel(leftBuffer.getChannelData(0), 0);
+      stereoBuffer.copyToChannel(rightBuffer.getChannelData(0), 1);
+
+      voices[voice_number] = {buffer: stereoBuffer, bpm: voice_bpm};
     }
-
-    // create a new WaveSurfer instance
-    wavesurfers[load_data[0]] = WaveSurfer.create({
-      container: '#waveform' + load_data[0]
-    });
-
-    // load the audio file into the WaveSurfer instance
-    wavesurfers[load_data[0]].load(voices[load_data[0]].file);
   }
 });
-
-let prev_voice_played;
 
 osc.on('/play', message => {
   if ( browser_sound_output === true ) {
     let voice_to_play = message.args[0];
-    if ( voice_to_play === prev_voice_played ) {
-      // rewind voice if playing again
-      wavesurfers[voice_to_play].seekTo(0);
-    }
-    // make sure the WaveSurfer instance is defined
-    if (wavesurfers[voice_to_play]) {
-      // calculate the playback rate based on the current BPM and the voice's BPM
-      let current_bpm = $('#bpm').val();
-      let voice_bpm = voices[voice_to_play].bpm;
-      wavesurfers[voice_to_play].setPlaybackRate(current_bpm / voice_bpm);
-
-      // play the audio
-      wavesurfers[voice_to_play].play();
-      prev_voice_played = voice_to_play;
-    }
+    let source = ac.createBufferSource();
+    source.buffer = voices[voice_to_play].buffer;
+    let current_bpm = $('#bpm').val();
+    source.playbackRate.value = current_bpm / voices[voice_to_play].bpm;
+    source.connect(ac.destination);
+    source.start();
+    sources[voice_to_play] = source;
   }
 });
 
