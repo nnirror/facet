@@ -72,6 +72,7 @@ function getLastLineOfBlock(initial_line) {
 $(document).keydown(function(e) {
   // [ctrl + enter] or [ctrl + r] to select text and send to pattern server (127.0.0.1:1123)
   if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {
+    ac = new AudioContext();
     runFacet();
   }
   else if ( e.ctrlKey && e.keyCode == 188 ) {
@@ -205,6 +206,25 @@ $('body').on('click', '#midi_refresh', function() {
   });
 });
 
+$('body').on('click', '#sound', function() {
+  if ( localStorage.getItem('facet_browser_sound_output') === 'true' ) {
+    localStorage.setItem('facet_browser_sound_output', 'false');
+    $.growl.notice({ message: 'browser sound is off.' });
+    setBrowserSound('false');
+  }
+  else if ( localStorage.getItem('facet_browser_sound_output') === 'false' ) {
+    localStorage.setItem('facet_browser_sound_output', 'true');
+    $.growl.notice({ message: 'browser sound is on.' });
+    setBrowserSound('true');
+  }
+  else {
+    // not initialized yet in localstorage, turn off on first click since browser sound is on by default
+    localStorage.setItem('facet_browser_sound_output', 'false');
+    setBrowserSound('false');
+    $.growl.notice({ message: 'browser sound is off.' });
+  }
+});
+
 $('body').on('click', '#stop', function() {
   $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {
     $.growl.notice({ message: 'system muted' });
@@ -237,15 +257,41 @@ $('body').on('click', '#restart', function() {
   });
 });
 
+let browser_sound_output = true;
+
 $(document).ready(function() {
   setTimeout(() => {
     initializeMIDISelection();
 }, 100);
+try {
+  setBrowserSound(localStorage.getItem('facet_browser_sound_output'));
+}
+catch (e) {
+  // do nothing because there's nothing saved in localStorage
+}
 });
 
 setInterval(() => {
   initializeMIDISelection();
 }, 1000);
+
+function setBrowserSound(true_or_false_local_storage_string) {
+  if ( true_or_false_local_storage_string === 'true' ) {
+    browser_sound_output = true;
+    $('#sound').css('background',"url('../spkr.png') no-repeat");
+    $('#sound').css('background-size',"100% 200%");
+  }
+  else if ( true_or_false_local_storage_string === 'false' ) {
+    browser_sound_output = false;
+    $('#sound').css('background',"url('../spkr-off.png') no-repeat");
+    $('#sound').css('background-size',"100% 200%");
+  }
+  else {
+    browser_sound_output = true;
+    $('#sound').css('background',"url('../spkr.png') no-repeat");
+    $('#sound').css('background-size',"100% 200%");
+  }
+}
 
 function initializeMIDISelection () {
   // retrieve the previously stored MIDI out destination from localstorage
@@ -305,6 +351,17 @@ function setStatus(status) {
   $('#status').html(colored_span);
 }
 
+function upscaleArray(data, newLength) {
+  let factor = Math.floor(newLength / data.length);
+  let newData = [];
+  for (let i = 0; i < data.length; i++) {
+    for (let j = 0; j < factor; j++) {
+      newData.push(data[i]);
+    }
+  }
+  return newData;
+}
+
 let bpm=90;
 // check every 10ms for bpm change and send if changed
 setInterval(()=>{
@@ -323,14 +380,90 @@ $('#bpm').val(90);
 const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
 osc.open();
 
+osc.on('/progress', message => {
+  $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
+});
+
 osc.on('/bpm', message => {
   if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
     $('#bpm').val(`${message.args[0]}`);
   }
+  if ( browser_sound_output === true ) {
+    // adjust the playback speed of all voices
+    for (let i = 1; i <= 16; i++) {
+      if (voices[i] && sources[i]) {
+          let current_bpm = $('#bpm').val();
+          let voice_bpm = voices[i].bpm;
+          // set the playback rate based on the current and original BPM
+          sources[i].playbackRate.value = current_bpm / voice_bpm;
+      }
+    }
+  }
 });
 
-osc.on('/progress', message => {
-  $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
+let voices = [];
+let sources = [];
+let ac;
+
+osc.on('/load', message => {
+  if ( browser_sound_output === true ) {
+    let load_data = message.args[0].split(' ');
+    let voice_number = load_data[0];
+    let fp = load_data[1].split(',');
+    let sample_rate = load_data[2];
+    let pan_data = load_data[3].split(',');;
+    let is_mono = load_data[4] == 1 ? true : false;
+    let voice_bpm = Number(load_data[5]);
+    fp = fp.map(Number);
+    
+    // upscale pan_data to match the length of fp
+    pan_data = upscaleArray(pan_data, fp.length);
+
+    if (is_mono) {
+      // if mono, create a single mono buffer
+      let buffer = ac.createBuffer(1, fp.length, sample_rate);
+      let data = buffer.getChannelData(0);
+      for (let i = 0; i < fp.length; i++) {
+        data[i] = fp[i];
+      }
+      voices[voice_number] = {buffer: buffer, bpm: voice_bpm};
+    } else {
+      // if stereo, create two identical buffers from fp and apply amplitude modulation
+      let leftBuffer = ac.createBuffer(1, fp.length, sample_rate);
+      let rightBuffer = ac.createBuffer(1, fp.length, sample_rate);
+      
+      for (let i = 0; i < fp.length; i++) {
+        // apply amplitude modulation based on pan_data
+        let panValue = parseFloat(pan_data[i]);
+        leftBuffer.getChannelData(0)[i] = fp[i] * (panValue < 0 ? 1 : 1 - panValue);
+        rightBuffer.getChannelData(0)[i] = fp[i] * (panValue > 0 ? 1 : 1 + panValue);
+      }
+
+      // combine the two mono buffers into a stereo buffer
+      let stereoBuffer = ac.createBuffer(2, fp.length, sample_rate);
+      stereoBuffer.copyToChannel(leftBuffer.getChannelData(0), 0);
+      stereoBuffer.copyToChannel(rightBuffer.getChannelData(0), 1);
+
+      voices[voice_number] = {buffer: stereoBuffer, bpm: voice_bpm};
+    }
+  }
+});
+
+osc.on('/play', message => {
+  let voice_to_play = message.args[0];
+
+  // check if the voice is loaded
+  if (voices[voice_to_play]) {
+    let source = ac.createBufferSource();
+    source.buffer = voices[voice_to_play].buffer;
+    let current_bpm = $('#bpm').val();
+    source.playbackRate.value = current_bpm / voices[voice_to_play].bpm;
+    source.connect(ac.destination);
+    source.start();
+    sources[voice_to_play] = source;
+  } else {
+    // voice is not loaded yet
+  }
 });
 
 setInterval(() => {
