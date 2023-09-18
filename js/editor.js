@@ -72,6 +72,7 @@ function getLastLineOfBlock(initial_line) {
 $(document).keydown(function(e) {
   // [ctrl + enter] or [ctrl + r] to select text and send to pattern server (127.0.0.1:1123)
   if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {
+    ac = new AudioContext();
     runFacet();
   }
   else if ( e.ctrlKey && e.keyCode == 188 ) {
@@ -210,9 +211,14 @@ $('body').on('click', '#sound', function() {
     localStorage.setItem('facet_browser_sound_output', 'false');
     setBrowserSound('false');
   }
-  else {
+  else if ( localStorage.getItem('facet_browser_sound_output') === 'false' ) {
     localStorage.setItem('facet_browser_sound_output', 'true');
     setBrowserSound('true');
+  }
+  else {
+    // not initialized yet in localstorage, turn off on first click since browser sound is on by default
+    localStorage.setItem('facet_browser_sound_output', 'false');
+    setBrowserSound('false');
   }
 });
 
@@ -272,9 +278,14 @@ function setBrowserSound(true_or_false_local_storage_string) {
     $('#sound').css('background',"url('../spkr.png') no-repeat");
     $('#sound').css('background-size',"100% 200%");
   }
-  else {
+  else if ( true_or_false_local_storage_string === 'false' ) {
     browser_sound_output = false;
     $('#sound').css('background',"url('../spkr-off.png') no-repeat");
+    $('#sound').css('background-size',"100% 200%");
+  }
+  else {
+    browser_sound_output = true;
+    $('#sound').css('background',"url('../spkr.png') no-repeat");
     $('#sound').css('background-size',"100% 200%");
   }
 }
@@ -389,7 +400,7 @@ osc.on('/bpm', message => {
 
 let voices = [];
 let sources = [];
-const ac = new AudioContext();
+let ac;
 
 osc.on('/load', message => {
   if ( browser_sound_output === true ) {
@@ -436,8 +447,10 @@ osc.on('/load', message => {
 });
 
 osc.on('/play', message => {
-  if ( browser_sound_output === true ) {
-    let voice_to_play = message.args[0];
+  let voice_to_play = message.args[0];
+
+  // check if the voice is loaded
+  if (voices[voice_to_play]) {
     let source = ac.createBufferSource();
     source.buffer = voices[voice_to_play].buffer;
     let current_bpm = $('#bpm').val();
@@ -445,6 +458,8 @@ osc.on('/play', message => {
     source.connect(ac.destination);
     source.start();
     sources[voice_to_play] = source;
+  } else {
+    // voice is not loaded yet
   }
 });
 
