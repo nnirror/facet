@@ -209,16 +209,19 @@ $('body').on('click', '#midi_refresh', function() {
 $('body').on('click', '#sound', function() {
   if ( localStorage.getItem('facet_browser_sound_output') === 'true' ) {
     localStorage.setItem('facet_browser_sound_output', 'false');
+    $.growl.notice({ message: 'browser sound is off.' });
     setBrowserSound('false');
   }
   else if ( localStorage.getItem('facet_browser_sound_output') === 'false' ) {
     localStorage.setItem('facet_browser_sound_output', 'true');
+    $.growl.notice({ message: 'browser sound is on.' });
     setBrowserSound('true');
   }
   else {
     // not initialized yet in localstorage, turn off on first click since browser sound is on by default
     localStorage.setItem('facet_browser_sound_output', 'false');
     setBrowserSound('false');
+    $.growl.notice({ message: 'browser sound is off.' });
   }
 });
 

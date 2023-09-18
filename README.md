@@ -1,6 +1,6 @@
 ## Overview
 
-Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser, a pair of NodeJS servers running locally on your machine, and Max or Max for Live, Facet can generate and sequence audio, MIDI, OSC, and image data.
+Facet is an open-source live coding system for algorithmic music and synthesis. With a code editor in the browser, a pair of NodeJS servers running locally on your machine, Facet can generate and sequence audio, MIDI, OSC, and image data.
 
 Facet runs on MacOS, Linux, and Windows.
 
@@ -11,17 +11,14 @@ Facet runs on MacOS, Linux, and Windows.
 3. Download or clone the Facet repository. If you download it, make sure that the repository name is exactly `facet` and NOT `facet-main`.
 4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
 5. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
-6. In a browser tab, navigate to http://localhost:1124. This is the browser window with the code editor.
-7. Open Max, or if using Max for Live, click the Edit Button to launch the Max Editor. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
-8. If using Max: Create a new patcher, and add a "facet" object. Connect its leftmost two outlets (audio channel 1 and audio channel 2) to a DAC.
-9. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set.
-10. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
+6. In a browser tab (Firefox or Chrome work best), navigate to http://localhost:1124. This is the browser-based code editor which can also handle stereo audio playback.
+7. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing through your browser tab. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
 
 ## Facet commands
 
 ### Syntax
 
-Facet commands are based entirely around JavaScript, using a custom class called a `FacetPattern`. In order to produce audio or MIDI output, create an instance of a FacetPattern, and run some methods:
+Facet commands are based entirely around JavaScript, using a class called a `FacetPattern`. In order to produce audio or MIDI output, create an instance of a FacetPattern, and run some methods:
 
 `new FacetPattern('example').sine(100).play();`
 
@@ -73,15 +70,21 @@ A server, known as the `process manager`, starts up on http://localhost:5831. Th
 
 2. The `pattern generator` server starts up on http://localhost:1123. This server listens to requests from the text editor UI in the browser located at http://localhost:1124 and interprets those commands into data. If the pattern is intended to be played back as audio, a corresponding .wav file will be stored in the `tmp/` subdirectory in the Facet repo. Otherwise, if the pattern is intended for MIDI or OSC output, the data will be posted directly to the transport server.
 
-### Max / Max for Live
+### Running Facet with Max / Max for Live
 
-In order to play audio files generated with Facet, Max or Max for Live is required. (It is possible, however, to use Facet without Max, for only MIDI and OSC output.)
+It is possible to do audio playback with Facet directly in Max or Max for Live. In that case, turn off browser sound playback by toggling off the "sound" icon in the bottom-right of the code editor. Your selected preference for whether the browser should handle sound playback will persist between sessions. You can change back and forth any time.
 
-The necessary Max patchers are included in this repo. Make sure to configure File Preferences in Max (step 7 from the getting started section above) in order for these patchers to work properly.
+The necessary Max patchers for sound playback are included in this repo.
 
 If running Max: the `facet.maxpat` patcher has 4 individual channels of audio output plus a fifth outlet for passing OSC commands into your patcher.
 
 If running Max for Live: the `facet.axmd` and `facet_4ch.amxd` Max for Live devices allow for stereo and 4 channel audio outputs in Ableton Live, respectively. To access the third and fourth channels of `facet_4ch.amxd`, create a second track and select input channels 3/4 from the input track where `facet_4ch.amxd` is running.
+
+#### Configuration for Max / Max for Live
+
+1. Open Max, or if using Max for Live, click the Edit Button to launch the Max Editor. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
+2. If using Max: Create a new patcher, and add a "facet" object.
+3. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set.
 
 ### Variables
 
