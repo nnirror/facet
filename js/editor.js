@@ -450,19 +450,20 @@ osc.on('/load', message => {
 });
 
 osc.on('/play', message => {
-  let voice_to_play = message.args[0];
-
-  // check if the voice is loaded
-  if (voices[voice_to_play]) {
-    let source = ac.createBufferSource();
-    source.buffer = voices[voice_to_play].buffer;
-    let current_bpm = $('#bpm').val();
-    source.playbackRate.value = current_bpm / voices[voice_to_play].bpm;
-    source.connect(ac.destination);
-    source.start();
-    sources[voice_to_play] = source;
-  } else {
-    // voice is not loaded yet
+  if ( browser_sound_output === true ) {
+    let voice_to_play = message.args[0];
+    // check if the voice is loaded
+    if (voices[voice_to_play]) {
+      let source = ac.createBufferSource();
+      source.buffer = voices[voice_to_play].buffer;
+      let current_bpm = $('#bpm').val();
+      source.playbackRate.value = current_bpm / voices[voice_to_play].bpm;
+      source.connect(ac.destination);
+      source.start();
+      sources[voice_to_play] = source;
+    } else {
+      // voice is not loaded yet
+    }
   }
 });
 
