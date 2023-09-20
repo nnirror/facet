@@ -17,8 +17,10 @@ let bars_elapsed = 0;
 let bpm = 90;
 let prev_bpm = 90;
 let voice_number_to_load = 1;
+let browser_sound_output = true;
 let VOICES = 16;
-let voice_allocator = initializeVoiceAllocator();;
+let voice_allocator = initializeVoiceAllocator();
+let voices_to_send_to_browser = [];
 let patterns_for_next_loop = {};
 let stopped_patterns = [];
 let current_relative_step_position = 0;
@@ -73,6 +75,11 @@ app.post('/play', (req, res) => {
   res.sendStatus(200);
 });
 
+app.get('/load', (req, res) => {
+  res.json(voices_to_send_to_browser);
+  voices_to_send_to_browser = [];
+});
+
 app.post('/update', (req, res) => {
   // only set data if the transport was not stopped while the pattern was generated
   if (transport_on === true) {
@@ -88,7 +95,9 @@ app.post('/update', (req, res) => {
     if ( posted_pattern.sequence_data.length > 0 ) {
       allocateVoice(posted_pattern);
       let is_mono = posted_pattern.pan_data === false && posted_pattern.dacs == '1 1' ? 1 : 0;
-      editor_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.data} ${SAMPLE_RATE} ${posted_pattern.pan_data} ${is_mono} ${posted_pattern.bpm_at_generation_time}`));
+      if ( browser_sound_output === true ) {
+        voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.data} ${SAMPLE_RATE} ${posted_pattern.pan_data} ${is_mono} ${posted_pattern.bpm_at_generation_time}`);
+      }
       udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time} ${is_mono}`));
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step) => {
@@ -109,6 +118,11 @@ app.post('/update', (req, res) => {
       patterns_for_next_loop[facet_pattern_name] = posted_pattern;
     }
   }
+  res.sendStatus(200);
+});
+
+app.post('/browser_sound', (req, res) => {
+  browser_sound_output = req.body.browser_sound_output === 'true' ? true : false;
   res.sendStatus(200);
 });
 
@@ -218,7 +232,9 @@ function tick() {
               }
               // osc event to play back audio file in Max (or elsewhere)
               setTimeout(()=>{
-                editor_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
+                if ( browser_sound_output === true ) {
+                  editor_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
+                }
                 udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
               },pre_send_delay_ms);
             }

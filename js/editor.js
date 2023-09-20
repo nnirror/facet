@@ -291,6 +291,7 @@ function setBrowserSound(true_or_false_local_storage_string) {
     $('#sound').css('background',"url('../spkr.png') no-repeat");
     $('#sound').css('background-size',"100% 200%");
   }
+  $.post('http://127.0.0.1:3211/browser_sound', {browser_sound_output:browser_sound_output}).done(function( data, status ) {});
 }
 
 function initializeMIDISelection () {
@@ -375,6 +376,58 @@ setInterval(()=>{
   }
 }, 10);
 
+setInterval(() => {
+  fetch('http://localhost:3211/load')
+  .then(response => response.json())
+  .then((data) => {
+    for (var i = 0; i < data.length; i++) {
+      if ( browser_sound_output === true ) {
+        let load_data = data[i].split(' ');
+        let voice_number = load_data[0];
+        let fp = load_data[1].split(',');
+        let sample_rate = load_data[2];
+        let pan_data = load_data[3].split(',');;
+        let is_mono = load_data[4] == 1 ? true : false;
+        let voice_bpm = Number(load_data[5]);
+        fp = fp.map(Number);
+        
+        // upscale pan_data to match the length of fp
+        pan_data = upscaleArray(pan_data, fp.length);
+    
+        if (is_mono) {
+          // if mono, create a single mono buffer
+          let buffer = ac.createBuffer(1, fp.length, sample_rate);
+          let data = buffer.getChannelData(0);
+          for (let i = 0; i < fp.length; i++) {
+            data[i] = fp[i];
+          }
+          voices[voice_number] = {buffer: buffer, bpm: voice_bpm};
+        } else {
+          // if stereo, create two identical buffers from fp and apply amplitude modulation
+          let leftBuffer = ac.createBuffer(1, fp.length, sample_rate);
+          let rightBuffer = ac.createBuffer(1, fp.length, sample_rate);
+          
+          for (let i = 0; i < fp.length; i++) {
+            // apply amplitude modulation based on pan_data
+            let panValue = parseFloat(pan_data[i]);
+            leftBuffer.getChannelData(0)[i] = fp[i] * (panValue < 0 ? 1 : 1 - panValue);
+            rightBuffer.getChannelData(0)[i] = fp[i] * (panValue > 0 ? 1 : 1 + panValue);
+          }
+    
+          // combine the two mono buffers into a stereo buffer
+          let stereoBuffer = ac.createBuffer(2, fp.length, sample_rate);
+          stereoBuffer.copyToChannel(leftBuffer.getChannelData(0), 0);
+          stereoBuffer.copyToChannel(rightBuffer.getChannelData(0), 1);
+    
+          voices[voice_number] = {buffer: stereoBuffer, bpm: voice_bpm};
+        }
+      }
+    }
+  }
+  )
+  .catch((error) => console.error('Error:', error));
+}, 125);
+
 $('#bpm').val(90);
 
 const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
@@ -404,50 +457,6 @@ osc.on('/bpm', message => {
 let voices = [];
 let sources = [];
 let ac;
-
-osc.on('/load', message => {
-  if ( browser_sound_output === true ) {
-    let load_data = message.args[0].split(' ');
-    let voice_number = load_data[0];
-    let fp = load_data[1].split(',');
-    let sample_rate = load_data[2];
-    let pan_data = load_data[3].split(',');;
-    let is_mono = load_data[4] == 1 ? true : false;
-    let voice_bpm = Number(load_data[5]);
-    fp = fp.map(Number);
-    
-    // upscale pan_data to match the length of fp
-    pan_data = upscaleArray(pan_data, fp.length);
-
-    if (is_mono) {
-      // if mono, create a single mono buffer
-      let buffer = ac.createBuffer(1, fp.length, sample_rate);
-      let data = buffer.getChannelData(0);
-      for (let i = 0; i < fp.length; i++) {
-        data[i] = fp[i];
-      }
-      voices[voice_number] = {buffer: buffer, bpm: voice_bpm};
-    } else {
-      // if stereo, create two identical buffers from fp and apply amplitude modulation
-      let leftBuffer = ac.createBuffer(1, fp.length, sample_rate);
-      let rightBuffer = ac.createBuffer(1, fp.length, sample_rate);
-      
-      for (let i = 0; i < fp.length; i++) {
-        // apply amplitude modulation based on pan_data
-        let panValue = parseFloat(pan_data[i]);
-        leftBuffer.getChannelData(0)[i] = fp[i] * (panValue < 0 ? 1 : 1 - panValue);
-        rightBuffer.getChannelData(0)[i] = fp[i] * (panValue > 0 ? 1 : 1 + panValue);
-      }
-
-      // combine the two mono buffers into a stereo buffer
-      let stereoBuffer = ac.createBuffer(2, fp.length, sample_rate);
-      stereoBuffer.copyToChannel(leftBuffer.getChannelData(0), 0);
-      stereoBuffer.copyToChannel(rightBuffer.getChannelData(0), 1);
-
-      voices[voice_number] = {buffer: stereoBuffer, bpm: voice_bpm};
-    }
-  }
-});
 
 osc.on('/play', message => {
   if ( browser_sound_output === true ) {
