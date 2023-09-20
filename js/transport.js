@@ -263,7 +263,7 @@ function tick() {
           if ( event.type === "osc" ) {
             // send any osc data at this step
             try {
-              editor_osc_server.send(new OSC.Message(`${event.data.address}`, event.data.data));
+              udp_osc_server.send(new OSC.Message(`${event.data.address}`, event.data.data));
             } catch (e) {}
           }
 
