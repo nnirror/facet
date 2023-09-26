@@ -274,10 +274,6 @@ app.get('/cleanup', (req, res) => {
   res.sendStatus(200);
 });
 
-app.get('/ping', (req, res) => {
-  res.sendStatus(200);
-});
-
 // run the server
 const server = app.listen(1123);
 

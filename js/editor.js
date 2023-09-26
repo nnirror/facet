@@ -390,10 +390,6 @@ setInterval(() => {
         let is_mono = load_data[4] == 1 ? true : false;
         let voice_bpm = Number(load_data[5]);
         fp = fp.map(Number);
-        
-        // upscale pan_data to match the length of fp
-        pan_data = upscaleArray(pan_data, fp.length);
-    
         if (is_mono) {
           // if mono, create a single mono buffer
           let buffer = ac.createBuffer(1, fp.length, sample_rate);
@@ -409,7 +405,8 @@ setInterval(() => {
           
           for (let i = 0; i < fp.length; i++) {
             // apply amplitude modulation based on pan_data
-            let panValue = parseFloat(pan_data[i]);
+            let panIndex = Math.floor(i * pan_data.length / fp.length);
+            let panValue = parseFloat(pan_data[panIndex]);
             leftBuffer.getChannelData(0)[i] = fp[i] * (panValue < 0 ? 1 : 1 - panValue);
             rightBuffer.getChannelData(0)[i] = fp[i] * (panValue > 0 ? 1 : 1 + panValue);
           }

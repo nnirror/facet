@@ -12,18 +12,6 @@ process.title = 'facet_process_manager';
 
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
-setInterval(()=>{
-  axios.get('http://localhost:1123/ping')
-  .then(response => {
-    // do nothing
-  })
-  .catch(error => {
-    exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
-      runCommand(commands[0].command, commands[0].name, (err, res) => {});
-    });
-  });
-},500);
-
 app.post('/restart', (req, res) => {
   console.log(`restarting Facet...`);
   exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
