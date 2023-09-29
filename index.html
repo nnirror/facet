@@ -28,22 +28,30 @@
   </head>
   <body>
     <script src="js/editor.js" type="text/javascript"></script>
-    <div class="toolbar_container left">
-      <div id="status">●</div>
-      <div id="cpu">0% cpu</div>
-      <div id="bpm_control">
-        <input type="number" id="bpm" name="bpm" min="1" max="10000" value="90" title="bpm">
-        <span class="ui_label">bpm</span>
-      </div>
-    </div>
-    <div class="toolbar_container right">
-      <div id="midi"><span id="midi_label">MIDI out&nbsp;</span><select id="midi_outs" title="midi_outs"></select>&nbsp;<button type="button" id="midi_refresh">↻</button></div>
-      <div id="transport">
-        <span id="stop" title="stop transport">■</span>
-        <span id="clear" title="stop regeneration">⊖</span>
-        <span id="restart" title="restart servers">↻</span>
-        <div id="sound" title="toggle browser sound on/off"></div>
-      </div>
+      <div id="navbar">
+        <div class="left">
+            <div id="status">●</div>
+            <div id="cpu">0% cpu</div>
+            <div id="bpm_control">
+                <input type="number" id="bpm" name="bpm" min="1" max="10000" value="90" title="bpm">
+                <span class="ui_label">bpm</span>
+            </div>
+        </div>
+    
+        <div class="right">
+            <div id="midi">
+                <span id="midi_label">MIDI out&nbsp;</span>
+                <select id="midi_outs" title="midi_outs"></select>&nbsp;
+                <button type="button" id="midi_refresh">↻</button>
+            </div>
+    
+            <div id="transport">
+                <span id="stop" title="stop transport">■</span>
+                <span id="clear" title="stop regeneration">⊖</span>
+                <span id="restart" title="restart servers">↻</span>
+                <div id="sound" title="toggle browser sound on/off"></div>
+            </div>
+        </div>
     </div>
     <br>
     <div id="progress_bar_container"><div id="progress_bar"></div></div>
