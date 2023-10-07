@@ -1,5 +1,5 @@
 const {parentPort, workerData} = require("worker_threads");
-const commentStripper = require('./lib/strip_comments.js');
+const strip = require('strip-comments');
 const fs = require('fs');
 const FacetPattern = require('./FacetPattern.js')
 const stop_called_regex = /(?<!{[^}]*)\.stop\(\)(?![^{}]*})/;
@@ -13,7 +13,7 @@ parentPort.postMessage(runCode(workerData.code));
 function runCode (code) {
   let fps = [];
   let run_errors = [];
-  user_input = commentStripper.stripComments(code);
+  user_input = strip(code);
   user_input = delimitEndsOfCommands(user_input);
   let commands = splitCommandsOnDelimiter(user_input);
   if (env.length == 0) {

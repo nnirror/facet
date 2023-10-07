@@ -2079,11 +2079,11 @@ f
     return this;
   }
 
-  pitch(pitchShiftFactors) {
+  pitch (pitchShiftFactors) {
     if (typeof pitchShiftFactors == 'number' || Array.isArray(pitchShiftFactors) === true) {
         pitchShiftFactors = new FacetPattern().from(pitchShiftFactors);
     }
-    pitchShiftFactors.size(this.data.length);
+    pitchShiftFactors.size(this.data.length).clip(1/32,32);
     let windowSize = 1024;
     let hopSize = windowSize / 4;
     let outputArray = [];
@@ -2268,6 +2268,9 @@ f
   }
 
   shuffle () {
+    if ( this.data.length < 1 ) {
+      return this;
+    }
     let shuffle_sequence = this.data;
     for (let i = shuffle_sequence.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -3112,7 +3115,6 @@ f
     if ( typeof channel != 'number' ) {
       throw `1st argument to .pitchbend(): channel must be a number; type found: ${typeof channel}`;
     }
-    this.scale(-1,1);
     this.pitchbend_data = {
       data:this.data,
       channel:channel

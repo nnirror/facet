@@ -150,6 +150,7 @@ module.exports = {
             }
           });
           Object.values(run_data.errors).forEach(error => {
+            console.log(error);
             if (error.message) {
               errors.push(error.message);
             }

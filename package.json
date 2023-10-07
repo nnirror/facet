@@ -21,6 +21,7 @@
     "osc-js": "^2.4.0",
     "pngjs": "^7.0.0",
     "readimage": "^1.1.1",
+    "strip-comments": "^2.0.1",
     "sync-request": "^6.1.0",
     "tonal": "^4.14.2",
     "wavefile": "^11.0.0",
