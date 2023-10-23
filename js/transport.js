@@ -88,7 +88,7 @@ app.post('/update', (req, res) => {
 
     if ( posted_pattern.is_stopped === true ) {
       stopped_patterns.push(facet_pattern_name);
-      stopVoice(posted_pattern);
+      stopVoice(posted_pattern.name);
       return;
     }
 
@@ -465,10 +465,18 @@ function checkForBpmRecalculation (events_per_loop) {
   }
 }
 
-function stopVoice (posted_pattern) {
-  // delete pattern from the event register matching this name
+function stopVoice (name) {
+  // delete pattern from the event register matching this name.
+  // run it every 500ms for 3 seconds because it's possible that another command that's currently being 
+  // generated will overwrite the first stopVoice call.
   try {
-    delete event_register[posted_pattern.name];
+    delete event_register[name];
+    setTimeout(()=>{delete event_register[name]},500);
+    setTimeout(()=>{delete event_register[name]},1000);
+    setTimeout(()=>{delete event_register[name]},1500);
+    setTimeout(()=>{delete event_register[name]},2000);
+    setTimeout(()=>{delete event_register[name]},2500);
+    setTimeout(()=>{delete event_register[name]},3000);
   }
   catch (e) {}
 }

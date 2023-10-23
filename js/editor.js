@@ -159,10 +159,8 @@ function runFacet() {
   setTimeout(function(){ cm.setCursor({line: line, ch: cursor.ch }); }, 100);
   setStatus(`processing`);
   let code = cm.getSelection();
-  let commands = code.trim().split(';').filter(Boolean);
   $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
     if ( data.success == true ) {
-      // load wav file and play it.
       $.growl.notice({ message: 'success:<br/>' + code });
     }
     else if ( data.error )  {
