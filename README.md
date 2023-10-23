@@ -37,7 +37,7 @@ There are lots of methods to generate, translate, and orchestrate playback on Fa
 
 Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`) allow you to supply functions as arguments:
 
-`$('example').iter(16,()=>{this.append(_.randsamp().speed(10))}).play();`
+`$('example').iter(16,()=>{this.append(_.randsamp('808').speed(10))}).play();`
 `// stitches together 16 random samples, each playing at 10x normal speed`
 
 ### UI controls in the browser
@@ -131,9 +131,9 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 - **channel** ( _channels_ )
 	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
 	- example:
-		- `$('example').randsamp().channel(1).play(); // first channel only`
-		- `$('example').randsamp().channels([1,3]).play(); // second channel only`
-		- `$('example').randsamp().channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
+		- `$('example').randsamp('808').channel(1).play(); // first channel only`
+		- `$('example').randsamp('808').channels([1,3]).play(); // second channel only`
+		- `$('example').randsamp('808').channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
 ---
 - **pan** ( _PanningFacetPattern_, _pan_mode_ = 0 )
 	- dynamically moves the FacetPattern between however many channels are specified in a seperate `.channels()` call. Without a call to `.channels()`, it will default to spatially positioning the FacetPattern between channels 1 and 2.
@@ -151,9 +151,9 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 	- This command should go at the end of the chain of commands. Applying further operations after it could alter the sound. This is because `play()` works by superposing copies of the input FacetPattern at all the playback positions, rather than creating discrete events to fire at each playback position. This helps to keep timing tight, as there is only one event that fires per loop to actually play each voice of audio, and it's always at position 0, where it plays the entire superposed pattern.
 	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or `[ctrl + /]`, or press the stop button "■".
 	- example:
-		- `$('example').randsamp().play();	// plays once at beginning of loop`
-		- `$('example').randsamp().play(0.5);	// plays once at middle point`
-		- `$('example').randsamp().play(_.noise(4));	// plays once at 4 random positions`
+		- `$('example').randsamp('808').play();	// plays once at beginning of loop`
+		- `$('example').randsamp('808').play(0.5);	// plays once at middle point`
+		- `$('example').randsamp('808').play(_.noise(4));	// plays once at 4 random positions`
 ---
 - **saveas** ( _filename_ )
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
@@ -228,7 +228,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` method uses the TonalJS npm package as a scale dictionary.
 	- possible keys: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
 	- possible scales: ["ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian", "bebop", "bebop dominant", "bebop major", "chromatic", "ichikosucho", "ionian pentatonic", "major pentatonic", "ritusen"]
-	- example: `$('example').randsamp().reduce(32).scale(36,51).key("F# bebop").note();`
+	- example: `$('example').randsamp('808').reduce(32).scale(36,51).key("F# bebop").note();`
 ---
 - **osc** ( _address_ )
 	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
@@ -477,7 +477,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
-		- `$('example').randsamp().reverse().play(); // random backwards sample`
+		- `$('example').randsamp('808').reverse().play(); // random backwards sample`
 ---
 - **sample** ( _filepath_, _channel_index_ = 0)
 	- loads a wav file from the `samples/` directory into memory. You can also specify any file with an absolute file path. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_. By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
@@ -513,7 +513,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
  	- runs the FacetPattern through an allpass filter.
 	- `frequency` changes the amount of phase shift introduced by the filter at different frequencies. It will change the phase response of the filter while leaving the magnitude response unchanged.
  	- example:
- 		- `$('example').randsamp().iter(12,()=>{this.allpass().delay(ri(1,6000))}).scale(-1,1).play(); // reverb`
+ 		- `$('example').randsamp('808').iter(12,()=>{this.allpass().delay(ri(1,6000))}).scale(-1,1).play(); // reverb`
  ---
 - **at** ( _position_, _value_ )
 	- replaces the value of a FacetPattern at the relative position `position` with `value`.
@@ -524,7 +524,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **audio** ( )
 	- removes any DC offset on the FacetPattern by running it through a high-pass biquadratic filter at 5Hz.
 	- example:
-		- `$('example').randsamp().times(_.noise(4)).audio().play();`
+		- `$('example').randsamp('808').times(_.noise(4)).audio().play();`
 ---
 - **bitshift** ( _shift_ = 16 )
 	- performs a bitwise rotation on the elements of the FacetPattern object’s data array by shift bits.
@@ -546,7 +546,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **compress** ( _ratio_, _threshold_, _attackTime_, _releaseTime_ )
 	- compresses the FacetPattern into a smaller dynamic range. `ratio` is a float between 0 and 1 corresponding to n:1 so 0.5 would be 2:1, 0.2 would be 5:1, etc. `threshold` is the sample amplitude at which compression kicks in. `attackTime` and `releaseTime` are expressed as relations to a second, so 0.1 would be 1/10th of a second.
 	- example:
-		- `$('example').randsamp().compress(0.1,0.001,0.01,0.01).play();`
+		- `$('example').randsamp('808').compress(0.1,0.001,0.01,0.01).play();`
 ---
 - **crab** ( )
 	- superposes a reversed copy of the FacetPattern on top of iself, so it plays backwards and forwards at the same time..
@@ -655,7 +655,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **interp** ( _weight_ = 0.5, _name_ )
 	- interpolates the FacetPattern with a FacetPattern. A weight of 0.5 gives equal weight to both patterns.
 		- example:
-		- `$('example').sine(100).interp(0.5,_.randsamp()).play(); // 50% sine wave; 50% random sample`
+		- `$('example').sine(100).interp(0.5,_.randsamp('808')).play(); // 50% sine wave; 50% random sample`
 ---
 - **invert** ( )
 	- computes the `minimum` and `maximum` values in the FacetPattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
@@ -700,7 +700,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **mutechunks** ( _chunks_, _prob_ )
 	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them. __Note__: this is intended for use with FacetPatterns with a large enough amount of data to be played back at audio rate. For a similar effect on smaller FacetPatterns, use `prob()`.
 	- example:
-		- `$('example').randsamp().mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
+		- `$('example').randsamp('808').mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
 ---
 - **normalize** ( )
 	- scales the FacetPattern to the 0 - 1 range.
@@ -750,7 +750,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **rechunk** ( _chunks_ )
 	- slices the input FacetPattern into `chunks` chunks and shuffles the chunks around. __Note__: this is intended for use with FacetPatterns with a large enough amount of data to be played back at audio rate. For a similar effect on smaller FacetPatterns, use `shuffle()` or `fracture`.
 	- example:
-		- `$('example').randsamp().rechunk(16).play();	// 16 slices from the sample in random order`
+		- `$('example').randsamp('808').rechunk(16).play();	// 16 slices from the sample in random order`
 ---
 - **reduce** ( _new_size_ )
 	- reduces the FacetPattern length to `new_size`. If `new_size` is larger than the FacetPattern length, no change.
@@ -771,7 +771,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- applies the Schroeder reverb algorithm to the FacetPattern. The `size` argument should be between 0 and 2 for most use cases but can go up to 10.
 	- the `feedback` argument controls feedback in the reverb algorithm. It should be between 0 and 0.98.
 	- example:
-		- `$('example').randsamp().reverb(rf()).play(); // different reverb size for random sample each loop`
+		- `$('example').randsamp('808').reverb(rf()).play(); // different reverb size for random sample each loop`
 ---
 - **reverse** ( )
 	- returns the reversed FacetPattern.
@@ -832,8 +832,8 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **speed** ( _amt_ )
 	- increases or decreases the playback speed of the FacetPattern, similar to transposing audio samples up or down. An `amt` value of 0.5 will play at half speed. An `amt` value of 2 will play at double speed.
 	- example
-		- `$('example').randsamp().speed(0.2); // slow sample`
-		- `$('example').randsamp().speed(1.5); // fast sample`
+		- `$('example').randsamp('808').speed(0.2); // slow sample`
+		- `$('example').randsamp('808').speed(1.5); // fast sample`
 ---
 - **sticky** ( _amt_ )
 	- samples and holds values in the FacetPattern based on probability. `amt` (float 0-1) sets the likelihood of each value being sampled and held.
@@ -884,7 +884,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 - **add** ( _FacetPattern_, _match_sizes_ = true )
 	- adds the first FacetPattern and the second FacetPattern. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 	- example:
-		- `$('example').randsamp().add(_.randsamp()).play(); // two random samples each loop`
+		- `$('example').randsamp('808').add(_.randsamp('808')).play(); // two random samples each loop`
 ---
 - **bpf** ( _cutoffPattern_ = 1000, _q_ = 2.5 )
 	- applies a bandpass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
@@ -911,7 +911,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- delays the input FacetPattern by `delaySamplesPattern` samples. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
 	- the maximum `feedback` value is 0.975.
 	- example:
-		- `$('example').randsamp().delay(random(1700,10000)).play();`
+		- `$('example').randsamp('808').delay(random(1700,10000)).play();`
 ---
 - **divide** ( _FacetPattern_, _match_sizes_ = true )
 	- divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
@@ -998,7 +998,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 - **convolve** ( _FacetPattern_ )
 	- computes the convolution between the two FacetPatterns.
 	- example:
-		- `$('example').randsamp().convolve(_.randsamp()).play();	// convolving random samples`
+		- `$('example').randsamp('808').convolve(_.randsamp('808')).play();	// convolving random samples`
 ---
 - **equals** ( _FacetPattern_, _match_sizes_ = true )
 	- computes the logical EQUALS of both FacetPattern, returning a 0 if the values don't equal each other and returning a 1 if they do. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
@@ -1008,7 +1008,7 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 - **ichunk** ( _FacetPattern_ )
 	- slices the input into `FacetPattern.length` windowed chunks (to avoid audible clicks). Loops through every value of `FacetPattern` as a lookup table, determining which ordered chunk of audio from the input sequence it corresponds to, and appends that window to the output buffer.
 	- example:
-		- `$('example').randsamp().ichunk(_.ramp(rf(),rf(),256)).play(); // play 256 slices between two random points of a random sample... timestretching :)`
+		- `$('example').randsamp('808').ichunk(_.ramp(rf(),rf(),256)).play(); // play 256 slices between two random points of a random sample... timestretching :)`
 ---
 - **interlace** ( _FacetPattern_ )
 	- interlaces two FacetPatterns. If one FacetPattern is smaller, it will be interspersed evenly throughout the other FacetPattern.
@@ -1034,12 +1034,12 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 - **splice** ( _FacetPattern_, _position_  )
 	- inserts the second FacetPattern into the input FacetPattern at relative `position` between 0 and 1.
 	- example:
-		- `$('example').randsamp().splice(_.noise(n16),0.5).play(); // inserts a 16th note of noise halfway through the random sample`
+		- `$('example').randsamp('808').splice(_.noise(n16),0.5).play(); // inserts a 16th note of noise halfway through the random sample`
 ---
 - **sup** ( _FacetPattern_, _startPositionPattern_, _maxFrameSize_ = whole_note_samples )
 	- superposes a second FacetPattern onto the first. The `startPositionPattern` value can be any value between 0 and 1, or an array, or a FacetPattern. It controls the relative position(s) in the input FacetPattern to begin superposing `FacetPattern`. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
 	- example:
-		- `$('example').silence(n1).sup(_.randsamp(),0,n1).sup(_.randsamp(),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`
+		- `$('example').silence(n1).sup(_.randsamp('808'),0,n1).sup(_.randsamp('808'),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`
 
 ### Pattern modulators with a function as one of the arguments
 For more examples, refer to the `examples/this.md` file.
@@ -1048,7 +1048,7 @@ For more examples, refer to the `examples/this.md` file.
 	- Mixes the input FacetPattern with a second FacetPattern generated by `command`.
 	- The command that will be mixed must start with the reserved word: `this` (see example).
 	- example:
-		- `$('example').randsamp().mix(0.5,()=>{this.reverse().speed(2).echo(8).speed(10)}).play();`
+		- `$('example').randsamp('808').mix(0.5,()=>{this.reverse().speed(2).echo(8).speed(10)}).play();`
 ---
 - **iter** ( _num_times_, _command_ = function, _prob_ = 1 )
 	- A shorthand for rerunning a certain command over and over, with prob as a float between 0 and 1 controlling the likelihood that the code actually runs.
@@ -1057,7 +1057,7 @@ For more examples, refer to the `examples/this.md` file.
 	- The variable `iters`, referring to the total number of iterations, is also available for use in commands.
 	- The variable `this.original_data`, referring to the original data before any iterations are proessed, is also available for use in commands.
 	- example:
-		- `$('example').randsamp().iter(8,()=>{this.delay(ri(1,2000))}).play(); // 8 delay lines between 1 and 2000 samples`
+		- `$('example').randsamp('808').iter(8,()=>{this.delay(ri(1,2000))}).play(); // 8 delay lines between 1 and 2000 samples`
 ---
 - **parallel** ( _commands_ = [function, function] )
 	- applies multiple commands in parallel to the input FacetPattern. The `commands` parameter is an array where each entry is a function. Each `command` is applied to a copy of the original input data, and the results are combined back together afterwards. The final output is normalized to have the same maximum value as the original input data.
@@ -1069,7 +1069,7 @@ For more examples, refer to the `examples/this.md` file.
 	- The variable `num_slices`, referring to the number of slices, is also available for use in commands.
 	- If the FacetPattern's data is >= 1024 samples, the last 1% of each slice will be faded out to prevent clicks in audio slices. If the FacetPattern's data is < 1024 samples, no fading is applied, and each slice is processed exactly as-is.
 	- example:
-		- `$('example').randsamp().slices(32,()=>{this.fft().shift(random()).ifft()}).play();`
+		- `$('example').randsamp('808').slices(32,()=>{this.fft().shift(random()).ifft()}).play();`
 ---
 - **sometimes** ( _prob_, _command_ = function() )
 	- runs `command` only some of the time, at a probability set by `prob`.
