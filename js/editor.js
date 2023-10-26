@@ -85,6 +85,14 @@ $(document).keydown(function(e) {
     $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {});
     $.growl.notice({ message: 'system muted' });
   }
+  else if ( e.ctrlKey && (e.keyCode == 88 ) ) {
+    // stop command(s)
+    runFacet('stop');
+  }
+  else if ( e.ctrlKey && (e.keyCode == 67 ) ) {
+    // keep command(s)
+    runFacet('keep');
+  }
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
   if ( $('#bpm').is(':focus') && e.keyCode == 13 ) {
@@ -147,7 +155,7 @@ $(document).keyup(function(e) {
   localStorage.setItem('facet_history', cm.getValue());
 });
 
-function runFacet() {
+function runFacet(mode = 'run') {
   // select the entire block surrounding the cursor pos, based on if newlines exist above and below
   let cursor = cm.getCursor();
   let line = cursor.line;
@@ -159,14 +167,7 @@ function runFacet() {
   setTimeout(function(){ cm.setCursor({line: line, ch: cursor.ch }); }, 100);
   setStatus(`processing`);
   let code = cm.getSelection();
-  $.post('http://127.0.0.1:1123', {code:code}).done(function( data, status ) {
-    if ( data.success == true ) {
-      $.growl.notice({ message: 'success:<br/>' + code });
-    }
-    else if ( data.error )  {
-      $.growl.error({ message: 'error:<br/>' + data.error });
-    }
-  });
+  $.post('http://127.0.0.1:1123', {code:code,mode:mode});
 }
 
 let midi_outs;

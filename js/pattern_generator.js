@@ -41,9 +41,9 @@ module.exports = {
   initEnv: () => {
     fs.writeFileSync('js/env.js', '');
   },
-  run: (code, is_rerun) => {
+  run: (code, is_rerun, mode) => {
     if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
-      const worker = new Worker("./js/run.js", {workerData:{code:code},resourceLimits:{stackSizeMb:128}});
+      const worker = new Worker("./js/run.js", {workerData:{code:code,mode:mode},resourceLimits:{stackSizeMb:128}});
       worker.once("message", run_data => {
           let fps = run_data.fps;
           Object.values(fps).forEach(fp => {
@@ -176,7 +176,7 @@ if ( !fs.existsSync('tmp/')) {
 // receive and run commands via HTTP POST
 app.post('/', (req, res) => {
   startTransport();
-  module.exports.run(req.body.code,false);
+  module.exports.run(req.body.code,false,req.body.mode);
   res.send({
     status: 200,
   });
@@ -258,7 +258,7 @@ app.get('/update', (req, res) => {
       || ((fp.loops_since_generation > 0) && ((fp.loops_since_generation % fp.regenerate_every_n_loops) == 0 ))
     ) {
       if ( fp.available_for_next_request == true ) {
-        module.exports.run(fp.original_command,true);
+        module.exports.run(fp.original_command,true,'run');
         fp.available_for_next_request == false;
         fp.loops_since_generation = 1;
       }

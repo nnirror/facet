@@ -8,9 +8,9 @@ let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data})
 let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
 let bpm_from_env;
 
-parentPort.postMessage(runCode(workerData.code));
+parentPort.postMessage(runCode(workerData.code,workerData.mode));
 
-function runCode (code) {
+function runCode (code,mode) {
   let fps = [];
   let run_errors = [];
   user_input = strip(code);
@@ -24,6 +24,12 @@ function runCode (code) {
   Object.values(commands).forEach(command => {
     let original_command = replaceDelimiterWithSemicolon(command);
     command = formatCode(command);
+    if ( mode === 'stop' ) {
+      command = `${command}.stop()`;
+    }
+    if ( mode === 'keep' ) {
+      command = `${command}.keep()`;
+    }
     try {
       let fp;
       let should_be_stopped = stop_called_regex.test(command);
