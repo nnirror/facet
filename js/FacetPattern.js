@@ -2881,30 +2881,33 @@ f
     return this;
 }
 
-  rechunk (numChunks) {
-    // Break the array into numChunks chunks
-    let chunkSize = Math.ceil(this.data.length / numChunks);
-    let chunks = [];
-    for (let i = 0; i < this.data.length; i += chunkSize) {
-        chunks.push(this.data.slice(i, i + chunkSize));
-    }
+rechunk (numChunks, probability) {
+  // Break the array into numChunks chunks
+  let chunkSize = Math.ceil(this.data.length / numChunks);
+  let chunks = [];
+  
+  for (let i = 0; i < this.data.length; i += chunkSize) {
+      chunks.push(this.data.slice(i, i + chunkSize));
+  }
 
-    // Shuffle the chunks
-    for (let i = chunks.length - 1; i > 0; i--) {
-        let j = Math.floor(Math.random() * (i + 1));
-        [chunks[i], chunks[j]] = [chunks[j], chunks[i]];
-    }
+  // Determine number of chunks to shuffle based on probability
+  let numChunksToShuffle = Math.floor(numChunks * probability);
 
-    // Stitch the 1D array back together
-    let result = [];
-    for (let chunk of chunks) {
-        result.push(chunk);
-    }
-    this.data = result;
-    this.data = this.fadeArrays(this.data);
-    this.data = this.sliceEndFade(this.data);
-    this.flatten();
-    return this;
+  // Shuffle the numChunksToShuffle chunks
+  for (let i = 0; i < numChunksToShuffle; i++) {
+      let j = i + Math.floor(Math.random() * (chunks.length - i));
+
+      // Swap chunks[i] and chunks[j]
+      [chunks[i], chunks[j]] = [chunks[j], chunks[i]];
+  }
+
+  // Assign the chunks array to the data
+  this.data = chunks;
+  this.data = this.fadeArrays(this.data);
+  this.data = this.sliceEndFade(this.data);
+  this.flatten();
+
+  return this;
 }
   // END audio operations
 

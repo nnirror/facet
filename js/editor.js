@@ -88,10 +88,12 @@ $(document).keydown(function(e) {
   else if ( e.ctrlKey && (e.keyCode == 88 ) ) {
     // stop command(s)
     runFacet('stop');
+    $.growl.notice({ message: 'command(s) stopped' });
   }
   else if ( e.ctrlKey && (e.keyCode == 67 ) ) {
     // keep command(s)
     runFacet('keep');
+    $.growl.notice({ message: 'command(s) kept' });
   }
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
