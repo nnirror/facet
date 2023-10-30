@@ -17,8 +17,7 @@ let bpm = 90;
 let bars_elapsed = 0;
 let reruns = {};
 let stored_variables = [];
-let new_variables_stored = false;
-let stored_variable_string = '';
+let previous_variables = {bpm:-1,bars_elapsed:-1,mousex:-1,mousey:-1};
 let errors = [];
 let percent_cpu = 0;
 let mousex, mousey;
@@ -36,10 +35,12 @@ axios.interceptors.request.use(request => {
 module.exports = {
   cleanUp: () => {
     fs.writeFileSync('js/env.js', '');
+    fs.writeFileSync('js/vars.js', '');
     fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   },
   initEnv: () => {
     fs.writeFileSync('js/env.js', '');
+    fs.writeFileSync('js/vars.js', '');
   },
   run: (code, is_rerun, mode) => {
     if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
@@ -69,7 +70,12 @@ module.exports = {
                 let data = fp.variables_to_set[i].data;
                 stored_variables[name] = data;
               }
-              new_variables_stored = true;
+              let user_vars = '';
+              for (let key in stored_variables) {
+                user_vars += 'var ' + key + ' = ' + JSON.stringify(stored_variables[key]) + '; ';
+              }
+              // overwrite vars.js with stored_variables
+              fs.writeFileSync('js/vars.js', user_vars, ()=> {});
             }
 
             fp.name = fp.name + `---${Date.now()}`;
@@ -199,23 +205,21 @@ app.post('/stop', (req, res) => {
 app.post('/meta', (req, res) => {
   bpm = req.body.bpm;
   bars_elapsed = req.body.bars_elapsed;
-    // rewrite env.js, the environment variables that can be accessed in all future evals.
-    // it's loaded into each FacetPattern instance on consruction
-    if ( new_variables_stored === true ) {
-      stored_variable_string = '';
-      for (let key in stored_variables) {
-        let variable_string = stored_variables[key].length > 1 ? `[${stored_variables[key]}]` : `${stored_variables[key]}`;
-        stored_variable_string += `var ${key} = ${variable_string};`;
-      }
-      new_variables_stored = false;
-    }
-    
-    fs.writeFileSync('js/env.js',
+    // if any system-level variables have changed, rewrite env.js so those variables that be accessed in all future evals.
+    // it's loaded into each FacetPattern instance on construction
+    if ( bpm != previous_variables.bpm || bars_elapsed != previous_variables.bars_elapsed || mousex != previous_variables.mousex || mousey != previous_variables.mousey ) {
+      fs.writeFileSync('js/env.js',
       calculateNoteValues(bpm) +
-      `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};${stored_variable_string}`,
+      `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};`,
       ()=> {}
-    );
-  res.sendStatus(200);
+      );
+    }
+    res.sendStatus(200);
+
+    previous_variables.bpm = bpm;
+    previous_variables.bars_elapsed = bars_elapsed;
+    previous_variables.mousex = mousex;
+    previous_variables.mousey = mousey;
 });
 
 app.post('/autocomplete', (req, res) => {

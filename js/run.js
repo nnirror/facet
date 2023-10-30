@@ -6,6 +6,7 @@ const stop_called_regex = /(?<!{[^}]*)\.stop\(\)(?![^{}]*})/;
 const fp_name_regex = /\$\((['"])(.+?)\1\)/;
 let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
 let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
+let vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {return data});
 let bpm_from_env;
 
 parentPort.postMessage(runCode(workerData.code,workerData.mode));
@@ -20,6 +21,11 @@ function runCode (code,mode) {
     // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
     // in that case, try loading again
     env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
+  }
+  if (vars.length == 0) {
+    // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
+    // in that case, try loading again
+    vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {return data});
   }
   Object.values(commands).forEach(command => {
     let original_command = replaceDelimiterWithSemicolon(command);
@@ -40,7 +46,7 @@ function runCode (code,mode) {
         fp.is_stopped = true;
       }
       else {
-        fp = eval(env + utils + command);
+        fp = eval(env + vars + utils + command);
       }
       // parse the current BPM and add it as a property of the FP.
       // the BPM at generation time is needed in the transport - if BPM has changed

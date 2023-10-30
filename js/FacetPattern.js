@@ -3328,13 +3328,34 @@ rechunk (numChunks, probability) {
   }
 
   getEnv() {
-    let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
-    if (env.length == 0) {
+    let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {
+      if(err) throw err; 
+      return data;
+    });
+  
+    if (env.length === 0) {
       // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
       // in that case, try loading again
-      env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
+      env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {
+        if(err) throw err;
+        return data;
+      });
     }
-    return env;
+  
+    let vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {
+      if(err) throw err;
+      return data;
+    });
+  
+    if (vars.length === 0) {
+      // in case the app file is empty, try loading again
+      vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {
+        if(err) throw err;
+        return data;
+      });
+    }
+    env += vars;
+    return  env;
   }
 
   getUtils() {
