@@ -23,6 +23,7 @@ let voice_allocator = initializeVoiceAllocator();
 let voices_to_send_to_browser = [];
 let patterns_for_next_loop = {};
 let stopped_patterns = [];
+let patterns_that_have_been_stopped = [];
 let current_relative_step_position = 0;
 let event_register = [];
 let transport_on = true;
@@ -86,9 +87,10 @@ app.post('/update', (req, res) => {
     let posted_pattern = JSON.parse(req.body.pattern);
     let facet_pattern_name = posted_pattern.name.split('---')[0];
 
-    if ( posted_pattern.is_stopped === true ) {
+    if ( posted_pattern.is_stopped === true || facet_pattern_name in patterns_that_have_been_stopped ) {
       stopped_patterns.push(facet_pattern_name);
       stopVoice(posted_pattern.name);
+      delete patterns_that_have_been_stopped[facet_pattern_name];
       return;
     }
 
@@ -471,6 +473,7 @@ function stopVoice (name) {
   // generated will overwrite the first stopVoice call.
   try {
     delete event_register[name];
+    patterns_that_have_been_stopped[name] = true;
     setTimeout(()=>{delete event_register[name]},500);
     setTimeout(()=>{delete event_register[name]},1000);
     setTimeout(()=>{delete event_register[name]},1500);
