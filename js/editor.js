@@ -385,44 +385,20 @@ setInterval(() => {
       if ( browser_sound_output === true ) {
         let load_data = data[i].split(' ');
         let voice_number = load_data[0];
-        let fp = load_data[1].split(',');
-        let sample_rate = load_data[2];
-        let pan_data = load_data[3].split(',');;
-        let is_mono = load_data[4] == 1 ? true : false;
-        let voice_bpm = Number(load_data[5]);
-        fp = fp.map(Number);
-        if (is_mono) {
-          // if mono, create a single mono buffer
-          let buffer = ac.createBuffer(1, fp.length, sample_rate);
-          let data = buffer.getChannelData(0);
-          for (let i = 0; i < fp.length; i++) {
-            data[i] = fp[i];
-          }
-          voices[voice_number] = {buffer: buffer, bpm: voice_bpm};
-        } else {
-          // if stereo, create two identical buffers from fp and apply amplitude modulation
-          let leftBuffer = ac.createBuffer(1, fp.length, sample_rate);
-          let rightBuffer = ac.createBuffer(1, fp.length, sample_rate);
-          
-          for (let i = 0; i < fp.length; i++) {
-            // apply amplitude modulation based on pan_data
-            let panIndex = Math.floor(i * pan_data.length / fp.length);
-            let panValue = parseFloat(pan_data[panIndex]);
-            leftBuffer.getChannelData(0)[i] = fp[i] * (panValue < 0 ? 1 : 1 - panValue);
-            rightBuffer.getChannelData(0)[i] = fp[i] * (panValue > 0 ? 1 : 1 + panValue);
-          }
-    
-          // combine the two mono buffers into a stereo buffer
-          let stereoBuffer = ac.createBuffer(2, fp.length, sample_rate);
-          stereoBuffer.copyToChannel(leftBuffer.getChannelData(0), 0);
-          stereoBuffer.copyToChannel(rightBuffer.getChannelData(0), 1);
-    
-          voices[voice_number] = {buffer: stereoBuffer, bpm: voice_bpm};
-        }
+        let fp = load_data[1];
+        let voice_bpm = Number(load_data[2]);
+        // get any wav files that were just generated
+        fetch(`../tmp/${fp}`)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => ac.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+          // add the audioBuffer directly to the voices object
+          voices[voice_number] = {buffer: audioBuffer, bpm: voice_bpm};
+        })
+        .catch(e => console.error(e));
       }
     }
-  }
-  )
+  })
   .catch((error) => console.error('Error:', error));
 }, 125);
 

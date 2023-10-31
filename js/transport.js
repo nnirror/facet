@@ -98,7 +98,7 @@ app.post('/update', (req, res) => {
       allocateVoice(posted_pattern);
       let is_mono = posted_pattern.pan_data === false && posted_pattern.dacs == '1 1' ? 1 : 0;
       if ( browser_sound_output === true ) {
-        voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.data} ${SAMPLE_RATE} ${posted_pattern.pan_data} ${is_mono} ${posted_pattern.bpm_at_generation_time}`);
+        voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`);
       }
       udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time} ${is_mono}`));
       event_register[facet_pattern_name] = [];
