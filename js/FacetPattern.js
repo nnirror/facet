@@ -2881,7 +2881,7 @@ f
     return this;
 }
 
-rechunk (numChunks, probability) {
+rechunk (numChunks, probability = 1) {
   // Break the array into numChunks chunks
   let chunkSize = Math.ceil(this.data.length / numChunks);
   let chunks = [];
