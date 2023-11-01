@@ -19,6 +19,7 @@ let reruns = {};
 let stored_variables = [];
 let previous_variables = {bpm:-1,bars_elapsed:-1,mousex:-1,mousey:-1};
 let errors = [];
+let workers = []; 
 let percent_cpu = 0;
 let mousex, mousey;
 let cross_platform_copy_command = process.platform == 'win32' ? 'copy \/y' : 'cp';
@@ -45,15 +46,25 @@ module.exports = {
   run: (code, is_rerun, mode) => {
     if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
       const worker = new Worker("./js/run.js", {workerData:{code:code,mode:mode},resourceLimits:{stackSizeMb:128}});
+      workers.push(worker);
       worker.once("message", run_data => {
+          // remove the worker from the workeres list
+          let index = workers.findIndex(workerObj => workerObj === worker);
+          if (index !== -1) {
+              workers.splice(index, 1);
+          }
           let fps = run_data.fps;
           Object.values(fps).forEach(fp => {
             if ( fp.is_stopped === true ) {
+              // stop all workers. any commands that weren't stopped will continue to regenerate the next loop
+              terminateAllWorkers();
               postToTransport(fp);
               delete reruns[fp.name];
               return;
             }
             if ( fp.do_not_regenerate === true ) {
+              // stop all workers. any commands that weren't stopped will continue to regenerate the next loop
+              terminateAllWorkers();
               delete reruns[fp.name];
             }
 
@@ -195,6 +206,7 @@ app.post('/hooks/clear', (req, res) => {
 
 app.post('/stop', (req, res) => {
   reruns = {};
+  terminateAllWorkers();
   axios.post('http://localhost:3211/stop',{})
   .catch(function (error) {
     console.log(`error stopping transport server: ${error}`);
@@ -300,6 +312,13 @@ process.on('SIGINT', () => {
   module.exports.cleanUp();
   process.exit()
 });
+
+function terminateAllWorkers () {
+  workers.forEach(worker => {
+    worker.terminate();  // cancel the worker thread
+  });
+  workers = [];  // all workers have been terminated
+}
 
 function calculateNoteValues(bpm) {
   let out = '';
