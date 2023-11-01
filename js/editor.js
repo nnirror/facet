@@ -78,22 +78,29 @@ $(document).keydown(function(e) {
   else if ( e.ctrlKey && e.keyCode == 188 ) {
     // clear hooks: [ctrl + ","]
     $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
-    $.growl.notice({ message: 'hooks cleared' });
+    $.growl.notice({ message: 'regeneration stopped' });
   }
   else if ( e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191) ) {
     // clear hooks and mute everything: [ctrl + "."] or  [ctrl + "?"]
     $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {});
     $.growl.notice({ message: 'system muted' });
   }
-  else if ( e.ctrlKey && (e.keyCode == 88 ) ) {
+  else if ( e.ctrlKey && (e.keyCode == 222 ) ) {
     // stop command(s)
     runFacet('stop');
     $.growl.notice({ message: 'command(s) stopped' });
   }
-  else if ( e.ctrlKey && (e.keyCode == 67 ) ) {
+  else if ( e.ctrlKey && (e.keyCode == 186 ) ) {
     // keep command(s)
+    ac = new AudioContext();
     runFacet('keep');
-    $.growl.notice({ message: 'command(s) kept' });
+    $.growl.notice({ message: 'command(s) generated and kept' });
+  }
+  else if ( e.ctrlKey && (e.keyCode == 220 ) ) {
+    // command(s) run once
+    ac = new AudioContext();
+    runFacet('once');
+    $.growl.notice({ message: 'command(s) generated to play once' });
   }
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
@@ -239,7 +246,7 @@ $('body').on('click', '#stop', function() {
 
 $('body').on('click', '#clear', function() {
   $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {
-    $.growl.notice({ message: 'hooks cleared' });
+    $.growl.notice({ message: 'regeneration stopped' });
   });
 });
 
@@ -353,16 +360,6 @@ function setStatus(status) {
   $('#status').html(colored_span);
 }
 
-function upscaleArray(data, newLength) {
-  let factor = Math.floor(newLength / data.length);
-  let newData = [];
-  for (let i = 0; i < data.length; i++) {
-    for (let j = 0; j < factor; j++) {
-      newData.push(data[i]);
-    }
-  }
-  return newData;
-}
 
 let bpm=90;
 // check every 10ms for bpm change and send if changed

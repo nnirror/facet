@@ -36,6 +36,9 @@ function runCode (code,mode) {
     if ( mode === 'keep' ) {
       command = `${command}.keep()`;
     }
+    if ( mode === 'once' ) {
+      command = `${command}.once()`;
+    }
     try {
       let fp;
       let should_be_stopped = stop_called_regex.test(command);

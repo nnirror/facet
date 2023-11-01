@@ -56,8 +56,9 @@ Below the text editor, there are several UI elements which control the servers r
 ### Key commands
 
 - Run command(s): `[ctrl + enter]` or `[ctrl + r]`. All commands not separated by multiple newlines will run together.
-- Stop command(s): `[ctrl + x]`. All commands not separated by multiple newlines will be stopped, if they are currently running.
-- Keep command(s): `[ctrl + c]`. All commands not separated by multiple newlines will be generated and continually played back as-is, without regenerating.
+- Stop command(s): `[ctrl + ']`. All commands not separated by multiple newlines will be stopped, if they are currently running.
+- Keep command(s): `[ctrl + ;]`. All commands not separated by multiple newlines will continue to play back as-is, without regenerating.
+- Once command(s): `[ctrl + \]`. All commands not separated by multiple newlines will play back once and not regenerate.
 - Stop all playback: `[ctrl + .]` or `[ctrl + /]`
 - Stop regenerating all patterns: `[ctrl + ,]`
 - Autocomplete / list methods: `[ctrl + space]`. This will list all available methods including their arguments in a dropdown menu, filtered by the text preceding the cursor position. If only one matching method is found, it will autocomplete that method.
