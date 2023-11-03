@@ -24,6 +24,7 @@ let voices_to_send_to_browser = [];
 let patterns_for_next_loop = {};
 let stopped_patterns = [];
 let patterns_that_have_been_stopped = [];
+let patterns_to_delete_at_end_of_loop = [];
 let current_relative_step_position = 0;
 let event_register = [];
 let transport_on = true;
@@ -191,6 +192,10 @@ function tick() {
   if ( current_relative_step_position > 1.00001 ) {
     current_relative_step_position = 0;
     bars_elapsed++;
+    Object.keys(patterns_to_delete_at_end_of_loop).forEach((fp_name) => {
+      delete event_register[fp_name];
+    });
+    patterns_to_delete_at_end_of_loop = [];
     applyNextPatterns();
     patterns_for_next_loop = {};
     // tell pattern server to start processing next loop
@@ -286,8 +291,13 @@ function tick() {
           }
 
           // remove any events from the event register that are intended to play only once
-          if ( event.play_once === true ) {
+          if ( event.play_once === true && event.type === "audio" ) {
             delete event_register[fp_name];
+          }
+
+          if ( event.play_once === true && event.type !== "audio" ) {
+            // delete event_register[fp_name];
+            patterns_to_delete_at_end_of_loop[fp_name] = true;
           }
 
         }

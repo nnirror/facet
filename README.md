@@ -806,8 +806,9 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([1,2,3,4]).shift(-0.5); // 3 4 2 1`
 ---
-- **shuffle** ( )
-	- randomizes the FacetPattern.
+- **shuffle** ( _prob_ = 1 )
+	- randomizes the order of the elements in the FacetPattern.
+	- The `prob` argument controls the percentage of data to shuffle. It should be a float between 0 and 1. A `prob` of 1 means 100% of the elements will shuffle; a `prob` of 0.5 means 50% of the elements will shuffle, etc.
 	- example:
 		- `$('example').from([1,2,3,4]).shuffle(); // first time: 3 2 1 4`
 		- `$('example').from([1,2,3,4]).shuffle(); // second time: 1 3 4 2`

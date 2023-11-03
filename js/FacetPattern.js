@@ -2267,12 +2267,15 @@ f
     return this;
   }
 
-  shuffle () {
-    if ( this.data.length < 1 ) {
+  shuffle (probability = 1) {
+    if (this.data.length < 1) {
       return this;
     }
+  
     let shuffle_sequence = this.data;
-    for (let i = shuffle_sequence.length - 1; i > 0; i--) {
+    let numToShuffle = Math.round(probability * shuffle_sequence.length);
+  
+    for (let i = shuffle_sequence.length - 1; i >= shuffle_sequence.length - numToShuffle; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffle_sequence[i], shuffle_sequence[j]] = [shuffle_sequence[j], shuffle_sequence[i]];
     }
