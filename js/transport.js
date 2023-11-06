@@ -499,6 +499,19 @@ function allocateVoice(posted_pattern) {
   // determine the voice number where new_voice can go
   let new_voice_found = false;
   let voice_checks = 0;
+  while ( voice_checks < VOICES ) {
+    // special check first - if the fp name split--- 0 is already set as a pattern. 
+    // there can't be more than one voice with the same name at one time, so delete those
+    // this is critical in the context of replacing old "kept" patterns instead of clogging up 
+    // all the voices with kept patterns that aren't even being used anymore
+    if ( voice_allocator[voice_checks] ) {
+      if ( voice_allocator[voice_checks].name.split('---')[0] === posted_pattern.name.split('---')[0] ) {
+        voice_allocator[voice_checks] = false;
+      }
+    }
+    voice_checks++;
+  }
+  voice_checks = 0;
   while ( new_voice_found == false && voice_checks < VOICES ) {
     if ( voice_allocator[voice_number_to_load].overwritable === true || voice_allocator[voice_number_to_load] === false ) {
       // new voice found
@@ -552,7 +565,6 @@ function scalePatternToSteps(pattern, steps) {
 class AudioPlaybackVoice {
 	constructor(posted_pattern) {
 		this.name = posted_pattern.name;
-		this.keep = posted_pattern.do_not_regenerate;
 		this.every = posted_pattern.regenerate_every_n_loops;
     this.loops_since_generation = 0;
 		this.once = posted_pattern.play_once;

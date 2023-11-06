@@ -690,7 +690,7 @@ class FacetPattern {
     if (length < 1 ) {
       length = 1;
     }
-    let turing_sequence = this.noise(length).round();
+    let turing_sequence = this.noise(length).scale(0,1).round();
     this.data = turing_sequence.data;
     return this;
   }
