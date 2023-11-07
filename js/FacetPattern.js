@@ -3141,7 +3141,7 @@ rechunk (numChunks, probability = 1) {
     if ( Array.isArray(sequence) === false ) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
-    let out_fp = new FacetPattern().silence(this.getWholeNoteNumSamples());
+    let out_fp = new FacetPattern();
     let copy_fp = new FacetPattern().from(this.data);
     Object.values(sequence).forEach(s => {
       out_fp.sup(copy_fp,s);
@@ -3498,18 +3498,22 @@ rechunk (numChunks, probability = 1) {
     if (typeof startPositions == 'number' || Array.isArray(startPositions) === true) {
       startPositions = new FacetPattern().from(startPositions);
     }
+    if (this.data.length == 0) {
+      this.data = new FacetPattern().silence(maxFrameSize).data;
+    }
     startPositions = startPositions.data;
     maxFrameSize = Math.abs(Math.floor(maxFrameSize));
     let output = this.data.slice();
-    // startPosition = Math.abs(startPosition);
     for (let j = 0; j < startPositions.length; j++) {
       let startPosition = startPositions[j];
       let start = Math.floor(startPosition * maxFrameSize);
       for (let i = 0; i < addPattern.data.length; i++) {
         if (start + i < this.data.length) {
             output[start + i] += addPattern.data[i];
-        } else {
+        } else if (output.length < (maxFrameSize+addPattern.data.length)) {
             output.push(addPattern.data[i]);
+        } else {
+            break;
         }
       }
     }
