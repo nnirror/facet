@@ -3236,6 +3236,54 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
+  seq ( seqArg, operations ) {
+    let seqPattern = [];
+    if ( operations && typeof operations != 'function' ) {
+      throw `2nd argument must be a function, type found: ${typeof operations}`;
+    }
+    if ( this.isFacetPattern(seqArg) ) {
+      // prepare the seqPattern array
+      for (let i = 0; i < seqArg.data.length; i++) {
+        seqPattern.push(seqArg.data[i]);
+      }
+    }
+    else if ( typeof seqArg == 'string' ) {
+      // string
+      seqPattern = seqArg.split(/\s+/);
+    }
+    else {
+      throw `1st argument to seq must be a string of Facetpattern; type found: ${typeof seqArg}`;
+    }
+    for (let i = 0; i < seqPattern.length; i++) {
+      let currentSampleName = seqPattern[i];
+      let index;
+
+      if ( currentSampleName.includes('/*') ) {
+        index = currentSampleName.indexOf('/*');
+      } else if (currentSampleName.includes('*')) {
+        index = currentSampleName.indexOf('*');
+      }
+
+      if ( index !== undefined ) {
+        currentSampleName = currentSampleName.substring(0, index);
+        let fp = new FacetPattern().randsamp(currentSampleName);
+        if ( operations ) {
+          fp.sometimes(1,operations);
+        }
+        this.sup(fp, i/seqPattern.length);
+      }
+      else {
+        // return directory as-is
+        let fp = new FacetPattern().sample(currentSampleName);
+        if ( operations ) {
+          fp.sometimes(1,operations);
+        }
+        this.sup(fp, i/seqPattern.length);
+      }
+    }
+    return this;
+  }
+
   stop () {
     this.is_stopped = true;
     return this;

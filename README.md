@@ -1067,6 +1067,14 @@ For more examples, refer to the `examples/this.md` file.
 	- applies multiple commands in parallel to the input FacetPattern. The `commands` parameter is an array where each entry is a function. Each `command` is applied to a copy of the original input data, and the results are combined back together afterwards. The final output is normalized to have the same maximum value as the original input data.
 	- example: `$('s').noise(n4).scale(-1,1).allpass(347).allpass(113).allpass(37).parallel([()=>{this.delay(1687,0.999)},()=>{this.delay(1601,0.999)},()=>{this.delay(2053,0.999)},()=>{this.delay(2251,0.999)}]).play().full(); // schroeder reverb on a quarter note of noise`
 ---
+- **seq** ( _sequencePattern_, _commands_ = function )
+	- superposes the samples specified in `sequencePattern` across the loop. `sequencePattern` can either be a string or a FacetPattern composed of strings.
+	- the character `*` at the end of a member of the `sequencePattern` string will select a random sample from that directory (see examples).
+	- the `commands` will run on each sample as it is superposed onto the output pattern.
+	- example: 
+		- `$('example').seq('kicks/* hats/* snares/003 hats/003').play(); // random kick, random hat, snares/003, hats/003`
+		- `$('example').seq(_.from(['kicks/003', 'hats*', 'snares/003', 'hats/*']).dup(choose([1, 3, 5, 7])).palindrome().rechunk(8, 0.5), () => {this.log(rf()).delay(ri(n128, n16))}).full().play() // example using commands to proess each sample, and using a FacetPattern as the sequencePattern`;
+---
 - **slices** ( _num_slices_, _command_ = function, _prob_ = 1 )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `command`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
 	- The variable `s`, referring to the current slice number starting at 0, is also available for use in commands.
