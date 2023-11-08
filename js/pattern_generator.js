@@ -275,7 +275,7 @@ app.get('/update', (req, res) => {
     ) {
       if ( fp.available_for_next_request == true ) {
         module.exports.run(fp.original_command,true,'run');
-        fp.available_for_next_request == false;
+        fp.available_for_next_request = false;
         fp.loops_since_generation = 1;
       }
     }
