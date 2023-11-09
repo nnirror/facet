@@ -6,6 +6,7 @@ const wav = require('node-wav');
 const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const NYQUIST = SAMPLE_RATE / 2;
 const curve_calc = require('./lib/curve_calc.js');
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const Complex = require('./lib/Complex.js');
@@ -1192,6 +1193,22 @@ waveformSample(waveform, phase) {
     this.reverse();
     this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
+    return this;
+  }
+
+  vocode ( modulatorPattern, carrierPattern, numBands = 16) {
+    let lowerLimit = Math.log10(20);
+    let upperLimit = Math.log10(NYQUIST);
+    let width = (upperLimit - lowerLimit) / numBands;
+    let bands = [];
+    for (let i = 0; i <= numBands; i++) {
+      bands.push(Math.pow(10, (lowerLimit + i * width)));
+    }
+    for (let i = 0; i <= numBands; i++) {
+      this.sup(modulatorPattern.bpf(bands[i],1).follow(0,100)
+        .times(carrierPattern.bpf(bands[i],1))
+       )
+    }
     return this;
   }
 
