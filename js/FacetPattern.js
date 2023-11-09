@@ -1196,19 +1196,15 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-  vocode ( modulatorPattern, carrierPattern, numBands = 16) {
-    let lowerLimit = Math.log10(20);
-    let upperLimit = Math.log10(NYQUIST);
-    let width = (upperLimit - lowerLimit) / numBands;
-    let bands = [];
-    for (let i = 0; i <= numBands; i++) {
-      bands.push(Math.pow(10, (lowerLimit + i * width)));
-    }
-    for (let i = 0; i <= numBands; i++) {
-      this.sup(modulatorPattern.bpf(bands[i],1).follow(0,100)
+  vocode ( carrierPattern ) {
+    let bands = [250,500,750,1000,1250,1500,1750,2000,2500,3000,4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000,16000,17000,18000,19000,20000,21000,22000];
+    let out_fp = new FacetPattern();
+    for (let i = 0; i < bands.length; i++) {
+      out_fp.sup(this.bpf(bands[i],1).follow(NYQUIST*0.0001,NYQUIST*0.0008)
         .times(carrierPattern.bpf(bands[i],1))
        )
     }
+    this.data = out_fp.data;
     return this;
   }
 

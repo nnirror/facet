@@ -1044,12 +1044,11 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- superposes a second FacetPattern onto the first. The `startPositionPattern` value can be any value between 0 and 1, or an array, or a FacetPattern. It controls the relative position(s) in the input FacetPattern to begin superposing `FacetPattern`. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
 	- example:
 		- `$('example').silence(n1).sup(_.randsamp('808'),0,n1).sup(_.randsamp('808'),0.5,n1).play(); // superpose two samples at the 0% and 50% points through each loop`
-- **vocode** ( _modulatorPattern_, _carrierPattern_, _numBins_ = 16 )
-	- creates a vocoder effect from two FacetPatterns: `modulatorPattern` and `carrierPattern`. The `numBins` argument sets the number of bins that the audio spectrum of each pattern will be split into.
-	- The amplitude envelope of each frequency bin in the `modulatorPattern` controls the amplitude of each bin in `carrierPattern`.
-	- for a "classic" vocoding effect, use a rhythmic sample for `modulatorPattern` and a melodic pattern for `carrierPattern`.
+- **vocode** ( _carrierPattern_ )
+	- creates a vocoder effect where the amplitude envelope of each frequency bin in the input FacetPattern controls the amplitude of each freuqency bin in `carrierPattern`.
+	- for a "classic" vocoding effect, use a rhythmic sample as the input FacetPattern and a melodic pattern for `carrierPattern`.
 	- example:
-		- `$('example').vocode(_.randsamp('808'), _.square([220,440,110,110])).play(); // vocode random 808 sample with simple square wave pattern`
+		- `$('example').seq('808/* 808/* 808/* 808/* 808/* 808/* 808/* 808/*').vocode(_.square([220,440,110,110])).play(); // vocode sequence of random 808 sample with simple square wave pattern`
 
 ### Pattern modulators with a function as one of the arguments
 For more examples, refer to the `examples/this.md` file.
