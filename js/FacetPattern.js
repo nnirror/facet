@@ -3274,6 +3274,7 @@ rechunk (numChunks, probability = 1) {
     for (let i = 0; i < seqPattern.length; i++) {
       let currentSampleName = seqPattern[i];
       let index;
+      let fp = new FacetPattern();
 
       if ( currentSampleName.includes('/*') ) {
         index = currentSampleName.indexOf('/*');
@@ -3283,15 +3284,20 @@ rechunk (numChunks, probability = 1) {
 
       if ( index !== undefined ) {
         currentSampleName = currentSampleName.substring(0, index);
-        let fp = new FacetPattern().randsamp(currentSampleName);
+          fp.randsamp(currentSampleName);
         if ( operations ) {
           fp.sometimes(1,operations);
         }
         this.sup(fp, i/seqPattern.length);
       }
       else {
-        // return directory as-is
-        let fp = new FacetPattern().sample(currentSampleName);
+        if ( currentSampleName == '_' ) {
+          fp.silence(0);
+        }
+        else {
+          // return directory as-is
+          fp.sample(currentSampleName);
+        }
         if ( operations ) {
           fp.sometimes(1,operations);
         }

@@ -1076,6 +1076,7 @@ For more examples, refer to the `examples/this.md` file.
 - **seq** ( _sequencePattern_, _commands_ = function )
 	- superposes the samples specified in `sequencePattern` across the loop. `sequencePattern` can either be a string or a FacetPattern composed of strings.
 	- the character `*` at the end of a member of the `sequencePattern` string will select a random sample from that directory (see examples).
+	- the character `_` in a `sequencePattern` specifies to insert silence instead of a sample.
 	- the `commands` will run on each sample as it is superposed onto the output pattern.
 	- example: 
 		- `$('example').seq('kicks/* hats/* snares/003 hats/003').play(); // random kick, random hat, snares/003, hats/003`
