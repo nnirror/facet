@@ -1197,11 +1197,11 @@ waveformSample(waveform, phase) {
   }
 
   vocode ( carrierPattern ) {
-    let bands = [250,500,750,1000,1250,1500,2000,2500,3000,4000,5000,6000,7000,8000,9000,10000];
+    let bands = [0,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000];
     let out_fp = new FacetPattern();
-    for (let i = 0; i < bands.length; i++) {
-      out_fp.sup(this.bpf(bands[i],1).follow(NYQUIST*0.0001,NYQUIST*0.0008)
-        .times(carrierPattern.bpf(bands[i],1))
+    for (let i = 0; i < bands.length-1; i++) {
+      out_fp.sup(this.ffilter(bands[i],bands[i]+1000).follow(NYQUIST*0.0001,NYQUIST*0.0008)
+        .times(carrierPattern.ffilter(bands[i],bands[i]+1000))
        )
     }
     this.data = out_fp.data;
