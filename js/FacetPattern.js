@@ -1197,7 +1197,7 @@ waveformSample(waveform, phase) {
   }
 
   vocode ( carrierPattern ) {
-    let bands = [250,500,750,1000,1250,1500,1750,2000,2500,3000,4000,5000,6000,7000,8000,9000,10000,11000,12000,13000,14000,15000,16000,17000,18000,19000,20000,21000,22000];
+    let bands = [250,500,750,1000,1250,1500,2000,2500,3000,4000,5000,6000,7000,8000,9000,10000];
     let out_fp = new FacetPattern();
     for (let i = 0; i < bands.length; i++) {
       out_fp.sup(this.bpf(bands[i],1).follow(NYQUIST*0.0001,NYQUIST*0.0008)
