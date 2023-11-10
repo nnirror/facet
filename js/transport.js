@@ -225,7 +225,7 @@ function tick() {
       let count_times_fp_played = 0;
       fp_data.forEach((event) => {
         if ( event.position >= current_relative_step_position
-          && (event.position < (current_relative_step_position + (relative_step_amount_to_add_per_loop * range_of_steps_to_check)) && (event.fired === false || event.type != "audio") ) ) {
+          && (event.position < (current_relative_step_position + (relative_step_amount_to_add_per_loop * range_of_steps_to_check)) && (event.fired === false) ) ) {
             event.fired = true;
           // fire all events for this facetpattern matching the current step
           if ( event.type === "audio" ) {

@@ -201,6 +201,7 @@ app.post('/', (req, res) => {
 
 app.post('/hooks/clear', (req, res) => {
   reruns = {};
+  terminateAllWorkers();
   res.sendStatus(200);
 });
 

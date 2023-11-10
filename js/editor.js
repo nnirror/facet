@@ -362,17 +362,18 @@ function setStatus(status) {
 
 
 let bpm=90;
+let prev_bpm = 90;
 // check every 10ms for bpm change and send if changed
 setInterval(()=>{
-  prev_bpm = bpm;
   bpm = $('#bpm').val();
   // send change on increment/decrement by 1
-  if ( !isNaN(bpm) && bpm >= 1 && ( Math.abs(bpm-prev_bpm) == 1 ) ) {
+  if ( !isNaN(bpm) && bpm >= 1 && $('#bpm').is(':focus') && ( Math.abs(bpm-prev_bpm) == 1 ) ) {
     $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
   }
-}, 10);
+  prev_bpm = bpm;
+}, 50);
 
 setInterval(() => {
   fetch('http://localhost:3211/load')

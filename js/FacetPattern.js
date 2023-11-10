@@ -3662,6 +3662,61 @@ fgate(binThresholds) {
   return this;
 }
 
+tune (key_string = "C major", binThreshold = 0.005) {
+  let chroma_key = Scale.get(key_string).chroma;
+  let key_letter = key_string.split(' ')[0].toLowerCase();
+
+  if ( key_letter == 'a' ) {
+    chroma_key = this.stringLeftRotate(chroma_key,3);
+  }
+  else if ( key_letter == 'a#' ) {
+    chroma_key = this.stringLeftRotate(chroma_key,2);
+  }
+  else if ( key_letter == 'b' ) {
+    chroma_key = this.stringLeftRotate(chroma_key,1);
+  }
+  else if ( key_letter == 'c' ) {
+    // no rotation needed, chroma defaults to c at root
+  }
+  else if ( key_letter == 'c#' ) {
+    chroma_key = this.stringRightRotate(chroma_key,1);
+  }
+  else if ( key_letter == 'd' ) {
+    chroma_key = this.stringRightRotate(chroma_key,2);
+  }
+  else if ( key_letter == 'd#' ) {
+    chroma_key = this.stringRightRotate(chroma_key,3);
+  }
+  else if ( key_letter == 'e' ) {
+    chroma_key = this.stringRightRotate(chroma_key,4);
+  }
+  else if ( key_letter == 'f' ) {
+    chroma_key = this.stringRightRotate(chroma_key,5);
+  }
+  else if ( key_letter == 'f#' ) {
+    chroma_key = this.stringRightRotate(chroma_key,6);
+  }
+  else if ( key_letter == 'g' ) {
+    chroma_key = this.stringRightRotate(chroma_key,7);
+  }
+  else if ( key_letter == 'g#' ) {
+    chroma_key = this.stringRightRotate(chroma_key,8);
+  }
+  chroma_key = chroma_key.split('');
+  let notes_in_key = [];
+  let octave_count = 0;
+  for (let i = 0; i < 128; i++) {
+    if ( chroma_key[i%12] == 1 ) {
+      notes_in_key.push((i%12) + octave_count);
+    }
+    if ( i > 11 && i % 12 == 0) {
+      octave_count += 12;
+    }
+  }
+  this.fkey(new FacetPattern().from(notes_in_key),binThreshold);
+  return this;
+}
+
 fkey (midiNotes, binThreshold = 0.005, maxHarmonic = 10) {
   if (typeof midiNotes == 'number' || Array.isArray(midiNotes) === true) {
     midiNotes = new FacetPattern().from(midiNotes);

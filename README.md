@@ -230,7 +230,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 - **key** ( _key_and_scale_ )
 	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` method uses the TonalJS npm package as a scale dictionary.
 	- possible keys: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
-	- possible scales: ["ionian", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian", "bebop", "bebop dominant", "bebop major", "chromatic", "ichikosucho", "ionian pentatonic", "major pentatonic", "ritusen"]
+	- possible scales: ["major pentatonic", "major", "minor", "major blues", "minor blues", "melodic minor", "harmonic minor", "bebop", "diminished", "dorian", "lydian", "mixolydian", "phrygian", "locrian", "ionian pentatonic", "mixolydian pentatonic", "ritusen", "egyptian", "neopolitan major pentatonic", "vietnamese 1", "pelog", "kumoijoshi", "hirajoshi", "iwato", "in-sen", "lydian pentatonic", "malkos raga", "locrian pentatonic", "minor pentatonic", "minor six pentatonic", "flat three pentatonic", "flat six pentatonic", "scriabin", "whole tone pentatonic", "lydian #5P pentatonic", "lydian dominant pentatonic", "minor #7M pentatonic", "super locrian pentatonic", "minor hexatonic", "augmented", "piongio", "prometheus neopolitan", "prometheus", "mystery #1", "six tone symmetric", "whole tone", "messiaen's mode #5", "locrian major", "double harmonic lydian", "altered", "locrian #2", "mixolydian b6", "lydian dominant", "lydian augmented", "dorian b2", "ultralocrian", "locrian 6", "augmented heptatonic", "dorian #4", "lydian diminished", "leading whole tone", "lydian minor", "phrygian dominant", "balinese", "neopolitan major", "harmonic major", "double harmonic major", "hungarian minor", "hungarian major", "oriental", "flamenco", "todi raga", "persian", "enigmatic", "major augmented", "lydian #9", "messiaen's mode #4", "purvi raga", "spanish heptatonic", "bebop minor", "bebop major", "bebop locrian", "minor bebop", "ichikosucho", "minor six diminished", "half-whole diminished", "kafi raga", "messiaen's mode #6", "composite blues", "messiaen's mode #3", "messiaen's mode #7", "chromatic"]
 	- example: `$('example').randsamp('808').reduce(32).scale(36,51).key("F# bebop").note();`
 ---
 - **osc** ( _address_ )
@@ -325,6 +325,12 @@ This can be useful when you want to access the same pattern across multiple comm
 	-  The `weight` argument allows you to specify an exponential weight for the probability of random values. For instance, `rf(0.125,8,3)` will generate half of its values between 0.125 and 1; and the other half will be between 1 and 8. By default, the weighting is linear, i.e. all values between `min` and `max` have equal probability.
 	- example:
 		- `$('example').sine(ri(1,1000)).play(); // a sine wave with 1 - 1000 cycles`
+
+### Methods for controlling MIDI scales
+- **randscale** ( )
+	- returns a random scale for MIDI notes out. The set of possible scales is listed in the `key()` method.
+	- example:
+		- `$('example').noise(32).scale(30,80).sort().key('f# ' + randscale()).note(); // random scale in f#`
 
 ### FacetPattern generators that can take a FacetPattern, number, or array as an argument
 When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').sine(440).play();`, the output is a static 440Hz wave. But with the command `$('example').sine(_.sine(5).scale(20,2000))).play();`, the frequency of the sine wave is being modulated by a 5 Hz sine wave which is generating values between 20 and 2000. This produces a classic frequency modulation sound, but since you can supply any FacetPattern as an argument, there are lots of sound design possibilities.
@@ -864,6 +870,13 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([0,1,2,3]).truncate(2); // now 2 values long`
 		- `$('example').from([0,1,2,3]).truncate(6); // still 4 values long`
+---
+- **tune** ( _key_and_scale_ = "c major", _binThreshold_ = 0.005 )
+	- applies a spectral gate to the FacetPattern, muting any frequency bins that do not closely map onto the supplied `key_and_scale`.
+	- The set of possible scales is listed in the `key()` method.
+	- `binThreshold` controls how close a bin frequency must be to the supplied scale's harmonic content in order to be kept. For example, if `binThreshold` is set to 0.1, then a bin frequency must be within 10% of a harmonic in the supplied `key_and_scale` in order to be kept.
+	- example:
+		- `$('example').noise(n1).tune('c major',0.0001).play(); // tuning a whole note of noise to c major`
 ---
 - **unique** ( )
 	- returns the set of unique values in the FacetPattern.
