@@ -35,7 +35,7 @@ process.title = 'facet_transport';
 
 const editor_osc_server = new OSC({
   discardLateMessages: false,
-  plugin: new OSC.WebsocketServerPlugin()
+  plugin: new OSC.WebsocketServerPlugin({ url: `ws://localhost:${FacetConfig.settings.EDITOR_OSC_OUTPORT}` })
 });
 editor_osc_server.open();
 

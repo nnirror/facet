@@ -401,7 +401,7 @@ setInterval(() => {
 
 $('#bpm').val(90);
 
-const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
+const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin({ url: `ws://localhost:${window.configSettings.EDITOR_OSC_OUTPORT}` }) });
 osc.open();
 
 osc.on('/progress', message => {
