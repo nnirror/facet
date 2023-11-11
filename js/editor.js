@@ -72,7 +72,6 @@ function getLastLineOfBlock(initial_line) {
 $(document).keydown(function(e) {
   // [ctrl + enter] or [ctrl + r] to select text and send to pattern server (127.0.0.1:1123)
   if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {
-    ac = new AudioContext();
     runFacet();
   }
   else if ( e.ctrlKey && e.keyCode == 188 ) {
@@ -90,15 +89,13 @@ $(document).keydown(function(e) {
     runFacet('stop');
     $.growl.notice({ message: 'command(s) stopped' });
   }
-  else if ( e.ctrlKey && (e.keyCode == 186 ) ) {
+  else if ( e.ctrlKey && (e.keyCode == 186 || e.keyCode == 59 ) ) {
     // keep command(s)
-    ac = new AudioContext();
     runFacet('keep');
     $.growl.notice({ message: 'command(s) generated and kept' });
   }
   else if ( e.ctrlKey && (e.keyCode == 220 ) ) {
     // command(s) run once
-    ac = new AudioContext();
     runFacet('once');
     $.growl.notice({ message: 'command(s) generated to play once' });
   }
@@ -398,12 +395,12 @@ setInterval(() => {
     }
   })
   .catch((error) => console.error('Error:', error));
-}, 125);
+}, 33);
 
 $('#bpm').val(90);
 
-const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin({ url: `ws://localhost:${window.configSettings.EDITOR_OSC_OUTPORT}` }) });
-osc.open();
+const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
+osc.open({ port: window.configSettings.EDITOR_OSC_OUTPORT });
 
 osc.on('/progress', message => {
   $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
@@ -429,6 +426,7 @@ osc.on('/bpm', message => {
 let voices = [];
 let sources = [];
 let ac;
+ac = new AudioContext();
 
 osc.on('/play', message => {
   if ( browser_sound_output === true ) {
