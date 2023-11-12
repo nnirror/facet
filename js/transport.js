@@ -158,6 +158,7 @@ app.post('/bpm', (req, res) => {
 
 app.post('/stop', (req, res) => {
   event_register = [];
+  patterns_for_next_loop = {};
   transport_on = false;
   voice_allocator = initializeVoiceAllocator();
   if ( typeof midioutput !== 'undefined' ) {
@@ -357,8 +358,15 @@ function applyNextPatterns () {
           for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
             let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
             // check if key needs to be locked
-            if ( posted_pattern.key_data !== false ) {
-              note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_data).data[0];
+            if ( posted_pattern.key_scale !== false ) {
+              if ( typeof posted_pattern.key_scale == 'object' ) {
+                // scale made from FP
+                note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_letter,new FacetPattern().from(posted_pattern.key_scale.data)).data[0];
+              }
+              else {
+                // scale from string
+                note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_letter,posted_pattern.key_scale).data[0];
+              }
             }
   
             event_register[facet_pattern_name].push(

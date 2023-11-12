@@ -32,7 +32,8 @@ class FacetPattern {
     this.do_not_regenerate = false;
     this.env = this.getEnv();
     this.executed_successfully = true;
-    this.key_data = false;
+    this.key_letter = false;
+    this.key_scale = false;
     this.is_stopped = false;
     this.loops_since_generation = 1;
     this.original_data = [];
@@ -797,47 +798,8 @@ class FacetPattern {
     return this;
   }
 
-  key (key_string = "C major") {
-    let chroma_key = Scale.get(key_string).chroma;
-    let key_letter = key_string.split(' ')[0].toLowerCase();
-
-    if ( key_letter == 'a' ) {
-      chroma_key = this.stringLeftRotate(chroma_key,3);
-    }
-    else if ( key_letter == 'a#' ) {
-      chroma_key = this.stringLeftRotate(chroma_key,2);
-    }
-    else if ( key_letter == 'b' ) {
-      chroma_key = this.stringLeftRotate(chroma_key,1);
-    }
-    else if ( key_letter == 'c' ) {
-      // no rotation needed, chroma defaults to c at root
-    }
-    else if ( key_letter == 'c#' ) {
-      chroma_key = this.stringRightRotate(chroma_key,1);
-    }
-    else if ( key_letter == 'd' ) {
-      chroma_key = this.stringRightRotate(chroma_key,2);
-    }
-    else if ( key_letter == 'd#' ) {
-      chroma_key = this.stringRightRotate(chroma_key,3);
-    }
-    else if ( key_letter == 'e' ) {
-      chroma_key = this.stringRightRotate(chroma_key,4);
-    }
-    else if ( key_letter == 'f' ) {
-      chroma_key = this.stringRightRotate(chroma_key,5);
-    }
-    else if ( key_letter == 'f#' ) {
-      chroma_key = this.stringRightRotate(chroma_key,6);
-    }
-    else if ( key_letter == 'g' ) {
-      chroma_key = this.stringRightRotate(chroma_key,7);
-    }
-    else if ( key_letter == 'g#' ) {
-      chroma_key = this.stringRightRotate(chroma_key,8);
-    }
-
+  key (key_letter = "C", key_scale = "major") {
+    let chroma_key = this.parseKeyAndScale(key_letter,key_scale);
     // check the modulo 12 of each variable. if it's 0, move it up 1 and try again. try 12 times then quit
     let key_sequence = [];
     for (let [k, step] of Object.entries(this.data)) {
@@ -864,9 +826,9 @@ class FacetPattern {
         key_sequence.push(-1);
       }
     }
-    this.key_data = key_string;
+    this.key_scale = key_scale;
+    this.key_letter = key_letter;
     this.data = key_sequence;
-    this.clip(0,127);
     return this;
   }
 
@@ -3310,6 +3272,60 @@ rechunk (numChunks, probability = 1) {
   // END special operations
 
   // BEGIN utility functions used in other methods
+  parseKeyAndScale(key_letter = "C", key_scale = "major") {
+    let chroma_key;
+    key_letter = key_letter.toLowerCase();
+    // if key_string is facet_pattern, create chroma_key from that
+    if ( this.isFacetPattern(key_scale ) ) {
+      if ( key_scale.data.length < 12 ) {
+        key_scale.append(new FacetPattern().from(0).dup(11)).truncate(12);
+      }
+      chroma_key = key_scale.data.join();
+      chroma_key = chroma_key.replace(/,/g, "");
+    }
+    else {
+      chroma_key = Scale.get(key_scale).chroma;
+    }
+
+    if ( key_letter == 'a' ) {
+      chroma_key = this.stringLeftRotate(chroma_key,3);
+    }
+    else if ( key_letter == 'a#' ) {
+      chroma_key = this.stringLeftRotate(chroma_key,2);
+    }
+    else if ( key_letter == 'b' ) {
+      chroma_key = this.stringLeftRotate(chroma_key,1);
+    }
+    else if ( key_letter == 'c' ) {
+      // no rotation needed, chroma defaults to c at root
+    }
+    else if ( key_letter == 'c#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,1);
+    }
+    else if ( key_letter == 'd' ) {
+      chroma_key = this.stringRightRotate(chroma_key,2);
+    }
+    else if ( key_letter == 'd#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,3);
+    }
+    else if ( key_letter == 'e' ) {
+      chroma_key = this.stringRightRotate(chroma_key,4);
+    }
+    else if ( key_letter == 'f' ) {
+      chroma_key = this.stringRightRotate(chroma_key,5);
+    }
+    else if ( key_letter == 'f#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,6);
+    }
+    else if ( key_letter == 'g' ) {
+      chroma_key = this.stringRightRotate(chroma_key,7);
+    }
+    else if ( key_letter == 'g#' ) {
+      chroma_key = this.stringRightRotate(chroma_key,8);
+    }
+    return chroma_key;
+  }
+  
   getMaximumValue () {
     let max = Math.max.apply(Math, this.data);
     let min = Math.abs(Math.min.apply(Math, this.data));
@@ -3662,46 +3678,8 @@ fgate(binThresholds) {
   return this;
 }
 
-tune (key_string = "C major", binThreshold = 0.005) {
-  let chroma_key = Scale.get(key_string).chroma;
-  let key_letter = key_string.split(' ')[0].toLowerCase();
-
-  if ( key_letter == 'a' ) {
-    chroma_key = this.stringLeftRotate(chroma_key,3);
-  }
-  else if ( key_letter == 'a#' ) {
-    chroma_key = this.stringLeftRotate(chroma_key,2);
-  }
-  else if ( key_letter == 'b' ) {
-    chroma_key = this.stringLeftRotate(chroma_key,1);
-  }
-  else if ( key_letter == 'c' ) {
-    // no rotation needed, chroma defaults to c at root
-  }
-  else if ( key_letter == 'c#' ) {
-    chroma_key = this.stringRightRotate(chroma_key,1);
-  }
-  else if ( key_letter == 'd' ) {
-    chroma_key = this.stringRightRotate(chroma_key,2);
-  }
-  else if ( key_letter == 'd#' ) {
-    chroma_key = this.stringRightRotate(chroma_key,3);
-  }
-  else if ( key_letter == 'e' ) {
-    chroma_key = this.stringRightRotate(chroma_key,4);
-  }
-  else if ( key_letter == 'f' ) {
-    chroma_key = this.stringRightRotate(chroma_key,5);
-  }
-  else if ( key_letter == 'f#' ) {
-    chroma_key = this.stringRightRotate(chroma_key,6);
-  }
-  else if ( key_letter == 'g' ) {
-    chroma_key = this.stringRightRotate(chroma_key,7);
-  }
-  else if ( key_letter == 'g#' ) {
-    chroma_key = this.stringRightRotate(chroma_key,8);
-  }
+tune (key_letter = "C", binThreshold = 0.005) {
+  let chroma_key = this.parseKeyAndScale(key_letter,new FacetPattern().from(1));
   chroma_key = chroma_key.split('');
   let notes_in_key = [];
   let octave_count = 0;

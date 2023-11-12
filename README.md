@@ -227,11 +227,16 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- example:
 		- `$('example').ramp(36,72,32).chord('maj7').add((bars%4)*12).key('F# major').note(50,100,1);`
 ---
-- **key** ( _key_and_scale_ )
-	- given an input FacetPattern with data in the range of MIDI note numbers (0-127), translate all its values so they now adhere to the supplied `key_and_scale` (e.g. "C major"). The `key()` method uses the TonalJS npm package as a scale dictionary.
-	- possible keys: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
+- **key** ( _key_letter_, _key_scale_ )
+	- translates a FacetPattern with data in the range of MIDI note numbers (0-127) so all its values now adhere to the supplied `key_letter` and `key_scale`.
+	- `key_letter` values: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
+	- `key_scale` values can either be a string (see list below) or a FacetPattern containing 1-12 binary numbers (see examples).
 	- possible scales: ["major pentatonic", "major", "minor", "major blues", "minor blues", "melodic minor", "harmonic minor", "bebop", "diminished", "dorian", "lydian", "mixolydian", "phrygian", "locrian", "ionian pentatonic", "mixolydian pentatonic", "ritusen", "egyptian", "neopolitan major pentatonic", "vietnamese 1", "pelog", "kumoijoshi", "hirajoshi", "iwato", "in-sen", "lydian pentatonic", "malkos raga", "locrian pentatonic", "minor pentatonic", "minor six pentatonic", "flat three pentatonic", "flat six pentatonic", "scriabin", "whole tone pentatonic", "lydian #5P pentatonic", "lydian dominant pentatonic", "minor #7M pentatonic", "super locrian pentatonic", "minor hexatonic", "augmented", "piongio", "prometheus neopolitan", "prometheus", "mystery #1", "six tone symmetric", "whole tone", "messiaen's mode #5", "locrian major", "double harmonic lydian", "altered", "locrian #2", "mixolydian b6", "lydian dominant", "lydian augmented", "dorian b2", "ultralocrian", "locrian 6", "augmented heptatonic", "dorian #4", "lydian diminished", "leading whole tone", "lydian minor", "phrygian dominant", "balinese", "neopolitan major", "harmonic major", "double harmonic major", "hungarian minor", "hungarian major", "oriental", "flamenco", "todi raga", "persian", "enigmatic", "major augmented", "lydian #9", "messiaen's mode #4", "purvi raga", "spanish heptatonic", "bebop minor", "bebop major", "bebop locrian", "minor bebop", "ichikosucho", "minor six diminished", "half-whole diminished", "kafi raga", "messiaen's mode #6", "composite blues", "messiaen's mode #3", "messiaen's mode #7", "chromatic"]
 	- example: `$('example').randsamp('808').reduce(32).scale(36,51).key("F# bebop").note();`
+	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1])).note(); // octave scale, via custom FacetPattern`
+	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,0,0,0,0,0,0,0])).note(); // equivalent to the above custom octave scale; the padded zeroes are optional`
+	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,0,1])).note(); // octave + perfect fifth scale, via custom FacetPattern`
+	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,1,0,0,0,0,0,1])).note(); // octave + tritone + major seventh, via custom FacetPattern`
 ---
 - **osc** ( _address_ )
 	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
@@ -871,12 +876,12 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').from([0,1,2,3]).truncate(2); // now 2 values long`
 		- `$('example').from([0,1,2,3]).truncate(6); // still 4 values long`
 ---
-- **tune** ( _key_and_scale_ = "c major", _binThreshold_ = 0.005 )
-	- applies a spectral gate to the FacetPattern, muting any frequency bins that do not closely map onto the supplied `key_and_scale`.
-	- The set of possible scales is listed in the `key()` method.
-	- `binThreshold` controls how close a bin frequency must be to the supplied scale's harmonic content in order to be kept. For example, if `binThreshold` is set to 0.1, then a bin frequency must be within 10% of a harmonic in the supplied `key_and_scale` in order to be kept.
+- **tune** ( _note_ = "c", _binThreshold_ = 0.005 )
+	- applies a spectral gate to the FacetPattern, muting any frequency bins that do not closely map onto the supplied `note`.
+	- `note` values: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
+	- `binThreshold` controls how close a bin frequency must be to the supplied note's harmonics in order to be kept. For example, if `binThreshold` is set to 0.1, then a bin frequency must be within 10% of a harmonic in the supplied `note` in order to be kept.
 	- example:
-		- `$('example').noise(n1).tune('c major',0.0001).play(); // tuning a whole note of noise to c major`
+		- `$('example').noise(n1).tune('c',0.0001).play(); // tuning a whole note of noise to c`
 ---
 - **unique** ( )
 	- returns the set of unique values in the FacetPattern.
