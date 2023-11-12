@@ -465,9 +465,7 @@ function resetEventRegister() {
 }
 
 function checkForBpmRecalculation (events_per_loop) {
-  if ( bpm_recalculation_counter % 8 == 0 ) {
-    scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
-  }
+  scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
 
   if ( typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ) {
     bpm = scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1];
