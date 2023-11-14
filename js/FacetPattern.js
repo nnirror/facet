@@ -1446,13 +1446,12 @@ waveformSample(waveform, phase) {
     if ( !this.isFacetPattern(sequence2) ) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
     }
-    let interp_sequence = [];
     let amt = Math.abs(Number(prob));
     let same_size_arrays = this.makePatternsTheSameSize(this, sequence2);
-    let sequence = same_size_arrays[0];
-    let mult_sequence = same_size_arrays[1];
-    this.data = sequence.times(1 - amt).add(mult_sequence.times(amt)).data;
-    return this;
+    this.data = same_size_arrays[0].data.map((value, index) => {
+      return value + amt * (same_size_arrays[1].data[index] - value);
+    });
+   return this;
   }
 
   invert () {
@@ -2890,9 +2889,12 @@ rechunk (numChunks, probability = 1) {
   // END audio operations
 
   // BEGIN special operations
-  bpm () {
-    this.bpm_pattern = new FacetPattern().from(this.data);
-    this.reduce(256);
+  bpm ( bpm_fp ) {
+    if ( typeof bpm_fp == 'number' || Array.isArray(bpm_fp) === true ) {
+      bpm_fp = new FacetPattern().from(bpm_fp);
+    }
+    this.bpm_pattern = bpm_fp;
+    this.data = bpm_fp.data;
     return this;
   }
 

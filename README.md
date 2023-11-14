@@ -256,9 +256,8 @@ You need to connect the MIDI device you want to use before starting Facet.
 ### Methods for controlling transport BPM
 - **bpm** ( )
 	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
-	- BPM patterns have a 256 value maximum.
 	- example:
-		- `$('example').from([20,40,80,160,320]).shuffle().bpm(); // each loop will be all 5 of these BPM, randomly ordered`
+		- `$('example').bpm(_.from([20,40,80,160,320]).shuffle()); // each loop will be all 5 of these BPM, randomly ordered`
 
 ### Methods for controlling pattern regeneration
 - **every** ( _n_loops_ )
@@ -303,6 +302,13 @@ This can be useful when you want to access the same pattern across multiple comm
 	- returns a randomly selected value from a supplied array.
 	- example:
 		- `$('example').sine(choose([10,200,1000])).play(); // sine wave with either 10, 200, or 1000 cycles`
+---
+- **cof** ( _index_ )
+	- returns the element at position `index` in the circle of fifths, starting with C and ending with F.
+	- the set of notes: `['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'F']`.
+	- example:
+		- `$('example').noise(16).scale(36,90).key(cof(2)).note(); // MIDI notes in D major`
+		- `$('example').noise(16).scale(36,90).key(cof(ri(0,11))).note(); // MIDI notes in random major key`
 ---
 - **ftom** ( _hzfrequency_ )
 	- converts the supplied `hzfrequency` value to its corresponding MIDI note number.

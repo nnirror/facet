@@ -16,6 +16,10 @@ function choose (list) {
   return list[Math.floor(Math.random()*list.length)];
 }
 
+function cof (index) {
+  return ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'F'][index%12];
+}
+
 function ftom(frequency) {
   return Math.round(12 * Math.log2(frequency / 440) + 69);
 }
