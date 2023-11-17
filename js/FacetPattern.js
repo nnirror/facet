@@ -2915,72 +2915,76 @@ rechunk (numChunks, probability = 1) {
   }
 
   chord (chord_name, inversion_mode = 0) {
-    const VALID_CHORD_NAMES = [
-      'maj', 'major',
-      'min', 'minor',
-      'fifth', '5th', '5',
-      'seventh', '7th', '7',
-      'major seventh', 'maj7',
-      'minor seventh', 'm7',
-      'diminished', 'dim',
-      'add2', 'add9'
-    ];
-    if ( !VALID_CHORD_NAMES.includes(chord_name) ) {
-      throw `invalid chord name: ${chord_name}`;
+    if ( this.isFacetPattern(chord_name) ) {
+      this.chord_intervals = chord_name.data;
     }
-
-    let chord_intervals_to_add = [];
-    switch (chord_name) {
-      case 'maj':
-        chord_intervals_to_add = [4,7];
-      case 'major':
-        chord_intervals_to_add = [4,7];
-      case 'min':
+    else {
+      const VALID_CHORD_NAMES = [
+        'maj', 'major',
+        'min', 'minor',
+        'fifth', '5th', '5',
+        'seventh', '7th', '7',
+        'major seventh', 'maj7',
+        'minor seventh', 'm7',
+        'diminished', 'dim',
+        'add2', 'add9'
+      ];
+      if ( !VALID_CHORD_NAMES.includes(chord_name) ) {
+        throw `invalid chord name: ${chord_name}`;
+      }
+  
+      let chord_intervals_to_add = [];
+      switch (chord_name) {
+        case 'maj':
+          chord_intervals_to_add = [4,7];
+        case 'major':
+          chord_intervals_to_add = [4,7];
+        case 'min':
+              chord_intervals_to_add = [3,7];
+        case 'minor':
             chord_intervals_to_add = [3,7];
-      case 'minor':
-          chord_intervals_to_add = [3,7];
-      case 'fifth':
-          chord_intervals_to_add = [7];
-      case '5th':
-          chord_intervals_to_add = [7];
-      case 'seventh':
-          chord_intervals_to_add = [4,7,10];
-      case '7th':
-          chord_intervals_to_add = [4,7,10];
-      case 'major seventh':
-        chord_intervals_to_add = [4,7,11];
-      case 'maj7':
-        chord_intervals_to_add = [4,7,11];
-      case 'minor seventh':
-        chord_intervals_to_add = [3,7,10];
-      case 'm7':
-        chord_intervals_to_add = [3,7,10];
-      case 'diminished':
-        chord_intervals_to_add = [-1,2,5];
-      case 'dim':
-        chord_intervals_to_add = [-1,2,5];
-      case 'add2':
-        chord_intervals_to_add = [2,4,7];
-      case 'add9':
-        chord_intervals_to_add = [4,7,14];
-        break;
-      default:
+        case 'fifth':
+            chord_intervals_to_add = [7];
+        case '5th':
+            chord_intervals_to_add = [7];
+        case 'seventh':
+            chord_intervals_to_add = [4,7,10];
+        case '7th':
+            chord_intervals_to_add = [4,7,10];
+        case 'major seventh':
+          chord_intervals_to_add = [4,7,11];
+        case 'maj7':
+          chord_intervals_to_add = [4,7,11];
+        case 'minor seventh':
+          chord_intervals_to_add = [3,7,10];
+        case 'm7':
+          chord_intervals_to_add = [3,7,10];
+        case 'diminished':
+          chord_intervals_to_add = [-1,2,5];
+        case 'dim':
+          chord_intervals_to_add = [-1,2,5];
+        case 'add2':
+          chord_intervals_to_add = [2,4,7];
+        case 'add9':
+          chord_intervals_to_add = [4,7,14];
+          break;
+        default:
+      }
+  
+      if ( inversion_mode == 1 ) {
+        chord_intervals_to_add[0] -= 12;
+      }
+      else if ( inversion_mode == 2 ) {
+        chord_intervals_to_add[0] -= 12;
+        chord_intervals_to_add[1] -= 12;
+      }
+      else if ( inversion_mode == 3 ) {
+        chord_intervals_to_add[0] -= 12;
+        chord_intervals_to_add[1] -= 12;
+        chord_intervals_to_add[2] -= 12;
+      }
+      this.chord_intervals = chord_intervals_to_add;
     }
-
-    if ( inversion_mode == 1 ) {
-      chord_intervals_to_add[0] -= 12;
-    }
-    else if ( inversion_mode == 2 ) {
-      chord_intervals_to_add[0] -= 12;
-      chord_intervals_to_add[1] -= 12;
-    }
-    else if ( inversion_mode == 3 ) {
-      chord_intervals_to_add[0] -= 12;
-      chord_intervals_to_add[1] -= 12;
-      chord_intervals_to_add[2] -= 12;
-    }
-
-    this.chord_intervals = chord_intervals_to_add;
     return this;
   }
 

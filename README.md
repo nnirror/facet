@@ -200,9 +200,10 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- example:
 		- `$('example').drunk(64,0.1).cc();`
 ---
-- **chord** ( _chord_name_, _inversion_mode_ = 0 )
+- **chord** ( _chord_type_, _inversion_mode_ = 0 )
 	- creates a chord of MIDI notes for every value in the FacetPattern's data.
-	- Here is a list of the possible chord names, as well as a numerical representation of the intervals in that chord:
+	- if the `chord_type` argument is a FacetPattern, the chord intervals will correspond to the data of the `chord_type` FacetPattern.
+	- if `chord_type` is a string, it must be from the below list of chord names:
 
 	`maj` / `major` = `0,4,7`
 
@@ -222,10 +223,11 @@ You need to connect the MIDI device you want to use before starting Facet.
 
 	`add9` = `0,4,7,14`
 
-	- The `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
-	- _Note_: to force chords into a certain key, use the `key()` operation after the `chord()` operation.
+	- if `chord_type` is a string, the `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
+	- _Note_: to force chords into a certain key, use the `key()` operation _after_ the `chord()` operation.
 	- example:
 		- `$('example').ramp(36,72,32).chord('maj7').add((bars%4)*12).key('F# major').note(50,100,1);`
+		- `$('example').noise(16).scale(36,90).chord(_.from([3,5,7,10,11,14,16,20,25])).key('c','major').note(); // 9-note chords mapped onto c major`
 ---
 - **key** ( _key_letter_, _key_scale_ )
 	- translates a FacetPattern with data in the range of MIDI note numbers (0-127) so all its values now adhere to the supplied `key_letter` and `key_scale`.
