@@ -948,8 +948,9 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').sine(1).divide(_.from([0.5,0.25,0.1,1]));`
 ---
-- **ffilter** ( _minFreqPattern_, _maxFreqPattern_ )
+- **ffilter** ( _minFreqPattern_, _maxFreqPattern_, _invertMode_ = false)
 	- applies a spectral filter to the FacetPattern, passing only the frequency bins between `minFreqPattern` and `maxFreqPattern`.
+	- you can invert the filter mode so it cuts all the bins between `minFreqPattern` and `maxFreqPattern` by sending a truthy value for `invertMode.`
 	- example:
 		- `$('example').noise(n16).ffilter(200,2000).play(); // noise between 200Hz - 2000Hz`
 ---
@@ -1107,11 +1108,12 @@ For more examples, refer to the `examples/this.md` file.
 		- `$('example').seq('kicks/* hats/* snares/003 hats/003').play(); // random kick, random hat, snares/003, hats/003`
 		- `$('example').seq(_.from(['kicks/003', 'hats*', 'snares/003', 'hats/*']).dup(choose([1, 3, 5, 7])).palindrome().rechunk(8, 0.5), () => {this.log(rf()).delay(ri(n128, n16))}).full().play() // example using commands to proess each sample, and using a FacetPattern as the sequencePattern`;
 ---
-- **slices** ( _num_slices_, _command_ = function, _prob_ = 1 )
+- **slices** ( _num_slices_, _command_ = function, _prob_ = 1, _fade_mode_ = true )
 	- slices the FacetPattern into `num_slices` slices, and for `prob` percent of those slices, runs `command`, appending all slices back together. You can refer to the current slice of the algorithm via the reserved word: `this` (see example).
 	- The variable `s`, referring to the current slice number starting at 0, is also available for use in commands.
 	- The variable `num_slices`, referring to the number of slices, is also available for use in commands.
 	- If the FacetPattern's data is >= 1024 samples, the last 1% of each slice will be faded out to prevent clicks in audio slices. If the FacetPattern's data is < 1024 samples, no fading is applied, and each slice is processed exactly as-is.
+	- By default, the `slices()` method applies a very short fadeout on each slice to prevent any clicks that might occur from any code running on each slice. This behavior can be turned off by including a falsy `fade_mode` value.
 	- example:
 		- `$('example').randsamp('808').slices(32,()=>{this.fft().shift(random()).ifft()}).play();`
 ---

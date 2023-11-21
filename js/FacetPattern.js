@@ -3159,7 +3159,7 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
-  slices (num_slices, command, prob = 1) {
+  slices (num_slices, command, prob = 1, yes_fade = true) {
     let out_fp = new FacetPattern();
     prob = Math.abs(Number(prob));
     num_slices = Math.abs(Math.round(Number(num_slices)));
@@ -3186,7 +3186,7 @@ rechunk (numChunks, probability = 1) {
       if ( Math.random() < prob ) {
         current_slice = eval(this.utils + command);
       }
-      if (this.data.length >= 1024) {
+      if (this.data.length >= 1024 && yes_fade == true) {
         out_fp.sup(current_slice.fadeout(0.01),s/num_slices,this.data.length);
       }
       else {
@@ -3780,7 +3780,7 @@ fkey (midiNotes, binThreshold = 0.005, maxHarmonic = 10) {
   return this;
 }
 
-ffilter(minFreqs, maxFreqs) {
+ffilter(minFreqs, maxFreqs, invertMode = false) {
   if (typeof minFreqs == 'number' || Array.isArray(minFreqs) === true) {
     minFreqs = new FacetPattern().from(minFreqs);
   }
@@ -3837,9 +3837,17 @@ ffilter(minFreqs, maxFreqs) {
       for (var a = 0; a < output.length/2; a++ ) {
         // calculate bin frequency
         let binFreq = a * binSize;
-        if (binFreq < minFreq || binFreq > maxFreq) {
-          output[a] = new Complex.Complex(0,0);
-          output[output.length-a-1] = new Complex.Complex(0,0);
+        if (invertMode === false) {
+          if (binFreq < minFreq || binFreq > maxFreq) {
+            output[a] = new Complex.Complex(0,0);
+            output[output.length-a-1] = new Complex.Complex(0,0);
+          }
+        }
+        else {
+          if (binFreq > minFreq && binFreq < maxFreq) {
+            output[a] = new Complex.Complex(0,0);
+            output[output.length-a-1] = new Complex.Complex(0,0);
+          }
         }
       }
 
