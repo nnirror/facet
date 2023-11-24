@@ -75,20 +75,6 @@ module.exports = {
             if (reruns[fp.name]) {
               reruns[fp.name].available_for_next_request = true;
             }
-            if ( fp.variables_to_set.length > 0 ) {
-              for (var i = 0; i < fp.variables_to_set.length; i++ ) {
-                let name = fp.variables_to_set[i].name;
-                let data = fp.variables_to_set[i].data;
-                stored_variables[name] = data;
-              }
-              let user_vars = '';
-              for (let key in stored_variables) {
-                user_vars += 'var ' + key + ' = ' + JSON.stringify(stored_variables[key]) + '; ';
-              }
-              // overwrite vars.js with stored_variables
-              fs.writeFileSync('js/vars.js', user_vars, ()=> {});
-            }
-
             fp.name = fp.name + `---${Date.now()}`;
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');

@@ -35,7 +35,7 @@ There are lots of methods to generate, translate, and orchestrate playback on Fa
 `$('example').sine(100).times(random()).play();`
 `// each time you run ^, the same sine wave at a different volume`
 
-Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`) allow you to supply functions as arguments:
+Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`, `run()`) allow you to supply functions as arguments:
 
 `$('example').iter(16,()=>{this.append(_.randsamp('808').speed(10))}).play();`
 `// stitches together 16 random samples, each playing at 10x normal speed`
@@ -281,7 +281,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 This can be useful when you want to access the same pattern across multiple commands.
 
 - **set** ( _name_ )
-	- saves a FacetPattern's data in memory on the pattern generator server, for reference as a variable in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+	- saves a FacetPattern's data in memory, for reference as a variable in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
 	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If  the pattern has one piece of data in it, the corresponding variable will be a float.
 	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, an error might display: `{your_variable_name_here} is undefined`. This will resolve after the first loop, after the variable you just set has fully propagated into the environment.
 		- example:
@@ -482,7 +482,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- `skip` specifies the number of prime numbers to skip before including the next one in the list. The default value is 1.
 	- example:
 		- `$('s').noise(n4).times(_.ramp(1,0,n4)).iter(12,()=>{this.allpass().delay(_.primes(60,1000,ri(20,2000)).data[i]).full()}).full().play(); // generates a quarter note transient burst of noise, then iteratively sends it through delays that are all primes`
-- **ramp** ( _from_, _to_, _size_ )
+- **ramp** ( _from_, _to_, _size_ = 128 )
 	- moves from `from` to `to` over `size` values.
 	- example:
 		- `$('example').ramp(250,100,1000); // go from 250 to 100 over 1000 values`
@@ -1098,6 +1098,12 @@ For more examples, refer to the `examples/this.md` file.
 - **parallel** ( _commands_ = [function, function] )
 	- applies multiple commands in parallel to the input FacetPattern. The `commands` parameter is an array where each entry is a function. Each `command` is applied to a copy of the original input data, and the results are combined back together afterwards. The final output is normalized to have the same maximum value as the original input data.
 	- example: `$('s').noise(n4).scale(-1,1).allpass(347).allpass(113).allpass(37).parallel([()=>{this.delay(1687,0.999)},()=>{this.delay(1601,0.999)},()=>{this.delay(2053,0.999)},()=>{this.delay(2251,0.999)}]).play().full(); // schroeder reverb on a quarter note of noise`
+---
+- **run** ( _commands_ = function )
+	- equivalent to a `sometimes(1,()=>{})` method. See `sometimes()` below for more details.
+	- allows you to run arbitrary JS code on the FacetPattern every loop.
+	- example:
+		- `$('example').noise(n1).run(()=>{if(bars%2==0){this.tune('c')}else {this.tune('g')}}).play(); // alternating c and g whole notes made from tuned noise`
 ---
 - **seq** ( _sequencePattern_, _commands_ = function )
 	- superposes the samples specified in `sequencePattern` across the loop. `sequencePattern` can either be a string or a FacetPattern composed of strings.

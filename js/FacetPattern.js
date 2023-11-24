@@ -1,5 +1,6 @@
 "use strict";
 const fs = require('fs');
+const vm = require('vm');
 const { exec } = require('child_process');
 const path = require('path');
 const wav = require('node-wav');
@@ -49,7 +50,6 @@ class FacetPattern {
     this.sequence_data = [];
     this.skipped = false;
     this.utils = this.env + this.getUtils();
-    this.variables_to_set = [];
   }
 
   // BEGIN generator operations
@@ -313,7 +313,7 @@ class FacetPattern {
     return this;
   }
 
-  ramp (from, to, size) {
+  ramp (from, to, size = 128 ) {
     let ramp_sequence = [];
     from = Number(from);
     to = Number(to);
@@ -3155,7 +3155,35 @@ rechunk (numChunks, probability = 1) {
   }
 
   set (pattern_name) {
-    this.variables_to_set.push({name:pattern_name,data:this.data});
+    if (pattern_name === undefined) {
+      throw (`cannot set pattern because the pattern name is undefined. Use a string!`);
+    }
+    let vars = fs.readFileSync('js/vars.js', 'utf8');
+    let context = {};
+    let script = new vm.Script(vars);
+    script.runInNewContext(context);
+  
+    // Delete the existing variable from the context
+    delete context[pattern_name];
+  
+    // Add the new value of the variable to the context
+    if (Array.isArray(this.data) && this.data.length === 1) {
+      context[pattern_name] = parseFloat(this.data[0]);
+    } else {
+      context[pattern_name] = this.data;
+    }
+    
+    let updatedVars = '';
+    for (let key in context) {
+      if (Array.isArray(context[key])) {
+        updatedVars += `var ${key} = [${context[key].join(',')}];\n`;
+      } else {
+        updatedVars += `var ${key} = ${JSON.stringify(context[key])};\n`;
+      }
+    }
+  
+    // Write the updated variables to the file
+    fs.writeFileSync('js/vars.js', updatedVars);
     return this;
   }
 
@@ -3196,6 +3224,11 @@ rechunk (numChunks, probability = 1) {
     }
     this.data = out_fp.data;
     this.flatten();
+    return this;
+  }
+
+  run (command) {
+    this.sometimes(1,command);
     return this;
   }
 
