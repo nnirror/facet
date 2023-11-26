@@ -2786,7 +2786,7 @@ f
 
   // BEGIN audio operations
   audio () {
-    this.hpf(5);
+    this.hpf(5,1);
     return this;
   }
 
@@ -3242,39 +3242,39 @@ rechunk (numChunks, probability = 1) {
     if (typeof command != 'function') {
         throw `3rd argument must be a function, type found: ${typeof command}`;
     }
+    if (new_max < new_min) {
+      let temp = new_min;
+      new_min = new_max;
+      new_max = temp;
+  }
 
-    // Create a copy of the current data
-    let originalData = [...this.data];
+    // create a copy of the current data
+    let originalData = new FacetPattern().from(this.data);
 
-    // Calculate the start and end indices of the subrange
+    // calculate the start and end indices of the subrange
     let start = Math.round(new_min * this.data.length);
     let end = Math.round(new_max * this.data.length);
 
-    // Extract the subrange
-    this.data = originalData.slice(start, end);
+    // extract the subrange
+    this.data = originalData.data.slice(start, end);
+
+    // create silence in area where subrange will be inserted
+    originalData.splice(new FacetPattern().silence(this.data.length),new_min);
 
     let i = this.current_iteration_number;
     let iters = this.current_total_iterations;
     let s = this.current_slice_number;
     let num_slices = this.current_total_slices;
 
-    // Run the command on the subrange
+    // run the command on the subrange
     command = command.toString();
     command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     eval(this.utils + command);
 
-    // Crossfade parameters
-    let crossfadeDuration = Math.round(this.data.length * 0.1); // 10% of the subrange length
-    for (let i = 0; i < crossfadeDuration; i++) {
-        let crossfadeFactor = i / crossfadeDuration;
-        this.data[i] = this.data[i] * crossfadeFactor + originalData[start + i] * (1 - crossfadeFactor);
-        this.data[this.data.length - 1 - i] = this.data[this.data.length - 1 - i] * crossfadeFactor + originalData[end - 1 - i] * (1 - crossfadeFactor);
-    }
-
-    // Replace the subrange in the original data with the transformed subrange
-    originalData.splice(start, end - start, ...this.data);
-    this.data = originalData;
+    // superpose the subrange back into the original data
+    originalData.sup(this,new_min);
+    this.data = originalData.data;
     return this;
 }
 
