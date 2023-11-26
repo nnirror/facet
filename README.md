@@ -1128,6 +1128,13 @@ For more examples, refer to the `examples/this.md` file.
 	- `command` must start with the reserved word: `this` (see example).
 	- example:
 		- `$('example').phasor(1).sticky(0.5).scale(40,80).sometimes(0.5,()=>this.reverse());`
+---
+- **subrange** ( _min_, _max_, _command_ = function() )
+	- runs `command` on a subrange of the FacetPattern, specified by `min` and `max`.
+	- `min` and `max` should be floats between 0 and 1. They are relative values, so a value of 0 means the beginning of the pattern, and a value of 1 means the end of the pattern.
+	- `command` must start with the reserved word: `this` (see example).
+	- example:
+		- `$('example').tri(200).subrange(0.33,0.66,()=>{this.times(0.25)}).play(); // quieter in the middle third`
 
 ### Methods for image generation and processing
 

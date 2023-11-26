@@ -2053,11 +2053,11 @@ f
     return this;
   }
 
-  pitch (pitchShiftFactors) {
+  pitch ( pitchShiftFactors ) {
     if (typeof pitchShiftFactors == 'number' || Array.isArray(pitchShiftFactors) === true) {
         pitchShiftFactors = new FacetPattern().from(pitchShiftFactors);
     }
-    pitchShiftFactors.size(this.data.length).clip(1/32,32);
+    pitchShiftFactors.size(this.data.length).clip(1/32, 32);
     let windowSize = 1024;
     let hopSize = windowSize / 4;
     let outputArray = [];
@@ -2077,6 +2077,12 @@ f
             pitchShiftFactor = 0.125;
         }
         let resampledSegment = this.resample(segment, 1 / pitchShiftFactor);
+        if (resampledSegment.length > segment.length) {
+            resampledSegment = resampledSegment.slice(0, segment.length);
+        } else if (resampledSegment.length < segment.length) {
+            let padding = new Array(segment.length - resampledSegment.length).fill(0);
+            resampledSegment = resampledSegment.concat(padding);
+        }
         for (let j = 0; j < resampledSegment.length; j++) {
             let outputIndex = i + j;
             if (outputIndex < outputArray.length) {
@@ -2088,7 +2094,7 @@ f
     }
     this.data = outputArray;
     return this;
-  }
+}
 
   hannWindow (size) {
       let window = [];
@@ -3232,6 +3238,46 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
+  subrange(new_min, new_max, command) {
+    if (typeof command != 'function') {
+        throw `3rd argument must be a function, type found: ${typeof command}`;
+    }
+
+    // Create a copy of the current data
+    let originalData = [...this.data];
+
+    // Calculate the start and end indices of the subrange
+    let start = Math.round(new_min * this.data.length);
+    let end = Math.round(new_max * this.data.length);
+
+    // Extract the subrange
+    this.data = originalData.slice(start, end);
+
+    let i = this.current_iteration_number;
+    let iters = this.current_total_iterations;
+    let s = this.current_slice_number;
+    let num_slices = this.current_total_slices;
+
+    // Run the command on the subrange
+    command = command.toString();
+    command = command.replace(/current_slice./g, 'this.');
+    command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+    eval(this.utils + command);
+
+    // Crossfade parameters
+    let crossfadeDuration = Math.round(this.data.length * 0.1); // 10% of the subrange length
+    for (let i = 0; i < crossfadeDuration; i++) {
+        let crossfadeFactor = i / crossfadeDuration;
+        this.data[i] = this.data[i] * crossfadeFactor + originalData[start + i] * (1 - crossfadeFactor);
+        this.data[this.data.length - 1 - i] = this.data[this.data.length - 1 - i] * crossfadeFactor + originalData[end - 1 - i] * (1 - crossfadeFactor);
+    }
+
+    // Replace the subrange in the original data with the transformed subrange
+    originalData.splice(start, end - start, ...this.data);
+    this.data = originalData;
+    return this;
+}
+
   sometimes (prob, command) {
     if ( typeof command != 'function' ) {
       throw `2nd argument must be a function, type found: ${typeof command}`;
@@ -3813,7 +3859,7 @@ fkey (midiNotes, binThreshold = 0.005, maxHarmonic = 10) {
   return this;
 }
 
-ffilter(minFreqs, maxFreqs, invertMode = false) {
+ffilter (minFreqs, maxFreqs, invertMode = false) {
   if (typeof minFreqs == 'number' || Array.isArray(minFreqs) === true) {
     minFreqs = new FacetPattern().from(minFreqs);
   }
@@ -3885,10 +3931,11 @@ ffilter(minFreqs, maxFreqs, invertMode = false) {
       }
 
       let ifftOutput = Complex.ifft(output);
-      resynthesizedSignal.append(new FacetPattern().from(ifftOutput.map(x => x.real)).reverse().truncate(sliceSize).fadeinSamples(Math.round(SAMPLE_RATE*.002)).fadeoutSamples(Math.round(SAMPLE_RATE*.002)));
+      resynthesizedSignal.append(new FacetPattern().from(ifftOutput.map(x => x.real)).reverse().truncate(sliceSize));
     }
     this.data = resynthesizedSignal.data;
     this.truncate(original_size);
+    this.fadeinSamples(Math.round(SAMPLE_RATE*.002)).fadeoutSamples(Math.round(SAMPLE_RATE*.002));
     return this;
   }
 
