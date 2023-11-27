@@ -3248,18 +3248,18 @@ rechunk (numChunks, probability = 1) {
       new_max = temp;
   }
 
+    let originalFrameSize = this.data.length;
     // create a copy of the current data
-    let originalData = new FacetPattern().from(this.data);
-
-    // calculate the start and end indices of the subrange
-    let start = Math.round(new_min * this.data.length);
-    let end = Math.round(new_max * this.data.length);
+    let beforeData = new FacetPattern().from(this.data);
+    let afterData = new FacetPattern().from(this.data);
 
     // extract the subrange
-    this.data = originalData.data.slice(start, end);
+    this.range(new_min,new_max);
+    // this.data = originalData.data.slice(start, end);
 
     // create silence in area where subrange will be inserted
-    originalData.splice(new FacetPattern().silence(this.data.length),new_min);
+    beforeData.range(0,new_min);
+    afterData.range(new_max,1);
 
     let i = this.current_iteration_number;
     let iters = this.current_total_iterations;
@@ -3272,9 +3272,8 @@ rechunk (numChunks, probability = 1) {
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     eval(this.utils + command);
 
-    // superpose the subrange back into the original data
-    originalData.sup(this,new_min);
-    this.data = originalData.data;
+    beforeData.append(this).sup(afterData,new_max,originalFrameSize);
+    this.data = beforeData.data;
     return this;
 }
 
