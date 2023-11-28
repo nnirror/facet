@@ -3420,7 +3420,9 @@ rechunk (numChunks, probability = 1) {
     // since this is to smooth clicks in audio data, don't crossfade any "data" patterns with <= 1024 values
     let totalLength = 0;
     for (let i = 0; i < array.length; i++) {
-      totalLength += array[i].length;
+      if (array[i] != undefined) {
+        totalLength += array[i].length;
+      }
     }
     if ( totalLength <= 1024 ) {
       return array;
@@ -3450,7 +3452,9 @@ rechunk (numChunks, probability = 1) {
     // since this is to smooth clicks in audio data, don't crossfade any "data" patterns with <= 1024 values
     let totalLength = 0;
     for (let i = 0; i < arrays.length; i++) {
-      totalLength += arrays[i].length;
+      if (arrays[i] != undefined) {
+        totalLength += arrays[i].length;
+      }
     }
     if ( totalLength <= 1024 ) {
       return arrays;
