@@ -4,6 +4,8 @@ const vm = require('vm');
 const { exec } = require('child_process');
 const path = require('path');
 const wav = require('node-wav');
+const fft = require('fft-js').fft;
+const fftUtil = require('fft-js').util;
 const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
@@ -13,7 +15,6 @@ const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStron
 const Complex = require('./lib/Complex.js');
 const { Scale } = require('tonal');
 const PNG = require('pngjs').PNG;
-const readimage = require('readimage');
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
 class FacetPattern {
@@ -229,39 +230,30 @@ class FacetPattern {
 
   image (imagePath, columnsPerSecond = 512, minimumFrequency = 20, maximumFrequency = SAMPLE_RATE / 2, frequencyPattern = false) {
     const fileData = fs.readFileSync(imagePath);
-    let imageData;
+    const png = PNG.sync.read(fileData);
     let samplesPerColumn = Math.round(SAMPLE_RATE / columnsPerSecond);
-    readimage(fileData, function (err, image) {
-      if (err) {
-        throw `image file: ${imagePath} could not be read correctly. Make sure the file is a JPEG, and try re-exporting it with GIMP or another image editor.`;
-      }
-      imageData = image;
-    });
-    this.silence(samplesPerColumn*imageData.width);
-    if ( frequencyPattern !== false ) {
-      // custom frequencyPattern
-      if ( !this.isFacetPattern(frequencyPattern) ) {
+    this.silence(samplesPerColumn * png.width);
+    if (frequencyPattern !== false) {
+      if (!this.isFacetPattern(frequencyPattern)) {
         throw `frequencyPattern for image() must be a FacetPattern object if included as an argument; type found: ${typeof frequencyPattern}`;
       }
-      frequencyPattern.size(imageData.height);
-    }
-    else {
-      // linear frequencyPattern based on ramp from minimumFrequency to maximumFrequency
-      frequencyPattern = new FacetPattern().ramp(0,1,imageData.height);
+      frequencyPattern.size(png.height);
+    } else {
+      frequencyPattern = new FacetPattern().ramp(0, 1, png.height);
     }
     frequencyPattern.reverse();
-    for (let y = 0; y < imageData.height; y++) {
+    for (let y = 0; y < png.height; y++) {
       let brightness_data = [];
       let frequency = (frequencyPattern.data[y] * (maximumFrequency - minimumFrequency)) + minimumFrequency;
-      for (let x = 0; x < imageData.width; x++) {
-        let pixelIndex = (y * imageData.width + x) * 4;
-        let r = imageData.frames[0].data[pixelIndex];
-        let g = imageData.frames[0].data[pixelIndex + 1];
-        let b = imageData.frames[0].data[pixelIndex + 2];
+      for (let x = 0; x < png.width; x++) {
+        let idx = (png.width * y + x) << 2;
+        let r = png.data[idx];
+        let g = png.data[idx + 1];
+        let b = png.data[idx + 2];
         let brightness = (r + g + b) / (255 * 3);
         brightness_data.push(brightness);
       }
-      this.sup(new FacetPattern().sine(frequency,samplesPerColumn*imageData.width).times(new FacetPattern().from(brightness_data).curve()),0);
+      this.sup(new FacetPattern().sine(frequency, samplesPerColumn * png.width).times(new FacetPattern().from(brightness_data).curve()), 0);
     }
     this.full();
     return this;
@@ -4015,6 +4007,74 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     this.truncate(original_size);
     return this;
   }
+
+  spectro (filename, windowSize = 2048 ) {
+    // define the overlap between windows
+    let overlap = 0.5;  // 25% overlap
+
+    // calculate the number of windows in the data
+    let stepSize = Math.round(windowSize * (1 - overlap));
+    let numWindows = Math.ceil((this.data.length - windowSize) / stepSize) + 1;
+
+    // create a new PNG image
+    let png = new PNG({
+        width: numWindows,
+        height: windowSize / 2,
+        filterType: -1
+    });
+
+    for (let i = 0; i < numWindows; i++) {
+        // get the data for this window
+        let start = i * stepSize;
+        let windowData = this.data.slice(start, start + windowSize);
+        while (windowData.length < windowSize) {
+            windowData.push(0);
+        }
+
+        // convert the window data to complex numbers
+        let complexWindowData = windowData.map(value => [value, 0]);
+
+        // apply the Fourier transform to the window data
+        let phasors = fft(complexWindowData);
+
+        // convert the phasors to decibels
+        let magnitudes = fftUtil.fftMag(phasors);
+
+        // apply a logarithmic scale to the magnitudes
+        let logMagnitudes = magnitudes.map(x => Math.log10(x + 1e-9));
+
+        // write the magnitudes to the PNG data
+        for (let j = 0; j < windowSize / 2; j++) {
+            let idx = (png.width * (png.height - j - 1) + i) << 2;  // flip the spectrogram
+            let value = logMagnitudes[j];
+            // scale it from [0, 1] to [0, 255]
+            value = Math.round(value * 255);
+
+            // map the value to a color
+            let color = [];
+
+            if (value < 128) {
+                // interpolate between blue and green
+                color[0] = 0;
+                color[1] = Math.round(value * 2);
+                color[2] = 96 - color[1];
+            } else {
+                // interpolate between green and red
+                color[0] = Math.round((value - 128) * 2);
+                color[1] = 96 - color[0];
+                color[2] = 0;
+            }
+
+            // write the pixel data
+            png.data[idx] = color[0];
+            png.data[idx + 1] = color[1];
+            png.data[idx + 2] = color[2];
+            png.data[idx + 3] = 255;
+        }
+    }
+    png.pack().pipe(fs.createWriteStream(`img/${filename}.png`));
+    return this;
+}
 
   saveimg (filename, rgbData, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
     width = Math.round(width);

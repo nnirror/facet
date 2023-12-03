@@ -462,13 +462,13 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- the lowest pixels in the image correspond to the lowest frequencies in the output, and the highest pixels in the image correspond to the highest frequencies in the output.
 	- the default `columnsPerSecond` value of 512 means that each second of audio will contain 512 columns of pixels. This value can be larger or smaller, but keep in mind that as this value decreases, the file will take more time to generate. This method can be CPU intensive and works best with smaller image files or larger `columnsPerSecond values`.
 	- since pixel brightness corresponds with loudness, images with dark backgrounds and high contrast will produce clearer tones.
-	- This method currently only works with JPEG files, and sometimes even certain JPEG files won't work. (I have submitted a GitHub issue: https://github.com/revisitors/readimage/issues/4) Re-saving the JPEG files in GIMP seems to create files that the middleware this method uses can parse correctly.
+	- This method currently only works with PNG files.
 	- the `minimumFrequency` and `maximumFrequency` values control the range of frequencies that the pixels will map onto.
 	- the `frequencyPattern` argument allows you to remap the rows of pixels with a FacetPattern. It should be scaled between 0 and 1. It will automatically be resized so its data length matches the height of the image in pixels. Lower values in `frequencyPattern` will map onto lower frequencies inside the range of `minimumFrequency` and `maximumFrequency`. Higher values in `frequencyPattern` will map onto higher frequencies inside the range of `minimumFrequency` and `maximumFrequency`.
 	- output range is from -1 - 1.
 	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
-		- `$('example').image('/path/to/file/goes/here.jpg',1024).play(); // each column lasts 1024 samples`
+		- `$('example').image('/path/to/file/goes/here.png',1024).play(); // each column lasts 1024 samples`
 ---
 - **noise** ( _length_ )
 	- generates a random series of values between -1 and 1 for `length`.
@@ -1145,16 +1145,25 @@ For more examples, refer to the `examples/this.md` file.
 	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. Other values will rotate the data in a different way, around a different center point.
 	- example:
 		- `$('example').sine(1).size(10000).scale(0,1).layer2d(_.noise(10000), _.ramp(0,100,128), _.ramp(0,100,128)).saveimg('example').once(); // layers a ramp from 0,0 to 100,100 over a sine wave background`
+---
 - **mutechunks2d** ( _num_chunks_, _probabilty_ )
 	- slices the input FacetPattern into `chunks` chunks in 2D space and mutes `prob` percent of them.
 	- `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
 	- example:
 		`$('example').sine(0.3,1000).scale(0,1).mutechunks2d(36,0.5).saveimg('example').once();`
+---
+- **rechunk2d** ( _num_chunks_ )
+	- slices the input FacetPattern into `chunks` chunks in 2D space and shuffles the chunks around.
+	- `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
+	- example:
+		`$('example').sine(0.3,1000).scale(0,1).rechunk2d(36).saveimg('example').once();`
+---
 - **rotate** ( _angle_, _width_, _height_ )
 	- rotates the FacetPattern `angle` degrees around a center point, as if it were suspended in 2D space.
 	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. Other values will rotate the data in a different way, around a different center point.
 	- example:
 		- `$('example').sine(1).scale(0,1).size(512*512).rotate(35).saveimg('example').once(); // rotates a sine wave background 35 degrees`
+---
 - **saveimg** ( _filepath_, _rgbData_, _width_, _height_ )
 	- saves the FacetPattern data as a PNG file in the `img/` directory or a sub-directory. If a sub-directory is specified in the `filepath` argument and it doesn't exist, it will be created.
 	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. They control the width and height of the PNG image file, in pixels. If the FacetPattern has more data `d` than there are total pixels `p` in the image, the data will be truncated after `p`.
@@ -1185,18 +1194,20 @@ For more examples, refer to the `examples/this.md` file.
             )
 			.once();
 		```
-- **rechunk2d** ( _num_chunks_ )
-	- slices the input FacetPattern into `chunks` chunks in 2D space and shuffles the chunks around.
-	- `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
-	- example:
-		`$('example').sine(0.3,1000).scale(0,1).rechunk2d(36).saveimg('example').once();`
+---
 - **shift2d** ( _xAmt_, _yAmt_, _width_ )
 	- shifts the FacetPattern in 2D space, by `xAmt` pixels to the left/right, and by `yAmt` pixels up/down.
 	- the `width` argument is optional. It defaults to the square root of the FacetPattern's length. Other values will shift the data in a different way.
 	- example:
 		- `$('example').noise(100*100).prob(0.001).iter(4,()=>{this.mix(0.5,()=>{this.shift2d(0,1)})}).saveimg('example').once(); // slides all the pixels up 4`
+---
 - **size2d** ( _size_ )
 	- creates a smaller image of the FacetPattern in 2D Space, according to the relative amount `size`.
 	- `size` must be between 0 and 1. The new pattern will be a smaller 2D image of the input, surrounded by padding of black pixels (0s).
 	- example:
 		- `$('example').noise(10000).size2d(0.5).saveimg('example'); // 100 x 100 image with a square of noise in the center`
+---
+- **spectro** ( _filePath_, _windowSize_ = 2048 )
+	- saves a PNG file in the `img/` directory named `fileName.png`, with the FacetPattern's spectrogram.
+	- example:
+		- `$('example').noise(n1).ffilter(_.ramp(0,NYQUIST/2),_.ramp(NYQUIST,NYQUIST/2)).spectro('mytri'+Date.now()).once();`
