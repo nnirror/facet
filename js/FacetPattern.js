@@ -4010,8 +4010,7 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
 
   spectro (filename, windowSize = 2048 ) {
     // define the overlap between windows
-    let overlap = 0.5;  // 25% overlap
-
+    let overlap = 0.5; // 50% overlap
     // calculate the number of windows in the data
     let stepSize = Math.round(windowSize * (1 - overlap));
     let numWindows = Math.ceil((this.data.length - windowSize) / stepSize) + 1;
@@ -4040,14 +4039,11 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
         // convert the phasors to decibels
         let magnitudes = fftUtil.fftMag(phasors);
 
-        // apply a logarithmic scale to the magnitudes
-        let logMagnitudes = magnitudes.map(x => Math.log10(x + 1e-9));
-
         // write the magnitudes to the PNG data
         for (let j = 0; j < windowSize / 2; j++) {
             let idx = (png.width * (png.height - j - 1) + i) << 2;  // flip the spectrogram
-            let value = logMagnitudes[j];
-            // scale it from [0, 1] to [0, 255]
+            let value = magnitudes[j];
+            // convert the magnitude to decibels and scale it from [0, 1] to [0, 255]
             value = Math.round(value * 255);
 
             // map the value to a color
