@@ -3348,6 +3348,21 @@ rechunk (numChunks, probability = 1) {
   // END special operations
 
   // BEGIN utility functions used in other methods
+  
+  butterworthFilter(order, cutoff) {
+    let gain = 0;
+    let roots = [];
+    for (let i = 0; i < 2 * order; i++) {
+        let angle = (Math.PI / 2) * (2 * i + 1) / (2 * order);
+        let real = -cutoff * Math.sin(angle);
+        let imag = cutoff * Math.cos(angle);
+        roots.push([real, imag]);
+        gain += Math.sqrt(real * real + imag * imag);
+    }
+    gain = Math.pow(0.5 / gain, order);
+    return { gain: gain, roots: roots };
+  }
+
   parseKeyAndScale(key_letter = "C", key_scale = "major") {
     let chroma_key;
     key_letter = key_letter.toLowerCase();
@@ -4009,6 +4024,17 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
   }
 
   spectro (filename, windowSize = 2048 ) {
+    // apply butterworth filter before sampling the signal
+    let filter = this.butterworthFilter(2, SAMPLE_RATE/2);
+    for (let i = 0; i < this.data.length; i++) {
+        let y = 0;
+        for (let j = 0; j < filter.roots.length; j++) {
+            y += filter.gain * this.data[i] / (1 + Math.pow(this.data[i] - filter.roots[j][0], 2) + Math.pow(-filter.roots[j][1], 2));
+        }
+        this.data[i] = y;
+    }
+    // scale the data to [0, 0.1] so the spectrogram is easier to see
+    this.scale(0,0.1);
     // define the overlap between windows
     let overlap = 0.5; // 50% overlap
     // calculate the number of windows in the data
@@ -4049,16 +4075,23 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
             // map the value to a color
             let color = [];
 
-            if (value < 128) {
+            if (value < 1) {
+              color[0] = 0;
+              color[1] = 0;
+              color[2] = 0;
+            }
+            else {
+              if (value < 128) {
                 // interpolate between blue and green
                 color[0] = 0;
                 color[1] = Math.round(value * 2);
-                color[2] = 96 - color[1];
-            } else {
-                // interpolate between green and red
-                color[0] = Math.round((value - 128) * 2);
-                color[1] = 96 - color[0];
-                color[2] = 0;
+                color[2] = 128 - color[1];
+              } else {
+                  // interpolate between green and red
+                  color[0] = Math.round((value - 128) * 2);
+                  color[1] = 128 - color[0];
+                  color[2] = 0;
+              }
             }
 
             // write the pixel data
