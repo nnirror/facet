@@ -4136,8 +4136,13 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
         new FacetPattern().from(1)
       ]
     }
-    if ( rgbData.length != 3 ) {
-      throw `saveimg() requires an array of 3 FacetPatterns for RGB data`;
+    else {
+      if ( rgbData.length != 3 ) {
+        throw `saveimg() requires an array of 3 FacetPatterns for RGB data`;
+      }
+      rgbData[0] = new FacetPattern().from(rgbData[0]);
+      rgbData[1] = new FacetPattern().from(rgbData[1]);
+      rgbData[2] = new FacetPattern().from(rgbData[2]);
     }
     rgbData[0].size(this.data.length);
     rgbData[1].size(this.data.length);
@@ -4161,6 +4166,9 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
   rotate (angle, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
     width = Math.round(width);
     height = Math.round(height);
+
+    // Wrap the angle to be between 0 and 360
+    angle = (angle + 360) % 360;
     if ( angle < 0 ) {
       throw `rotate() cannot be called without a positive angle value`;
     }
