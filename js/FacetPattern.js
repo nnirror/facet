@@ -4140,14 +4140,19 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
       if ( rgbData.length != 3 ) {
         throw `saveimg() requires an array of 3 FacetPatterns for RGB data`;
       }
-      rgbData[0] = new FacetPattern().from(rgbData[0]);
-      rgbData[1] = new FacetPattern().from(rgbData[1]);
-      rgbData[2] = new FacetPattern().from(rgbData[2]);
+      if (!this.isFacetPattern(rgbData[0])) {
+        rgbData[0] = new FacetPattern().from(rgbData[0]); 
+      }
+      if (!this.isFacetPattern(rgbData[1])) {
+        rgbData[1] = new FacetPattern().from(rgbData[1]); 
+      }
+      if (!this.isFacetPattern(rgbData[2])) {
+        rgbData[2] = new FacetPattern().from(rgbData[2]); 
+      }
     }
     rgbData[0].size(this.data.length);
     rgbData[1].size(this.data.length);
     rgbData[2].size(this.data.length);
-  
     // Set the pixel data from the float array
     for (let y = 0; y < png.height; y++) {
       for (let x = 0; x < png.width; x++) {
