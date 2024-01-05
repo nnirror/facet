@@ -399,16 +399,25 @@ setInterval(() => {
 
 $('#bpm').val(90);
 
-const osc = new OSC({ plugin: new OSC.WebsocketClientPlugin() });
-osc.open({ port: window.configSettings.EDITOR_OSC_OUTPORT });
+let voices = [];
+let sources = [];
+let ac;
+ac = new AudioContext();
 
-osc.on('/progress', message => {
-  $('#progress_bar').width(`${Math.round(message.args[0]*100)}%`);
+// connect to the server
+const socket = io.connect('http://localhost:3000', {
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
 });
 
-osc.on('/bpm', message => {
+socket.on('progress', (progress) => {
+  $('#progress_bar').width(`${Math.round(progress*100)}%`);
+});
+
+socket.on('bpm', (bpm) => {
   if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
-    $('#bpm').val(`${message.args[0]}`);
+    $('#bpm').val(`${bpm}`);
   }
   if ( browser_sound_output === true ) {
     // adjust the playback speed of all voices
@@ -423,14 +432,8 @@ osc.on('/bpm', message => {
   }
 });
 
-let voices = [];
-let sources = [];
-let ac;
-ac = new AudioContext();
-
-osc.on('/play', message => {
+socket.on('play', (voice_to_play) => {
   if ( browser_sound_output === true ) {
-    let voice_to_play = message.args[0];
     // check if the voice is loaded
     if (voices[voice_to_play]) {
       let source = ac.createBufferSource();
@@ -445,19 +448,3 @@ osc.on('/play', message => {
     }
   }
 });
-
-setInterval(() => {
-  if ( osc.status() == 3 ) {
-    osc.open();
-  }
-}, 250);
-
-// close down osc server when window shuts down or tab is closed
-window.addEventListener("beforeunload", function (e) {
-  osc.close();
-});
-
-// attempt to restart osc server when tab is focused
-window.onfocus = function() {
-  osc.open();
-};

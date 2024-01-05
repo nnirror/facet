@@ -3,6 +3,8 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const {WebMidi} = require('webmidi');
 const express = require('express');
+const http = require('http');
+const socketIo = require('socket.io');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const app = express();
@@ -13,6 +15,7 @@ const OSC = require('osc-js')
 const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
 udp_osc_server.open({ port: 2134 });
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
+const server = http.createServer(app);
 let bars_elapsed = 0;
 let bpm = 90;
 let prev_bpm = 90;
@@ -27,17 +30,41 @@ let patterns_that_have_been_stopped = [];
 let patterns_to_delete_at_end_of_loop = [];
 let current_relative_step_position = 0;
 let event_register = [];
+let sockets = [];
 let transport_on = true;
 let meta_data = {
   bpm: [90]
 };
 process.title = 'facet_transport';
 
-const editor_osc_server = new OSC({
-  discardLateMessages: false,
-  plugin: new OSC.WebsocketServerPlugin({ url: `ws://localhost:${FacetConfig.settings.EDITOR_OSC_OUTPORT}` })
+// attach Socket.IO to the HTTP server
+const io = socketIo(server, {
+  cors: {
+    origin: "*", // allow all origins
+    methods: ["GET", "POST"] // allow GET and POST
+  }
 });
-editor_osc_server.open();
+
+// listen for new connections
+io.on('connection', (socket) => {
+  // new client connected
+  sockets.push(socket);
+
+  // send bpm and bars_elapsed every 20ms
+  setInterval(() => {
+    socket.emit('bpm', bpm);
+    socket.emit('barsElapsed', bars_elapsed);
+    socket.emit('progress', current_relative_step_position);
+  }, 20);
+
+  // listen for the client disconnecting
+  socket.on('disconnect', () => {
+    sockets = sockets.filter(s => s !== socket);
+  });
+});
+
+// start the HTTP server
+server.listen(3000, () => {});
 
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
@@ -180,7 +207,6 @@ let bpm_was_changed_this_tick = false;
 let bpm_was_changed_this_loop = false;
 // send bpm to Max
 udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
-editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 
 function tick() {
   let events_per_second = 1000 / EVENT_RESOLUTION_MS;
@@ -206,7 +232,6 @@ function tick() {
     // set all "fired" values to false at beginning of loop
     resetEventRegister();
     udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
-    editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     loop_start_time = Date.now();
     bpm_was_changed_this_loop = false;
   }
@@ -241,7 +266,7 @@ function tick() {
               // osc event to play back audio file in Max (or elsewhere)
               setTimeout(()=>{
                 if ( browser_sound_output === true ) {
-                  editor_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
+                  emitPlayEvent(event.voice);
                 }
                 udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
               },pre_send_delay_ms);
@@ -475,7 +500,6 @@ function checkForBpmRecalculation (events_per_loop) {
     bpm_was_changed_this_loop = true;
     prev_bpm = bpm;
     udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
-    editor_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
   }
   else {
     bpm_was_changed_this_tick = false;
@@ -565,6 +589,12 @@ function scalePatternToSteps(pattern, steps) {
       result.push(pattern[index]);
   }
   return result;
+}
+
+function emitPlayEvent(voice) {
+  for (let socket of sockets) {
+    socket.emit('play', voice);
+  }
 }
 
 class AudioPlaybackVoice {
