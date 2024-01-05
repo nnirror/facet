@@ -306,7 +306,6 @@ function tick() {
     }
   }
   delay = Math.max(0, EVENT_RESOLUTION_MS - (Date.now() - expectedTime));
-  editor_osc_server.send(new OSC.Message(`/progress`, `${current_relative_step_position}`));
   expectedTime += EVENT_RESOLUTION_MS;
 
   // hard-reset loop position if bpm has been static for the entire loop and an entire loop of time has passed

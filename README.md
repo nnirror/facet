@@ -614,6 +614,11 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').from([1]).echo(5); // 1 0.666 0.4435 0.29540 0.19674 0.13103`
 		- `$('example').phasor(50).size(n8).echo(7).play(); // echoing out over a whole note `
 ---
+- **expo** ( _exponent_ )
+	- applies exponential scaling to the FacetPattern based on its minimum and maximum. `exponent` values larger than 1 will emphasize lower numbers more and more. Values less than 1 will emphasize higher numbers more and more.
+	- example:
+		- `$('example').sine(_.ramp(100,2000,512).expo(6),n1).play().once(); // experiment with different expo() values to hear the difference`
+---
 - **fade** ( _fade_percent_ = 0.1 )
 	- applies a crossfade window to the FacetPattern, where `fade_percent` of the beginning and end are faded in/out.
 	- example:
@@ -832,7 +837,9 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').noise(1000).size(n1).play(); // upscaling 1000 samples of noise to be 1 whole note long`
 ---
 - **scale** ( _new_min_, _new_max_, _exponent_ = 1 )
-	- moves the FacetPattern to a new range, from `new_min` to `new_max`, with `exponent` allowing for nonlinear transformations. **NOTE**: this method will return the average of `new_min` and `new_max` if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
+	- moves the FacetPattern to a new range, from `new_min` to `new_max`, with `exponent` allowing for nonlinear transformations. 
+	- `exponent` values larger than 1 will emphasize lower numbers more and more. Values less than 1 will emphasize higher numbers more and more.
+	- **NOTE**: this method will return the average of `new_min` and `new_max` if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
 	- example:
 		- `$('example').sine(10,100).scale(0,1); // unipolar signal`
 ---

@@ -2172,27 +2172,59 @@ f
     return this;
   }
 
+  expo (expo_curve) {
+    this.scale(this.minimum(),this.maximum(),expo_curve);
+    return this;
+  }
+
   scale (outMin, outMax, exponent = 1) {
     if ( this.data.length == 1 ) {
       return (outMin + outMax) / 2;
     }
-    let inMin = this.minimum();
-    let inMax = this.maximum();
-    let output = [];
-    for (let i = 0; i < this.data.length; i++) {
-        let normalized = (this.data[i] - inMin) / (inMax - inMin);
-        let transformed;
-        if (exponent >= 0 && exponent <= 1) {
-            transformed = 1 - Math.pow(1 - normalized, exponent);
-        } else {
-            transformed = Math.pow(normalized, exponent);
-        }
-        let scaled = transformed * (outMax - outMin) + outMin;
-        output.push(scaled);
+    if (exponent > 1 ) {
+      let inMin = this.minimum();
+      let inMax = this.maximum();
+      let output = [];
+      for (let i = 0; i < this.data.length; i++) {
+          let normalized = (this.data[i] - inMin) / (inMax - inMin);
+          let transformed;
+          if (exponent >= 0 && exponent <= 1) {
+              transformed = 1 - Math.pow(1 - normalized, exponent);
+          } else {
+              transformed = Math.pow(normalized, exponent);
+          }
+          let scaled = transformed * (outMax - outMin) + outMin;
+          output.push(scaled);
+      }
+      this.data = output;
     }
-    this.data = output;
+    else {
+      this.scaleLT1(outMin,outMax,exponent);
+    }
     return this;
+}
+
+scaleLT1 (outMin, outMax, exponent = 1) {
+  if ( this.data.length == 1 ) {
+    return (outMin + outMax) / 2;
   }
+  let inMin = this.minimum();
+  let inMax = this.maximum();
+  let output = [];
+  for (let i = 0; i < this.data.length; i++) {
+      let normalized = (this.data[i] - inMin) / (inMax - inMin);
+      let transformed;
+      if (exponent >= 0 && exponent <= 1) {
+          transformed = Math.pow(normalized, exponent);
+      } else {
+          transformed = inMax - Math.pow(inMax - normalized, exponent);
+      }
+      let scaled = transformed * (outMax - outMin) + outMin;
+      output.push(scaled);
+  }
+  this.data = output;
+  return this;
+}
 
   skip (prob) {
     prob = Math.abs(Number(prob));
@@ -3801,7 +3833,7 @@ rechunk (numChunks, probability = 1) {
     const resynthesizedData = complexData.map(complexNumber => Math.sqrt(complexNumber[0]**2 + complexNumber[1]**2));
 
     this.data = resynthesizedData;
-    this.audio();
+    this.audio().truncate(dataLength);
     return this;
   }
 
