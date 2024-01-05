@@ -60,6 +60,10 @@ function mtos(midiNoteIn) {
   return samples;
 }
 
+function ts () {
+  return Date.now();
+}
+
 function barmod(mod, values) {
   mod = Math.round(Math.abs(Number(mod)));
   if ( values.length % 2 != 0 ) {

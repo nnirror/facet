@@ -5,6 +5,7 @@ const { exec } = require('child_process');
 const path = require('path');
 const wav = require('node-wav');
 const fft = require('fft-js').fft;
+const ifft = require('fft-js').ifft;
 const fftUtil = require('fft-js').util;
 const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
@@ -3152,6 +3153,37 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
+  inc (pattern_name, amt = 1) {
+    let vars = fs.readFileSync('js/vars.js', 'utf8');
+    let context = {};
+    let script = new vm.Script(vars);
+    script.runInNewContext(context);
+    if (typeof context[pattern_name] == 'number') {
+      // increment
+      context[pattern_name] = context[pattern_name] + amt;
+    }
+    else {
+      // initialize the pattern to 0
+      this.variables_initialized_during_evaluation = true;
+      context[pattern_name] = 0;
+    }
+    let updatedVars = '';
+    for (let key in context) {
+      if (Array.isArray(context[key])) {
+        updatedVars += `var ${key} = [${context[key].join(',')}];\n`;
+      } else {
+        updatedVars += `var ${key} = ${JSON.stringify(context[key])};\n`;
+      }
+    }
+    fs.writeFileSync('js/vars.js', updatedVars);
+    return this;
+  }
+
+  dec (pattern_name, amt = 1) {
+    this.inc(pattern_name, amt * -1);
+    return this;
+  }
+
   set (pattern_name) {
     if (pattern_name === undefined) {
       throw (`cannot set pattern because the pattern name is undefined. Use a string!`);
@@ -3708,6 +3740,117 @@ rechunk (numChunks, probability = 1) {
     this.data.splice(position, splicePattern.data.length, ...splicePattern.data);
     return this;
   }
+
+  fftPhase ( complexNumber ) {
+    return Math.atan2(complexNumber[1], complexNumber[0]);
+  }
+
+  fftMag ( complexNumber ) {
+    return Math.sqrt(complexNumber[0]**2 + complexNumber[1]**2);
+  }
+
+  ftilt(rotations) {
+    if ( this.isFacetPattern(rotations) ) {
+      rotations = rotations.data;
+    }
+    let dataLength = this.data.length;
+    let nextPowerOfTwo = Complex.nextPowerOfTwo(dataLength);
+    if (dataLength !== nextPowerOfTwo) {
+        this.data.push(...Array(nextPowerOfTwo - dataLength).fill(0));
+    }
+    const phasors = fft(this.data);
+    const numContainers = rotations.length;
+
+    // calculate the number of bins per container
+    const binsPerContainer = Math.floor(phasors.length / numContainers);
+
+    // normalize rotations to range [-PI, PI]
+    const normalizedRotations = rotations.map(rotation => rotation * Math.PI);
+
+    // apply rotations to each container
+    for (let i = 0; i < numContainers; i++) {
+      for (let j = 0; j < binsPerContainer; j++) {
+          const binIndex = i * binsPerContainer + j;
+          if (binIndex < phasors.length) {
+              // calculate frequency of this bin
+              const frequency = binIndex * SAMPLE_RATE / phasors.length;
+
+              // calculate time delay for this container
+              const timeDelay = normalizedRotations[i];
+
+              // calculate phase shift for this bin
+              const phaseShift = 2 * Math.PI * frequency * timeDelay;
+
+              // extract magnitude and phase
+              const magnitude = this.fftMag(phasors[binIndex]);
+              let phase = this.fftPhase(phasors[binIndex]);
+
+              // apply phase shift
+              phase += phaseShift;
+
+              // convert back to rectangular form
+              phasors[binIndex] = [magnitude * Math.cos(phase), magnitude * Math.sin(phase)];
+          }
+      }
+    }
+
+    // inverse FFT to resynthesize audio
+    const complexData = ifft(phasors);
+
+    // convert complex data to 1D signal by taking the magnitude of each complex number
+    const resynthesizedData = complexData.map(complexNumber => Math.sqrt(complexNumber[0]**2 + complexNumber[1]**2));
+
+    this.data = resynthesizedData;
+    this.audio();
+    return this;
+  }
+
+  flookup ( lookup ) {
+    if ( this.isFacetPattern(lookup) ) {
+      lookup.clip(0,1).size(this.data.length/4);
+      lookup = lookup.data;
+    }
+    const numContainers = lookup.length;
+    const frameSize = Math.floor(this.data.length / numContainers);
+    const hopSize = Math.floor(frameSize / 2); // 50% overlap
+    const original_size = this.data.length;
+
+    // divide this.data into overlapping frames
+    const frames = [];
+    for (let i = 0; i <= this.data.length - frameSize; i += hopSize) {
+        let frame = this.data.slice(i, i + frameSize);
+        let nextPowerOfTwo = Complex.nextPowerOfTwo(frame.length);
+        if (frame.length !== nextPowerOfTwo) {
+            frame.push(...Array(nextPowerOfTwo - frame.length).fill(0));
+        }
+        frames.push(frame);
+    }
+
+    // apply FFT to each frame
+    const phasors = frames.map(frame => fft(frame));
+
+    // use repeated lookup array to rearrange frames
+    const rearrangedFrames = lookup.map(value => {
+      const frameIndex = Math.floor(value * (phasors.length - 1));
+      return phasors[frameIndex];
+    });
+
+    // apply inverse FFT to each frame
+    const resynthesizedFrames = rearrangedFrames.map(frame => ifft(frame));
+
+    // overlap-add frames to resynthesize signal
+    const resynthesizedSignal = new Array(this.data.length).fill(0);
+    for (let i = 0; i < resynthesizedFrames.length; i++) {
+        for (let j = 0; j < resynthesizedFrames[i].length; j++) {
+            if (i * hopSize + j < resynthesizedSignal.length) {
+                resynthesizedSignal[i * hopSize + j] += resynthesizedFrames[i][j][0]; // assuming ifft returns complex numbers
+            }
+        }
+    }
+    this.data = resynthesizedSignal;
+    this.trim().size(original_size).audio();
+    return this;
+}
 
 fgate(binThresholds) {
   if (typeof binThresholds == 'number' || Array.isArray(binThresholds) === true) {
@@ -4303,13 +4446,11 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
   }
 
-  shift2d (x, y, width = Math.round(Math.sqrt(this.data.length))) {
-    // calculate the height of the 2D space
-    let height = this.data.length / width;
+  shift2d (x, y, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
     // create a new array to hold the moved values
     let movedArr = new Array(this.data.length);
     // loop through each value in the original array
-    for (let i = 0; i < this.data.length; i++) {
+    for (let i = 0; i < height * width; i++) {
         // calculate the current row and column in the 2D space
         let row = Math.floor(i / width);
         let col = i % width;
@@ -4322,7 +4463,136 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     }
     this.data = movedArr;
     return this;
+}
+
+circle2d(centerX, centerY, radius, value, width = Math.round(Math.sqrt(this.data.length)), height = width) {
+  for (let i = 0; i < height * width; i++) {
+      let row = Math.floor(i / width);
+      let col = i % width;
+      // calculate distance from the current position to the center point
+      let distance = Math.sqrt(Math.pow(col - centerX, 2) + Math.pow(row - centerY, 2));
+
+      // if the distance is less than or equal to the radius, set the value at the current position to 1
+      if (distance <= radius) {
+          this.data[i] = value;
+      }
   }
+  return this;
+}
+
+rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, width = Math.round(Math.sqrt(this.data.length)), height = width) {
+  for (let i = 0; i < height * width; i++) {
+      let row = Math.floor(i / width);
+      let col = i % width;
+
+      // if the current position is within the rectangle, set the value at the current position to the specified value
+      if (col >= topLeftX && col < topLeftX + rectWidth && row >= topLeftY && row < topLeftY + rectHeight) {
+          this.data[i] = value;
+      }
+  }
+  return this;
+}
+
+tri2d(x1, y1, x2, y2, x3, y3, value, width = Math.round(Math.sqrt(this.data.length)), height = width) {
+  for (let i = 0; i < height * width; i++) {
+      let row = Math.floor(i / width);
+      let col = i % width;
+
+      // calculate the barycentric coordinates for the current position
+      let w1 = ((y2 - y3) * (col - x3) + (x3 - x2) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+      let w2 = ((y3 - y1) * (col - x3) + (x1 - x3) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+      let w3 = 1 - w1 - w2;
+
+      // if the current position is within the triangle, set the value at the current position to the specified value
+      if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+          this.data[i] = value;
+      }
+  }
+  return this;
+}
+
+palindrome2d(width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+  let mirroredData = [];
+
+  for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+          let mirroredRow = row < height / 2 ? row : height - row - 1;
+          let mirroredCol = col < width / 2 ? col : width - col - 1;
+          mirroredData[row * width + col] = this.data[mirroredRow * width + mirroredCol];
+      }
+  }
+
+  this.data = mirroredData;
+  return this;
+}
+
+walk2d (percentage, x, y, mode = 0, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+  let movedArr = [...this.data]; // copy the original data
+  let numToMove = Math.floor(percentage * this.data.length);
+
+  // if x or y is not an array, convert it to an array with the same min and max value
+  if (!Array.isArray(x)) x = [x, x];
+  if (!Array.isArray(y)) y = [y, y];
+
+  for (let i = 0; i < numToMove; i++) {
+      let index = Math.floor(Math.random() * this.data.length);
+      let row = Math.floor(index / width);
+      let col = index % width;
+
+      // calculate new position
+      let newRow = row + (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (y[1] - y[0] + 1) + y[0]);
+      let newCol = col + (Math.random() < 0.5 ? -1 : 1) * Math.floor(Math.random() * (x[1] - x[0] + 1) + x[0]);
+
+      switch(mode) {
+          case 0: // wrap
+              if (newRow < 0) newRow += height;
+              if (newRow >= height) newRow -= height;
+              if (newCol < 0) newCol += width;
+              if (newCol >= width) newCol -= width;
+              break;
+          case 1: // fold
+              if (newRow < 0) newRow = -newRow;
+              if (newRow >= height) newRow = 2*height - newRow - 1;
+              if (newCol < 0) newCol = -newCol;
+              if (newCol >= width) newCol = 2*width - newCol - 1;
+              break;
+          case 2: // clip
+              if (newRow < 0) newRow = 0;
+              if (newRow >= height) newRow = height - 1;
+              if (newCol < 0) newCol = 0;
+              if (newCol >= width) newCol = width - 1;
+              break;
+      }
+
+      // move the value to the new position in the moved array
+      let newIndex = newRow * width + newCol;
+      movedArr[newIndex] = this.data[index];
+  }
+
+  this.data = movedArr;
+  return this;
+}
+
+delay2d(delayX, delayY, intensityDecay = 0.5, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+  let delayedData = new Array(this.data.length).fill(0);
+
+  for (let delay = 0; delay < Math.abs(Math.max(delayX, delayY)); delay++) {
+      for (let row = 0; row < height; row++) {
+          for (let col = 0; col < width; col++) {
+              let delayedRow = ((row + delay * delayY) + height) % height;
+              let delayedCol = ((col + delay * delayX) + width) % width;
+              let index = delayedRow * width + delayedCol;
+              delayedData[index] += this.data[row * width + col] * Math.pow(intensityDecay, delay);
+
+              // clip the value at the current index to the range [0, 1]
+              delayedData[index] = Math.max(0, Math.min(1, delayedData[index]));
+          }
+      }
+  }
+
+  this.data = delayedData;
+  return this;
+}
 
   rechunk2d( chunks) {
     if (Math.sqrt(chunks) % 1 !== 0) {

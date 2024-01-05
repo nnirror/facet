@@ -39,6 +39,7 @@ function runCode (code,mode) {
     if ( mode === 'once' ) {
       command = `${command}.once()`;
     }
+    vars = addMissingVariables(command, vars);
     try {
       let fp;
       let should_be_stopped = stop_called_regex.test(command);
@@ -136,4 +137,21 @@ function splitCommandsOnDelimiter (user_input) {
 function parseBpmFromEnv(env_str) {
   const match = env_str.match(/bpm=[\d]+[.]*[\d]+/gm);
   return match ? match[0].split('bpm=')[1] : null;
+}
+
+function addMissingVariables(command, vars) {
+  let regex = /\.set\((.+?)\)|\.inc\((.+?)(?:,.+?)?\)|\.dec\((.+?)(?:,.+?)?\)/g;
+  let matches = command.match(regex);
+
+  if (matches) {
+    matches.forEach(match => {
+      let variableName = match.split('(')[1].split(')')[0].split(',')[0];
+      variableName = variableName.replace(/['"]+/g, '');
+      if (!vars.includes(`var ${variableName} =`)) {
+        vars += `var ${variableName} = 0;\n`;
+      }
+    });
+  }
+
+  return vars;
 }

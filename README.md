@@ -281,15 +281,27 @@ You need to connect the MIDI device you want to use before starting Facet.
 This can be useful when you want to access the same pattern across multiple commands.
 
 - **set** ( _name_ )
-	- saves a FacetPattern's data in memory, for reference as a variable in future operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
+	- saves a FacetPattern's data in memory, for reference as a variable in operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
 	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If  the pattern has one piece of data in it, the corresponding variable will be a float.
-	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, an error might display: `{your_variable_name_here} is undefined`. This will resolve after the first loop, after the variable you just set has fully propagated into the environment.
+	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 		- example:
 		-  ```
-		$('set_example').noise(32).curve().set('my_var').once(); // first, set the variable here
+		$('example').tri(100).set('abc').sine(abc).play(); // run it all in one command - just remember the first evaluated sine will have a frequency of 0
 
+		$('set_example').noise(32).curve().set('my_var').once(); // first, set the variable here
 		$('example').noise(100).times(my_var).play(); // now, you can use my_var in commands
 		``` 
+- **inc** ( _name_, _amount_to_add_ = 1 )
+	- increments a variable called `name` by `amount_to_add`. This variable can be used in operations.
+	- similar to the `set()` method, when you run the `.inc()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
+	- example:
+		`$('example').inc('abc').iter(abc,()=>{this.sup(_.randsamp('808'),i/iters)}).play(); // more 808 samples each iteration`
+
+- **dec** ( _name_, _amount_to_subtract_ = 1 )
+	- decrements a variable called `name` by `amount_to_add`. This variable can be used in operations.
+	- similar to the `set()` method, when you run the `.dec()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
+	- example:
+		`$('example').from(8).set('abc').sometimes(0.5,()=>{this.dec('abc')}).sometimes(0.5,()=>{this.inc('abc')}).iter(abc,()=>{this.sup(_.randsamp('k'),i/iters)}).play(); // start at 8, sometimes increment & sometimes decrement the total number of 808 samples`
 
 ### Single number generators
 - **barmod** ( _modulo_, _values_ )
@@ -338,6 +350,10 @@ This can be useful when you want to access the same pattern across multiple comm
 	-  The `weight` argument allows you to specify an exponential weight for the probability of random values. For instance, `rf(0.125,8,3)` will generate half of its values between 0.125 and 1; and the other half will be between 1 and 8. By default, the weighting is linear, i.e. all values between `min` and `max` have equal probability.
 	- example:
 		- `$('example').sine(ri(1,1000)).play(); // a sine wave with 1 - 1000 cycles`
+---
+- **ts** ( )
+	- returns the current timestamp Date.now() as a string.
+	- `$('example').sine(100,n1).saveas('mytest'+ts()).once(); // saves a file in the samples directory named like this: mytest1704420621454.wav`
 
 ### Methods for controlling MIDI scales
 - **randscale** ( )
@@ -959,10 +975,20 @@ When a modulator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').noise(n16).fgate(0.7).play(); // try experimenting with different threshold values `
 ---
+- **flookup** ( _lookupPattern_ )
+	- applies a spectral bin rearrangement to the FacetPattern based on the `lookupPattern`. Similar to `ichunk()` but using FFT. The `lookupPattern` maps the current spectral bins to new positions. The length of the lookupPattern determines the number of frames in the resynthesized signal.
+	- example:
+		`$('example').randsamp('808').flookup(_.ramp(1,0,SAMPLE_RATE)).play().once(); // backwards 808 sample, ramping from relative position 1 to 0`
+---
 - **fshift** ( _shiftAmountPattern_ )
 	- applies a spectral bin shift to the FacetPattern. `shiftAmountPattern` values lower than 0 will cause the bottom to wrap the top, and the rest of the spectrum moves downwards. `shiftAmountPattern` values higher than 0 will cause the top of the spectrum to wrap to the bottom, and the rest of the spectrum moves upwards.
 	- example:
 		- `$('example').sine(100).fshift(0.04).play(); // try experimenting with different shift values `
+---
+- **ftilt** ( _tiltAmountPattern_ )
+    - applies spectral harmonic tilting to the FacetPattern. This method allows for the rotation of the harmonic bands of the signal, enabling each band to be repositioned independently in time. The `tiltAmountPattern` should be normalized to values between -1 and 1, where -1 represents a full counter-clockwise rotation and 1 represents a full clockwise rotation.
+    - example:
+        - `$('example').sample('808/808-Clap03').ftilt(_.ramp(rf(),rf(),100)).play(); // split the clap sample into 100 frequency bands and disperse them randomly in time`
 ---
 - **harmonics** ( _numHarmonicsPattern_ )
 	- adds `numHarmonicsPattern` harmonics to the input signal.
@@ -1138,6 +1164,24 @@ For more examples, refer to the `examples/this.md` file.
 
 ### Methods for image generation and processing
 
+- **circle2d** ( _centerX_, _centerY_, _radius_, _value_, _width_, _height_ = width )
+    - adds a circle on top of the existing data in a FacetPattern.
+	- `centerX` and `centerY` are the x,y coordinates of the center of the circle.
+	- `radius` controls the radius of the circle.
+	- `value` is brightness value for the circle normalized between 0 - 1.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating shapes inside non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
+    - example:
+		- `$('example').silence(1000000).circle2d(100,100,100,1).saveimg('example_circle'); // white circle in a 1000x1000 image`
+        - `$('example').silence(1000000).circle2d(100,100,100,1,1250,800).saveimg('example_circle',[1,1,1],1250,800); // white circle in a 1250x800 image`
+---
+- **delay2d** (_delayX_, _delayY_, _intensityDecay_ = 0.5, _width_, _height_ )
+    - applies a delay effect to the data in a FacetPattern in 2 dimensions.
+    - `delayX` and `delayY` are the delay amounts in the x and y directions. Positive values move right/down; negative values move left/up.
+    - `intensityDecay` is a value between 0 and 1 that controls how much the intensity of the data decays with each delay step. A value of 0.5 means the intensity is halved with each delay step.
+    - the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
+    - example:
+        - `$('example').silence(1000000).circle2d(500, 500, 250, 1).delay2d(20, 20, 0.85).saveimg('delay2d').once(); // circle echoing down-left`
+---
 - **layer2d** ( _brightness_data_, _xCoords_, _yCoords_, _width_, _height_ )
 	- superposes a FacetPattern in 2 dimensions on top of the existing data in a FacetPattern.
 	- `brightness_data` is a FacetPattern that should be normalized between 0 and 1. It controls how bright the corresponding pixels will be.
@@ -1152,11 +1196,26 @@ For more examples, refer to the `examples/this.md` file.
 	- example:
 		`$('example').sine(0.3,1000).scale(0,1).mutechunks2d(36,0.5).saveimg('example').once();`
 ---
+- **palindrome2d** ( _width_, _height_ )
+    - generates a 2D palindrome of the input FacetPattern, mirrored in both x and y axes.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating shapes inside non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
+    - example:
+        - `$('example').silence(1000000).iter(128,()=>{this.rect2d(ri(0,1000), ri(0,1000), ri(10,100), ri(10,100), rf())}).palindrome2d().invert().saveimg('palindrome2d',[_.ramp(rf(),rf(),1000000),_.ramp(rf(),rf(),1000000),_.ramp(rf(),rf(),1000000)]); // 128 rectangles in a 2d palindrome`
+---
 - **rechunk2d** ( _num_chunks_ )
 	- slices the input FacetPattern into `chunks` chunks in 2D space and shuffles the chunks around.
 	- `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
 	- example:
 		`$('example').sine(0.3,1000).scale(0,1).rechunk2d(36).saveimg('example').once();`
+---
+- **rect2d** ( _topLeftX_, _topLeftY_, _rectWidth_, _rectHeight_, _value_, _width_, _height_ = width )
+    - adds a rectangle on top of the existing data in a FacetPattern.
+	- `topLeftX` and `topLeftY` are the x,y coordinates of the top-left corner of the rectangle.
+	- `rectWidth` and `rectHeight` control the size of the rectangle.
+	- `value` is brightness value for the rectamgle normalized between 0 - 1.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating shapes inside non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
+    - example:
+        - `$('example').silence(1000000).rect2d(0,0,100,100,1).saveimg('rect2d'); // 100x100 white square in top-left corner of 1000x1000 image`
 ---
 - **rotate** ( _angle_, _width_, _height_ )
 	- rotates the FacetPattern `angle` degrees around a center point, as if it were suspended in 2D space.
@@ -1195,9 +1254,9 @@ For more examples, refer to the `examples/this.md` file.
 			.once();
 		```
 ---
-- **shift2d** ( _xAmt_, _yAmt_, _width_ )
+- **shift2d** ( _xAmt_, _yAmt_, _mode_, _width_, _height_ )
 	- shifts the FacetPattern in 2D space, by `xAmt` pixels to the left/right, and by `yAmt` pixels up/down.
-	- the `width` argument is optional. It defaults to the square root of the FacetPattern's length. Other values will shift the data in a different way.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
 	- example:
 		- `$('example').noise(100*100).prob(0.001).iter(4,()=>{this.mix(0.5,()=>{this.shift2d(0,1)})}).saveimg('example').once(); // slides all the pixels up 4`
 ---
@@ -1211,3 +1270,20 @@ For more examples, refer to the `examples/this.md` file.
 	- saves a PNG file in the `img/` directory named `fileName.png`, with the FacetPattern's spectrogram.
 	- example:
 		- `$('example').noise(n1).ffilter(_.ramp(0,NYQUIST/2),_.ramp(NYQUIST,NYQUIST/2)).spectro('mytri'+Date.now()).once();`
+---
+- **tri2d** ( _x1_, _y1_, _x2_, _y2_, _x3_, _y3_, _value_, _width_, _height_ = width )
+    - adds a triangle on top of the existing data in a FacetPattern.
+	- `x1`, `y1`, `x2`, `y2`, `x3`, and `y3` define the triangle's position in the 2d space.
+	- `value` is brightness value for the triangle normalized between 0 - 1.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating shapes inside non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
+    - example:
+        - `$('example').silence(1000000).tri2d(ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000),1).saveimg('tri2d'); // one random white triangle in a 1000x1000 image`
+---
+- **walk2d** ( _percentage_, _x_, _y_, _mode_ = 0, _width_, _height_ )
+    - generates a 2D random walk for the FacetPattern.
+	- `percentage` should be a float between 0 and 1 and controls the percentage of pixels to move.
+	- `x` and `y` control the maximum distance that a pixel can move. They should be non-negative integers (but random walks occur in both left/right AND up/down),
+	- `mode` controls the behavior of pixels at the boundary. A value of 0 is "wrap" mode; values move to the other side. A value of 1 is "fold" mode; values get folded back by however many they exeeded the boundary. A value of 2 is "clip" mode; values get stuck at the boundary.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating shapes inside non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
+    - example:
+        - `$('example').silence(1000000).rect2d(950, 950, 50, 50, 1).walk2d(0.5, 10, 10, 0).saveimg('walk2d'); // white square in bottom corner, 50% random walked by 10px in all 4 directions`
