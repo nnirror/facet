@@ -1279,6 +1279,13 @@ For more examples, refer to the `examples/this.md` file.
     - example:
         - `$('example').silence(1000000).tri2d(ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000),1).saveimg('tri2d'); // one random white triangle in a 1000x1000 image`
 ---
+- **warp2d** ( _warpX_, _warpY_, _warpIntensity_, _width_, _height_ )
+	- applies a warp effect to the FacetPattern, pulling it towards a given point in 2D space.
+	- `warpX` and `warpY` are the x and y coordinates of the warp point.
+	- `warpIntensity` should be a float between 0 and 1 and controls the intensity of the warp effect.
+	- the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. If generating shapes inside non-square images, make sure the `width` and `height` arguments here match the dimensions in the `saveimg()` method, or the data will be distorted.
+	- example: `$('example').silence(1000000).circle2d(100, 100, 100, 0.2).delay2d(20, 20, 0.98).iter(4,()=>{this.warp2d(ri(0,999),ri(0,999),rf())}).saveimg('warp2d'); // echoing circles warped to a random position in the 2d space`
+---
 - **walk2d** ( _percentage_, _x_, _y_, _mode_ = 0, _width_, _height_ )
     - generates a 2D random walk for the FacetPattern.
 	- `percentage` should be a float between 0 and 1 and controls the percentage of pixels to move.

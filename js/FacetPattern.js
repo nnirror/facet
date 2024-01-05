@@ -4573,17 +4573,56 @@ walk2d (percentage, x, y, mode = 0, width = Math.round(Math.sqrt(this.data.lengt
   return this;
 }
 
-delay2d(delayX, delayY, intensityDecay = 0.5, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
-  let delayedData = new Array(this.data.length).fill(0);
+warp2d(warpX, warpY, warpIntensity, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+  let warpedData = new Array(this.data.length).fill(0);
 
-  for (let delay = 0; delay < Math.abs(Math.max(delayX, delayY)); delay++) {
+  for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+          // calculate the distance from the current point to the warp point
+          let dx = warpX - col;
+          let dy = warpY - row;
+          let distance = Math.sqrt(dx * dx + dy * dy);
+
+          // calculate the warp factor based on the distance and the warp intensity
+          let warpFactor = warpIntensity * Math.exp(-distance / (width * warpIntensity)); // exponential decay
+
+          // calculate the new position after applying the warp effect
+          let warpedRow = row + dy * warpFactor;
+          let warpedCol = col + dx * warpFactor;
+
+          // clip the new position to the range [0, width) and [0, height)
+          warpedRow = Math.max(0, Math.min(height - 1, Math.round(warpedRow)));
+          warpedCol = Math.max(0, Math.min(width - 1, Math.round(warpedCol)));
+
+          // move the value to the new position in the warped array
+          let index = row * width + col;
+          let warpedIndex = warpedRow * width + warpedCol;
+          warpedData[warpedIndex] = this.data[index];
+      }
+  }
+
+  this.data = warpedData;
+  return this;
+}
+
+delay2d(delayX, delayY, intensityDecay = 0.5, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+  if (intensityDecay < 0 ) {
+    intensityDecay = 0;
+  }
+  if (intensityDecay > 1 ) {
+    intensityDecay = 1;
+  }
+  let delayedData = new Array(this.data.length).fill(0);
+  let totalDelays = Math.round(1 / (1 - intensityDecay));
+
+  for (let delay = 0; delay < totalDelays; delay++) {
+      let decayFactor = 1 - (intensityDecay * delay / totalDelays);
       for (let row = 0; row < height; row++) {
           for (let col = 0; col < width; col++) {
-              let delayedRow = ((row + delay * delayY) + height) % height;
-              let delayedCol = ((col + delay * delayX) + width) % width;
+              let delayedRow = delayY >= 0 ? ((row + delay * delayY) + height) % height : ((row - delay * Math.abs(delayY)) + height) % height;
+              let delayedCol = delayX >= 0 ? ((col + delay * delayX) + width) % width : ((col - delay * Math.abs(delayX)) + width) % width;
               let index = delayedRow * width + delayedCol;
-              delayedData[index] += this.data[row * width + col] * Math.pow(intensityDecay, delay);
-
+              delayedData[index] += this.data[row * width + col] * decayFactor;
               // clip the value at the current index to the range [0, 1]
               delayedData[index] = Math.max(0, Math.min(1, delayedData[index]));
           }
