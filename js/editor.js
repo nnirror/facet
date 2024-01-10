@@ -413,8 +413,7 @@ const socket = io.connect('http://localhost:3000', {
 
 socket.on('progress', (progress) => {
   $('#progress_bar').width(`${Math.round(progress*100)}%`);
-});
-
+})
 socket.on('bpm', (bpm) => {
   if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
     $('#bpm').val(`${bpm}`);

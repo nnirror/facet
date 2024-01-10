@@ -16,6 +16,10 @@ function choose (list) {
   return list[Math.floor(Math.random()*list.length)];
 }
 
+function decide () {
+  return Math.random() > 0.5 ? 1 : 0;
+}
+
 function cof (index) {
   return ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'F'][index%12];
 }

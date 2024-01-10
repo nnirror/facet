@@ -2552,6 +2552,7 @@ scaleLT1 (outMin, outMax, exponent = 1) {
     else if ( amt > 1 ) {
       amt = 1;
     }
+    amt = Math.pow(amt, 10);
     let sticky_sequence = [];
     let stuck_key;
     for (const [key, step] of Object.entries(this.data)) {
@@ -3294,6 +3295,158 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
+  slices2d(num_slices, command) {
+    let width = Math.round(Math.sqrt(this.data.length));
+    let height = width;
+    let root = Math.round(Math.sqrt(num_slices));
+    num_slices = root * root;
+    let segmentWidth = Math.ceil(width / Math.sqrt(num_slices));
+    let segmentHeight = Math.ceil(height / Math.sqrt(num_slices));
+    let segments = [];
+    let out_fp = Array(width).fill().map(() => Array(height).fill(new FacetPattern()));
+
+    this.current_total_slices = num_slices;
+    let i = this.current_iteration_number;
+    let iters = this.current_total_iterations;
+    command = command.toString();
+    command = command.replace(/this./g, 'current_slice.');
+    command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+  
+    for (let segment = 0; segment < num_slices; segment++) {
+      let startRow = (segment % root) * segmentHeight;
+      let startCol = Math.floor(segment / root) * segmentWidth;
+      let endRow = Math.min(height, startRow + segmentHeight);
+      let endCol = Math.min(width, startCol + segmentWidth);
+      let segmentData = [];
+  
+      for (let row = startRow; row < endRow; row++) {
+          for (let col = startCol; col < endCol; col++) {
+              segmentData.push(this.data[row * width + col]);
+          }
+      }
+      segments.push({data: segmentData, width: endCol - startCol, height: endRow - startRow});
+  }
+  
+  for (var s = 0; s < num_slices; s++) {
+      let current_slice = new FacetPattern().from(segments[s].data);
+      current_slice = eval(this.utils + command);
+  
+      let startRow = (s % root) * segmentHeight;
+      let startCol = Math.floor(s / root) * segmentWidth;
+  
+      for (let row = 0; row < segments[s].height; row++) {
+          if (startRow + row >= out_fp.length) {
+              continue;
+          }
+          for (let col = 0; col < segments[s].width; col++) {
+              let value = current_slice.data[row * segments[s].width + col];
+              if (isNaN(value)) {
+                  value = 0; // or some other default value
+              }
+              out_fp[startRow + row][startCol + col] = value;
+          }
+      }
+  }
+    this.data = out_fp.flat();
+    return this;
+}
+
+spectral (stretchFactor = 1) {
+  let width = Math.sqrt(this.data.length), height = Math.sqrt(this.data.length);
+  this.rotate(270);
+
+  // Double the width and height
+  width *= 2;
+  height *= 2;
+
+  let signal = [];
+  for (let y = 0; y < height; y++) {
+    let row = [];
+    for (let x = 0; x < width; x++) {
+      // Fill the upper half of the array with zeros
+      if (y >= height / 2 || x >= width / 2) {
+        row.push([0, 0]);
+      } else {
+        // treating each value of data as an amplitude of a frequency bin
+        let amplitude = this.data[y * width / 2 + x];
+        // assuming an arbitrary phase
+        let phase = 0;
+        row.push([amplitude, phase]);
+      }
+    }
+
+    // Stretch and interpolate the row
+    let stretchedRow = [];
+    for (let i = 0; i < row.length - 1; i++) {
+      for (let j = 0; j < stretchFactor; j++) {
+        let t = j / stretchFactor;
+        let interpolatedValue = (1 - t) * row[i][0] + t * row[i + 1][0];
+        stretchedRow.push([interpolatedValue, 0]);
+      }
+    }
+    // Add the last element of the row
+    stretchedRow.push(row[row.length - 1]);
+    row = stretchedRow;
+
+    let powerOfTwo = this.nextPowerOf2(row.length);
+    while (row.length < powerOfTwo) {
+      row.push([0, 0]);  // Padding with zeros
+    }
+
+    // Computing the IFFT for the given row
+    let ifftData = ifft(row);
+    // Interpreting the real component of the ifftData as the sound signal
+    let soundSignalForRow = ifftData.map(([real, imaginary]) => real);
+    signal = signal.concat(soundSignalForRow);
+  }
+  this.data = signal;
+  return this;
+}
+
+nextPowerOf2(n) {
+  let count = 0;
+
+  if (n && !(n & (n - 1)))
+      return n;
+
+  while( n != 0) {
+      n >>= 1;
+      count += 1;
+  }
+
+  return 1 << count;
+}
+
+grow2d(iterations, prob, threshold = 0, mode = 0) {
+  // convert to a 2D array
+  let size = Math.sqrt(this.data.length);
+  let data2d = [];
+  for (let i = 0; i < size; i++) {
+    data2d[i] = this.data.slice(i * size, i * size + size);
+  }
+
+  // loop through every value in 2D array _iterations_ number of times
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < size; i++) {
+      for (let j = 0; j < size; j++) {
+        let condition = (mode == 1 && data2d[i][j] > threshold) || (mode == 0 && data2d[i][j] < threshold);
+        if (condition) {
+          // set _prob_ adjacent values also to the current cell's value
+          for (let di = -1; di <= 1; di++) {
+            for (let dj = -1; dj <= 1; dj++) {
+              if (Math.random() < prob && i + di >= 0 && i + di < size && j + dj >= 0 && j + dj < size) {
+                data2d[i + di][j + dj] = data2d[i][j];
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  this.data = data2d.flat();
+  return this;
+}
+
   subrange(new_min, new_max, command) {
     if (typeof command != 'function') {
         throw `3rd argument must be a function, type found: ${typeof command}`;
@@ -3884,7 +4037,7 @@ rechunk (numChunks, probability = 1) {
     return this;
 }
 
-fgate(binThresholds) {
+fgate(binThresholds, invert = 0) {
   if (typeof binThresholds == 'number' || Array.isArray(binThresholds) === true) {
     binThresholds = new FacetPattern().from(binThresholds);
   }
@@ -3935,8 +4088,14 @@ fgate(binThresholds) {
       let magnitude_fp = new FacetPattern().from(Complex.computeMagnitudes(output)).scale(0,1);
       for (var a = 0; a < output.length; a++ ) {
         // look up bin's relative magnitude - if less than bin threshold, set to 0
-        if ( magnitude_fp.data[a] < binThreshold ) {
-          output[a] = new Complex.Complex(0,0);
+        if (invert) {
+          if (magnitude_fp.data[a] >= binThreshold) {
+            output[a] = new Complex.Complex(0,0);
+          }
+        } else {
+          if (magnitude_fp.data[a] < binThreshold) {
+            output[a] = new Complex.Complex(0,0);
+          }
         }
       }
       let ifftOutput = Complex.ifft(output);
@@ -4198,7 +4357,7 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
   }
 
-  spectro (filename, windowSize = 2048 ) {
+  savespectrogram (filename, windowSize = 2048 ) {
     // apply butterworth filter before sampling the signal
     let filter = this.butterworthFilter(2, SAMPLE_RATE/2);
     for (let i = 0; i < this.data.length; i++) {
@@ -4280,7 +4439,10 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
 }
 
-  saveimg (filename, rgbData, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
+  saveimg (filename = Date.now(), rgbData, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
+    if (typeof filename !== 'string') {
+      filename = filename.toString();
+    }
     width = Math.round(width);
     height = Math.round(height);
 
@@ -4343,9 +4505,9 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
   }
 
-  rotate (angle, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
-    width = Math.round(width);
-    height = Math.round(height);
+  rotate (angle) {
+    let width = Math.round(Math.sqrt(this.data.length));
+    let height = width;
 
     // Wrap the angle to be between 0 and 360
     angle = (angle + 360) % 360;
@@ -4425,7 +4587,9 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
      return this;
     }  
 
-  layer2d ( brightness_data, xCoords, yCoords, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length)) ) {
+  layer2d ( brightness_data, xCoords, yCoords) {
+    let width = Math.round(Math.sqrt(this.data.length));
+    let height = width;
     if ( !brightness_data ) {
       throw `layer2d() cannot be called without a brightness argument`;
     }
@@ -4478,7 +4642,9 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
   }
 
-  shift2d (x, y, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+  shift2d (x, y) {
+    let width = Math.round(Math.sqrt(this.data.length));
+    let height = width;
     // create a new array to hold the moved values
     let movedArr = new Array(this.data.length);
     // loop through each value in the original array
@@ -4497,7 +4663,9 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
 }
 
-circle2d(centerX, centerY, radius, value, width = Math.round(Math.sqrt(this.data.length)), height = width) {
+circle2d(centerX, centerY, radius, value) {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
   for (let i = 0; i < height * width; i++) {
       let row = Math.floor(i / width);
       let col = i % width;
@@ -4512,7 +4680,58 @@ circle2d(centerX, centerY, radius, value, width = Math.round(Math.sqrt(this.data
   return this;
 }
 
-rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, width = Math.round(Math.sqrt(this.data.length)), height = width) {
+draw2d(coordinates, fillValue) {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
+  if (fillValue === undefined) {
+    throw new Error("fillValue is required for draw2d.");
+  }
+  if (coordinates.length % 2 !== 0) {
+    throw new Error("Invalid number of coordinates for draw2d. The array length must be divisible by 2.");
+  }
+
+  // create a 2D array with the dimensions of the polygon
+  let polygon = new Array(height).fill(null).map(() => new Array(width).fill(0));
+  let points = [];
+  for (let i = 0; i < coordinates.length; i += 2) {
+    points.push({x: coordinates[i], y: coordinates[i + 1]});
+  }
+
+  // process each pair of points
+  for (let i = 0; i < points.length - 1; i++) {
+    let start = points[i];
+    let end = points[i + 1];
+
+    // check if the points are within the bounds of the polygon
+    if (start.x < 0 || start.x >= width || end.x < 0 || end.x >= width || start.y < 0 || start.y >= height || end.y < 0 || end.y >= height) {
+      throw new Error(`Coordinates (${start.x}, ${start.y}) or (${end.x}, ${end.y}) are out of bounds.`);
+    }
+
+    // fill the line between the points with the fill value
+    let dx = Math.abs(end.x - start.x);
+    let dy = Math.abs(end.y - start.y);
+    let sx = (start.x < end.x) ? 1 : -1;
+    let sy = (start.y < end.y) ? 1 : -1;
+    let err = dx - dy;
+
+    while(true){
+      polygon[start.y][start.x] = fillValue;
+
+      if ((start.x === end.x) && (start.y === end.y)) break;
+      let e2 = 2*err;
+      if (e2 > -dy) { err -= dy; start.x  += sx; }
+      if (e2 < dx) { err += dx; start.y += sy; }
+    }
+  }
+
+  // wpdate the data property with the new polygon
+  this.data = polygon.flat();
+  return this;
+}
+
+rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value) {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
   for (let i = 0; i < height * width; i++) {
       let row = Math.floor(i / width);
       let col = i % width;
@@ -4525,7 +4744,9 @@ rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, width = Math.round(Math
   return this;
 }
 
-tri2d(x1, y1, x2, y2, x3, y3, value, width = Math.round(Math.sqrt(this.data.length)), height = width) {
+tri2d(x1, y1, x2, y2, x3, y3, value) {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
   for (let i = 0; i < height * width; i++) {
       let row = Math.floor(i / width);
       let col = i % width;
@@ -4543,22 +4764,28 @@ tri2d(x1, y1, x2, y2, x3, y3, value, width = Math.round(Math.sqrt(this.data.leng
   return this;
 }
 
-palindrome2d(width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
-  let mirroredData = [];
+palindrome2d() {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
+  let newWidth = width * 2;
+  let newHeight = height * 2;
+  let mirroredData = new Array(newWidth * newHeight).fill(0);
 
-  for (let row = 0; row < height; row++) {
-      for (let col = 0; col < width; col++) {
-          let mirroredRow = row < height / 2 ? row : height - row - 1;
-          let mirroredCol = col < width / 2 ? col : width - col - 1;
-          mirroredData[row * width + col] = this.data[mirroredRow * width + mirroredCol];
-      }
+  for (let row = 0; row < newHeight; row++) {
+    for (let col = 0; col < newWidth; col++) {
+      let originalRow = row < height ? row : newHeight - row - 1;
+      let originalCol = col < width ? col : newWidth - col - 1;
+      mirroredData[row * newWidth + col] = this.data[originalRow * width + originalCol];
+    }
   }
 
   this.data = mirroredData;
   return this;
 }
 
-walk2d (percentage, x, y, mode = 0, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+walk2d (percentage, x, y, mode = 0) {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
   let movedArr = [...this.data]; // copy the original data
   let numToMove = Math.floor(percentage * this.data.length);
 
@@ -4605,7 +4832,9 @@ walk2d (percentage, x, y, mode = 0, width = Math.round(Math.sqrt(this.data.lengt
   return this;
 }
 
-warp2d(warpX, warpY, warpIntensity, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+warp2d(warpX, warpY, warpIntensity) {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
   let warpedData = new Array(this.data.length).fill(0);
 
   for (let row = 0; row < height; row++) {
@@ -4637,7 +4866,9 @@ warp2d(warpX, warpY, warpIntensity, width = Math.round(Math.sqrt(this.data.lengt
   return this;
 }
 
-delay2d(delayX, delayY, intensityDecay = 0.5, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(this.data.length / width)) {
+delay2d(delayX, delayY, intensityDecay = 0.5) {
+  let width = Math.round(Math.sqrt(this.data.length));
+  let height = width;
   if (intensityDecay < 0 ) {
     intensityDecay = 0;
   }
@@ -4740,33 +4971,29 @@ delay2d(delayX, delayY, intensityDecay = 0.5, width = Math.round(Math.sqrt(this.
   }
 
   size2d ( size ) {
-    let original_size = this.data.length;
+    if (size <= 0 || size > 1) {
+        throw new Error('size2d() requires a size between 0 and 1');
+    }
+
     // Calculate the dimensions of the square
     let squareSize = Math.ceil(Math.sqrt(this.data.length));
-    let padding = 0;
-    if (size > 1 || size < 0 )  {
-      throw new Error('size2d() requires a size between 0 and 1');
-    }
-    padding = (1 - size) / 2;
+    let newSize = Math.floor(squareSize * size);
 
     // Create the 2D square array
     let square = [];
-    for (let i = 0; i < squareSize; i++) {
+    for (let i = 0; i < newSize; i++) {
         let row = [];
-        for (let j = 0; j < squareSize; j++) {
-            if (i < padding*squareSize || i >= squareSize - padding*squareSize || j < padding*squareSize || j >= squareSize - padding*squareSize) {
-                row.push(0);
-            } else {
-                let index = Math.floor((i - padding*squareSize) * (squareSize - 2 * padding*squareSize) + (j - padding*squareSize));
-                row.push(this.data[index]);
-            }
+        for (let j = 0; j < newSize; j++) {
+            // Use linear interpolation to find the corresponding index in the original data
+            let index = Math.floor((i / newSize) * squareSize) * squareSize + Math.floor((j / newSize) * squareSize);
+            row.push(this.data[index]);
         }
         square.push(row);
     }
     this.data = square;
     this.flatten();
     return this;
-  }
+}
 
 }
 module.exports = FacetPattern;

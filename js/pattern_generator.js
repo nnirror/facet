@@ -27,6 +27,18 @@ let cross_platform_move_command = process.platform == 'win32' ? 'move \/y' : 'mv
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 process.title = 'facet_pattern_generator';
 
+// Log uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('There was an uncaught error', err);
+  process.exit(1);
+});
+
+// Log unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 axios.interceptors.request.use(request => {
     request.maxContentLength = Infinity;
     request.maxBodyLength = Infinity;
@@ -222,7 +234,7 @@ app.post('/meta', (req, res) => {
 });
 
 app.post('/autocomplete', (req, res) => {
-  let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1"]
+  let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1", "nextPowerOf2"]
   let all_methods = getAllFuncs(new FacetPattern());
   let available_methods = []
   for (var i = 0; i < all_methods.length; i++) {
@@ -323,9 +335,12 @@ function getCpuUsage () {
 }
 
 function postToTransport (fp) {
+  // remove this.data as it's not needed in the transport and is potentially huge
+  let fpCopy = { ...fp };
+  delete fpCopy.data;
   axios.post('http://localhost:3211/update',
     {
-      pattern: JSON.stringify(fp)
+      pattern: JSON.stringify(fpCopy)
     }
   )
   .catch(function (error) {
@@ -341,9 +356,12 @@ function startTransport () {
 }
 
 function postMetaDataToTransport (fp,data_type) {
+  // remove this.data as it's not needed in the transport and is potentially huge
+  let fpCopy = { ...fp };
+  delete fpCopy.data;
   axios.post('http://localhost:3211/meta',
     {
-      pattern: JSON.stringify(fp),
+      pattern: JSON.stringify(fpCopy),
       type: data_type
     }
   )
