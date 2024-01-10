@@ -1306,7 +1306,7 @@ For more examples, refer to the `examples/this.md` file.
         - `$('example').noise(1000000).slices2d(36,()=>{this.times(rf())}).saveimg('slices2d').once();;`
 ---
 - **spectral** ( _stretchFactor_ = 1 )
-    - applies a spectral transformation to the FacetPattern, treating it as if it were a 2d spectrogra and applying an Inverse Fourier Fast Transfrom (IFFT).
+    - applies a spectral transformation to the FacetPattern, treating it as if it were a 2d spectrogram and applying an Inverse Fourier Fast Transform (IFFT).
 	- this allows you to generate, interpret, and resynthesize a frequency-domain representation into sound.
     - the `stretchFactor` parameter determines how much the pattern is stretched horizontally before the IFFT is applied. The default value is 1, which means no stretching. Each row of the pattern is then stretched by the `stretchFactor`. This is done by linearly interpolating between each pair of consecutive values in the row.
     - example:
