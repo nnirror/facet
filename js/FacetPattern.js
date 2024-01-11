@@ -3400,6 +3400,7 @@ spectral (stretchFactor = 1) {
     signal = signal.concat(soundSignalForRow);
   }
   this.data = signal;
+  this.range(0,0.5);
   return this;
 }
 
@@ -4701,7 +4702,7 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
 }
 
-circle2d(centerX, centerY, radius, value) {
+circle2d(centerX, centerY, radius, value, mode = 0) {
   let width = Math.round(Math.sqrt(this.data.length));
   let height = width;
   for (let i = 0; i < height * width; i++) {
@@ -4710,8 +4711,9 @@ circle2d(centerX, centerY, radius, value) {
       // calculate distance from the current position to the center point
       let distance = Math.sqrt(Math.pow(col - centerX, 2) + Math.pow(row - centerY, 2));
 
-      // if the distance is less than or equal to the radius, set the value at the current position to 1
-      if (distance <= radius) {
+      // if mode is 0, only draw the outline by checking if the distance is close to the radius
+      // if mode is 1, fill the circle by checking if the distance is less than or equal to the radius
+      if ((mode === 0 && Math.abs(distance - radius) < 1) || (mode === 1 && distance <= radius)) {
           this.data[i] = value;
       }
   }
@@ -4785,7 +4787,7 @@ rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
   return this;
 }
 
-tri2d(x1, y1, x2, y2, x3, y3, value) {
+tri2d(x1, y1, x2, y2, x3, y3, value, mode = 0) {
   let width = Math.round(Math.sqrt(this.data.length));
   let height = width;
   for (let i = 0; i < height * width; i++) {
@@ -4797,8 +4799,9 @@ tri2d(x1, y1, x2, y2, x3, y3, value) {
       let w2 = ((y3 - y1) * (col - x3) + (x1 - x3) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
       let w3 = 1 - w1 - w2;
 
-      // if the current position is within the triangle, set the value at the current position to the specified value
-      if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+      // if mode is 0, only draw the outline by checking if the point is close to one of the edges
+      // if mode is 1, fill the triangle by checking if the point is within the triangle
+      if ((mode === 0 && (Math.abs(w1) < 0.05 || Math.abs(w2) < 0.05 || Math.abs(w3) < 0.05)) || (mode === 1 && w1 >= 0 && w2 >= 0 && w3 >= 0)) {
           this.data[i] = value;
       }
   }

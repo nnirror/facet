@@ -1225,12 +1225,12 @@ For more examples, refer to the `examples/this.md` file.
 
 **NOTE:** 2D images are expected to have sizes that are a perfect square. This means that the width and height of the produced image are integers. Some methods will produce distorted output or throw errors if you try to run them with patterns that are not perfect squares.
 
-- **circle2d** ( _centerX_, _centerY_, _radius_, _value_, _fillMode_ )
+- **circle2d** ( _centerX_, _centerY_, _radius_, _value_, _fillMode_ = 0 )
     - adds a circle on top of the existing data in a FacetPattern.
 	- `centerX` and `centerY` are the x,y coordinates of the center of the circle.
 	- `radius` controls the radius of the circle.
 	- `value` is brightness value for the circle normalized between 0 - 1.
-	- `fillMode` controls whether the inside of the shape is filled in with `value` or ignored.
+	- `fillMode` (0 or 1) controls whether the inside of the shape is filled in with `value` or ignored. Default is no fill.
     - example:
 		- `$('example').silence(1000000).circle2d(100,100,100,1).saveimg('example_circle'); // white circle in a 1000x1000 image`
         - `$('example').silence(1000000).circle2d(100,100,100,1,1250,800).saveimg('example_circle',[1,1,1],1250,800); // white circle in a 1250x800 image`
@@ -1282,12 +1282,12 @@ For more examples, refer to the `examples/this.md` file.
 	- example:
 		`$('example').sine(0.3,1000).scale(0,1).rechunk2d(36).saveimg('example').once();`
 ---
-- **rect2d** ( _topLeftX_, _topLeftY_, _rectWidth_, _rectHeight_, _value_, _fillMode_ )
+- **rect2d** ( _topLeftX_, _topLeftY_, _rectWidth_, _rectHeight_, _value_, _fillMode_ = 0 )
     - adds a rectangle on top of the existing data in a FacetPattern.
 	- `topLeftX` and `topLeftY` are the x,y coordinates of the top-left corner of the rectangle.
 	- `rectWidth` and `rectHeight` control the size of the rectangle.
 	- `value` is brightness value for the rectamgle normalized between 0 - 1.
-	- `fillMode` controls whether the inside of the shape is filled in with `value` or ignored.
+	- `fillMode` (0 or 1) controls whether the inside of the shape is filled in with `value` or ignored. Default is no fill.
     - example:
         - `$('example').silence(1000000).rect2d(0,0,100,100,1).saveimg('rect2d'); // 100x100 white square in top-left corner of 1000x1000 image`
 ---
@@ -1360,11 +1360,11 @@ For more examples, refer to the `examples/this.md` file.
     - example:
         - `$('example').silence(1000000).iter(16,()=>{this.circle2d(ri(0,999),ri(0,999),ri(0,100),rf())}).spectral().play().full().once(); // 16 circles randomly dispersed and superposed around the audio spectrum`
 ---
-- **tri2d** ( _x1_, _y1_, _x2_, _y2_, _x3_, _y3_, _value_, _fillMode_ )
+- **tri2d** ( _x1_, _y1_, _x2_, _y2_, _x3_, _y3_, _value_, _fillMode_ = 0 )
     - adds a triangle on top of the existing data in a FacetPattern.
 	- `x1`, `y1`, `x2`, `y2`, `x3`, and `y3` define the triangle's position in the 2d space.
 	- `value` is brightness value for the triangle normalized between 0 - 1.
-	- `fillMode` controls whether the inside of the shape is filled in with `value` or ignored.
+	- `fillMode` (0 or 1) controls whether the inside of the shape is filled in with `value` or ignored. Default is no fill.
     - example:
         - `$('example').silence(1000000).tri2d(ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000),1).saveimg('tri2d'); // one random white triangle in a 1000x1000 image`
 ---
