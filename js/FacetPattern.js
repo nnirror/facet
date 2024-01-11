@@ -3417,6 +3417,39 @@ nextPowerOf2(n) {
   return 1 << count;
 }
 
+markov(states) {
+  states.forEach(state => {
+    let totalProb = 0;
+    for (let prob in state.probs) {
+      totalProb += state.probs[prob];
+    }
+    for (let prob in state.probs) {
+      state.probs[prob] /= totalProb;
+    }
+    state.transition = function() {
+      let rand = Math.random();
+      let cumulativeProb = 0;
+      for (let nextState in this.probs) {
+        cumulativeProb += this.probs[nextState];
+        if (rand < cumulativeProb) {
+          return nextState;
+        }
+      }
+    }
+  });
+
+  this.data = this.data.map(value => {
+    let state = states.find(state => state.value === value);
+    if (!state) {
+      throw new Error(`No state found in markov() for value: ${value}`);
+    }
+    let newStateName = state.transition();
+    let newState = states.find(state => state.name === newStateName);
+    return newState.value;
+  });
+  return this;
+}
+
 grow2d(iterations, prob, threshold = 0, mode = 0) {
   // convert to a 2D array
   let size = Math.sqrt(this.data.length);
@@ -3505,6 +3538,7 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
   }
 
   seq ( seqArg, operations ) {
+    this.data = [];
     let seqPattern = [];
     if ( operations && typeof operations != 'function' ) {
       throw `2nd argument must be a function, type found: ${typeof operations}`;
@@ -3519,8 +3553,12 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
       // string
       seqPattern = seqArg.split(/\s+/);
     }
+    else if (Array.isArray(seqArg) && typeof seqArg[0] == 'string') {
+      // array of strings
+      seqPattern = seqArg.join(' ').split(/\s+/);
+    }
     else {
-      throw `1st argument to seq must be a string of Facetpattern; type found: ${typeof seqArg}`;
+      throw `1st argument to seq must be a string or Facetpattern; type found: ${typeof seqArg}`;
     }
     for (let i = 0; i < seqPattern.length; i++) {
       let currentSampleName = seqPattern[i];
@@ -4357,7 +4395,7 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
   }
 
-  savespectrogram (filename, windowSize = 2048 ) {
+  savespectrogram (filename = Date.now(), windowSize = 2048 ) {
     // apply butterworth filter before sampling the signal
     let filter = this.butterworthFilter(2, SAMPLE_RATE/2);
     for (let i = 0; i < this.data.length; i++) {
@@ -4729,15 +4767,18 @@ draw2d(coordinates, fillValue) {
   return this;
 }
 
-rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value) {
+rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
   let width = Math.round(Math.sqrt(this.data.length));
   let height = width;
   for (let i = 0; i < height * width; i++) {
       let row = Math.floor(i / width);
       let col = i % width;
 
-      // if the current position is within the rectangle, set the value at the current position to the specified value
-      if (col >= topLeftX && col < topLeftX + rectWidth && row >= topLeftY && row < topLeftY + rectHeight) {
+      // if mode is 0, only draw the outline by checking if the point is on the edge of the rectangle
+      // if mode is 1, fill the rectangle by checking if the point is within the rectangle
+      if ((mode === 0 && ((col === topLeftX || col === topLeftX + rectWidth - 1) && row >= topLeftY && row < topLeftY + rectHeight) || 
+                          ((row === topLeftY || row === topLeftY + rectHeight - 1) && col >= topLeftX && col < topLeftX + rectWidth)) || 
+          (mode === 1 && col >= topLeftX && col < topLeftX + rectWidth && row >= topLeftY && row < topLeftY + rectHeight)) {
           this.data[i] = value;
       }
   }

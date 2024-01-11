@@ -366,7 +366,7 @@ This can be useful when you want to access the same pattern across multiple comm
 	- example:
 		- `$('example').noise(32).scale(30,80).sort().key('f# ' + randscale()).note(); // random scale in f#`
 
-### FacetPattern generators that can take a FacetPattern, number, or array as an argument
+### FacetPattern generators that can take a FacetPattern, number, array, or object as an argument
 When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').sine(440).play();`, the output is a static 440Hz wave. But with the command `$('example').sine(_.sine(5).scale(20,2000))).play();`, the frequency of the sine wave is being modulated by a 5 Hz sine wave which is generating values between 20 and 2000. This produces a classic frequency modulation sound, but since you can supply any FacetPattern as an argument, there are lots of sound design possibilities.
 
 - **sine** ( _frequencyPattern_, _duration_ = sample_rate, _samplerate_ = sample_rate, _fade_in_and_out_ = true )
@@ -394,6 +394,52 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').circle(440,n4).play(); // 440 Hz cosine wave for a quarter note`
 		- `$('example').noise(n1).times(_.circle(4)).play().once(); // amplitude modulation of noise with a quarter note circular waveform`
 		- `$('example').noise(n1).ffilter(_.circle(1).invert().size(128).scale(0, NYQUIST/2),_.circle(1).size(128).scale(NYQUIST / 2, NYQUIST)).play().once(); // circular spectral filtering of a whole note of noise`
+---
+- **markov** ( _states_ = [{name, value, probs}, {name, value, probs}, ...] )
+    - modifies the input FacetPattern according to a Markov chain. The `states` parameter is an array where each entry is an object representing a state. Each state object has a `name`, a `value` that corresponds to a value in `this.data`, and a `probs` object that defines the transition probabilities to other states.
+    - The method modifies `this.data` by transitioning each value to a new state based on the probabilities defined in the `states` array. The transition probabilities are normalized so that they add up to 1 for each state.
+    - Example: 
+    ```javascript
+    $('example')
+  .iter(choose([3,4,8]), () => {
+    this.prepend(_.from(['k*', 'h*', 's*', 'h*', '_', '_','_', '_'])
+      .markov([{
+          name: "state1",
+          value: 'k*',
+          probs: {
+            "state1": 0.8,
+            "state2": 0.5,
+            "state3": 0.5
+          }
+        },
+        {
+          name: "state2",
+          value: 'h*',
+          probs: {
+            "state3": 1
+          }
+        },
+        {
+          name: "state3",
+          value: 's*',
+          probs: {
+            "state1": 1
+          }
+        },
+		{
+          name: "state4",
+          value: '_',
+          probs: {
+            "state1": 0.5,
+			"state4": 0.5
+          }
+        }
+      ]))
+  })
+  .run(() => {
+    this.seq(this.data)
+  }).play();
+  ```
 ---
 - **phasor** ( _frequencyPattern_, _duration_ = 1 second, _samplerate_ = default_sample_rate, _fade_in_and_out_ = true )
 	- generates a phasor wave at `frequencyPattern` Hertz, lasting for `duration` samples, at the sample rate defined by `samplerate`.
@@ -1179,11 +1225,12 @@ For more examples, refer to the `examples/this.md` file.
 
 **NOTE:** 2D images are expected to have sizes that are a perfect square. This means that the width and height of the produced image are integers. Some methods will produce distorted output or throw errors if you try to run them with patterns that are not perfect squares.
 
-- **circle2d** ( _centerX_, _centerY_, _radius_, _value_ )
+- **circle2d** ( _centerX_, _centerY_, _radius_, _value_, _fillMode_ )
     - adds a circle on top of the existing data in a FacetPattern.
 	- `centerX` and `centerY` are the x,y coordinates of the center of the circle.
 	- `radius` controls the radius of the circle.
 	- `value` is brightness value for the circle normalized between 0 - 1.
+	- `fillMode` controls whether the inside of the shape is filled in with `value` or ignored.
     - example:
 		- `$('example').silence(1000000).circle2d(100,100,100,1).saveimg('example_circle'); // white circle in a 1000x1000 image`
         - `$('example').silence(1000000).circle2d(100,100,100,1,1250,800).saveimg('example_circle',[1,1,1],1250,800); // white circle in a 1250x800 image`
@@ -1235,11 +1282,12 @@ For more examples, refer to the `examples/this.md` file.
 	- example:
 		`$('example').sine(0.3,1000).scale(0,1).rechunk2d(36).saveimg('example').once();`
 ---
-- **rect2d** ( _topLeftX_, _topLeftY_, _rectWidth_, _rectHeight_, _value_ )
+- **rect2d** ( _topLeftX_, _topLeftY_, _rectWidth_, _rectHeight_, _value_, _fillMode_ )
     - adds a rectangle on top of the existing data in a FacetPattern.
 	- `topLeftX` and `topLeftY` are the x,y coordinates of the top-left corner of the rectangle.
 	- `rectWidth` and `rectHeight` control the size of the rectangle.
 	- `value` is brightness value for the rectamgle normalized between 0 - 1.
+	- `fillMode` controls whether the inside of the shape is filled in with `value` or ignored.
     - example:
         - `$('example').silence(1000000).rect2d(0,0,100,100,1).saveimg('rect2d'); // 100x100 white square in top-left corner of 1000x1000 image`
 ---
@@ -1312,10 +1360,11 @@ For more examples, refer to the `examples/this.md` file.
     - example:
         - `$('example').silence(1000000).iter(16,()=>{this.circle2d(ri(0,999),ri(0,999),ri(0,100),rf())}).spectral().play().full().once(); // 16 circles randomly dispersed and superposed around the audio spectrum`
 ---
-- **tri2d** ( _x1_, _y1_, _x2_, _y2_, _x3_, _y3_, _value_ )
+- **tri2d** ( _x1_, _y1_, _x2_, _y2_, _x3_, _y3_, _value_, _fillMode_ )
     - adds a triangle on top of the existing data in a FacetPattern.
 	- `x1`, `y1`, `x2`, `y2`, `x3`, and `y3` define the triangle's position in the 2d space.
 	- `value` is brightness value for the triangle normalized between 0 - 1.
+	- `fillMode` controls whether the inside of the shape is filled in with `value` or ignored.
     - example:
         - `$('example').silence(1000000).tri2d(ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000), ri(0,1000),1).saveimg('tri2d'); // one random white triangle in a 1000x1000 image`
 ---
