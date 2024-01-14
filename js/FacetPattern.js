@@ -3080,24 +3080,62 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
-  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 1) {
+  note2d ( velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 1, lowNote = 0, highNote = 127 ) {
+    this.clip(0,1);
+    this.replace(0,-1);
+    let original_data = this.data;
+    const size = Math.sqrt(this.data.length);
+    let frequency_range = (highNote - lowNote) / size;
+    let current_max_freq = highNote;
+    // check if the data can form a perfect square
+    if (size % 1 !== 0) {
+        throw new Error('note2d() must use that data length that is a perfect square');
+    }
+    // process the data in columns
+    for (let i = 0; i < size; i++) {
+        let column = [];
+        for (let j = 0; j < size; j++) {
+            column.push(original_data[j * size + i]);
+        }
+        this.data = column;
+        // scale the data to the current frequency range
+        this.times(current_max_freq);
+        current_max_freq = Math.floor(Math.max(current_max_freq - frequency_range, lowNote));
+        // ensure current_max_freq doesn't go below lowNote
+        this.data = this.data.map(value => Object.is(value, -0) ? -1 : value)
+        // call note() for each column
+        this.note(velocity, duration, channel, new FacetPattern().ramp(0,1,size));
+    }
+    this.data = original_data;
+    return this;
+  }
+
+  note (velocity = new FacetPattern().from(100), duration = new FacetPattern().from(125), channel = 1, position) {
     if ( typeof velocity == 'number' || Array.isArray(velocity) === true ) {
       velocity = new FacetPattern().from(velocity);
     }
     if ( typeof duration == 'number' || Array.isArray(duration) === true ) {
       duration = new FacetPattern().from(duration);
     }
+    if (position === undefined) {
+      position = new FacetPattern().ramp(0,1,this.data.length);
+    }
+    if ( typeof position == 'number' || Array.isArray(position) === true ) {
+      position = new FacetPattern().from(position);
+    }
     if ( typeof channel != 'number' ) {
       throw `3rd argument to .note(): channel must be a number; type found: ${typeof channel}`;
     }
     velocity.size(this.data.length);
     duration.size(this.data.length);
+    position.size(this.data.length);
     for (const [key, step] of Object.entries(this.data)) {
       this.notes.push({
         note:step,
         velocity:velocity.data[key],
         duration:duration.data[key],
-        channel:channel
+        channel:channel,
+        position:position.data[key]
       });
     }
     return this;

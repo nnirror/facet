@@ -185,13 +185,25 @@ You might need to activate a MIDI driver on your machine in order to send MIDI f
 
 You need to connect the MIDI device you want to use before starting Facet.
 
-- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1 )
+- **note** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1, _PositionPattern_ )
 	- sends a MIDI note on/off pair for every value in the FacetPattern's data.
-	- The `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
-	- The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
+	- the `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
+	- the `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
+	- the `PositionPattern` argument is optional. When not supplied, the positions will calculate automatically and spread pattern data across the entire whole note, playing the first value in the data at relative position 0, and playing the last value in the data at relative position 1. By supplying a `PositionPattern`, you can program when each note should play.
 	- example:
 		- `$('example').sine(1,32).scale(36,90).round().note();`
 		- `$('example').sine(1,ri(32,100)).scale(36,ri(52,100)).prob(rf()).nonzero().round().note();`
+		- `$('example').noise(16).scale(60,80).sort().note(100,125,1,_.ramp(0,0.25,16)); // play all notes during the first 25% of the whole note`
+---
+- **note2d** ( _VelocityPattern_ = 100, _DurationPattern_ = 125, _channel_ = 1, _lowNote_ = 0, _highNote_ = 127 )
+    - sends a MIDI note on/off pair for every value in the FacetPattern's data, arranged as if it were a square 2D grid.
+	- for more information on generating 2D patterns, see the `Methods for image generation and processing` section further below in the README document.
+    - the `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
+    - the `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
+    - the `lowNote` and `highNote` arguments define the range of MIDI notes that can be played. By default, this range is from 0 (inclusive) to 127 (inclusive).
+    - The data length must be a perfect square, as it is processed in columns to form a 2D grid of notes.
+    - Example:
+        - `$('example').silence(2500).circle2d(25,25,25,1).saveimg().note2d(100,125,1,30,80).once(); // saves 50x50 image with a circle in the middle; then plays that circle shape between the MIDI notes 30 and 80`
 ---
 - **cc** ( _controller_number_ = 70, _channel_ = 1 )
 	- sends a MIDI cc event bound to controller # `controller_number` for every value in the FacetPattern's data.

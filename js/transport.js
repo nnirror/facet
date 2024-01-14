@@ -372,7 +372,7 @@ function applyNextPatterns () {
         if ( note_data.note >= 0 ) {
           event_register[facet_pattern_name].push(
             {
-              position: (i/posted_pattern.notes.length),
+              position: note_data.position,
               type: "note",
               data: note_data,
               play_once: posted_pattern.play_once,
@@ -395,7 +395,7 @@ function applyNextPatterns () {
   
             event_register[facet_pattern_name].push(
               {
-                position: (i/posted_pattern.notes.length),
+                position: note_data.position,
                 type: "note",
                 data: {
                   note: note_to_add,
