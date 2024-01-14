@@ -356,12 +356,9 @@ function startTransport () {
 }
 
 function postMetaDataToTransport (fp,data_type) {
-  // remove this.data as it's not needed in the transport and is potentially huge
-  let fpCopy = { ...fp };
-  delete fpCopy.data;
   axios.post('http://localhost:3211/meta',
     {
-      pattern: JSON.stringify(fpCopy),
+      pattern: JSON.stringify(fp),
       type: data_type
     }
   )
