@@ -3313,7 +3313,10 @@ rechunk (numChunks, probability = 1) {
       slice_end_pos = slice_start_pos + calc_slice_size;
       current_slice = new FacetPattern().from(this.data).range(slice_start_pos/this.data.length, slice_end_pos/this.data.length);
       if ( Math.random() < prob ) {
-        current_slice = eval(this.utils + command);
+        current_slice = eval(this.env + this.utils + command);
+        current_slice.notes.forEach(n => {
+          this.notes.push(n);
+        });
       }
       if (this.data.length >= 1024 && yes_fade == true) {
         out_fp.sup(current_slice.fadeout(0.01),s/num_slices,this.data.length);
@@ -3367,7 +3370,10 @@ rechunk (numChunks, probability = 1) {
   
   for (var s = 0; s < num_slices; s++) {
       let current_slice = new FacetPattern().from(segments[s].data);
-      current_slice = eval(this.utils + command);
+      current_slice = eval(this.env + this.utils + command);
+      current_slice.notes.forEach(n => {
+        this.notes.push(n);
+      });
   
       let startRow = (s % root) * segmentHeight;
       let startCol = Math.floor(s / root) * segmentWidth;
@@ -3551,7 +3557,7 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
     command = command.toString();
     command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
-    eval(this.utils + command);
+    eval(this.env + this.utils + command);
 
     beforeData.append(this).sup(afterData,new_max,originalFrameSize);
     this.data = beforeData.data;
@@ -3571,7 +3577,7 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
     let s = this.current_slice_number;
     let num_slices = this.current_total_slices;
     if ( Math.random() < prob ) {
-      eval(this.utils + command);
+      eval(this.env + this.utils + command);
     }
     return this;
   }
