@@ -2179,7 +2179,8 @@ f
 
   scale (outMin, outMax, exponent = 1) {
     if ( this.data.length == 1 ) {
-      return (outMin + outMax) / 2;
+      this.data = (outMin + outMax) / 2;
+      return this;
     }
     if (exponent > 1 ) {
       let inMin = this.minimum();
