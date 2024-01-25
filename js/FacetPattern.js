@@ -2473,7 +2473,7 @@ scaleLT1 (outMin, outMax, exponent = 1) {
     if (typeof chunksPerSecond == 'number' || Array.isArray(chunksPerSecond) === true) {
         chunksPerSecond = new FacetPattern().from(chunksPerSecond);
     }
-    stretchFactors.size(this.data.length);
+    stretchFactors.size(this.data.length).clip(0.001,16);
     chunksPerSecond.clip(1, Math.round(SAMPLE_RATE / (SAMPLE_RATE * .002)-2)).size(this.data.length);
     let outputArray = [];
     let skip_every = 0;
@@ -3193,13 +3193,7 @@ rechunk (numChunks, probability = 1) {
     if ( Array.isArray(sequence) === false ) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
-    let out_fp = new FacetPattern();
-    let copy_fp = new FacetPattern().from(this.data);
-    Object.values(sequence).forEach(s => {
-      out_fp.sup(copy_fp,s);
-    });
-    this.data = out_fp.data;
-    this.sequence_data = [0];
+    this.sequence_data = sequence;
     return this;
   }
 

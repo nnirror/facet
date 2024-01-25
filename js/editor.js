@@ -400,6 +400,7 @@ setInterval(() => {
 $('#bpm').val(90);
 
 let voices = [];
+const NUM_VOICES = 16;
 let sources = [];
 let ac;
 ac = new AudioContext();
@@ -420,7 +421,7 @@ socket.on('bpm', (bpm) => {
   }
   if ( browser_sound_output === true ) {
     // adjust the playback speed of all voices
-    for (let i = 1; i <= 16; i++) {
+    for (let i = 1; i <= NUM_VOICES; i++) {
       if (voices[i] && sources[i]) {
           let current_bpm = $('#bpm').val();
           let voice_bpm = voices[i].bpm;
@@ -435,6 +436,7 @@ socket.on('play', (voice_to_play) => {
   if ( browser_sound_output === true ) {
     // check if the voice is loaded
     if (voices[voice_to_play]) {
+      delete sources[voice_to_play];
       let source = ac.createBufferSource();
       source.buffer = voices[voice_to_play].buffer;
       let current_bpm = $('#bpm').val();

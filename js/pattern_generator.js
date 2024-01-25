@@ -82,7 +82,7 @@ module.exports = {
 
             if ( fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false ) {
               // and only add to reruns the first time the code is POSTed and runs successfully
-              reruns[fp.name]  = fp;
+              reruns[fp.name] = fp;
             }
             if (reruns[fp.name]) {
               reruns[fp.name].available_for_next_request = true;

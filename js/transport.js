@@ -16,12 +16,12 @@ const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: 
 udp_osc_server.open({ port: 2134 });
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 const server = http.createServer(app);
+const VOICES = 16;
 let bars_elapsed = 0;
 let bpm = 90;
 let prev_bpm = 90;
 let voice_number_to_load = 1;
 let browser_sound_output = true;
-let VOICES = 16;
 let voice_allocator = initializeVoiceAllocator();
 let voices_to_send_to_browser = [];
 let patterns_for_next_loop = {};
@@ -260,7 +260,7 @@ function tick() {
               let pre_send_delay_ms = 0;
               // if the /play message is sent less than 100ms after the /load message, the file might not have finished
               //  loading into sfplay~ yet, so set a 10ms delay to give the loading time to complete
-              if (Date.now() - event.loadtime < 100) {
+              if ( Date.now() - event.loadtime < 100 && browser_sound_output === false ) {
                 pre_send_delay_ms = 30;
               }
               // osc event to play back audio file in Max (or elsewhere)
