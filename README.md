@@ -238,7 +238,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- if `chord_type` is a string, the `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
 	- _Note_: to force chords into a certain key, use the `key()` operation _after_ the `chord()` operation.
 	- example:
-		- `$('example').ramp(36,72,32).chord('maj7').add((bars%4)*12).key('F# major').note(50,100,1);`
+		- `$('example').ramp(36,72,32).chord('maj7').add((bars%4)*12).key('F#','major').note(50,100,1);`
 		- `$('example').noise(16).scale(36,90).chord(_.from([3,5,7,10,11,14,16,20,25])).key('c','major').note(); // 9-note chords mapped onto c major`
 ---
 - **key** ( _key_letter_, _key_scale_ )
@@ -246,7 +246,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- `key_letter` values: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
 	- `key_scale` values can either be a string (see list below) or a FacetPattern containing 1-12 binary numbers (see examples).
 	- possible scales: ["major pentatonic", "major", "minor", "major blues", "minor blues", "melodic minor", "harmonic minor", "bebop", "diminished", "dorian", "lydian", "mixolydian", "phrygian", "locrian", "ionian pentatonic", "mixolydian pentatonic", "ritusen", "egyptian", "neopolitan major pentatonic", "vietnamese 1", "pelog", "kumoijoshi", "hirajoshi", "iwato", "in-sen", "lydian pentatonic", "malkos raga", "locrian pentatonic", "minor pentatonic", "minor six pentatonic", "flat three pentatonic", "flat six pentatonic", "scriabin", "whole tone pentatonic", "lydian #5P pentatonic", "lydian dominant pentatonic", "minor #7M pentatonic", "super locrian pentatonic", "minor hexatonic", "augmented", "piongio", "prometheus neopolitan", "prometheus", "mystery #1", "six tone symmetric", "whole tone", "messiaen's mode #5", "locrian major", "double harmonic lydian", "altered", "locrian #2", "mixolydian b6", "lydian dominant", "lydian augmented", "dorian b2", "ultralocrian", "locrian 6", "augmented heptatonic", "dorian #4", "lydian diminished", "leading whole tone", "lydian minor", "phrygian dominant", "balinese", "neopolitan major", "harmonic major", "double harmonic major", "hungarian minor", "hungarian major", "oriental", "flamenco", "todi raga", "persian", "enigmatic", "major augmented", "lydian #9", "messiaen's mode #4", "purvi raga", "spanish heptatonic", "bebop minor", "bebop major", "bebop locrian", "minor bebop", "ichikosucho", "minor six diminished", "half-whole diminished", "kafi raga", "messiaen's mode #6", "composite blues", "messiaen's mode #3", "messiaen's mode #7", "chromatic"]
-	- example: `$('example').randsamp('808').reduce(32).scale(36,51).key("F# bebop").note();`
+	- example: `$('example').randsamp('808').reduce(32).scale(36,51).key('F#', 'bebop').note();`
 	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1])).note(); // octave scale, via custom FacetPattern`
 	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,0,0,0,0,0,0,0])).note(); // equivalent to the above custom octave scale; the padded zeroes are optional`
 	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,0,1])).note(); // octave + perfect fifth scale, via custom FacetPattern`
@@ -376,7 +376,7 @@ This can be useful when you want to access the same pattern across multiple comm
 - **randscale** ( )
 	- returns a random scale for MIDI notes out. The set of possible scales is listed in the `key()` method.
 	- example:
-		- `$('example').noise(32).scale(30,80).sort().key('f# ' + randscale()).note(); // random scale in f#`
+		- `$('example').noise(32).scale(30,80).sort().key('f#', randscale()).note(); // random scale in f#`
 
 ### FacetPattern generators that can take a FacetPattern, number, array, or object as an argument
 When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').sine(440).play();`, the output is a static 440Hz wave. But with the command `$('example').sine(_.sine(5).scale(20,2000))).play();`, the frequency of the sine wave is being modulated by a 5 Hz sine wave which is generating values between 20 and 2000. This produces a classic frequency modulation sound, but since you can supply any FacetPattern as an argument, there are lots of sound design possibilities.
@@ -796,7 +796,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 - **mtos** ( )
 	- converts all values in the FacetPattern from MIDI note values to samples.
 	- example:
-		- `$('example').noise(n4).comb(_.noise(128).scale(0,127).key('c major').mtos().sort()).play(); // comb filter delayed by sample values in c major on a quarter note of noise`
+		- `$('example').noise(n4).comb(_.noise(128).scale(0,127).key('c','major').mtos().sort()).play(); // comb filter delayed by sample values in c major on a quarter note of noise`
 ---
 - **modulo** ( _amt_ )
 	- returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.
