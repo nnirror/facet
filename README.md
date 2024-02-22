@@ -147,9 +147,10 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1)).play(); // pans the noise smoothly around channels 1, 2, and 4`
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
 ---
-- **play** ( _PlaybackFacetPattern_ )
+- **play** ( _PlaybackFacetPattern_, _pitchSequenceData_ = 1 )
 	- plays the FacetPattern as audio through an open "facet" abstraction in Max or Max for Live, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note.
 	- `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
+	- `pitchSequenceData` is an optional argument that should contain an array of pitch shift values. These values are used to adjust the pitch of the sound at each step of the sequence. The pitch shift values are spread out over the sequence steps, so if there are fewer pitch shift values than sequence steps, the pitch shift values will be repeated.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 	- This command should go at the end of the chain of commands. Applying further operations after it could alter the sound. This is because `play()` works by superposing copies of the input FacetPattern at all the playback positions, rather than creating discrete events to fire at each playback position. This helps to keep timing tight, as there is only one event that fires per loop to actually play each voice of audio, and it's always at position 0, where it plays the entire superposed pattern.
 	- By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or `[ctrl + /]`, or press the stop button "■".

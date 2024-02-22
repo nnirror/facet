@@ -402,6 +402,7 @@ $('#bpm').val(90);
 let voices = [];
 const NUM_VOICES = 16;
 let sources = [];
+let pitchShifts = {};
 let ac;
 ac = new AudioContext();
 
@@ -425,14 +426,19 @@ socket.on('bpm', (bpm) => {
       if (voices[i] && sources[i]) {
           let current_bpm = $('#bpm').val();
           let voice_bpm = voices[i].bpm;
-          // set the playback rate based on the current and original BPM
-          sources[i].playbackRate.value = current_bpm / voice_bpm;
+          // get the pitch shift value for this voice
+          let pitch = pitchShifts[i];
+          // set the playback rate based on the current and original BPM and the pitch shift
+          sources[i].playbackRate.value = (current_bpm / voice_bpm) * pitch;
       }
     }
   }
 });
 
-socket.on('play', (voice_to_play) => {
+socket.on('play', (data) => {
+  let voice_to_play = data.voice;
+  let pitch = data.pitch;
+  pitchShifts[voice_to_play] = pitch;
   if ( browser_sound_output === true ) {
     // check if the voice is loaded
     if (voices[voice_to_play]) {
@@ -440,7 +446,7 @@ socket.on('play', (voice_to_play) => {
       let source = ac.createBufferSource();
       source.buffer = voices[voice_to_play].buffer;
       let current_bpm = $('#bpm').val();
-      source.playbackRate.value = current_bpm / voices[voice_to_play].bpm;
+      source.playbackRate.value = (current_bpm / voices[voice_to_play].bpm) * pitch;
       source.connect(ac.destination);
       source.start();
       sources[voice_to_play] = source;

@@ -50,6 +50,7 @@ class FacetPattern {
     this.pitchbend_data = [];
     this.saveas_filename = false;
     this.sequence_data = [];
+    this.sequence_pitch_data = [];
     this.skipped = false;
     this.utils = this.env + this.getUtils();
   }
@@ -3180,7 +3181,7 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
-  play (sequence = 0 ) {
+  play (sequence = 0, pitches = 1) {
     if ( typeof this.name == 'number')   {
       throw `FacetPattern found without a name. All FacetPatterns for audio and MIDI output must be initialized via: $('name_here')`;
     }
@@ -3194,8 +3195,18 @@ rechunk (numChunks, probability = 1) {
       throw `input to .play() must be an array or number; type found: ${typeof sequence}`;
     }
     this.sequence_data = sequence;
+    if ( typeof pitches == 'number' ) {
+      pitches = [pitches];
+    }
+    else if ( this.isFacetPattern(pitches) ) {
+      pitches = pitches.data;
+    }
+    if ( Array.isArray(pitches) === false ) {
+      throw `input to .play() must be an array or number; type found: ${typeof pitches}`;
+    }
+    this.sequence_pitch_data = pitches;
     return this;
-  }
+}
 
   saveas (filename) {
     this.saveas_filename = filename;

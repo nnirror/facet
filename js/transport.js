@@ -130,12 +130,20 @@ app.post('/update', (req, res) => {
       }
       udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time} ${is_mono}`));
       event_register[facet_pattern_name] = [];
-      posted_pattern.sequence_data.forEach((step) => {
+      posted_pattern.sequence_data.forEach((step, index) => {
+        // calculate the ratio of sequence steps to pitch steps
+        let ratio = posted_pattern.sequence_pitch_data.length / posted_pattern.sequence_data.length;
+        // calculate the index in the pattern's sequence_pitch_data
+        let pitchIndex = Math.floor(index * ratio) % posted_pattern.sequence_pitch_data.length;
+        // get the pitch from the pattern's sequence_pitch_data
+        let pitch = posted_pattern.sequence_pitch_data[pitchIndex];
+
         event_register[facet_pattern_name].push(
           {
             position: step,
             type: "audio",
             data: [],
+            pitch: pitch,
             play_once: posted_pattern.play_once,
             voice: voice_number_to_load,
             fired: false,
@@ -266,7 +274,7 @@ function tick() {
               // osc event to play back audio file in Max (or elsewhere)
               setTimeout(()=>{
                 if ( browser_sound_output === true ) {
-                  emitPlayEvent(event.voice);
+                  emitPlayEvent(event);
                 }
                 udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
               },pre_send_delay_ms);
@@ -591,9 +599,11 @@ function scalePatternToSteps(pattern, steps) {
   return result;
 }
 
-function emitPlayEvent(voice) {
+function emitPlayEvent(event) {
+  let voice = event.voice;
+  let pitch = event.pitch;
   for (let socket of sockets) {
-    socket.emit('play', voice);
+    socket.emit('play', { voice: voice, pitch: pitch });
   }
 }
 
