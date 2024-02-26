@@ -74,21 +74,12 @@ A server, known as the `process manager`, starts up on http://localhost:5831. Th
 
 2. The `pattern generator` server starts up on http://localhost:1123. This server listens to requests from the text editor UI in the browser located at http://localhost:1124 and interprets those commands into data. If the pattern is intended to be played back as audio, a corresponding .wav file will be stored in the `tmp/` subdirectory in the Facet repo. Otherwise, if the pattern is intended for MIDI or OSC output, the data will be posted directly to the transport server.
 
-### Running Facet with Max / Max for Live
+#### Configuration for Max
 
-It is possible to do audio playback with Facet directly in Max or Max for Live. In that case, turn off browser sound playback by toggling off the "sound" icon in the bottom-right of the code editor. Your selected preference for whether the browser should handle sound playback will persist between sessions. You can change back and forth any time.
-
-The necessary Max patchers for sound playback are included in this repo.
-
-If running Max: the `facet.maxpat` patcher has 4 individual channels of audio output plus a fifth outlet for passing OSC commands into your patcher.
-
-If running Max for Live: the `facet.axmd` and `facet_4ch.amxd` Max for Live devices allow for stereo and 4 channel audio outputs in Ableton Live, respectively. To access the third and fourth channels of `facet_4ch.amxd`, create a second track and select input channels 3/4 from the input track where `facet_4ch.amxd` is running.
-
-#### Configuration for Max / Max for Live
-
-1. Open Max, or if using Max for Live, click the Edit Button to launch the Max Editor. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
-2. If using Max: Create a new patcher, and add a "facet" object.
-3. If using Max for Live: move the `max/facet.amxd` and `max/facet_4ch.amxd` files from this directory to where you store your Max for Live Audio Effect devices. Drop an instance of `facet.axmd` into a track in a Live set.
+1. Open Max. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
+2. Create a new Max patcher, and add a `facet` object.
+3. The single outlet in the `facet` object will pass OSC commands from Facet into your patcher. Use the `/route` Max object to route the OSC data in your Max patcher.
+4. See the `examples/osc.md` example file for more details on receiving OSC in Max or any other application.
 
 ### Variables
 
@@ -148,7 +139,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
 ---
 - **play** ( _PlaybackFacetPattern_, _pitchSequenceData_ = 1 )
-	- plays the FacetPattern as audio through an open "facet" abstraction in Max or Max for Live, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note.
+	- plays the FacetPattern as audio, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note.
 	- `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
 	- `pitchSequenceData` is an optional argument that should contain an array of pitch shift values. These values are used to adjust the pitch of the sound at each step of the sequence. The pitch shift values are spread out over the sequence steps, so if there are fewer pitch shift values than sequence steps, the pitch shift values will be repeated.
 	- With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.

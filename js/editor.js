@@ -400,7 +400,6 @@ setInterval(() => {
 $('#bpm').val(90);
 
 let voices = [];
-const NUM_VOICES = 16;
 let sources = [];
 let pitchShifts = {};
 let ac;
@@ -422,7 +421,7 @@ socket.on('bpm', (bpm) => {
   }
   if ( browser_sound_output === true ) {
     // adjust the playback speed of all voices
-    for (let i = 1; i <= NUM_VOICES; i++) {
+    for (let i = 1; i <= voices.length; i++) {
       if (voices[i] && sources[i]) {
           let current_bpm = $('#bpm').val();
           let voice_bpm = voices[i].bpm;

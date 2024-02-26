@@ -16,7 +16,6 @@ const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: 
 udp_osc_server.open({ port: 2134 });
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 const server = http.createServer(app);
-const VOICES = 16;
 let bars_elapsed = 0;
 let bpm = 90;
 let prev_bpm = 90;
@@ -128,7 +127,6 @@ app.post('/update', (req, res) => {
       if ( browser_sound_output === true ) {
         voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`);
       }
-      udp_osc_server.send(new OSC.Message(`/load`, `${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time} ${is_mono}`));
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step, index) => {
         // calculate the ratio of sequence steps to pitch steps
@@ -213,8 +211,6 @@ let scaledBpm;
 let delay;
 let bpm_was_changed_this_tick = false;
 let bpm_was_changed_this_loop = false;
-// send bpm to Max
-udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
 
 function tick() {
   let events_per_second = 1000 / EVENT_RESOLUTION_MS;
@@ -239,7 +235,6 @@ function tick() {
     updateVoiceAllocator();
     // set all "fired" values to false at beginning of loop
     resetEventRegister();
-    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
     loop_start_time = Date.now();
     bpm_was_changed_this_loop = false;
   }
@@ -266,17 +261,11 @@ function tick() {
             // play any audio files at this step
             if ( count_times_fp_played < 1 ) {
               let pre_send_delay_ms = 0;
-              // if the /play message is sent less than 100ms after the /load message, the file might not have finished
-              //  loading into sfplay~ yet, so set a 10ms delay to give the loading time to complete
-              if ( Date.now() - event.loadtime < 100 && browser_sound_output === false ) {
-                pre_send_delay_ms = 30;
-              }
-              // osc event to play back audio file in Max (or elsewhere)
+              // osc event to play back audio file in browser
               setTimeout(()=>{
                 if ( browser_sound_output === true ) {
                   emitPlayEvent(event);
                 }
-                udp_osc_server.send(new OSC.Message(`/play`, `${event.voice}`))
               },pre_send_delay_ms);
             }
             count_times_fp_played++;
@@ -507,7 +496,6 @@ function checkForBpmRecalculation (events_per_loop) {
     bpm_was_changed_this_tick = true;
     bpm_was_changed_this_loop = true;
     prev_bpm = bpm;
-    udp_osc_server.send(new OSC.Message(`/bpm`, `${bpm}`));
   }
   else {
     bpm_was_changed_this_tick = false;
@@ -533,48 +521,12 @@ function stopVoice (name) {
 
 function allocateVoice(posted_pattern) {
   let new_voice = new AudioPlaybackVoice(posted_pattern);
-  // determine the voice number where new_voice can go
-  let new_voice_found = false;
-  let voice_checks = 0;
-  while ( voice_checks < VOICES ) {
-    // special check first - if the fp name split--- 0 is already set as a pattern. 
-    // there can't be more than one voice with the same name at one time, so delete those
-    // this is critical in the context of replacing old "kept" patterns instead of clogging up 
-    // all the voices with kept patterns that aren't even being used anymore
-    if ( voice_allocator[voice_checks] ) {
-      if ( voice_allocator[voice_checks].name.split('---')[0] === posted_pattern.name.split('---')[0] ) {
-        voice_allocator[voice_checks] = false;
-      }
-    }
-    voice_checks++;
-  }
-  voice_checks = 0;
-  while ( new_voice_found == false && voice_checks < VOICES ) {
-    if ( voice_allocator[voice_number_to_load].overwritable === true || voice_allocator[voice_number_to_load] === false ) {
-      // new voice found
-      voice_allocator[voice_number_to_load] = new_voice;
-      new_voice_found = true;
-    }
-    else {
-      // continue looking for available voices
-      voice_checks++;
-    }
-    voice_number_to_load++;
-      if ( voice_number_to_load > VOICES ) {
-        voice_number_to_load = 1;
-      }
-  }
-  if ( new_voice_found === false ) {
-    // all voices busy - steal the one at the current index after looping through
-    voice_allocator[voice_number_to_load] = new_voice;
-  }
+  voice_number_to_load++;
+  voice_allocator[voice_number_to_load] = new_voice;
 }
 
 function initializeVoiceAllocator() {
 	let obj = {};
-	for (let i = 1; i <= VOICES; i++) {
-		obj[i] = false;
-	}
 	return obj;
 }
 
