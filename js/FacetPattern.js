@@ -4851,22 +4851,70 @@ rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
 tri2d(x1, y1, x2, y2, x3, y3, value, mode = 0) {
   let width = Math.round(Math.sqrt(this.data.length));
   let height = width;
-  for (let i = 0; i < height * width; i++) {
-      let row = Math.floor(i / width);
-      let col = i % width;
 
-      // calculate the barycentric coordinates for the current position
-      let w1 = ((y2 - y3) * (col - x3) + (x3 - x2) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
-      let w2 = ((y3 - y1) * (col - x3) + (x1 - x3) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
-      let w3 = 1 - w1 - w2;
+  if (mode === 0) {
+    // define the vertices of the triangle
+    let vertices = [[x1, y1], [x2, y2], [x3, y3], [x1, y1]];
 
-      // if mode is 0, only draw the outline by checking if the point is close to one of the edges
-      // if mode is 1, fill the triangle by checking if the point is within the triangle
-      if ((mode === 0 && (Math.abs(w1) < 0.05 || Math.abs(w2) < 0.05 || Math.abs(w3) < 0.05)) || (mode === 1 && w1 >= 0 && w2 >= 0 && w3 >= 0)) {
-          this.data[i] = value;
-      }
+    // draw lines between the vertices
+    for (let v = 0; v < 3; v++) {
+        let [xStart, yStart] = vertices[v];
+        let [xEnd, yEnd] = vertices[v + 1];
+
+        let dx = Math.abs(xEnd - xStart);
+        let dy = Math.abs(yEnd - yStart);
+        let sx = (xStart < xEnd) ? 1 : -1;
+        let sy = (yStart < yEnd) ? 1 : -1;
+        let err = dx - dy;
+
+        while(true){
+            this.data[yStart * width + xStart] = value;
+
+            if ((xStart === xEnd) && (yStart === yEnd)) break;
+            let e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; xStart += sx; }
+            if (e2 < dx) { err += dx; yStart += sy; }
+        }
+    }
+  } else if (mode === 1) {
+    for (let i = 0; i < height * width; i++) {
+        let row = Math.floor(i / width);
+        let col = i % width;
+
+        // calculate the barycentric coordinates for the current position
+        let w1 = ((y2 - y3) * (col - x3) + (x3 - x2) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+        let w2 = ((y3 - y1) * (col - x3) + (x1 - x3) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+        let w3 = 1 - w1 - w2;
+
+        if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+            this.data[i] = value;
+        }
+    }
   }
+
   return this;
+}
+
+drawLine(point1, point2, value) {
+  let x1 = point1.x;
+  let y1 = point1.y;
+  let x2 = point2.x;
+  let y2 = point2.y;
+
+  let dx = Math.abs(x2 - x1);
+  let dy = Math.abs(y2 - y1);
+  let sx = (x1 < x2) ? 1 : -1;
+  let sy = (y1 < y2) ? 1 : -1;
+  let err = dx - dy;
+
+  while(true){
+      this.data[y1 * this.width + x1] = value;
+
+      if ((x1 === x2) && (y1 === y2)) break;
+      let e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x1 += sx; }
+      if (e2 < dx) { err += dx; y1 += sy; }
+  }
 }
 
 palindrome2d() {
