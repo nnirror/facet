@@ -377,6 +377,7 @@ $('#bpm').val(90);
 let voices = [];
 let sources = [];
 let pitchShifts = {};
+let lastPlayedTimes = {};
 let ac;
 ac = new AudioContext();
 
@@ -416,7 +417,6 @@ socket.on('play', (data) => {
   if ( browser_sound_output === true ) {
     // check if the voice is loaded
     if (voices[voice_to_play]) {
-      delete sources[voice_to_play];
       let source = ac.createBufferSource();
       source.buffer = voices[voice_to_play].buffer;
       let current_bpm = $('#bpm').val();
@@ -424,11 +424,24 @@ socket.on('play', (data) => {
       source.connect(ac.destination);
       source.start();
       sources[voice_to_play] = source;
+      lastPlayedTimes[voice_to_play] = Date.now();
     } else {
       // voice is not loaded yet
     }
   }
 });
+
+// delete any sources that haven't been played in the past 5 minutes to limit memory usage
+setInterval(() => {
+  let currentTime = Date.now();
+  for (let voice in lastPlayedTimes) {
+    if (currentTime - lastPlayedTimes[voice] > 60 * 5000) {
+      sources[voice].disconnect();
+      delete sources[voice];
+      delete lastPlayedTimes[voice];
+    }
+  }
+}, 60 * 5000);
 
 socket.on('load', function(data) {
   for (var i = 0; i < data.length; i++) {
