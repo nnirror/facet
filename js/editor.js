@@ -372,31 +372,6 @@ setInterval(()=>{
   prev_bpm = bpm;
 }, 50);
 
-setInterval(() => {
-  fetch('http://localhost:3211/load')
-  .then(response => response.json())
-  .then((data) => {
-    for (var i = 0; i < data.length; i++) {
-      if ( browser_sound_output === true ) {
-        let load_data = data[i].split(' ');
-        let voice_number = load_data[0];
-        let fp = load_data[1];
-        let voice_bpm = Number(load_data[2]);
-        // get any wav files that were just generated
-        fetch(`../tmp/${fp}`)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => ac.decodeAudioData(arrayBuffer))
-        .then(audioBuffer => {
-          // add the audioBuffer directly to the voices object
-          voices[voice_number] = {buffer: audioBuffer, bpm: voice_bpm};
-        })
-        .catch(e => console.error(e));
-      }
-    }
-  })
-  .catch((error) => console.error('Error:', error));
-}, 33);
-
 $('#bpm').val(90);
 
 let voices = [];
@@ -451,6 +426,26 @@ socket.on('play', (data) => {
       sources[voice_to_play] = source;
     } else {
       // voice is not loaded yet
+    }
+  }
+});
+
+socket.on('load', function(data) {
+  for (var i = 0; i < data.length; i++) {
+    if ( browser_sound_output === true ) {
+      let load_data = data[i].split(' ');
+      let voice_number = load_data[0];
+      let fp = load_data[1];
+      let voice_bpm = Number(load_data[2]);
+      // get any wav files that were just generated
+      fetch(`../tmp/${fp}`)
+      .then(response => response.arrayBuffer())
+      .then(arrayBuffer => ac.decodeAudioData(arrayBuffer))
+      .then(audioBuffer => {
+        // add the audioBuffer directly to the voices object
+        voices[voice_number] = {buffer: audioBuffer, bpm: voice_bpm};
+      })
+      .catch(e => console.error(e));
     }
   }
 });

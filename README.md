@@ -122,22 +122,6 @@ By default, Facet checks every 10 milliseconds whether it needs to fire any even
 Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. By default, patterns will continually regenerate each loop. In order to only regenerate every n loops, use the `.every()` method. In order to continue playing a pattern and not regenerate, use the `.keep()` method. In order to only play back once, use the `.once()` method.
 
 ### Audio output
-- **channel** ( _channels_ )
-	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
-	- example:
-		- `$('example').randsamp('808').channel(1).play(); // first channel only`
-		- `$('example').randsamp('808').channels([1,3]).play(); // second channel only`
-		- `$('example').randsamp('808').channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
----
-- **pan** ( _PanningFacetPattern_, _pan_mode_ = 0 )
-	- dynamically moves the FacetPattern between however many channels are specified in a seperate `.channels()` call. Without a call to `.channels()`, it will default to spatially positioning the FacetPattern between channels 1 and 2.
-	- the values in `PanningFacetPattern` should be between -1 and 1. Values beyond that will be clipped to the -1 - 1 range. A value of -1 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between -1 and 1 will crossfade between all the specified active channels.
-	- the default `pan_mode` of 0 means that the panning moves smoothly between channels, e.g., channels adjacent to the selected full-volume channel will have some signal bleeding into them. Switching the `pan_mode` to 1 makes the panning work in a discrete manner, where only one channel has a signal in it at any given time, and there is no bleed between channels.
-	- example:
-		- `$('example').noise(n1).times(_.ramp(1,0,n1)).pan(_.sine(1,n1)).play(); // no channels are specified; defaults to stereo panning`
-		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1)).play(); // pans the noise smoothly around channels 1, 2, and 4`
-		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
----
 - **play** ( _PlaybackFacetPattern_, _pitchSequenceData_ = 1 )
 	- plays the FacetPattern as audio, at however many positions are specified in `PlaybackFacetPattern`, as the global transport loops through a whole note.
 	- `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
@@ -149,6 +133,22 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp('808').play();	// plays once at beginning of loop`
 		- `$('example').randsamp('808').play(0.5);	// plays once at middle point`
 		- `$('example').randsamp('808').play(_.noise(4));	// plays once at 4 random positions`
+---
+- **pan** ( _PanningFacetPattern_, _pan_mode_ = 0 )
+	- dynamically moves the FacetPattern between however many channels are specified in a seperate `.channels()` call. Without a call to `.channels()`, it will default to spatially positioning the FacetPattern between channels 1 and 2.
+	- the values in `PanningFacetPattern` should be between -1 and 1. Values beyond that will be clipped to the -1 - 1 range. A value of -1 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between -1 and 1 will crossfade between all the specified active channels.
+	- the default `pan_mode` of 0 means that the panning moves smoothly between channels, e.g., channels adjacent to the selected full-volume channel will have some signal bleeding into them. Switching the `pan_mode` to 1 makes the panning work in a discrete manner, where only one channel has a signal in it at any given time, and there is no bleed between channels.
+	- example:
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).pan(_.sine(1,n1)).play(); // no channels are specified; defaults to stereo panning`
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1)).play(); // pans the noise smoothly around channels 1, 2, and 4`
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
+---
+- **channel** ( _channels_ )
+	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
+	- example:
+		- `$('example').randsamp('808').channel(1).play(); // first channel only`
+		- `$('example').randsamp('808').channels([1,3]).play(); // second channel only`
+		- `$('example').randsamp('808').channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
 ---
 - **saveas** ( _filename_ )
 	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
@@ -266,10 +266,11 @@ You need to connect the MIDI device you want to use before starting Facet.
 		- `$('example').bpm(_.from([20,40,80,160,320]).shuffle()); // each loop will be all 5 of these BPM, randomly ordered`
 
 ### Methods for controlling pattern regeneration
-- **every** ( _n_loops_ )
-	- only regenerate the pattern after `n_loops` loops. By default, patterns regenerate each loop, so this method only needs to be included if you wish to regenerate a pattern less frequently.
-	- example:
-		- `$('example').sine(ri(10,500)).times(rf()).every(4).play(); // slightly different sine wave tone every 4 loops`
+- **whenmod** ( _modulo_operand_, _equals_value_ = 0 )
+    - only regenerates the pattern when the number of bars elapsed, modulo the `modulo_operand`, equals the `equals_value` argument. This can be useful when you want to conditionally skip certain commands, only rerunning every n bars.
+        - example:
+        - `$('example_0').sine(ri(100,400)).whenmod(4, 0); // regenerates the pattern once every 4 bars`
+		- `$('example_2').sine(ri(100,400)).whenmod(4, 2); // regenerates the pattern once every 4 bars, but 2 bars away from the above example`
 ---
 - **keep** (  )
 	- preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
@@ -307,7 +308,7 @@ This can be useful when you want to access the same pattern across multiple comm
 	- example:
 		`$('example').from(8).set('abc').sometimes(0.5,()=>{this.dec('abc')}).sometimes(0.5,()=>{this.inc('abc')}).iter(abc,()=>{this.sup(_.randsamp('k'),i/iters)}).play(); // start at 8, sometimes increment & sometimes decrement the total number of 808 samples`
 
-### Single number generators
+### Utility functions
 - **barmod** ( _modulo_, _values_ )
 	- returns values that depend on the current value of `bars`. (`bars` is a global variable that starts at 0 and increments at the completion of a loop.)
 	- selects a value from the `values` array, based on `bars % modulo`.  If the `bars` value currently is 9, and the `modulo` argument to this method is 4, since 9 % 4 = 1, this method will return the value from the `values` array immediately following the number 1.
@@ -363,6 +364,36 @@ This can be useful when you want to access the same pattern across multiple comm
 - **ts** ( )
 	- returns the current timestamp Date.now() as a string.
 	- `$('example').sine(100,n1).saveas('mytest'+ts()).once(); // saves a file in the samples directory named like this: mytest1704420621454.wav`
+---
+- **just** ()
+    - returns an array of frequency ratios for the just intonation tuning system.
+    - example:
+        - `$('example').sine(100,n16).play(_.ramp(0,1,12),_.from(just())); // sine waves in ascending just intonation scale`
+---
+- **pythagorean** ()
+    - returns an array of frequency ratios for the Pythagorean tuning system.
+    - example:
+        - `$('example').sine(100,n16).play(_.ramp(0,1,12),_.from(pythagorean())); // sine waves in ascending pythagorean intonation scale`
+---
+- **equaltemp** ()
+    - returns an array of frequency ratios for the 12-tone equal temperament tuning system.
+    - example:
+        - `$('example').sine(100,n16).play(_.ramp(0,1,12),_.from(equaltemp())); // sine waves in ascending equal temperament intonation scale`
+---
+- **meantone** ()
+    - returns an array of frequency ratios for the meantone temperament tuning system.
+    - example:
+        - `$('example').sine(100,n16).play(_.ramp(0,1,12),_.from(meantone())); // sine waves in ascending meantone intonation scale`
+---
+- **edo19** ()
+    - returns an array of frequency ratios for the 19-tone equal division of the octave (EDO) tuning system.
+    - example:
+        - `$('example').sine(100,n16).play(_.ramp(0,1,12),_.from(edo19())); // sine waves in ascending edo19 intonation scale`
+---
+- **edo31** ()
+    - returns an array of frequency ratios for the 31-tone equal division of the octave (EDO) tuning system.
+    - example:
+        - `$('example').sine(100,n16).play(_.ramp(0,1,12),_.from(edo31())); // sine waves in ascending edo31 intonation scale`
 
 ### Methods for controlling MIDI scales
 - **randscale** ( )

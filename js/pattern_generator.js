@@ -16,7 +16,6 @@ const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 let bpm = 90;
 let bars_elapsed = 0;
 let reruns = {};
-let stored_variables = [];
 let previous_variables = {bpm:-1,bars_elapsed:-1,mousex:-1,mousey:-1};
 let errors = [];
 let workers = []; 
@@ -60,7 +59,7 @@ module.exports = {
       const worker = new Worker("./js/run.js", {workerData:{code:code,mode:mode},resourceLimits:{stackSizeMb:128}});
       workers.push(worker);
       worker.once("message", run_data => {
-          // remove the worker from the workeres list
+          // remove the worker from the workers list
           let index = workers.findIndex(workerObj => workerObj === worker);
           if (index !== -1) {
               workers.splice(index, 1);
@@ -268,9 +267,9 @@ app.post('/status', (req, res) => {
 
 app.get('/update', (req, res) => {
   for (const [fp_name, fp] of Object.entries(reruns)) {
-    // determine which patterns to rerun  
-    if ( fp.regenerate_every_n_loops == 1
-      || ((fp.loops_since_generation > 0) && ((fp.loops_since_generation % fp.regenerate_every_n_loops) == 0 ))
+    // determine which patterns to rerun 
+    if ( fp.whenmod_modulo_operand == false
+      || ((fp.loops_since_generation > 0) && ((bars_elapsed % fp.whenmod_modulo_operand) == fp.whenmod_equals ))
     ) {
       if ( fp.available_for_next_request == true ) {
         module.exports.run(fp.original_command,true,'run');

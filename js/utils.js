@@ -93,3 +93,39 @@ function barmod(mod, values) {
 function scale(oldValue, oldMin, oldMax, newMin, newMax) {
   return (newMax - newMin) * (oldValue - oldMin) / (oldMax - oldMin) + newMin;
 }
+
+function just() {
+  return ([1, 16/15, 9/8, 6/5, 5/4, 4/3, 7/5, 3/2, 8/5, 5/3, 16/9, 15/8]);
+}
+
+function pythagorean() {
+  return ([1, 256/243, 9/8, 32/27, 81/64, 4/3, 729/512, 3/2, 128/81, 27/16, 16/9, 243/128]);
+}
+
+function equaltemp() {
+  let ratios = [];
+  for (let i = 0; i < 12; i++) {
+    ratios.push(Math.pow(2, i / 12));
+  }
+  return ratios;
+}
+
+function meantone() {
+  return ([1, 256/243, 10/9, 32/27, 5/4, 4/3, 45/32, 3/2, 128/81, 5/3, 16/9, 15/8]);
+}
+
+function edo19() {
+  let ratios = [];
+  for (let i = 0; i < 19; i++) {
+    ratios.push(Math.pow(2, i / 19));
+  }
+  return ratios;
+}
+
+function edo31() {
+  let ratios = [];
+  for (let i = 0; i < 31; i++) {
+    ratios.push(Math.pow(2, i / 31));
+  }
+  return ratios;
+}

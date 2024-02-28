@@ -103,11 +103,6 @@ app.post('/play', (req, res) => {
   res.sendStatus(200);
 });
 
-app.get('/load', (req, res) => {
-  res.json(voices_to_send_to_browser);
-  voices_to_send_to_browser = [];
-});
-
 app.post('/update', (req, res) => {
   // only set data if the transport was not stopped while the pattern was generated
   if (transport_on === true) {
@@ -123,7 +118,6 @@ app.post('/update', (req, res) => {
 
     if ( posted_pattern.sequence_data.length > 0 ) {
       allocateVoice(posted_pattern);
-      let is_mono = posted_pattern.pan_data === false && posted_pattern.dacs == '1 1' ? 1 : 0;
       if ( browser_sound_output === true ) {
         voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`);
       }
@@ -135,7 +129,6 @@ app.post('/update', (req, res) => {
         let pitchIndex = Math.floor(index * ratio) % posted_pattern.sequence_pitch_data.length;
         // get the pitch from the pattern's sequence_pitch_data
         let pitch = posted_pattern.sequence_pitch_data[pitchIndex];
-
         event_register[facet_pattern_name].push(
           {
             position: step,
@@ -149,6 +142,7 @@ app.post('/update', (req, res) => {
           }
         )
       });
+      emitLoadEvent();
     }
     else {
       patterns_for_next_loop[facet_pattern_name] = posted_pattern;
@@ -209,7 +203,6 @@ let loop_start_time = Date.now();
 let bpm_recalculation_counter = -1;
 let scaledBpm;
 let delay;
-let bpm_was_changed_this_tick = false;
 let bpm_was_changed_this_loop = false;
 
 function tick() {
@@ -245,16 +238,12 @@ function tick() {
   events_per_loop = seconds_per_loop * events_per_second;
   relative_step_amount_to_add_per_loop = 1 / events_per_loop;
 
-  let range_of_steps_to_check = 1;
-  if ( bpm_was_changed_this_tick === true ) {
-    range_of_steps_to_check = 16;
-  }
   if ( transport_on === true ) {
     for (const [fp_name, fp_data] of Object.entries(event_register)) {
       let count_times_fp_played = 0;
       fp_data.forEach((event) => {
         if ( event.position >= current_relative_step_position
-          && (event.position < (current_relative_step_position + (relative_step_amount_to_add_per_loop * range_of_steps_to_check)) && (event.fired === false) ) ) {
+          && (event.position < (current_relative_step_position + relative_step_amount_to_add_per_loop) && (event.fired === false) ) ) {
             event.fired = true;
           // fire all events for this facetpattern matching the current step
           if ( event.type === "audio" ) {
@@ -493,12 +482,8 @@ function checkForBpmRecalculation (events_per_loop) {
   }
 
   if ( prev_bpm != bpm ) {
-    bpm_was_changed_this_tick = true;
     bpm_was_changed_this_loop = true;
     prev_bpm = bpm;
-  }
-  else {
-    bpm_was_changed_this_tick = false;
   }
 }
 
@@ -549,6 +534,13 @@ function scalePatternToSteps(pattern, steps) {
       result.push(pattern[index]);
   }
   return result;
+}
+
+function emitLoadEvent() {
+  for (let socket of sockets) {
+    socket.emit('load', voices_to_send_to_browser);
+  }
+  voices_to_send_to_browser = [];
 }
 
 function emitPlayEvent(event) {

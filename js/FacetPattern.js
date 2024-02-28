@@ -44,7 +44,6 @@ class FacetPattern {
     this.pan_data = false;
     this.pan_mode = 0;
     this.play_once = false;
-    this.regenerate_every_n_loops = 1;
     this.original_command = '';
     this.osc_data = [];
     this.pitchbend_data = [];
@@ -53,6 +52,8 @@ class FacetPattern {
     this.sequence_pitch_data = [];
     this.skipped = false;
     this.utils = this.env + this.getUtils();
+    this.whenmod_modulo_operand = false;
+    this.whenmod_equals = false;
   }
 
   // BEGIN generator operations
@@ -2236,6 +2237,16 @@ scaleLT1 (outMin, outMax, exponent = 1) {
     return this;
   }
 
+  whenmod (modulo, equals_value = 0) {
+    let current_bar_number = this.getBars();
+    if  ((current_bar_number-1) % modulo !== equals_value) {
+      this.skipped = true;
+    }
+    this.whenmod_modulo_operand = modulo;
+    this.whenmod_equals = equals_value;
+    return this;
+  }
+
   shift (amt) {
     let moved_sequence = [];
     amt = Number(amt);
@@ -3019,11 +3030,6 @@ rechunk (numChunks, probability = 1) {
       }
       this.chord_intervals = chord_intervals_to_add;
     }
-    return this;
-  }
-
-  every (n_loops = 1) {
-    this.regenerate_every_n_loops = Math.abs(Math.round(n_loops)) == 0 ? 1 : Math.abs(Math.round(n_loops));
     return this;
   }
   
@@ -3858,6 +3864,11 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
 
   getBPM () {
     let bpmValue = this.env.match(/bpm\s*=\s*(\d+)/)[1];
+    return bpmValue;
+  }
+
+  getBars () {
+    let bpmValue = this.env.match(/bars\s*=\s*(\d+)/)[1];
     return bpmValue;
   }
 
