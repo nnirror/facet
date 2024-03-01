@@ -70,18 +70,18 @@ function getLastLineOfBlock(initial_line) {
 }
 
 $(document).keydown(function(e) {
-  // [ctrl + enter] or [ctrl + r] to select text and send to pattern server (127.0.0.1:1123)
+  // [ctrl + enter] or [ctrl + r] to select text and send to pattern server :1123
   if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {
     runFacet();
   }
   else if ( e.ctrlKey && e.keyCode == 188 ) {
     // clear hooks: [ctrl + ","]
-    $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {});
+    $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function( data, status ) {});
     $.growl.notice({ message: 'regeneration stopped' });
   }
   else if ( e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191) ) {
     // clear hooks and mute everything: [ctrl + "."] or  [ctrl + "?"]
-    $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {});
+    $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function( data, status ) {});
     $.growl.notice({ message: 'system muted' });
   }
   else if ( e.ctrlKey && (e.keyCode == 222 ) ) {
@@ -102,7 +102,7 @@ $(document).keydown(function(e) {
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
   if ( $('#bpm').is(':focus') && e.keyCode == 13 ) {
-    $.post('http://127.0.0.1:3211/bpm', {bpm:$('#bpm').val()}).done(function( data, status ) {}).fail(function(data) {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, {bpm:$('#bpm').val()}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
     $('#bpm').blur();
@@ -124,7 +124,7 @@ $(document).keydown(function(e) {
   }
 
   if ( e.ctrlKey && e.code === 'Space' ) {
-    $.post('http://127.0.0.1:1123/autocomplete', {}).done(function( data, status ) {
+    $.post(`http://${configSettings.HOST}:1123/autocomplete`, {}).done(function( data, status ) {
       facet_methods = data.data.methods;
       // forked custom hinting from: https://stackoverflow.com/a/39973139
       var options = {
@@ -173,11 +173,11 @@ function runFacet(mode = 'run') {
   setTimeout(function(){ cm.setCursor({line: line, ch: cursor.ch }); }, 100);
   setStatus(`processing`);
   let code = cm.getSelection();
-  $.post('http://127.0.0.1:1123', {code:code,mode:mode});
+  $.post(`http://${configSettings.HOST}:1123`, {code:code,mode:mode});
 }
 
 let midi_outs;
-$.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
+$.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function( data, status ) {
   // create <select> dropdown with this -- check every 2 seconds, store
   // in memory, if changed update select #midi_outs add option
   if (data.data != midi_outs) {
@@ -192,11 +192,11 @@ $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
 
 $('body').on('change', '#midi_outs', function() {
   localStorage.setItem('midi_outs_value', this.value);
-  $.post('http://127.0.0.1:3211/midi_select', {output:this.value}).done(function( data, status ) {});
+  $.post(`http://${configSettings.HOST}:3211/midi_select`, {output:this.value}).done(function( data, status ) {});
 });
 
 $('body').on('click', '#midi_refresh', function() {
-  $.post('http://127.0.0.1:3211/midi', {}).done(function( data, status ) {
+  $.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function( data, status ) {
     $('#midi_outs').html('');
     for (var i = 0; i < data.data.length; i++) {
       let midi_out = data.data[i];
@@ -231,7 +231,7 @@ $('body').on('click', '#sound', function() {
 });
 
 $('body').on('click', '#stop', function() {
-  $.post('http://127.0.0.1:1123/stop', {}).done(function( data, status ) {
+  $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function( data, status ) {
     $.growl.notice({ message: 'system muted' });
   })
   .fail(function(data) {
@@ -242,7 +242,7 @@ $('body').on('click', '#stop', function() {
 });
 
 $('body').on('click', '#clear', function() {
-  $.post('http://127.0.0.1:1123/hooks/clear', {}).done(function( data, status ) {
+  $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function( data, status ) {
     $.growl.notice({ message: 'regeneration stopped' });
   });
 });
@@ -252,7 +252,7 @@ $('body').on('click', '#rerun', function() {
 });
 
 $('body').on('click', '#restart', function() {
-  $.post('http://127.0.0.1:5831/restart', {}).done(function( data, status ) {
+  $.post(`http://${configSettings.HOST}:5831/restart`, {}).done(function( data, status ) {
     if (status == 'success') {
       $.growl.notice({ message: 'Facet restarted successfully'});
     }
@@ -296,7 +296,7 @@ function setBrowserSound(true_or_false_local_storage_string) {
     $('#sound').css('background',"url('../spkr.png') no-repeat");
     $('#sound').css('background-size',"100% 200%");
   }
-  $.post('http://127.0.0.1:3211/browser_sound', {browser_sound_output:browser_sound_output}).done(function( data, status ) {});
+  $.post(`http://${configSettings.HOST}:3211/browser_sound`, {browser_sound_output:browser_sound_output}).done(function( data, status ) {});
 }
 
 function initializeMIDISelection () {
@@ -305,7 +305,7 @@ function initializeMIDISelection () {
   if (storedValue) {
     // reset the most recently used MIDI out destination
     $('#midi_outs').val(storedValue);
-    $.post('http://127.0.0.1:3211/midi_select', {output:storedValue}).done(function( data, status ) {});
+    $.post(`http://${configSettings.HOST}:3211/midi_select`, {output:storedValue}).done(function( data, status ) {});
   }
 }
 
@@ -324,7 +324,7 @@ checkStatus();
 
 function checkStatus() {
   setInterval( () => {
-    $.post('http://127.0.0.1:1123/status', {
+    $.post(`http://${configSettings.HOST}:1123/status`, {
       mousex:mousex,
       mousey:mousey
     }).done(function( data, status ) {
@@ -365,7 +365,7 @@ setInterval(()=>{
   bpm = $('#bpm').val();
   // send change on increment/decrement by 1
   if ( !isNaN(bpm) && bpm >= 1 && $('#bpm').is(':focus') && ( Math.abs(bpm-prev_bpm) == 1 ) ) {
-    $.post('http://127.0.0.1:3211/bpm', {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
   }
@@ -382,7 +382,7 @@ let ac;
 ac = new AudioContext();
 
 // connect to the server
-const socket = io.connect('http://localhost:3000', {
+const socket = io.connect(`http://${configSettings.HOST}:3000`, {
   reconnection: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,

@@ -13,6 +13,7 @@ const WaveFile = require('wavefile').WaveFile;
 const FacetPattern = require('./FacetPattern.js');
 const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const HOST = FacetConfig.settings.HOST;
 let bpm = 90;
 let bars_elapsed = 0;
 let reruns = {};
@@ -205,7 +206,7 @@ app.post('/hooks/clear', (req, res) => {
 app.post('/stop', (req, res) => {
   reruns = {};
   terminateAllWorkers();
-  axios.post('http://localhost:3211/stop',{})
+  axios.post(`http://${HOST}:3211/stop`,{})
   .catch(function (error) {
     console.log(`error stopping transport server: ${error}`);
   });
@@ -337,7 +338,7 @@ function postToTransport (fp) {
   // remove this.data as it's not needed in the transport and is potentially huge
   let fpCopy = { ...fp };
   delete fpCopy.data;
-  axios.post('http://localhost:3211/update',
+  axios.post(`http://${HOST}:3211/update`,
     {
       pattern: JSON.stringify(fpCopy)
     }
@@ -348,14 +349,14 @@ function postToTransport (fp) {
 }
 
 function startTransport () {
-  axios.post('http://localhost:3211/play',{})
+  axios.post(`http://${HOST}:3211/play`,{})
   .catch(function (error) {
     console.log(`error starting transport server: ${error}`);
   });
 }
 
 function postMetaDataToTransport (fp,data_type) {
-  axios.post('http://localhost:3211/meta',
+  axios.post(`http://${HOST}:3211/meta`,
     {
       pattern: JSON.stringify(fp),
       type: data_type
