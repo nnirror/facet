@@ -258,6 +258,65 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- _Note_: This method is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between -1 and 1, with 0 meaning no pitchbend.
 	- example:
 		- `$('example').sine(1).size(128).pitchbend();`
+---
+- **savemidi** (_midifilename_ = Date.now(), _velocityPattern_ = 64, _durationPattern_ = 16, _wraps_ = 1, _tick_mode_ = false_)
+	- creates a MIDI file of MIDI notes named `midifilename` in the `midi` directory, with the FacetPattern's data.
+	- `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
+	- The `velocityPattern` expects values between 1 and 100. (This range is set by the midi-writer-js npm package).
+	- The `wraps` parameter controls how many times to wrap the data back around onto itself, allowing for MIDI polyphony. For example, if your FacetPattern has 8 different 128-note patterns appended together in a sequence, a `wraps` of 8 would superpose all of those patterns on top of each other, while a `wraps` value of 4 would produce four patterns on top of each other, followed by four more patterns on top of each other.
+	- When `tick_mode` is set to a truthy value, the numbers in `durationPattern` represent the number of ticks to last, rather than a whole-note divisions. 1 tick = 1/256th note. This allows for durations smaller and larger than the valid duration values for when `tick_mode` is set to false.
+	- When `tick_mode` is set to false or excluded from the command, the following values are the only valid `durationPattern` argument values:
+	```javascript
+		1: whole note
+		2: half note
+		d2: dotted half note
+		dd2: double dotted half note
+		4: quarter note
+		4t: quarter triplet note
+		d4: dotted quarter note
+		dd4: double dotted quarter note
+		8: eighth note
+		8t: eighth triplet note
+		d8: dotted eighth note
+		dd8: double dotted eighth note
+		16: sixteenth note
+		16t: sixteenth triplet note
+		32: thirty-second note
+		64: sixty-fourth note
+	```
+	- example:
+		- `$('example').noise(64).scale(20,90).key('c major').savemidi(ts(),64,16).once();  // 64 random notes in c major at 64 velocity, each lasting a 16th note`
+		- `$('example').noise(64).scale(20,90).key('c major').savemidi(ts(),_.noise(64).scale(1,100),4,1,true).once(); // 64 random notes in c major, each with a random velocity between 1 - 100, each lasting 4 ticks`
+		- `$('example').iter(8,()=>{this.append(_.sine(choose([1,2,3,4])).size(128).scale(ri(30,50),ri(60,90)).key('c major'))}).savemidi(ts(),64,16,8).once(); // 8 sine wave patterns playing notes in c major, superposed on top of each other. try changing the wraps argument to values other than 8`
+---
+- **savemidi2d()** (_midifilename_ = Date.now(), _velocityPattern_ = 64, _durationPattern_ = 16, _tick_mode_ = false_, min_note = 0, max_note = 127)
+	- creates a MIDI file of MIDI notes named `midifilename` in the `midi` directory, with the FacetPattern's data, assuming that the data was created using the 2d methods for image generation and processing. All nonzero "pixel" values will be translated into a MIDI note. Go to the [methods for image generation and processing](#methods-for-image-generation-and-processing) section for more details on these methods.
+	- `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
+	- The `velocityPattern` expects values between 1 and 100. (This range is set by the midi-writer-js npm package).
+	- The `min_note` and `max_note` values control the range of notes that the corresponding 2d pattern will be generated between.
+	- When `tick_mode` is set to a truthy value, the numbers in `durationPattern` represent the number of ticks to last, rather than a whole-note divisions. 1 tick = 1/256th note. This allows for durations smaller and larger than the valid duration values for when `tick_mode` is set to false.
+	- When `tick_mode` is set to false or excluded from the command, the following values are the only valid `durationPattern` argument values:
+	```javascript
+		1: whole note
+		2: half note
+		d2: dotted half note
+		dd2: double dotted half note
+		4: quarter note
+		4t: quarter triplet note
+		d4: dotted quarter note
+		dd4: double dotted quarter note
+		8: eighth note
+		8t: eighth triplet note
+		d8: dotted eighth note
+		dd8: double dotted eighth note
+		16: sixteenth note
+		16t: sixteenth triplet note
+		32: thirty-second note
+		64: sixty-fourth note
+	```
+	- example:
+		- `$('example').silence(2500).iter(8,()=>{this.tri2d(ri(0,49),ri(0,49),ri(0,49),ri(0,49),ri(0,49),ri(0,49),1,0)}).savemidi2d(ts(), 64, 16).once(); // 8 randomly sized triangles in 2d space, all at velocity 64, 16th note durations`
+		- `$('example').silence(2500).iter(10,()=>{this.circle2d(ri(10,40), ri(10,40), 10, 1, 0)}).savemidi2d(ts(), 64, 64).once(); // 10 randomly sized circles in 2d space, all at velocity 64, 64th note durations`
 
 ### Methods for controlling transport BPM
 - **bpm** ( )
