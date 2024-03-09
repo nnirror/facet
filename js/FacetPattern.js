@@ -7,6 +7,7 @@ const wav = require('node-wav');
 const fft = require('fft-js').fft;
 const ifft = require('fft-js').ifft;
 const fftUtil = require('fft-js').util;
+const MidiWriter = require('midi-writer-js');
 const WaveFile = require('wavefile').WaveFile;
 const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
@@ -15,6 +16,7 @@ const curve_calc = require('./lib/curve_calc.js');
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const Complex = require('./lib/Complex.js');
 const { Scale } = require('tonal');
+const { Midi } = require("tonal");
 const PNG = require('pngjs').PNG;
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
@@ -4537,7 +4539,83 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     }
     png.pack().pipe(fs.createWriteStream(`img/${filename}.png`));
     return this;
-}
+  }
+
+  savemidi2d (midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127) {
+    if ( typeof velocityPattern == 'number' || Array.isArray(velocityPattern) === true ) {
+      velocityPattern = new FacetPattern().from(velocityPattern);
+    }
+    velocityPattern.size(this.data.length);
+    velocityPattern.clip(1,100); // for some reason the MIDI writer library only accepts velocities within this range
+
+    if ( typeof durationPattern == 'number' || Array.isArray(durationPattern) === true ) {
+      durationPattern = new FacetPattern().from(durationPattern);
+    }
+    durationPattern.size(this.data.length).round();
+
+    const sliceSize = Math.sqrt(this.data.length);
+    const track = new MidiWriter.Track();
+
+    const minIndex = 0;
+    const maxIndex = this.data.length - 1;
+
+    for (let i = 0; i < sliceSize; i++) {
+      const pitches = [];
+      for (let j = 0; j < sliceSize; j++) {
+        const index = j * sliceSize + i;
+        if (this.data[index] !== 0) {
+          const midiNoteNumber = Math.round((index - minIndex) / (maxIndex - minIndex) * (maxNote - minNote) + minNote);
+          pitches.push(Midi.midiToNoteName(midiNoteNumber));
+        }
+      }
+      let duration_str = durationPattern.data[i];
+      if ( tick_mode ) {
+        duration_str = 'T' + duration_str; // convert to tick syntax
+      }
+      if (pitches.length > 0) {
+        track.addEvent(new MidiWriter.NoteEvent({pitch: pitches, velocity: velocityPattern.data[i], sequential: false, duration: duration_str}));
+      }
+    }
+
+    const write = new MidiWriter.Writer([track]);
+    fs.writeFileSync(`midi/${midifilename}.mid`, write.buildFile(), 'binary');
+    return this;
+  }
+
+  savemidi (midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, wraps = 1, tick_mode = false) {
+    if ( typeof velocityPattern == 'number' || Array.isArray(velocityPattern) === true ) {
+      velocityPattern = new FacetPattern().from(velocityPattern);
+    }
+    velocityPattern.size(this.data.length);
+    velocityPattern.clip(1,100); // for some reason the MIDI writer library only accepts velocities within this range
+
+    if ( typeof durationPattern == 'number' || Array.isArray(durationPattern) === true ) {
+      durationPattern = new FacetPattern().from(durationPattern);
+    }
+    durationPattern.size(this.data.length).round();
+
+    const sliceSize = Math.ceil(this.data.length / wraps);
+    const track = new MidiWriter.Track();
+
+    for (let i = 0; i < sliceSize; i++) {
+      const pitches = [];
+      for (let j = 0; j < wraps; j++) {
+        const index = j * sliceSize + i;
+        if (index < this.data.length) {
+          pitches.push(Midi.midiToNoteName(this.data[index]));
+        }
+      }
+      let duration_str = durationPattern.data[i];
+      if ( tick_mode ) {
+        duration_str = 'T' + duration_str; // convert to tick syntax
+      }
+      track.addEvent(new MidiWriter.NoteEvent({pitch: pitches, velocity: velocityPattern.data[i], sequential: false, duration: duration_str}));
+    }
+
+    const write = new MidiWriter.Writer([track]);
+    fs.writeFileSync(`midi/${midifilename}.mid`, write.buildFile(), 'binary');
+    return this;
+  }
 
   saveimg (filename = Date.now(), rgbData, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
     if (typeof filename !== 'string') {
@@ -4774,7 +4852,7 @@ circle2d(centerX, centerY, radius, value, mode = 0) {
 
       // if mode is 0, only draw the outline by checking if the distance is close to the radius
       // if mode is 1, fill the circle by checking if the distance is less than or equal to the radius
-      if ((mode === 0 && Math.abs(distance - radius) < 1) || (mode === 1 && distance <= radius)) {
+      if ((mode === 0 && Math.abs(distance - radius) < 0.5) || (mode === 1 && distance <= radius)) {
           this.data[i] = value;
       }
   }

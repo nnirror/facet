@@ -10,7 +10,7 @@ const cors = require('cors');
 const app = express();
 const axios = require('axios');
 const FacetConfig = require('./config.js');
-const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
+const HOST = FacetConfig.settings.HOST;
 const OSC = require('osc-js')
 const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
 udp_osc_server.open({ port: 2134 });
@@ -334,7 +334,7 @@ tick();
 function reportTransportMetaData() {
   // pass along the current bpm and bars elapsed, if the transport is running
   if ( transport_on === true ) {
-    axios.post('http://localhost:1123/meta',
+    axios.post(`http://${HOST}:1123/meta`,
     {
       bpm: JSON.stringify(bpm),
       bars_elapsed: JSON.stringify(bars_elapsed)
@@ -462,7 +462,7 @@ function applyNextPatterns () {
 function requestNewPatterns () {
   if ( bars_elapsed > 0 ) {
     // tell server to generate any new patterns
-    axios.get('http://localhost:1123/update');
+    axios.get(`http://${HOST}:1123/update`);
   }
 }
 

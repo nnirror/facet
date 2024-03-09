@@ -16,6 +16,7 @@
     "express": "^4.18.2",
     "fft-js": "^0.0.12",
     "jshint": "^2.13.6",
+    "midi-writer-js": "^3.1.1",
     "node-wav": "^0.0.2",
     "open": "^8.4.2",
     "os-utils": "0.0.14",
