@@ -4586,13 +4586,13 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     if ( typeof velocityPattern == 'number' || Array.isArray(velocityPattern) === true ) {
       velocityPattern = new FacetPattern().from(velocityPattern);
     }
-    velocityPattern.size(this.data.length);
+    velocityPattern.size(Math.round(this.data.length/wraps));
     velocityPattern.clip(1,100); // for some reason the MIDI writer library only accepts velocities within this range
 
     if ( typeof durationPattern == 'number' || Array.isArray(durationPattern) === true ) {
       durationPattern = new FacetPattern().from(durationPattern);
     }
-    durationPattern.size(this.data.length).round();
+    durationPattern.size(Math.round(this.data.length)/wraps).round();
 
     const sliceSize = Math.ceil(this.data.length / wraps);
     const track = new MidiWriter.Track();
