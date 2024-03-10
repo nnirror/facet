@@ -4565,6 +4565,21 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
         const index = j * sliceSize + i;
         if (this.data[index] !== 0) {
           const midiNoteNumber = Math.round((index - minIndex) / (maxIndex - minIndex) * (maxNote - minNote) + minNote);
+          for (var c = 0; c < this.chord_intervals.length; c++) {
+            let note_to_add = midiNoteNumber + this.chord_intervals[c];
+            // check if key needs to be locked
+            if ( this.key_scale !== false ) {
+              if ( typeof this.key_scale == 'object' ) {
+                // scale made from FP
+                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,new FacetPattern().from(this.key_scale.data)).data[0];
+              }
+              else {
+                // scale from string
+                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,this.key_scale).data[0];
+              }
+            }
+            pitches.push(Midi.midiToNoteName(note_to_add));
+          }
           pitches.push(Midi.midiToNoteName(midiNoteNumber));
         }
       }
@@ -4602,6 +4617,21 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
       for (let j = 0; j < wraps; j++) {
         const index = j * sliceSize + i;
         if (index < this.data.length) {
+          for (var c = 0; c < this.chord_intervals.length; c++) {
+            let note_to_add = this.data[index] + this.chord_intervals[c];
+            // check if key needs to be locked
+            if ( this.key_scale !== false ) {
+              if ( typeof this.key_scale == 'object' ) {
+                // scale made from FP
+                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,new FacetPattern().from(this.key_scale.data)).data[0];
+              }
+              else {
+                // scale from string
+                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,this.key_scale).data[0];
+              }
+            }
+            pitches.push(Midi.midiToNoteName(note_to_add));
+          }
           pitches.push(Midi.midiToNoteName(this.data[index]));
         }
       }
