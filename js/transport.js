@@ -368,16 +368,22 @@ function applyNextPatterns () {
           for (var c = 0; c < posted_pattern.chord_intervals.length; c++) {
             let note_to_add = note_data.note + posted_pattern.chord_intervals[c];
             // check if key needs to be locked
-            if ( posted_pattern.key_scale !== false ) {
-              if ( typeof posted_pattern.key_scale == 'object' ) {
-                // scale made from FP
-                note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_letter,new FacetPattern().from(posted_pattern.key_scale.data)).data[0];
+            if (posted_pattern.key_scale !== false) {
+              let dataLength = posted_pattern.notes.length;
+              let keyLetterLength = posted_pattern.key_letter.length;
+              let keyScaleLength = posted_pattern.key_scale.length;
+          
+              let keyLetterIndex = Math.floor((i / dataLength) * keyLetterLength);
+              let keyScaleIndex = Math.floor((i / dataLength) * keyScaleLength);
+          
+              if (typeof posted_pattern.key_scale[keyScaleIndex] == 'object') {
+                  // scale made from FP
+                  note_to_add = new FacetPattern().from(note_to_add).key([posted_pattern.key_letter[keyLetterIndex]], new FacetPattern().from(posted_pattern.key_scale[keyScaleIndex].data)).data[0];
+              } else {
+                  // scale from string
+                  note_to_add = new FacetPattern().from(note_to_add).key([posted_pattern.key_letter[keyLetterIndex]], [posted_pattern.key_scale[keyScaleIndex]]).data[0];
               }
-              else {
-                // scale from string
-                note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_letter,posted_pattern.key_scale).data[0];
-              }
-            }
+          }
   
             event_register[facet_pattern_name].push(
               {
