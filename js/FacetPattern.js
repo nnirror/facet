@@ -2980,75 +2980,95 @@ rechunk (numChunks, probability = 1) {
   }
 
   chord (chord_name, inversion_mode = 0) {
-    if ( this.isFacetPattern(chord_name) ) {
-      this.chord_intervals = chord_name.data;
+    if ( !Array.isArray(chord_name) ) {
+      chord_name = [chord_name];
     }
-    else {
-      const VALID_CHORD_NAMES = [
-        'maj', 'major',
-        'min', 'minor',
-        'fifth', '5th', '5',
-        'seventh', '7th', '7',
-        'major seventh', 'maj7',
-        'minor seventh', 'm7',
-        'diminished', 'dim',
-        'add2', 'add9'
-      ];
-      if ( !VALID_CHORD_NAMES.includes(chord_name) ) {
-        throw `invalid chord name: ${chord_name}`;
+    for (var i = 0; i < chord_name.length; i++) {
+      let cn = chord_name[i];
+      if ( this.isFacetPattern(cn) ) {
+        this.chord_intervals.push(cn.data);
       }
-  
-      let chord_intervals_to_add = [];
-      switch (chord_name) {
-        case 'maj':
-          chord_intervals_to_add = [4,7];
-        case 'major':
-          chord_intervals_to_add = [4,7];
-        case 'min':
-              chord_intervals_to_add = [3,7];
-        case 'minor':
+      else {
+        const VALID_CHORD_NAMES = [
+          'maj', 'major',
+          'min', 'minor',
+          'fifth', '5th', '5',
+          'seventh', '7th', '7',
+          'major seventh', 'maj7',
+          'minor seventh', 'm7',
+          'diminished', 'dim',
+          'add2', 'add9'
+        ];
+        if ( !VALID_CHORD_NAMES.includes(cn) ) {
+          throw `invalid chord name: ${cn}`;
+        }
+    
+        let chord_intervals_to_add = [];
+        switch (cn) {
+          case 'maj':
+            chord_intervals_to_add = [4,7];
+          case 'major':
+            chord_intervals_to_add = [4,7];
+            break;
+          case 'min':
             chord_intervals_to_add = [3,7];
-        case 'fifth':
-            chord_intervals_to_add = [7];
-        case '5th':
-            chord_intervals_to_add = [7];
-        case 'seventh':
-            chord_intervals_to_add = [4,7,10];
-        case '7th':
-            chord_intervals_to_add = [4,7,10];
-        case 'major seventh':
-          chord_intervals_to_add = [4,7,11];
-        case 'maj7':
-          chord_intervals_to_add = [4,7,11];
-        case 'minor seventh':
-          chord_intervals_to_add = [3,7,10];
-        case 'm7':
-          chord_intervals_to_add = [3,7,10];
-        case 'diminished':
-          chord_intervals_to_add = [-1,2,5];
-        case 'dim':
-          chord_intervals_to_add = [-1,2,5];
-        case 'add2':
-          chord_intervals_to_add = [2,4,7];
-        case 'add9':
-          chord_intervals_to_add = [4,7,14];
-          break;
-        default:
+            break;
+          case 'minor':
+              chord_intervals_to_add = [3,7];
+              break;
+          case 'fifth':
+              chord_intervals_to_add = [7];
+              break;
+          case '5th':
+              chord_intervals_to_add = [7];
+              break;
+          case 'seventh':
+              chord_intervals_to_add = [4,7,10];
+              break;
+          case '7th':
+              chord_intervals_to_add = [4,7,10];
+              break;
+          case 'major seventh':
+            chord_intervals_to_add = [4,7,11];
+            break;
+          case 'maj7':
+            chord_intervals_to_add = [4,7,11];
+            break;
+          case 'minor seventh':
+            chord_intervals_to_add = [3,7,10];
+            break;
+          case 'm7':
+            chord_intervals_to_add = [3,7,10];
+            break;
+          case 'diminished':
+            chord_intervals_to_add = [-1,2,5];
+            break;
+          case 'dim':
+            chord_intervals_to_add = [-1,2,5];
+            break;
+          case 'add2':
+            chord_intervals_to_add = [2,4,7];
+            break;
+          case 'add9':
+            chord_intervals_to_add = [4,7,14];
+            break;
+          default:
+        }
+    
+        if ( inversion_mode == 1 ) {
+          chord_intervals_to_add[0] -= 12;
+        }
+        else if ( inversion_mode == 2 ) {
+          chord_intervals_to_add[0] -= 12;
+          chord_intervals_to_add[1] -= 12;
+        }
+        else if ( inversion_mode == 3 ) {
+          chord_intervals_to_add[0] -= 12;
+          chord_intervals_to_add[1] -= 12;
+          chord_intervals_to_add[2] -= 12;
+        }
+        this.chord_intervals.push(chord_intervals_to_add);
       }
-  
-      if ( inversion_mode == 1 ) {
-        chord_intervals_to_add[0] -= 12;
-      }
-      else if ( inversion_mode == 2 ) {
-        chord_intervals_to_add[0] -= 12;
-        chord_intervals_to_add[1] -= 12;
-      }
-      else if ( inversion_mode == 3 ) {
-        chord_intervals_to_add[0] -= 12;
-        chord_intervals_to_add[1] -= 12;
-        chord_intervals_to_add[2] -= 12;
-      }
-      this.chord_intervals = chord_intervals_to_add;
     }
     return this;
   }
@@ -4577,18 +4597,18 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     const minIndex = 0;
     const maxIndex = this.data.length - 1;
 
+    const chordIntervalsLength = this.chord_intervals.length;
+
     for (let i = 0; i < sliceSize; i++) {
       const pitches = [];
       for (let j = 0; j < sliceSize; j++) {
         const index = j * sliceSize + i;
-        // ideally this would skip notes < 0 but doing so prevents "rests" so for now they remain
-        // if (this.data[index] < 0 ) {
-        //   continue;
-        // }
         if (this.data[index] !== 0) {
           const midiNoteNumber = Math.round((index - minIndex) / (maxIndex - minIndex) * (maxNote - minNote) + minNote);
-          for (var c = 0; c < this.chord_intervals.length; c++) {
-            let note_to_add = midiNoteNumber + this.chord_intervals[c];
+          let chordIntervalIndex = Math.floor((index / this.data.length) * chordIntervalsLength);
+          let currentChordInterval = this.chord_intervals[chordIntervalIndex];
+          for (var c = 0; c < currentChordInterval.length; c++) {
+            let note_to_add = midiNoteNumber + currentChordInterval[c];
             // check if key needs to be locked
             if (this.key_scale !== false) {
               let dataLength = this.data.length;
@@ -4640,6 +4660,8 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     const sliceSize = Math.ceil(this.data.length / wraps);
     const track = new MidiWriter.Track();
 
+    const chordIntervalsLength = this.chord_intervals.length;
+
     for (let i = 0; i < sliceSize; i++) {
       const pitches = [];
       for (let j = 0; j < wraps; j++) {
@@ -4649,8 +4671,10 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
         //   continue;
         // }
         if (index < this.data.length) {
-          for (var c = 0; c < this.chord_intervals.length; c++) {
-            let note_to_add = this.data[index] + this.chord_intervals[c];
+          let chordIntervalIndex = Math.floor((index / this.data.length) * chordIntervalsLength);
+          let currentChordInterval = this.chord_intervals[chordIntervalIndex];
+          for (var c = 0; c < currentChordInterval.length; c++) {
+            let note_to_add = this.data[index] + currentChordInterval[c];
             // check if key needs to be locked
             if (this.key_scale !== false) {
               let dataLength = this.data.length;
