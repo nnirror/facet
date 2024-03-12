@@ -13,6 +13,7 @@ const FacetConfig = require('./config.js');
 const HOST = FacetConfig.settings.HOST;
 const OSC = require('osc-js')
 const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
+const Tonal = require('tonal');
 udp_osc_server.open({ port: 2134 });
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 const server = http.createServer(app);
@@ -220,8 +221,6 @@ function tick() {
       delete event_register[fp_name];
     });
     patterns_to_delete_at_end_of_loop = [];
-    applyNextPatterns();
-    patterns_for_next_loop = {};
     // tell pattern server to start processing next loop
     requestNewPatterns();
     // increment loops since generation for all voices
@@ -326,6 +325,11 @@ function tick() {
     loop_start_time = Date.now();
   }
 
+  if ( current_relative_step_position >= 0.99 ) {
+    applyNextPatterns();
+    patterns_for_next_loop = {};
+  }
+
   setTimeout(tick, delay);
 }
 
@@ -370,40 +374,47 @@ function applyNextPatterns () {
             let note_data = posted_pattern.notes[i];
             let chordIntervalIndex = Math.floor((i / posted_pattern.notes.length) * chordIntervalsLength);
             let currentChordInterval = posted_pattern.chord_intervals[chordIntervalIndex];
-            for (var c = 0; c < currentChordInterval.length; c++) {
-              let note_to_add = note_data.note + currentChordInterval[c];
-              // check if key needs to be locked
-              if (posted_pattern.key_scale !== false) {
-                let dataLength = posted_pattern.notes.length;
-                let keyLetterLength = posted_pattern.key_letter.length;
-                let keyScaleLength = posted_pattern.key_scale.length;
-            
-                let keyLetterIndex = Math.floor((i / dataLength) * keyLetterLength);
-                let keyScaleIndex = Math.floor((i / dataLength) * keyScaleLength);
-            
-                if (typeof posted_pattern.key_scale[keyScaleIndex] == 'object') {
-                    // scale made from FP
-                    note_to_add = new FacetPattern().from(note_to_add).key([posted_pattern.key_letter[keyLetterIndex]], new FacetPattern().from(posted_pattern.key_scale[keyScaleIndex].data)).data[0];
-                } else {
-                    // scale from string
-                    note_to_add = new FacetPattern().from(note_to_add).key([posted_pattern.key_letter[keyLetterIndex]], [posted_pattern.key_scale[keyScaleIndex]]).data[0];
+            if ( currentChordInterval ) {
+              for (var c = 0; c < currentChordInterval.length; c++) {
+                let note_to_add = note_data.note + currentChordInterval[c];
+                // check if key needs to be locked
+                if (posted_pattern.key_scale !== false) {
+                  let dataLength = posted_pattern.notes.length;
+                  let keyLetterLength = posted_pattern.key_letter.length;
+                  let keyScaleLength = posted_pattern.key_scale.length;
+              
+                  let keyLetterIndex = Math.floor((i / dataLength) * keyLetterLength);
+                  let keyScaleIndex = Math.floor((i / dataLength) * keyScaleLength);
+              
+                  if (typeof posted_pattern.key_scale[keyScaleIndex] == 'object') {
+                      // scale made from FP
+                      note_to_add = new FacetPattern().from(note_to_add).key([posted_pattern.key_letter[keyLetterIndex]], new FacetPattern().from(posted_pattern.key_scale[keyScaleIndex].data)).data[0];
+                  } else {
+                      // scale from string
+                      let octave = Math.floor(note_to_add / 12) - 1;
+                      let scaleNotes = Tonal.Scale.get(`${posted_pattern.key_letter[keyLetterIndex]} ${posted_pattern.key_scale[keyScaleIndex]}`).notes;
+                      scaleNotes = scaleNotes.map(note => note + octave);
+                      let midiNumbers = scaleNotes.map(note => Tonal.Note.midi(note));
+                      let closest = midiNumbers.reduce((prev, curr) => Math.abs(curr - note_to_add) < Math.abs(prev - note_to_add) ? curr : prev);
+                      note_to_add = closest;
+                  }
                 }
+  
+                event_register[facet_pattern_name].push(
+                  {
+                    position: note_data.position,
+                    type: "note",
+                    data: {
+                      note: note_to_add,
+                      channel: note_data.channel,
+                      velocity: note_data.velocity,
+                      duration: note_data.duration,
+                      play_once: posted_pattern.play_once,
+                      fired: false
+                    },
+                  }
+                )
               }
-
-              event_register[facet_pattern_name].push(
-                {
-                  position: note_data.position,
-                  type: "note",
-                  data: {
-                    note: note_to_add,
-                    channel: note_data.channel,
-                    velocity: note_data.velocity,
-                    duration: note_data.duration,
-                    play_once: posted_pattern.play_once,
-                    fired: false
-                  },
-                }
-              )
             }
           }
         }
