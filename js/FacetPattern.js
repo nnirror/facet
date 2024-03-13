@@ -15,8 +15,7 @@ const NYQUIST = SAMPLE_RATE / 2;
 const curve_calc = require('./lib/curve_calc.js');
 const KarplusStrongString = require('./lib/KarplusStrongString.js').KarplusStrongString;
 const Complex = require('./lib/Complex.js');
-const { Scale } = require('tonal');
-const { Midi } = require("tonal");
+const { Scale, Midi } = require('tonal');
 const PNG = require('pngjs').PNG;
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 
@@ -796,12 +795,31 @@ class FacetPattern {
   }
 
   key (key_letter = "C", key_scale = "major") {
-    let chroma_key = this.parseKeyAndScale(key_letter,key_scale);
-    // check the modulo 12 of each variable. if it's 0, move it up 1 and try again. try 12 times then quit
+    if ( !Array.isArray(key_scale) ) {
+      key_scale = [key_scale];
+    }
+    if (!this.isFacetPattern(key_letter)) {
+      key_letter = new FacetPattern().from(key_letter);
+    }
+    if (!this.isFacetPattern(key_scale)) {
+      key_scale = new FacetPattern().from(key_scale);
+    }
+    let same_size_arrays = this.makePatternsTheSameSize(key_letter, key_scale);
+    key_letter = same_size_arrays[0].data;
+    key_scale = same_size_arrays[1].data;
+  
+    let dataLength = this.data.length;
+    let keyLetterLength = key_letter.length;
+    let keyScaleLength = key_scale.length;
+
     let key_sequence = [];
     for (let [k, step] of Object.entries(this.data)) {
+      let keyLetterIndex = Math.floor((k / dataLength) * keyLetterLength);
+      let keyScaleIndex = Math.floor((k / dataLength) * keyScaleLength);
+      let chroma_key = this.parseKeyAndScale(key_letter[keyLetterIndex], key_scale[keyScaleIndex]);
+
       if (step < 0) {
-        key_sequence.push(-1);
+        key_sequence.push(-1000);
         continue;
       }
       step = Math.round(step);
@@ -820,7 +838,7 @@ class FacetPattern {
         i++;
       }
       if ( key_found == false ) {
-        key_sequence.push(-1);
+        key_sequence.push(-1000);
       }
     }
     this.key_scale = key_scale;
@@ -2962,75 +2980,95 @@ rechunk (numChunks, probability = 1) {
   }
 
   chord (chord_name, inversion_mode = 0) {
-    if ( this.isFacetPattern(chord_name) ) {
-      this.chord_intervals = chord_name.data;
+    if ( !Array.isArray(chord_name) ) {
+      chord_name = [chord_name];
     }
-    else {
-      const VALID_CHORD_NAMES = [
-        'maj', 'major',
-        'min', 'minor',
-        'fifth', '5th', '5',
-        'seventh', '7th', '7',
-        'major seventh', 'maj7',
-        'minor seventh', 'm7',
-        'diminished', 'dim',
-        'add2', 'add9'
-      ];
-      if ( !VALID_CHORD_NAMES.includes(chord_name) ) {
-        throw `invalid chord name: ${chord_name}`;
+    for (var i = 0; i < chord_name.length; i++) {
+      let cn = chord_name[i];
+      if ( this.isFacetPattern(cn) ) {
+        this.chord_intervals.push(cn.data);
       }
-  
-      let chord_intervals_to_add = [];
-      switch (chord_name) {
-        case 'maj':
-          chord_intervals_to_add = [4,7];
-        case 'major':
-          chord_intervals_to_add = [4,7];
-        case 'min':
-              chord_intervals_to_add = [3,7];
-        case 'minor':
+      else {
+        const VALID_CHORD_NAMES = [
+          'maj', 'major',
+          'min', 'minor',
+          'fifth', '5th', '5',
+          'seventh', '7th', '7',
+          'major seventh', 'maj7',
+          'minor seventh', 'm7',
+          'diminished', 'dim',
+          'add2', 'add9'
+        ];
+        if ( !VALID_CHORD_NAMES.includes(cn) ) {
+          throw `invalid chord name: ${cn}`;
+        }
+    
+        let chord_intervals_to_add = [];
+        switch (cn) {
+          case 'maj':
+            chord_intervals_to_add = [4,7];
+          case 'major':
+            chord_intervals_to_add = [4,7];
+            break;
+          case 'min':
             chord_intervals_to_add = [3,7];
-        case 'fifth':
-            chord_intervals_to_add = [7];
-        case '5th':
-            chord_intervals_to_add = [7];
-        case 'seventh':
-            chord_intervals_to_add = [4,7,10];
-        case '7th':
-            chord_intervals_to_add = [4,7,10];
-        case 'major seventh':
-          chord_intervals_to_add = [4,7,11];
-        case 'maj7':
-          chord_intervals_to_add = [4,7,11];
-        case 'minor seventh':
-          chord_intervals_to_add = [3,7,10];
-        case 'm7':
-          chord_intervals_to_add = [3,7,10];
-        case 'diminished':
-          chord_intervals_to_add = [-1,2,5];
-        case 'dim':
-          chord_intervals_to_add = [-1,2,5];
-        case 'add2':
-          chord_intervals_to_add = [2,4,7];
-        case 'add9':
-          chord_intervals_to_add = [4,7,14];
-          break;
-        default:
+            break;
+          case 'minor':
+              chord_intervals_to_add = [3,7];
+              break;
+          case 'fifth':
+              chord_intervals_to_add = [7];
+              break;
+          case '5th':
+              chord_intervals_to_add = [7];
+              break;
+          case 'seventh':
+              chord_intervals_to_add = [4,7,10];
+              break;
+          case '7th':
+              chord_intervals_to_add = [4,7,10];
+              break;
+          case 'major seventh':
+            chord_intervals_to_add = [4,7,11];
+            break;
+          case 'maj7':
+            chord_intervals_to_add = [4,7,11];
+            break;
+          case 'minor seventh':
+            chord_intervals_to_add = [3,7,10];
+            break;
+          case 'm7':
+            chord_intervals_to_add = [3,7,10];
+            break;
+          case 'diminished':
+            chord_intervals_to_add = [-1,2,5];
+            break;
+          case 'dim':
+            chord_intervals_to_add = [-1,2,5];
+            break;
+          case 'add2':
+            chord_intervals_to_add = [2,4,7];
+            break;
+          case 'add9':
+            chord_intervals_to_add = [4,7,14];
+            break;
+          default:
+        }
+    
+        if ( inversion_mode == 1 ) {
+          chord_intervals_to_add[0] -= 12;
+        }
+        else if ( inversion_mode == 2 ) {
+          chord_intervals_to_add[0] -= 12;
+          chord_intervals_to_add[1] -= 12;
+        }
+        else if ( inversion_mode == 3 ) {
+          chord_intervals_to_add[0] -= 12;
+          chord_intervals_to_add[1] -= 12;
+          chord_intervals_to_add[2] -= 12;
+        }
+        this.chord_intervals.push(chord_intervals_to_add);
       }
-  
-      if ( inversion_mode == 1 ) {
-        chord_intervals_to_add[0] -= 12;
-      }
-      else if ( inversion_mode == 2 ) {
-        chord_intervals_to_add[0] -= 12;
-        chord_intervals_to_add[1] -= 12;
-      }
-      else if ( inversion_mode == 3 ) {
-        chord_intervals_to_add[0] -= 12;
-        chord_intervals_to_add[1] -= 12;
-        chord_intervals_to_add[2] -= 12;
-      }
-      this.chord_intervals = chord_intervals_to_add;
     }
     return this;
   }
@@ -4559,23 +4597,33 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     const minIndex = 0;
     const maxIndex = this.data.length - 1;
 
+    const chordIntervalsLength = this.chord_intervals.length;
+
     for (let i = 0; i < sliceSize; i++) {
       const pitches = [];
       for (let j = 0; j < sliceSize; j++) {
         const index = j * sliceSize + i;
         if (this.data[index] !== 0) {
           const midiNoteNumber = Math.round((index - minIndex) / (maxIndex - minIndex) * (maxNote - minNote) + minNote);
-          for (var c = 0; c < this.chord_intervals.length; c++) {
-            let note_to_add = midiNoteNumber + this.chord_intervals[c];
+          let chordIntervalIndex = Math.floor((index / this.data.length) * chordIntervalsLength);
+          let currentChordInterval = this.chord_intervals[chordIntervalIndex];
+          for (var c = 0; c < currentChordInterval.length; c++) {
+            let note_to_add = midiNoteNumber + currentChordInterval[c];
             // check if key needs to be locked
-            if ( this.key_scale !== false ) {
-              if ( typeof this.key_scale == 'object' ) {
+            if (this.key_scale !== false) {
+              let dataLength = this.data.length;
+              let keyLetterLength = this.key_letter.length;
+              let keyScaleLength = this.key_scale.length;
+          
+              let keyLetterIndex = Math.floor((index / dataLength) * keyLetterLength);
+              let keyScaleIndex = Math.floor((index / dataLength) * keyScaleLength);
+          
+              if (typeof this.key_scale[keyScaleIndex] == 'object') {
                 // scale made from FP
-                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,new FacetPattern().from(this.key_scale.data)).data[0];
-              }
-              else {
-                // scale from string
-                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,this.key_scale).data[0];
+                note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], new FacetPattern().from(this.key_scale[keyScaleIndex].data)).data[0];
+              } else {
+                  // scale from string
+                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], [this.key_scale[keyScaleIndex]]).data[0];
               }
             }
             pitches.push(Midi.midiToNoteName(note_to_add));
@@ -4612,22 +4660,36 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     const sliceSize = Math.ceil(this.data.length / wraps);
     const track = new MidiWriter.Track();
 
+    const chordIntervalsLength = this.chord_intervals.length;
+
     for (let i = 0; i < sliceSize; i++) {
       const pitches = [];
       for (let j = 0; j < wraps; j++) {
         const index = j * sliceSize + i;
+        // ideally this would skip notes < 0 but doing so prevents "rests" so for now they remain
+        // if (this.data[index] < 0 ) {
+        //   continue;
+        // }
         if (index < this.data.length) {
-          for (var c = 0; c < this.chord_intervals.length; c++) {
-            let note_to_add = this.data[index] + this.chord_intervals[c];
+          let chordIntervalIndex = Math.floor((index / this.data.length) * chordIntervalsLength);
+          let currentChordInterval = this.chord_intervals[chordIntervalIndex];
+          for (var c = 0; c < currentChordInterval.length; c++) {
+            let note_to_add = this.data[index] + currentChordInterval[c];
             // check if key needs to be locked
-            if ( this.key_scale !== false ) {
-              if ( typeof this.key_scale == 'object' ) {
-                // scale made from FP
-                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,new FacetPattern().from(this.key_scale.data)).data[0];
-              }
-              else {
-                // scale from string
-                note_to_add = new FacetPattern().from(note_to_add).key(this.key_letter,this.key_scale).data[0];
+            if (this.key_scale !== false) {
+              let dataLength = this.data.length;
+              let keyLetterLength = this.key_letter.length;
+              let keyScaleLength = this.key_scale.length;
+          
+              let keyLetterIndex = Math.floor((index / dataLength) * keyLetterLength);
+              let keyScaleIndex = Math.floor((index / dataLength) * keyScaleLength);
+          
+              if (typeof this.key_scale[keyScaleIndex] == 'object') {
+                  // scale made from FP
+                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], new FacetPattern().from(this.key_scale[keyScaleIndex].data)).data[0];
+              } else {
+                  // scale from string
+                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], [this.key_scale[keyScaleIndex]]).data[0];
               }
             }
             pitches.push(Midi.midiToNoteName(note_to_add));

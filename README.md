@@ -204,10 +204,11 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- example:
 		- `$('example').drunk(64,0.1).cc();`
 ---
-- **chord** ( _chord_type_, _inversion_mode_ = 0 )
+- **chord** ( _chordTypePattern_, _inversion_mode_ = 0 )
 	- creates a chord of MIDI notes for every value in the FacetPattern's data.
-	- if the `chord_type` argument is a FacetPattern, the chord intervals will correspond to the data of the `chord_type` FacetPattern.
-	- if `chord_type` is a string, it must be from the below list of chord names:
+	- `chordTypePattern` can be a string, or a FacetPattern, or an array of either. If `chordTypePattern` is a FacetPattern, the chord intervals will correspond to the data of the `chordTypePattern` FacetPattern.
+	- if `chordTypePattern` is an array with more than one value in it, then the chord type will change dynamically over the course of the loop. For example, a `chordTypePattern` of ['major','maj7','minor'] will produce major chords for the first third of the loop, then switch to maj7 chords for the middle third, then switch to minor chords for the last third.
+	- if `chordTypePattern` is a string, it must be from the below list of chord names:
 
 	`maj` / `major` = `0,4,7`
 
@@ -232,17 +233,18 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- example:
 		- `$('example').ramp(36,72,32).chord('maj7').add((bars%4)*12).key('F#','major').note(50,100,1);`
 		- `$('example').noise(16).scale(36,90).chord(_.from([3,5,7,10,11,14,16,20,25])).key('c','major').note(); // 9-note chords mapped onto c major`
+		- `$('example').noise(8).scale(30,80).chord('maj7').key(['c','f#'], ['major','minor']).note(100,500); // maj7 chords, first in c major, then in f# minor`
 ---
-- **key** ( _key_letter_, _key_scale_ )
-	- translates a FacetPattern with data in the range of MIDI note numbers (0-127) so all its values now adhere to the supplied `key_letter` and `key_scale`.
-	- `key_letter` values: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
-	- `key_scale` values can either be a string (see list below) or a FacetPattern containing 1-12 binary numbers (see examples).
+- **key** ( _keyLetterPattern_, _keyScalePattern_ )
+	- translates a FacetPattern with data in the range of MIDI note numbers (0-127) so all its values now adhere to the supplied `keyLetterPattern` and `keyScalePattern`.
+	- `keyLetterPattern` values can be a string: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", or an array, or strings: `["A", "D"]`, or a FacetPattern of strings: `_.from(['A','D']).dup(3).shuffle()`. When `keyLetterPattern` contains multiple values, the key will change dynamically over the course of the loop. So a `keyLetterPattern` of `["A", "D", "G"]` will be in the key of A for the first third, then switch to D for the middle third, then switch to G for the last third.
+	- `keyScalePattern` values can either be a string (see list below), or a FacetPattern containing 1-12 binary numbers (see examples), or an array of strings/FacetPatterns, in which case the values change dynamically over the course of the loop.
 	- possible scales: ["major pentatonic", "major", "minor", "major blues", "minor blues", "melodic minor", "harmonic minor", "bebop", "diminished", "dorian", "lydian", "mixolydian", "phrygian", "locrian", "ionian pentatonic", "mixolydian pentatonic", "ritusen", "egyptian", "neopolitan major pentatonic", "vietnamese 1", "pelog", "kumoijoshi", "hirajoshi", "iwato", "in-sen", "lydian pentatonic", "malkos raga", "locrian pentatonic", "minor pentatonic", "minor six pentatonic", "flat three pentatonic", "flat six pentatonic", "scriabin", "whole tone pentatonic", "lydian #5P pentatonic", "lydian dominant pentatonic", "minor #7M pentatonic", "super locrian pentatonic", "minor hexatonic", "augmented", "piongio", "prometheus neopolitan", "prometheus", "mystery #1", "six tone symmetric", "whole tone", "messiaen's mode #5", "locrian major", "double harmonic lydian", "altered", "locrian #2", "mixolydian b6", "lydian dominant", "lydian augmented", "dorian b2", "ultralocrian", "locrian 6", "augmented heptatonic", "dorian #4", "lydian diminished", "leading whole tone", "lydian minor", "phrygian dominant", "balinese", "neopolitan major", "harmonic major", "double harmonic major", "hungarian minor", "hungarian major", "oriental", "flamenco", "todi raga", "persian", "enigmatic", "major augmented", "lydian #9", "messiaen's mode #4", "purvi raga", "spanish heptatonic", "bebop minor", "bebop major", "bebop locrian", "minor bebop", "ichikosucho", "minor six diminished", "half-whole diminished", "kafi raga", "messiaen's mode #6", "composite blues", "messiaen's mode #3", "messiaen's mode #7", "chromatic"]
 	- example: `$('example').randsamp('808').reduce(32).scale(36,51).key('F#', 'bebop').note();`
 	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1])).note(); // octave scale, via custom FacetPattern`
 	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,0,0,0,0,0,0,0])).note(); // equivalent to the above custom octave scale; the padded zeroes are optional`
 	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,0,1])).note(); // octave + perfect fifth scale, via custom FacetPattern`
-	- example: `$('example').noise(16).scale(30,80).key('c', _.from([1,0,0,0,0,1,0,0,0,0,0,1])).note(); // octave + tritone + major seventh, via custom FacetPattern`
+	- example: `$('example').noise(16).scale(30,80).key(['c','f#'], ['major','minor']).note(); // the first half is c major; the second half is f# major`
 ---
 - **osc** ( _address_ )
 	- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
