@@ -46,6 +46,7 @@ class FacetPattern {
     this.pan_mode = 0;
     this.play_once = false;
     this.original_command = '';
+    this.over_n = 1;
     this.osc_data = [];
     this.pitchbend_data = [];
     this.saveas_filename = false;
@@ -1489,20 +1490,14 @@ waveformSample(waveform, phase) {
     prob = Number(prob);
     let jammed_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
-      if ( step != 0 ) {
-        if ( Math.random() < prob) {
-          // changed
-          let step_distance = Math.random() * amt;
-          // half the time make it smaller
-          if ( Math.random() < 0.5 ) {
-            step_distance *= -1;
-          }
-          jammed_sequence[key] = Number((Number(step) + Number(step_distance)));
+      if ( Math.random() < prob) {
+        // changed
+        let step_distance = Math.random() * amt;
+        // half the time make it smaller
+        if ( Math.random() < 0.5 ) {
+          step_distance *= -1;
         }
-        else {
-          // unchanged
-          jammed_sequence[key] = step;
-        }
+        jammed_sequence[key] = Number((Number(step) + Number(step_distance)));
       }
       else {
         // unchanged
@@ -2257,11 +2252,13 @@ scaleLT1 (outMin, outMax, exponent = 1) {
     return this;
   }
 
+  over (n = 1) {
+    this.over_n = n;
+    this.whenmod(n);
+    return this;
+  }
+
   whenmod (modulo, equals_value = 0) {
-    let current_bar_number = this.getBars();
-    if  ((current_bar_number-1) % modulo !== equals_value) {
-      this.skipped = true;
-    }
     this.whenmod_modulo_operand = modulo;
     this.whenmod_equals = equals_value;
     return this;

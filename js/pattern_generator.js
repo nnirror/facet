@@ -367,19 +367,6 @@ function postMetaDataToTransport (fp,data_type) {
   });
 }
 
-function sliceEndFade(array) {
-  if ( array.length < 1024 ) {
-    return array;
-  }
-  let result = [...array];
-  let fadeLength = 128;
-  for (let i = array.length - fadeLength; i < array.length; i++) {
-    let t = (i - (array.length - fadeLength)) / fadeLength;
-    result[i] = array[i] * (1 - t);
-  }
-  return result;
-}
-
 function panning(input_value, input_channel, total_channels, pan_mode) {
   let fade_range = 2 / total_channels;
   let channel_start = (input_channel * fade_range) - 1;

@@ -25,6 +25,7 @@ let browser_sound_output = true;
 let voice_allocator = initializeVoiceAllocator();
 let voices_to_send_to_browser = [];
 let patterns_for_next_loop = {};
+let over_n_values = {};
 let stopped_patterns = [];
 let patterns_that_have_been_stopped = [];
 let patterns_to_delete_at_end_of_loop = [];
@@ -110,6 +111,8 @@ app.post('/update', (req, res) => {
     let posted_pattern = JSON.parse(req.body.pattern);
     let facet_pattern_name = posted_pattern.name.split('---')[0];
 
+    over_n_values[facet_pattern_name] = posted_pattern.over_n;
+
     if ( posted_pattern.is_stopped === true || facet_pattern_name in patterns_that_have_been_stopped ) {
       stopped_patterns.push(facet_pattern_name);
       stopVoice(posted_pattern.name);
@@ -122,6 +125,9 @@ app.post('/update', (req, res) => {
       if ( browser_sound_output === true ) {
         voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`);
       }
+    
+      let over_n = over_n_values[facet_pattern_name] || 1;
+    
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step, index) => {
         // calculate the ratio of sequence steps to pitch steps
@@ -130,18 +136,28 @@ app.post('/update', (req, res) => {
         let pitchIndex = Math.floor(index * ratio) % posted_pattern.sequence_pitch_data.length;
         // get the pitch from the pattern's sequence_pitch_data
         let pitch = posted_pattern.sequence_pitch_data[pitchIndex];
-        event_register[facet_pattern_name].push(
-          {
-            position: step,
-            type: "audio",
-            data: [],
-            pitch: pitch,
-            play_once: posted_pattern.play_once,
-            voice: voice_number_to_load,
-            fired: false,
-            loadtime: Date.now()
-          }
-        )
+    
+        // calculate which loop this step belongs to
+        let loopIndex = Math.floor(step * over_n);
+        // calculate the position within the loop
+        let newPosition = (step * over_n) - loopIndex;
+        if (loopIndex < over_n) {
+          event_register[facet_pattern_name].push(
+            {
+              position: newPosition,
+              type: "audio",
+              data: [],
+              pitch: pitch,
+              play_once: posted_pattern.play_once,
+              voice: voice_number_to_load,
+              fired: false,
+              loadtime: Date.now(),
+              play_on_bar: loopIndex,
+              over_n: posted_pattern.over_n,
+              bar_posted: bars_elapsed
+            }
+          )
+        }
       });
       emitLoadEvent();
     }
@@ -245,7 +261,7 @@ function tick() {
           && (event.position < (current_relative_step_position + relative_step_amount_to_add_per_loop) && (event.fired === false) ) ) {
             event.fired = true;
           // fire all events for this facetpattern matching the current step
-          if ( event.type === "audio" ) {
+          if ( event.type === "audio" && (((bars_elapsed - event.bar_posted) % event.over_n) == event.play_on_bar) ) {
             // play any audio files at this step
             if ( count_times_fp_played < 1 ) {
               let pre_send_delay_ms = 0;
@@ -327,7 +343,6 @@ function tick() {
 
   if ( current_relative_step_position >= 0.99 ) {
     applyNextPatterns();
-    patterns_for_next_loop = {};
   }
 
   setTimeout(tick, delay);
@@ -350,88 +365,112 @@ function reportTransportMetaData() {
   }
 }
 
-function applyNextPatterns () {
+function applyNextPatterns() {
   for (const [facet_pattern_name, posted_pattern] of Object.entries(patterns_for_next_loop)) {
-    if ( stopped_patterns.includes(facet_pattern_name)) {
+    if (stopped_patterns.includes(facet_pattern_name)) {
       return;
     }
-    if ( posted_pattern.notes.length > 0 ) {
+
+    let over_n = over_n_values[facet_pattern_name] || 1;
+
+    const processPatternData = (patternData, type, processData) => {
+      const eventsPerLoop = Math.ceil(patternData.length / over_n);
+      const startEventIndex = bars_elapsed % over_n * eventsPerLoop;
+      const endEventIndex = Math.min(startEventIndex + eventsPerLoop, patternData.length);
+
       event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.notes.length; i++) {
-        let note_data = posted_pattern.notes[i];
-        if ( note_data.note >= 0 ) {
-          event_register[facet_pattern_name].push(
-            {
-              position: note_data.position,
-              type: "note",
-              data: note_data,
-              play_once: posted_pattern.play_once,
-              fired: false
-            }
-          )
-          const chordIntervalsLength = posted_pattern.chord_intervals.length;
-          for (let i = 0; i < posted_pattern.notes.length; i++) {
-            let note_data = posted_pattern.notes[i];
-            let chordIntervalIndex = Math.floor((i / posted_pattern.notes.length) * chordIntervalsLength);
-            let currentChordInterval = posted_pattern.chord_intervals[chordIntervalIndex];
-            if ( currentChordInterval ) {
-              for (var c = 0; c < currentChordInterval.length; c++) {
-                let note_to_add = note_data.note + currentChordInterval[c];
-                // check if key needs to be locked
-                if (posted_pattern.key_scale !== false) {
-                  let dataLength = posted_pattern.notes.length;
-                  let keyLetterLength = posted_pattern.key_letter.length;
-                  let keyScaleLength = posted_pattern.key_scale.length;
-              
-                  let keyLetterIndex = Math.floor((i / dataLength) * keyLetterLength);
-                  let keyScaleIndex = Math.floor((i / dataLength) * keyScaleLength);
-              
-                  if (typeof posted_pattern.key_scale[keyScaleIndex] == 'object') {
-                      // scale made from FP
-                      note_to_add = new FacetPattern().from(note_to_add).key([posted_pattern.key_letter[keyLetterIndex]], new FacetPattern().from(posted_pattern.key_scale[keyScaleIndex].data)).data[0];
-                  } else {
-                      // scale from string
-                      let octave = Math.floor(note_to_add / 12) - 1;
-                      let scaleNotes = Tonal.Scale.get(`${posted_pattern.key_letter[keyLetterIndex]} ${posted_pattern.key_scale[keyScaleIndex]}`).notes;
-                      scaleNotes = scaleNotes.map(note => note + octave);
-                      let midiNumbers = scaleNotes.map(note => Tonal.Note.midi(note));
-                      let closest = midiNumbers.reduce((prev, curr) => Math.abs(curr - note_to_add) < Math.abs(prev - note_to_add) ? curr : prev);
-                      note_to_add = closest;
-                  }
-                }
-  
-                event_register[facet_pattern_name].push(
-                  {
-                    position: note_data.position,
-                    type: "note",
-                    data: {
-                      note: note_to_add,
-                      channel: note_data.channel,
-                      velocity: note_data.velocity,
-                      duration: note_data.duration,
-                      play_once: posted_pattern.play_once,
-                      fired: false
-                    },
-                  }
-                )
+      for (let i = startEventIndex; i < endEventIndex; i++) {
+        const indexWithinLoop = i - startEventIndex;
+        const newPosition = indexWithinLoop / eventsPerLoop;
+
+        let eventData = {
+          position: newPosition,
+          type: type,
+          data: patternData[i],
+          play_once: posted_pattern.play_once,
+          fired: false
+        };
+
+        if (processData) {
+          processData(eventData, i, indexWithinLoop);
+        }
+
+        event_register[facet_pattern_name].push(eventData);
+      }
+    };
+
+    if (posted_pattern.notes && posted_pattern.notes.length > 0 && posted_pattern.chord_intervals && posted_pattern.chord_intervals.length > 0) {
+      // process notes and associated chord intervals
+      processPatternData(posted_pattern.notes, 'note', (eventData, noteIndex, indexWithinLoop) => {
+        const note_data = eventData.data;
+        const eventsPerLoop = Math.ceil(posted_pattern.notes.length / over_n);
+        const chordIntervalsLength = posted_pattern.chord_intervals.length;
+    
+        // process chord intervals if available
+        let chordIntervalIndex = Math.floor((indexWithinLoop / eventsPerLoop) * chordIntervalsLength);
+        let currentChordInterval = posted_pattern.chord_intervals[chordIntervalIndex];
+    
+        if (currentChordInterval) {
+          for (let c = 0; c < currentChordInterval.length; c++) {
+            let note_to_add = note_data.note + currentChordInterval[c];
+            // check if key needs to be locked
+            if (posted_pattern.key_scale !== false) {
+              let keyLetterLength = Array.isArray(posted_pattern.key_letter) ? posted_pattern.key_letter.length : 1;
+              let keyScaleLength = posted_pattern.key_scale.length;
+      
+              let keyLetterIndex = Math.floor((indexWithinLoop / eventsPerLoop) * keyLetterLength);
+              let keyScaleIndex = Math.floor((indexWithinLoop / eventsPerLoop) * keyScaleLength);
+    
+              if (typeof posted_pattern.key_scale[keyScaleIndex] === 'object') {
+                // Scale from FacetPattern
+                note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_letter[keyLetterIndex], new FacetPattern().from(posted_pattern.key_scale[keyScaleIndex].data)).data[0];
+              } else {
+                // Scale from string
+                let octave = Math.floor(note_to_add / 12) - 1;
+                let scaleNotes = Tonal.Scale.get(`${posted_pattern.key_letter[keyLetterIndex]} ${posted_pattern.key_scale[keyScaleIndex]}`).notes;
+                scaleNotes = scaleNotes.map(note => `${note}${octave}`);
+                let midiNumbers = scaleNotes.map(note => Tonal.Note.midi(note));
+                let closest = midiNumbers.reduce((prev, curr) => Math.abs(curr - note_to_add) < Math.abs(prev - note_to_add) ? curr : prev);
+                note_to_add = closest;
               }
             }
+            
+            // add the computed note together with its original attributes
+            event_register[facet_pattern_name].push({
+              position: eventData.position,
+              type: 'note',
+              data: {
+                note: note_to_add,
+                channel: note_data.channel,
+                velocity: note_data.velocity,
+                duration: note_data.duration,
+                play_once: posted_pattern.play_once,
+                fired: false
+              }
+            });
           }
         }
-      }
+      });
     }
-  
+
     if ( typeof posted_pattern.cc_data.data !== 'undefined' ) {
+      let eventsPerLoop = Math.ceil(posted_pattern.cc_data.data.length / over_n);
+      let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
+      let endEventIndex = startEventIndex + eventsPerLoop;
+    
       event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.cc_data.data.length; i++) {
+      for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.cc_data.data.length; i++) {
         let cc_object = {
           data: posted_pattern.cc_data.data[i],
           controller: posted_pattern.cc_data.controller,
           channel: posted_pattern.cc_data.channel,
         };
+        let indexWithinLoop = i - startEventIndex;
+        let newPosition = indexWithinLoop / eventsPerLoop;
+    
         event_register[facet_pattern_name].push(
           {
-            position: (i/posted_pattern.cc_data.data.length),
+            position: newPosition,
             type: "cc",
             data: cc_object,
             play_once: posted_pattern.play_once,
@@ -440,17 +479,24 @@ function applyNextPatterns () {
         )
       }
     }
-  
+    
     if ( typeof posted_pattern.pitchbend_data.data !== 'undefined' ) {
+      let eventsPerLoop = Math.ceil(posted_pattern.pitchbend_data.data.length / over_n);
+      let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
+      let endEventIndex = startEventIndex + eventsPerLoop;
+    
       event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.pitchbend_data.data.length; i++) {
+      for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.pitchbend_data.data.length; i++) {
         let pb_object = {
           data: posted_pattern.pitchbend_data.data[i],
           channel: posted_pattern.pitchbend_data.channel,
         };
+        let indexWithinLoop = i - startEventIndex;
+        let newPosition = indexWithinLoop / eventsPerLoop;
+    
         event_register[facet_pattern_name].push(
           {
-            position: (i/posted_pattern.pitchbend_data.data.length),
+            position: newPosition,
             type: "pitchbend",
             data: pb_object,
             play_once: posted_pattern.play_once,
@@ -459,17 +505,24 @@ function applyNextPatterns () {
         )
       }
     }
-  
+    
     if ( typeof posted_pattern.osc_data.data !== 'undefined' ) {
+      let eventsPerLoop = Math.ceil(posted_pattern.osc_data.data.length / over_n);
+      let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
+      let endEventIndex = startEventIndex + eventsPerLoop;
+    
       event_register[facet_pattern_name] = [];
-      for (var i = 0; i < posted_pattern.osc_data.data.length; i++) {
+      for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.osc_data.data.length; i++) {
         let osc_object = {
           data: posted_pattern.osc_data.data[i],
           address: posted_pattern.osc_data.address,
         };
+        let indexWithinLoop = i - startEventIndex;
+        let newPosition = indexWithinLoop / eventsPerLoop;
+    
         event_register[facet_pattern_name].push(
           {
-            position: (i/posted_pattern.osc_data.data.length),
+            position: newPosition,
             type: "osc",
             data: osc_object,
             play_once: posted_pattern.play_once,

@@ -342,20 +342,38 @@ You need to connect the MIDI device you want to use before starting Facet.
 	- only play the generated FacetPattern a single time. Without including `once()`, the FacetPattern will regenerate and play back each loop by default.
 	- example:
 		- `$('example').noise(4096).play().once();`
+---
+- **over** ( _n_loops_ = 1 )
+	- distributes all the events that a FacetPattern would fire over `n_loops` so the pattern can last any number of loops before regenerating.
+	- works with audio playback, MIDI note/cc/pitchbend, and OSC.
+	- example:
+		- `$('example').randsamp('808').play(_.ramp(0,1,16)).over(ri(1,4)); // random sample played 16 times over 1,2,3 or 4 bars`
+		- `$('example').drunk(2048,0.01).cc().over(128); // drunk walk over 128 bars, creates a drifty process that you can map onto device paramters to slowly randomize something`
 
 ### Methods for setting variables
 This can be useful when you want to access the same pattern across multiple commands.
 
 - **set** ( _name_ )
 	- saves a FacetPattern's data in memory, for reference as a variable in operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
-	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If  the pattern has one piece of data in it, the corresponding variable will be a float.
+	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If the pattern has one piece of data in it, the corresponding variable will be a float.
 	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
+	- **NOTE**: if you want to set more than one variable, you should run all the `.set()` methods in a single command, so they do not create a race condition for when they are evaluated.
 		- example:
 		-  ```
 		$('example').tri(100).set('abc').sine(abc).play(); // run it all in one command - just remember the first evaluated sine will have a frequency of 0
 
 		$('set_example').noise(32).curve().set('my_var').once(); // first, set the variable here
 		$('example').noise(100).times(my_var).play(); // now, you can use my_var in commands
+
+		// multi-variable example
+		// step 1: initialize the patterns by running this with .once()
+		$('p1').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p1').once();
+		$('p2').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p2').once();
+		$('p3').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p3').once();
+		$('p4').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p4').once();
+
+		// step 2: start the process to continually modify some of the values in the d1-d4 patterns, in one command
+		$('example').from(p1).jam(0.1, 10).wrap(0,127).round().set('p1').from(p2).jam(0.1, 10).wrap(0,127).round().set('p2').from(p3).jam(0.1, 10).wrap(0,127).round().set('p3').from(p4).jam(0.1, 10).wrap(0,127).round().set('p4');
 		``` 
 - **inc** ( _name_, _amount_to_add_ = 1 )
 	- increments a variable called `name` by `amount_to_add`. This variable can be used in operations.
