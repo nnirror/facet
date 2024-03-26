@@ -399,55 +399,41 @@ function applyNextPatterns() {
       }
     };
 
-    if (posted_pattern.notes && posted_pattern.notes.length > 0 && posted_pattern.chord_intervals && posted_pattern.chord_intervals.length > 0) {
+    if (posted_pattern.notes && posted_pattern.notes.length > 0) {
       // process notes and associated chord intervals
       processPatternData(posted_pattern.notes, 'note', (eventData, noteIndex, indexWithinLoop) => {
         const note_data = eventData.data;
         const eventsPerLoop = Math.ceil(posted_pattern.notes.length / over_n);
-        const chordIntervalsLength = posted_pattern.chord_intervals.length;
+        // push the root note
+        event_register[facet_pattern_name].push({
+          position: eventData.position,
+          type: 'note',
+          data: note_data
+        });
     
-        // process chord intervals if available
-        let chordIntervalIndex = Math.floor((indexWithinLoop / eventsPerLoop) * chordIntervalsLength);
-        let currentChordInterval = posted_pattern.chord_intervals[chordIntervalIndex];
-    
-        if (currentChordInterval) {
-          for (let c = 0; c < currentChordInterval.length; c++) {
-            let note_to_add = note_data.note + currentChordInterval[c];
-            // check if key needs to be locked
-            if (posted_pattern.key_scale !== false) {
-              let keyLetterLength = Array.isArray(posted_pattern.key_letter) ? posted_pattern.key_letter.length : 1;
-              let keyScaleLength = posted_pattern.key_scale.length;
-      
-              let keyLetterIndex = Math.floor((indexWithinLoop / eventsPerLoop) * keyLetterLength);
-              let keyScaleIndex = Math.floor((indexWithinLoop / eventsPerLoop) * keyScaleLength);
-    
-              if (typeof posted_pattern.key_scale[keyScaleIndex] === 'object') {
-                // Scale from FacetPattern
-                note_to_add = new FacetPattern().from(note_to_add).key(posted_pattern.key_letter[keyLetterIndex], new FacetPattern().from(posted_pattern.key_scale[keyScaleIndex].data)).data[0];
-              } else {
-                // Scale from string
-                let octave = Math.floor(note_to_add / 12) - 1;
-                let scaleNotes = Tonal.Scale.get(`${posted_pattern.key_letter[keyLetterIndex]} ${posted_pattern.key_scale[keyScaleIndex]}`).notes;
-                scaleNotes = scaleNotes.map(note => `${note}${octave}`);
-                let midiNumbers = scaleNotes.map(note => Tonal.Note.midi(note));
-                let closest = midiNumbers.reduce((prev, curr) => Math.abs(curr - note_to_add) < Math.abs(prev - note_to_add) ? curr : prev);
-                note_to_add = closest;
-              }
+        if (posted_pattern.chord_intervals && posted_pattern.chord_intervals.length > 0) {
+          const chordIntervalsLength = posted_pattern.chord_intervals.length;
+          
+          // process chord intervals if available
+          let chordIntervalIndex = Math.floor((indexWithinLoop / eventsPerLoop) * chordIntervalsLength);
+          let currentChordInterval = posted_pattern.chord_intervals[chordIntervalIndex];
+          
+          if (currentChordInterval) {
+            for (let c = 0; c < currentChordInterval.length; c++) {
+              let note_to_add = note_data.note + currentChordInterval[c];
+              event_register[facet_pattern_name].push({
+                position: eventData.position,
+                type: 'note',
+                data: {
+                  note: note_to_add,
+                  channel: note_data.channel,
+                  velocity: note_data.velocity,
+                  duration: note_data.duration,
+                  play_once: posted_pattern.play_once,
+                  fired: false
+                }
+              });
             }
-            
-            // add the computed note together with its original attributes
-            event_register[facet_pattern_name].push({
-              position: eventData.position,
-              type: 'note',
-              data: {
-                note: note_to_add,
-                channel: note_data.channel,
-                velocity: note_data.velocity,
-                duration: note_data.duration,
-                play_once: posted_pattern.play_once,
-                fired: false
-              }
-            });
           }
         }
       });
