@@ -96,6 +96,7 @@ app.post('/meta', (req, res) => {
   let posted_pattern = JSON.parse(req.body.pattern);
   if ( req.body.type == 'bpm' ) {
     meta_data.bpm = posted_pattern.data;
+    meta_data.bpm_over_n = posted_pattern.over_n;
   }
   res.sendStatus(200);
 });
@@ -197,6 +198,7 @@ app.get('/status', (req,res)=> {
 
 app.post('/bpm', (req, res) => {
   meta_data.bpm = [Math.abs(Number(req.body.bpm))];
+  meta_data.bpm_over_n = 1;
   res.sendStatus(200);
 });
 
@@ -536,18 +538,33 @@ function resetEventRegister() {
   }
 }
 
-function checkForBpmRecalculation (events_per_loop) {
-  scaledBpm = scalePatternToSteps(meta_data.bpm,events_per_loop);
+function checkForBpmRecalculation(events_per_loop) {
+  scaledBpm = scalePatternToSteps(meta_data.bpm, events_per_loop);
+  // calculate the total length of the BPM pattern over meta_data.bpm_over_n loops
+  let totalPatternLength = events_per_loop * meta_data.bpm_over_n;
+  scaledBpm = scalePatternToSteps(meta_data.bpm, totalPatternLength);
 
-  if ( typeof scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1] != 'undefined' ) {
-    bpm = scaledBpm[Math.round(current_relative_step_position*events_per_loop)-1];
+  // find the overall position in the cycle, combining bars_elapsed and current_relative_step_position
+  // normalize the current_relative_step_position between 0 (inclusive) and 1 (exclusive)
+  let normalizedStepPosition = current_relative_step_position % 1;
+  // calculate the position within the entire cycle
+  let cyclePosition = bars_elapsed / meta_data.bpm_over_n + normalizedStepPosition / meta_data.bpm_over_n;
+  // ensure the cyclePosition wraps around properly
+  cyclePosition = cyclePosition % 1;
+
+  // use the cyclePosition to find the index in the scaled BPM pattern
+  let bpmIndex = Math.floor(cyclePosition * totalPatternLength);
+
+  if (typeof scaledBpm[bpmIndex] !== 'undefined') {
+    bpm = scaledBpm[bpmIndex];
   }
 
-  if ( prev_bpm != bpm ) {
+  if (prev_bpm !== bpm) {
     bpm_was_changed_this_loop = true;
     prev_bpm = bpm;
   }
 }
+
 
 function stopVoice (name) {
   // delete pattern from the event register matching this name.
