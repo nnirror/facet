@@ -2945,7 +2945,7 @@ rechunk (numChunks, probability = 1) {
   this.data = this.fadeArrays(this.data);
   this.data = this.sliceEndFade(this.data);
   this.flatten();
-
+  this.fixnan();
   return this;
 }
   // END audio operations
