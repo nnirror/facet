@@ -4604,26 +4604,28 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
           const midiNoteNumber = Math.round((index - minIndex) / (maxIndex - minIndex) * (maxNote - minNote) + minNote);
           let chordIntervalIndex = Math.floor((index / this.data.length) * chordIntervalsLength);
           let currentChordInterval = this.chord_intervals[chordIntervalIndex];
-          for (var c = 0; c < currentChordInterval.length; c++) {
-            let note_to_add = midiNoteNumber + currentChordInterval[c];
-            // check if key needs to be locked
-            if (this.key_scale !== false) {
-              let dataLength = this.data.length;
-              let keyLetterLength = this.key_letter.length;
-              let keyScaleLength = this.key_scale.length;
-          
-              let keyLetterIndex = Math.floor((index / dataLength) * keyLetterLength);
-              let keyScaleIndex = Math.floor((index / dataLength) * keyScaleLength);
-          
-              if (typeof this.key_scale[keyScaleIndex] == 'object') {
-                // scale made from FP
-                note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], new FacetPattern().from(this.key_scale[keyScaleIndex].data)).data[0];
-              } else {
-                  // scale from string
-                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], [this.key_scale[keyScaleIndex]]).data[0];
+          if ( this.chord_intervals.length > 0 ) {
+            for (var c = 0; c < currentChordInterval.length; c++) {
+              let note_to_add = midiNoteNumber + currentChordInterval[c];
+              // check if key needs to be locked
+              if (this.key_scale !== false) {
+                let dataLength = this.data.length;
+                let keyLetterLength = this.key_letter.length;
+                let keyScaleLength = this.key_scale.length;
+            
+                let keyLetterIndex = Math.floor((index / dataLength) * keyLetterLength);
+                let keyScaleIndex = Math.floor((index / dataLength) * keyScaleLength);
+            
+                if (typeof this.key_scale[keyScaleIndex] == 'object') {
+                  // scale made from FP
+                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], new FacetPattern().from(this.key_scale[keyScaleIndex].data)).data[0];
+                } else {
+                    // scale from string
+                    note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], [this.key_scale[keyScaleIndex]]).data[0];
+                }
               }
+              pitches.push(Midi.midiToNoteName(note_to_add));
             }
-            pitches.push(Midi.midiToNoteName(note_to_add));
           }
           pitches.push(Midi.midiToNoteName(midiNoteNumber));
         }
@@ -4670,26 +4672,28 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
         if (index < this.data.length) {
           let chordIntervalIndex = Math.floor((index / this.data.length) * chordIntervalsLength);
           let currentChordInterval = this.chord_intervals[chordIntervalIndex];
-          for (var c = 0; c < currentChordInterval.length; c++) {
-            let note_to_add = this.data[index] + currentChordInterval[c];
-            // check if key needs to be locked
-            if (this.key_scale !== false) {
-              let dataLength = this.data.length;
-              let keyLetterLength = this.key_letter.length;
-              let keyScaleLength = this.key_scale.length;
-          
-              let keyLetterIndex = Math.floor((index / dataLength) * keyLetterLength);
-              let keyScaleIndex = Math.floor((index / dataLength) * keyScaleLength);
-          
-              if (typeof this.key_scale[keyScaleIndex] == 'object') {
-                  // scale made from FP
-                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], new FacetPattern().from(this.key_scale[keyScaleIndex].data)).data[0];
-              } else {
-                  // scale from string
-                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], [this.key_scale[keyScaleIndex]]).data[0];
+          if ( this.chord_intervals.length > 0 ) {
+            for (var c = 0; c < currentChordInterval.length; c++) {
+              let note_to_add = this.data[index] + currentChordInterval[c];
+              // check if key needs to be locked
+              if (this.key_scale !== false) {
+                let dataLength = this.data.length;
+                let keyLetterLength = this.key_letter.length;
+                let keyScaleLength = this.key_scale.length;
+            
+                let keyLetterIndex = Math.floor((index / dataLength) * keyLetterLength);
+                let keyScaleIndex = Math.floor((index / dataLength) * keyScaleLength);
+            
+                if (typeof this.key_scale[keyScaleIndex] == 'object') {
+                    // scale made from FP
+                    note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], new FacetPattern().from(this.key_scale[keyScaleIndex].data)).data[0];
+                } else {
+                    // scale from string
+                    note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], [this.key_scale[keyScaleIndex]]).data[0];
+                }
               }
+              pitches.push(Midi.midiToNoteName(note_to_add));
             }
-            pitches.push(Midi.midiToNoteName(note_to_add));
           }
           pitches.push(Midi.midiToNoteName(this.data[index]));
         }
