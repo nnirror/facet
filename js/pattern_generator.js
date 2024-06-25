@@ -384,18 +384,25 @@ function panning(input_value, input_channel, total_channels, pan_mode) {
 
 function checkToSave (fp) {
   if ( fp.saveas_filename !== false ) {
-    let filename = fp.saveas_filename;
+    if (typeof fp.saveas_filename !== 'string') {
+      fp.saveas_filename = fp.saveas_filename.toString();
+    }
+    let filenameParts = fp.saveas_filename.split(cross_platform_slash);
+    let filename = filenameParts.pop();
     let folder = 'samples';
-    if (filename.includes(cross_platform_slash)) {
-      folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
-      filename = filename.split(cross_platform_slash)[1];
-    }
-    if (!fs.existsSync(folder)) {
-      fs.mkdir(folder, { recursive: true }, (err) => {
-          if (err) throw err;
-      });
-    }
-    exec(`${cross_platform_copy_command} tmp${cross_platform_slash}${fp.name}-out.wav ${folder}${cross_platform_slash}${filename}.wav`, (error, stdout, stderr) => {});
+
+    filenameParts.forEach(part => {
+      folder += `${cross_platform_slash}${part}`;
+      if (!fs.existsSync(folder)) {
+        fs.mkdirSync(folder, { recursive: true });
+      }
+    });
+    exec(`${cross_platform_copy_command} tmp${cross_platform_slash}${fp.name}-out.wav ${folder}${cross_platform_slash}${filename}.wav`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return;
+      }
+    });
   }
 }
 
