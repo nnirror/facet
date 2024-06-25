@@ -4577,6 +4577,7 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
   }
 
   savemidi2d (midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127) {
+    this.reverse();
     if ( typeof velocityPattern == 'number' || Array.isArray(velocityPattern) === true ) {
       velocityPattern = new FacetPattern().from(velocityPattern);
     }
@@ -4596,7 +4597,7 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
 
     const chordIntervalsLength = this.chord_intervals.length;
 
-    for (let i = 0; i < sliceSize; i++) {
+    for (let i = sliceSize - 1; i >= 0; i--) {
       const pitches = [];
       for (let j = 0; j < sliceSize; j++) {
         const index = j * sliceSize + i;
@@ -4635,12 +4636,13 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
         duration_str = 'T' + duration_str; // convert to tick syntax
       }
       if (pitches.length > 0) {
+        pitches.reverse()
         track.addEvent(new MidiWriter.NoteEvent({pitch: pitches, velocity: velocityPattern.data[i], sequential: false, duration: duration_str}));
       }
     }
-
     const write = new MidiWriter.Writer([track]);
     fs.writeFileSync(`midi/${midifilename}.mid`, write.buildFile(), 'binary');
+    this.reverse();
     return this;
   }
 
