@@ -31,7 +31,7 @@ class FacetPattern {
     this.current_slice_number = 0;
     this.current_total_slices = 0;
     this.current_total_iterations = 0;
-    this.dacs = '1 1';
+    this.dacs = [1,2];
     this.data = [];
     this.do_not_regenerate = false;
     this.env = this.getEnv();
@@ -43,7 +43,6 @@ class FacetPattern {
     this.original_data = [];
     this.notes = [];
     this.pan_data = false;
-    this.pan_mode = 0;
     this.play_once = false;
     this.original_command = '';
     this.over_n = 1;
@@ -403,56 +402,6 @@ class FacetPattern {
     }
     return this;
 }
-
-  stitchdir (dir, samplesBetweenEachFile = this.getWholeNoteNumSamples(), saved_filename = 'stitched', num_channels = 1) {
-    if ( this.isFacetPattern(samplesBetweenEachFile) ) {
-      samplesBetweenEachFile = samplesBetweenEachFile.data;
-    }
-    else {
-      samplesBetweenEachFile = [Number(samplesBetweenEachFile)];
-    }
-
-    // these are safeguards so this command runs when and only when the user initializes it, rather than each loop
-    this.play_once = true;
-    this.do_not_regenerate = true;
-
-    let stitchDir = dir;
-    if (!dir) {
-      stitchDir = `${process.cwd()}${cross_platform_slash}samples`;
-    }
-    else {
-      stitchDir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
-    }
-
-    let wav_files_to_stitch = [];
-    let original_files = fs.readdirSync(stitchDir);
-    original_files.filter(file => path.extname(file) === '.wav')
-      .sort()
-      .forEach(file => {
-        if (path.extname(file) == ".wav") {
-          wav_files_to_stitch.push(file);
-        }
-      });
-    
-    let multi_channel_sox_cmd = 'sox --combine merge';
-    for (var n = 0; n < num_channels; n++) {
-      let silence_samples_to_add = 0;
-      let iters = 0;
-      let out_fp = new FacetPattern();
-      for (var i = 0; i < wav_files_to_stitch.length; i++) {
-        let file = wav_files_to_stitch[i];
-        let next_fp_to_add = new FacetPattern().sample(`${dir}${cross_platform_slash}${file}`,n).prepend(new FacetPattern().silence(silence_samples_to_add));
-        out_fp.sup(next_fp_to_add,0);
-        silence_samples_to_add += samplesBetweenEachFile[iters%samplesBetweenEachFile.length]
-        iters++;
-      }
-      out_fp.savemono(`${dir}${cross_platform_slash}${saved_filename}-ch${n}`);
-      multi_channel_sox_cmd += ` ${stitchDir}${cross_platform_slash}${saved_filename}-ch${n}.wav`
-    }
-    multi_channel_sox_cmd += ` ${stitchDir}${cross_platform_slash}${saved_filename}-out.wav`;
-    exec(`${multi_channel_sox_cmd}`, (error, stdout, stderr) => {});
-    return this;
-  }
 
   sample (file_name, channel_index = 0) {
     if ( !file_name.includes('.wav') ) {
@@ -2847,23 +2796,17 @@ scaleLT1 (outMin, outMax, exponent = 1) {
   }
 
   channels (chans) {
-    this.dacs = '';
+    // convert to array and set as this.dacs
     if ( typeof chans == 'number' ) {
       chans = [chans];
     }
     else if ( this.isFacetPattern(chans) ) {
       chans = chans.data;
     }
-    for (var i = 0; i < Math.max(...chans); i++) {
-      if ( chans.includes(i+1) ) {
-        this.dacs += '1 ';
-      }
-      else {
-        this.dacs += '0 ';
-      }
+    this.dacs = chans;
+    if (this.dacs.length == 0 ) {
+      throw `channels cannot be empty`
     }
-    // remove last space
-    this.dacs = this.dacs.slice(0, -1);
     return this;
   }
 
@@ -3203,13 +3146,12 @@ rechunk (numChunks, probability = 1) {
     return this;
   }
 
-  pan ( pan_amt, mode = 0 ) {
+  pan ( pan_amt ) {
     if ( typeof pan_amt == 'number' || Array.isArray(pan_amt) === true ) {
       pan_amt = new FacetPattern().from(pan_amt);
     }
-    pan_amt.clip(-1,1);
+    pan_amt.clip(0,1);
     this.pan_data = pan_amt.data;
-    this.pan_mode = mode;
     return this;
   }
 

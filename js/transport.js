@@ -124,7 +124,7 @@ app.post('/update', (req, res) => {
     if ( posted_pattern.sequence_data.length > 0 ) {
       allocateVoice(posted_pattern);
       if ( browser_sound_output === true ) {
-        voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.name}-out.wav ${posted_pattern.bpm_at_generation_time}`);
+        voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.name}.wav ${posted_pattern.bpm_at_generation_time}`);
       }
     
       let over_n = over_n_values[facet_pattern_name] || 1;
@@ -149,6 +149,8 @@ app.post('/update', (req, res) => {
               type: "audio",
               data: [],
               pitch: pitch,
+              channels: posted_pattern.dacs,
+              pan_data: posted_pattern.pan_data,
               play_once: posted_pattern.play_once,
               voice: voice_number_to_load,
               fired: false,
@@ -625,8 +627,10 @@ function emitLoadEvent() {
 function emitPlayEvent(event) {
   let voice = event.voice;
   let pitch = event.pitch;
+  let channels = event.channels;
+  let pan_data = event.pan_data;
   for (let socket of sockets) {
-    socket.emit('play', { voice: voice, pitch: pitch });
+    socket.emit('play', { voice: voice, pitch: pitch, channels: channels, pan_data: pan_data });
   }
 }
 

@@ -380,6 +380,9 @@ let pitchShifts = {};
 let lastPlayedTimes = {};
 let ac;
 ac = new AudioContext();
+ac.destination.channelCount = ac.destination.maxChannelCount;
+ac.destination.channelCountMode = "explicit";
+ac.destination.channelInterpretation = "discrete";
 
 // connect to the server
 const socket = io.connect(`http://${configSettings.HOST}:3000`, {
@@ -413,18 +416,44 @@ socket.on('bpm', (bpm) => {
 socket.on('play', (data) => {
   let voice_to_play = data.voice;
   let pitch = data.pitch;
+  let channels = data.channels;
+  let pan_data = data.pan_data;
   pitchShifts[voice_to_play] = pitch;
   if ( browser_sound_output === true ) {
     // check if the voice is loaded
     if (voices[voice_to_play]) {
-      let source = ac.createBufferSource();
-      source.buffer = voices[voice_to_play].buffer;
-      let current_bpm = $('#bpm').val();
-      source.playbackRate.value = (current_bpm / voices[voice_to_play].bpm) * pitch;
-      source.connect(ac.destination);
-      source.start();
-      sources[voice_to_play] = source;
-      lastPlayedTimes[voice_to_play] = Date.now();
+      let merger = ac.createChannelMerger(ac.destination.channelCount);
+      channels.forEach((channel, index) => {
+        let source = ac.createBufferSource();
+        source.buffer = voices[voice_to_play].buffer;
+        let current_bpm = $('#bpm').val();
+        source.playbackRate.value = (current_bpm / voices[voice_to_play].bpm) * pitch;
+        // create a gain node for each channel
+        let gainNode = ac.createGain();
+        source.connect(gainNode);
+        gainNode.connect(merger, 0, channel - 1);
+        
+        if (pan_data === false || channels.length === 1) {
+          // if pan_data is false or there is only one channel, set the gain value to 1 for all channels
+          gainNode.gain.value = 1;
+        } else {
+          // schedule changes in the gain value based on pan_data
+          let durationPerValue = source.buffer.duration / pan_data.length;
+          pan_data.forEach((panValue, i) => {
+            let time = i * durationPerValue;
+            // calculate the normalized channel index
+            let normalizedIndex = index / (channels.length - 1);
+            // only interpolate the gain for the two channels closest to the pan_data value - otherwise, gain = 0
+            let gainValue = Math.abs(normalizedIndex - panValue) <= 1 / (channels.length - 1) ? 1 - Math.abs(normalizedIndex - panValue) : 0;
+            gainNode.gain.setValueAtTime(gainValue, ac.currentTime + time);
+          });
+        }
+
+        source.start();
+        sources[voice_to_play] = source;
+        lastPlayedTimes[voice_to_play] = Date.now();
+      });
+      merger.connect(ac.destination);
     } else {
       // voice is not loaded yet
     }

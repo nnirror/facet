@@ -6,13 +6,12 @@ Facet runs on MacOS, Linux, and Windows.
 
 ## Installation and getting started
 
-1. Download and install Node.js (must be v14 or greater) and npm: https://www.npmjs.com/get-npm
-2. Download and install SoX as a command line tool (the latest version is 14.4.2): http://sox.sourceforge.net/ If using homebrew: `brew install sox` should work. If running on Windows: you need to modify your Path environment variable so that SoX can be run from the command line. Ultimately you need to be able to run the command `sox` from the command line and verify that it's installed.
-3. Download or clone the Facet repository. If you download it, make sure that the repository name is exactly `facet` and NOT `facet-main`.
-4. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
-5. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
-6. In a browser tab (Firefox or Chrome work best), navigate to http://localhost:1124. This is the browser-based code editor which can also handle stereo audio playback.
-7. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing through your browser tab. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
+1. Download and install Node.js (must be v14 or greater) and npm: https://www.npmjs.com/get-np
+2. Download or clone the Facet repository.
+3. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
+4. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
+5. In a browser tab (Firefox or Chrome work best), navigate to http://localhost:1124. This is the browser-based code editor which can also handle stereo audio playback.
+6. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing through your browser tab. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
 
 ## Facet commands
 
@@ -134,14 +133,12 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp('808').play(0.5);	// plays once at middle point`
 		- `$('example').randsamp('808').play(_.noise(4));	// plays once at 4 random positions`
 ---
-- **pan** ( _PanningFacetPattern_, _pan_mode_ = 0 )
+- **pan** ( _PanningFacetPattern_ 0 )
 	- dynamically moves the FacetPattern between however many channels are specified in a seperate `.channels()` call. Without a call to `.channels()`, it will default to spatially positioning the FacetPattern between channels 1 and 2.
-	- the values in `PanningFacetPattern` should be between -1 and 1. Values beyond that will be clipped to the -1 - 1 range. A value of -1 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between -1 and 1 will crossfade between all the specified active channels.
-	- the default `pan_mode` of 0 means that the panning moves smoothly between channels, e.g., channels adjacent to the selected full-volume channel will have some signal bleeding into them. Switching the `pan_mode` to 1 makes the panning work in a discrete manner, where only one channel has a signal in it at any given time, and there is no bleed between channels.
+	- the values in `PanningFacetPattern` should be between 0 and 1. Values beyond that will be clipped to the 0 - 1 range. A value of 0 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between 0 and 1 will crossfade between all the specified active channels.
 	- example:
-		- `$('example').noise(n1).times(_.ramp(1,0,n1)).pan(_.sine(1,n1)).play(); // no channels are specified; defaults to stereo panning`
-		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1)).play(); // pans the noise smoothly around channels 1, 2, and 4`
-		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1),1).play(); // hard-pans the noise discretely between channels 1, 2, and 4`
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).pan(_.sine(1,n1).scale(0,1)).play(); // no channels are specified; defaults to stereo panning`
+		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1).scale(0,1)).play(); // pans the noise smoothly around channels 1, 2, and 4`
 ---
 - **channel** ( _channels_ )
 	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
@@ -151,20 +148,10 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').randsamp('808').channel(_.from([9,10,11,12,13,14,15,16]).shuffle().reduce(ri(1,8))).play(); // play on a random number of channels from 9-16`
 ---
 - **saveas** ( _filename_ )
-	- creates a new wav file in the `samples/` directory or a sub-directory containing the FacetPattern. If the directory doesn't exist, it will be created.
-	- if a file has been created with multiple channels via `.channels()` or with its audio panned between multiple channels via `.pan()`, the saved wav file will have that many channels.
+	- saves a monophonic, 32-bit depth wav file in the `samples/` directory or a sub-directory, containing the FacetPattern. If the directory doesn't exist, it will be created.
 	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 	- example:
 		- `$('example').iter(6,()=>{this.append(_.sine(ri(1,40))).saveas('/myNoiseStuff/' + Date.now()`)}); // creates 6 wav files in the myNoiseStuff directory. Each filename is the UNIX timestamp to preserve order.
----
-- **stitchdir** ( _dir_, _samplesBetweenEachFile_, _saved_filename_ = 'stitched', _num_channels_ = 1 )
-	- stitches together all the wav files in the supplied `dir` directory, in alphabetical order, creating a new wav file in the `samples/` directory or a sub-directory, as specified in `saved_filename`. If the directory doesn't exist, it will be created.
-	- the `samplesBetweenEachFile` argument can be a single number or a FacetPattern. This value specifies the exact number of samples between each file in the output file. If it's a FacetPattern, its values will be continuously cycled through while stitching together all the files in the directory.
-	- all files in the directory should have the same number of channels. The stitched wav file will have `num_channels` channels (default = 1).
-	- __Note__: this process can take minutes if there are a lot of wavs, so by default any time this method is called, it will be called once and only once.
-	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
-	- example:
-		- `$('example').stitchdir('mysamples',n1,'myNewStitchedFile'); // stitch together all the wavs in samples/mysamples, with a whole note between each file, creating a new file called MyNewStitchedFile.wav`
 - **stop** ( )
 	- stops the command from regenerating and playing back in future loops.
 	- any time a `.stop()` is found in a command, the entire command will be skipped and not executed. This helps to preserve CPU.
