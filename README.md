@@ -310,6 +310,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 ### Methods for controlling transport BPM
 - **bpm** ( )
 	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
+	- the minimum BPM value is 1, and the maximum BPM value is 10000.
 	- example:
 		- `$('example').bpm(_.from([20,40,80,160,320]).shuffle()); // each loop will be all 5 of these BPM, randomly ordered`
 
@@ -593,6 +594,14 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').binary(8); // 1000`
 		- `$('example').binary(490321,13); // 1110111101101: truncated at 13 values`
 		- `$('example').binary(8,12); // 000000001000: padded with 0s`
+---
+- **dirsamp** ( _dir_ = `../samples/`, _dir_pos_, _channel_index_ = 0 )
+	- loads a wav file from the `dir` directory into memory, based on its alphabetical position. The position is determined by the `dir_pos` argument, which should be a float between 0 and 1. A `dir_pos` value of 0 would load the first wav file in alphabetical order, a `dir_pos` value of 0.5 would load the middle file, and so on.
+	- The default directory is `../samples/`, but you can supply any directory as an argument.
+	- By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
+	- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
+	- example:
+		- `$('example').iter(8,()=>{this.sup(_.dirsamp('808',i/iters),i/iters)}).play(); // 808 sequence`
 ---
 - **drunk** ( _length_, _intensity_, _starting_value_ = Math.random() )
 	- generates a random walk of values between 0 and 1 for `length` values, starting at `starting_value` which is a random value between 0 and 1 by default. `intensity` controls how much to add.
@@ -892,8 +901,9 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').from([1,2,3,4]).modulo(3); // 1 2 0 1`
 ---
-- **mutechunks** ( _chunks_, _prob_ )
+- **mutechunks** ( _chunks_, _prob_, _yes_fade_ = true )
 	- slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them. __Note__: this is intended for use with FacetPatterns with a large enough amount of data to be played back at audio rate. For a similar effect on smaller FacetPatterns, use `prob()`.
+	- The default behavior is for each chunk to be slightly faded in and out to prevent audible clicks, but if you want to run this on smaller chunks of information for control-signal purposes, you can supply a falsy `yes_fade` argument.
 	- example:
 		- `$('example').randsamp('808').mutechunks(16,0.33).play();	// 33% of 16 audio slices muted`
 ---
@@ -943,7 +953,8 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').silence(n1).iter(128,()=>{this.sup(_.noise(n64).lpf(_.ramp(250,40,20),50).times(_.ramp(1,0,n64)).rangesamps(rf(),n64).fade(0.1),rf())}).play(); // granular synthesis of 128 synthesized kick drums`
 ---
 - **rechunk** ( _chunks_, _probability_ )
-	- slices the input FacetPattern into `chunks` chunks and shuffles the chunks around. The `probability` argument controls the percentage of chunks to reorder, and it expects a float between 0 and 1. __Note__: this is intended for use with FacetPatterns with a large enough amount of data to be played back at audio rate. For a similar effect on smaller FacetPatterns, use `shuffle()` or `fracture`.
+	- slices the input FacetPattern into `chunks` chunks and shuffles the chunks around. The `probability` argument controls the percentage of chunks to reorder, and it expects a float between 0 and 1.
+	- The default behavior is for each chunk to be slightly faded in and out to prevent audible clicks, but if you want to run this on smaller chunks of information for control-signal purposes, you can supply a falsy `yes_fade` argument.
 	- example:
 		- `$('example').randsamp('808').rechunk(16).play();	// 16 slices from the sample in random order`
 ---

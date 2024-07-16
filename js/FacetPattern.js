@@ -337,12 +337,14 @@ class FacetPattern {
     try {
       // try loading the directory exactly as it's supplied
       files = fs.readdirSync(dir);
+      files = files.filter(file => path.extname(file) === '.wav');
       chosenFile = files[Math.floor(Math.random() * files.length)];
     } catch (e) {
       // try appending './samples' to the supplied directory name
       try {
         dir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
         files = fs.readdirSync(dir);
+        files = files.filter(file => path.extname(file) === '.wav');
         chosenFile = files[Math.floor(Math.random() * files.length)];
       } catch (er) {
         // directory not found
@@ -374,6 +376,54 @@ class FacetPattern {
         } catch (err) {
           load_attempts++;
           chosenFile = files[Math.floor(Math.random() * files.length)];
+        }
+      }
+    }
+    this.flatten();
+    return this;
+  }
+
+  dirsamp(dir = `${process.cwd()}${cross_platform_slash}samples`, dir_pos = 0, channel_index = 0) {
+    let files, chosenFile;
+    try {
+      files = fs.readdirSync(dir);
+      files.sort();
+      files = files.filter(file => path.extname(file) === '.wav');
+      chosenFile = files[Math.floor(dir_pos * files.length)];
+    } catch (e) {
+      // try appending './samples' to the supplied directory name
+      try {
+        dir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
+        files = fs.readdirSync(dir);
+        files = files.filter(file => path.extname(file) === '.wav');
+        chosenFile = files[Math.floor(dir_pos * files.length)];
+      } catch (er) {
+        // directory not found
+        throw er;
+      }
+    }
+    let buffer;
+    let fp_found = false;
+    let load_attempts = 0;
+    while (fp_found !== true) {
+      if (load_attempts > 32) {
+        throw `error in dirsamp(): the supplied directory ${dir} failed to find a sample file 32 times a row`
+      }
+      try {
+        buffer = fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`);
+        this.data = this.loadBuffer(buffer, channel_index);
+        fp_found = true;
+      } catch (e) {
+        try {
+          let wav = new WaveFile(fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`));
+          wav.toBitDepth("32f");
+          this.data = wav.getSamples();
+          if (typeof this.data[channel_index] == 'object') {
+            this.data = this.data[channel_index];
+          }
+          return this.flatten();
+        } catch (err) {
+          load_attempts++;
         }
       }
     }
@@ -2836,7 +2886,7 @@ scaleLT1 (outMin, outMax, exponent = 1) {
     return this;
   }
 
-  mutechunks (numChunks = 16, probability = 0.75) {
+  mutechunks (numChunks = 16, probability = 0.75, yes_fade = true) {
     // Break the array into numChunks chunks
     let chunkSize = Math.ceil(this.data.length / numChunks);
     let chunks = [];
@@ -2857,13 +2907,15 @@ scaleLT1 (outMin, outMax, exponent = 1) {
         result.push(chunk);
     }
     this.data = result;
-    this.data = this.fadeArrays(this.data);
-    this.data = this.sliceEndFade(this.data);
+    if ( yes_fade === true ) {
+      this.data = this.fadeArrays(this.data);
+      this.data = this.sliceEndFade(this.data);
+    }
     this.flatten();
     return this;
 }
 
-rechunk (numChunks, probability = 1) {
+rechunk (numChunks, probability = 1, yes_fade = true) {
   // Break the array into numChunks chunks
   let chunkSize = Math.ceil(this.data.length / numChunks);
   let chunks = [];
@@ -2873,7 +2925,7 @@ rechunk (numChunks, probability = 1) {
   }
 
   // Determine number of chunks to shuffle based on probability
-  let numChunksToShuffle = Math.floor(numChunks * probability);
+  let numChunksToShuffle = Math.floor(chunks.length * probability);
 
   // Shuffle the numChunksToShuffle chunks
   for (let i = 0; i < numChunksToShuffle; i++) {
@@ -2885,8 +2937,10 @@ rechunk (numChunks, probability = 1) {
 
   // Assign the chunks array to the data
   this.data = chunks;
-  this.data = this.fadeArrays(this.data);
-  this.data = this.sliceEndFade(this.data);
+  if ( yes_fade === true ) {
+    this.data = this.fadeArrays(this.data);
+    this.data = this.sliceEndFade(this.data);
+  }
   this.flatten();
   this.fixnan();
   return this;
@@ -2898,7 +2952,7 @@ rechunk (numChunks, probability = 1) {
     if ( typeof bpm_fp == 'number' || Array.isArray(bpm_fp) === true ) {
       bpm_fp = new FacetPattern().from(bpm_fp);
     }
-    this.bpm_pattern = bpm_fp;
+    this.bpm_pattern = bpm_fp.clip(1,10000);
     this.data = bpm_fp.data;
     return this;
   }

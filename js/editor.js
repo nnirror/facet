@@ -402,12 +402,15 @@ socket.on('bpm', (bpm) => {
     // adjust the playback speed of all voices
     for (let i = 1; i <= voices.length; i++) {
       if (voices[i] && sources[i]) {
-          let current_bpm = $('#bpm').val();
-          let voice_bpm = voices[i].bpm;
-          // get the pitch shift value for this voice
-          let pitch = pitchShifts[i];
-          // set the playback rate based on the current and original BPM and the pitch shift
-          sources[i].playbackRate.value = (current_bpm / voice_bpm) * pitch;
+        let current_bpm = $('#bpm').val();
+        let voice_bpm = voices[i].bpm;
+        // get the pitch shift value for this voice
+        let pitch = pitchShifts[i];
+        // set the playback rate based on the current and original BPM and the pitch shift
+        // for all sources of this voice
+        sources[i].forEach(source => {
+          source.playbackRate.value = (current_bpm / voice_bpm) * pitch;
+        });
       }
     }
   }
@@ -423,6 +426,7 @@ socket.on('play', (data) => {
     // check if the voice is loaded
     if (voices[voice_to_play]) {
       let merger = ac.createChannelMerger(ac.destination.channelCount);
+      sources[voice_to_play] = [];
       channels.forEach((channel, index) => {
         let source = ac.createBufferSource();
         source.buffer = voices[voice_to_play].buffer;
@@ -450,7 +454,7 @@ socket.on('play', (data) => {
         }
 
         source.start();
-        sources[voice_to_play] = source;
+        sources[voice_to_play].push(source);
         lastPlayedTimes[voice_to_play] = Date.now();
       });
       merger.connect(ac.destination);
