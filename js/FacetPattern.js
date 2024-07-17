@@ -3989,31 +3989,16 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
   // END utility functions
 
   // frequency: hz. duration: samples (converted to seconds internally). damping and feedback both scaled 0-1. 
-  pluck(frequencies, duration = SAMPLE_RATE, damping = 0, feedback = 0.5, fade_in_and_out = true ) {
-    if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
-        frequencies = new FacetPattern().from(frequencies);
-    }
-    duration = Math.round(duration);
-    frequencies.size(duration);
-    duration = duration / SAMPLE_RATE;
+  pluck(frequency, damping = 0, feedback = 0.5 ) {
+    feedback = 0.9 + feedback * 0.093;
     damping = Math.abs(Number(damping));
     feedback = Math.abs(Number(feedback));
     feedback = 0.5 + feedback * 0.5;
-    let numSamples = SAMPLE_RATE * duration;
-    let output = new Float32Array(numSamples);
-    let string = new KarplusStrongString(frequencies.data[0], damping, feedback);
-    for (let i = 0; i < numSamples; i++) {
-        let frequency = frequencies.data[i];
-        string.frequency = frequency;
-        string.bufferSize = Math.round(SAMPLE_RATE / frequency);
-        output[i] = string.process();
-    }
+    let output = [];
+    let string = new KarplusStrongString(frequency, damping, feedback);
+    output.push(string.process());
     this.data = output;
     this.flatten().trim();
-    if ( fade_in_and_out == true ) {
-      this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
-      this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
-    }
     return this;
 }
 

@@ -32,15 +32,24 @@ class KarplusStrongString {
         return this._frequency;
     }
 
-    process() {
-        let value = this.buffer[this.index];
-        this.output = value;
-        let nextValue = this.buffer[(this.index + 1) % this.bufferSize];
-        value += (nextValue - value) * this.damping;
-        value *= this.feedback;
-        this.buffer[this.index] = value;
-        this.index = (this.index + 1) % this.bufferSize;
-        return this.output;
+    process(maxIterations = FACET_SAMPLE_RATE * 8, windowSize = 100, silenceThreshold = 0.001) {
+        let output = [];
+        for (let i = 0; i < maxIterations; i++) {
+            let value = this.buffer[this.index];
+            this.output = value;
+            let nextValue = this.buffer[(this.index + 1) % this.bufferSize];
+            value += (nextValue - value) * this.damping;
+            value *= this.feedback;
+            this.buffer[this.index] = value;
+            this.index = (this.index + 1) % this.bufferSize;
+            output.push(this.output);
+            let windowSamples = output.slice(-windowSize);
+            let windowAverage = windowSamples.reduce((sum, sample) => sum + Math.abs(sample), 0) / windowSize;
+            if (windowAverage < silenceThreshold) {
+                break;
+            }
+        }
+        return output;
     }
 }
 

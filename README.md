@@ -552,13 +552,11 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 		- `$('example').phasor(_.ramp(10,2000,300)).play(); // ramp from 10Hz to 2000 Hz over 300 values`
 		- `$('example').phasor(_.phasor(5).scale(20,2000)).play(); // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz`
 ---
-- **pluck** ( _frequencyPattern_, _duration_ = 1 second, _damping_ = 0, _feedback_ = 0.5, _fade_in_and_out_ = true )
-	- generates a Karplus-Strong type string pluck emulation at `frequencyPattern` Hertz, lasting for `duration` samples. `damping` and `feedback` values should be between 0 and 1.
+- **pluck** ( _frequency_, _damping_ = 0, _feedback_ = 0.5 )
+	- generates a Karplus-Strong type string pluck emulation at `frequency` Hertz. `damping` and `feedback` values should be between 0 and 1.
 	- output range is from -1 - 1.
-	- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
 	- example:
 		- `$('example').pluck(440,n4,rf(),rf()).play(); // different 440 Hz quarter note pluck each time`
-		- `$('example').pluck(_.ramp(100,2000,300),n1,0,0.99).play(); // ramp from 100Hz to 2000 Hz over 300 values`
 ---
 - **rect** ( _frequencyPattern_, _duration_ = 1 second, _pulse_width_ = 0.5, _samplerate_ = default_sample_rate, _fade_in_and_out_ = true )
 	- generates a rectangle wave at `frequencyPattern` Hertz, with a pulse width defined by `pulse_width`,  lasting for `duration` samples, at the sample rate defined by `samplerate`.
