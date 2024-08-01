@@ -45,7 +45,7 @@ class KarplusStrongString {
             output.push(this.output);
             let windowSamples = output.slice(-windowSize);
             let windowAverage = windowSamples.reduce((sum, sample) => sum + Math.abs(sample), 0) / windowSize;
-            if (windowAverage < silenceThreshold) {
+            if (i >= windowSize && windowAverage < silenceThreshold) {
                 break;
             }
         }
