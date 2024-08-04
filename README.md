@@ -75,6 +75,8 @@ A server, known as the `process manager`, starts up on http://localhost:5831. Th
 
 #### Configuration for Max
 
+It is possible to send data from Facet into a Max patch using a custom `facet.maxpat` object which is included in this repository. First, follow these setup steps:
+
 1. Open Max. In the Max navbar, go to > Options > File Preferences, click "Add Path", and add the facet directory (the folder that contains this file). Make sure that the Subfolders checkbox is checked.
 2. Create a new Max patcher, and add a `facet` object.
 3. The single outlet in the `facet` object will pass OSC commands from Facet into your patcher. Use the `/route` Max object to route the OSC data in your Max patcher.
@@ -118,7 +120,7 @@ By default, Facet checks every 10 milliseconds whether it needs to fire any even
 
 ### Outputs
 
-Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. By default, patterns will continually regenerate each loop. In order to only regenerate every n loops, use the `.every()` method. In order to continue playing a pattern and not regenerate, use the `.keep()` method. In order to only play back once, use the `.once()` method.
+Facet can synthesize and orchestrate the playback of multiple FacetPatterns simultaneously, producing audio, MIDI, or OSC output. By default, patterns will continually regenerate each loop. In order to only regenerate every n loops, use the `.whenmod()` method. In order to continue playing a pattern and not regenerate, use the `.keep()` method. In order to only play back once, use the `.once()` method.
 
 ### Audio output
 - **play** ( _PlaybackFacetPattern_, _pitchSequenceData_ = 1 )
@@ -141,7 +143,7 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 		- `$('example').noise(n1).times(_.ramp(1,0,n1)).channels([1,2,4]).pan(_.sine(1,n1).scale(0,1)).play(); // pans the noise smoothly around channels 1, 2, and 4`
 ---
 - **channel** ( _channels_ )
-	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array. **NOTE:** CPU will also increase as the total number of channels increases.
+	- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array.
 	- example:
 		- `$('example').randsamp('808').channel(1).play(); // first channel only`
 		- `$('example').randsamp('808').channels([1,3]).play(); // second channel only`
@@ -351,16 +353,6 @@ These can be useful when you want to access or modify the same pattern across co
 
 		$('set_example').noise(32).curve().set('my_var').once(); // first, set the variable here
 		$('example').noise(100).times(my_var).play(); // now, you can use my_var in commands
-
-		// multi-variable example
-		// step 1: initialize the patterns by running this with .once()
-		$('p1').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p1').once();
-		$('p2').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p2').once();
-		$('p3').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p3').once();
-		$('p4').noise(64).scale(ri(0,63),ri(64,127)).prob(rf()).sticky(rf(0.9,1)).round().set('p4').once();
-
-		// step 2: start the process to continually modify some of the values in the d1-d4 patterns, in one command
-		$('example').from(p1).jam(0.1, 10).wrap(0,127).round().set('p1').from(p2).jam(0.1, 10).wrap(0,127).round().set('p2').from(p3).jam(0.1, 10).wrap(0,127).round().set('p3').from(p4).jam(0.1, 10).wrap(0,127).round().set('p4');
 		```
 ---
 - **drift** ( _seedPattern_, _patternName_, _command_ = function )
