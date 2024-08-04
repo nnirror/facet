@@ -339,13 +339,12 @@ You need to connect the MIDI device you want to use before starting Facet.
 		- `$('example').drunk(2048,0.01).cc().over(128); // drunk walk over 128 bars, creates a drifty process that you can map onto device paramters to slowly randomize something`
 
 ### Methods for setting variables
-This can be useful when you want to access the same pattern across multiple commands.
+These can be useful when you want to access or modify the same pattern across commands or inside of one command.
 
 - **set** ( _name_ )
 	- saves a FacetPattern's data in memory, for reference as a variable in operations. Any FacetPatterns stored via `.set()` will only be stored until the server is closed.
 	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If the pattern has one piece of data in it, the corresponding variable will be a float.
 	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
-	- **NOTE**: if you want to set more than one variable, you should run all the `.set()` methods in a single command, so they do not create a race condition for when they are evaluated.
 		- example:
 		-  ```
 		$('example').tri(100).set('abc').sine(abc).play(); // run it all in one command - just remember the first evaluated sine will have a frequency of 0
@@ -362,18 +361,39 @@ This can be useful when you want to access the same pattern across multiple comm
 
 		// step 2: start the process to continually modify some of the values in the d1-d4 patterns, in one command
 		$('example').from(p1).jam(0.1, 10).wrap(0,127).round().set('p1').from(p2).jam(0.1, 10).wrap(0,127).round().set('p2').from(p3).jam(0.1, 10).wrap(0,127).round().set('p3').from(p4).jam(0.1, 10).wrap(0,127).round().set('p4');
-		``` 
+		```
+---
+- **drift** ( _seedPattern_, _patternName_, _command_ = function )
+	- creates and runs a drifting process on a pattern.
+	- when the command is executed manually by the user, it will create and store (internally, via `set()`) a new pattern, named `patternName`, using `seedPattern`.
+	- each time the command reruns, it checks if a pattern named `patternName` has been stored. If so, it will modify and replace the saved pattern based on the code in `command`.
+	- example:
+		- `$('example').drift(_.noise(16).scale(36,72).sort(),'mynotes',()=>{this.walk(0.1,1)}).note(); // starts as ascending melody and drifts away into randomness`
+---
 - **inc** ( _name_, _amount_to_add_ = 1 )
 	- increments a variable called `name` by `amount_to_add`. This variable can be used in operations.
 	- similar to the `set()` method, when you run the `.inc()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 	- example:
 		`$('example').inc('abc').iter(abc,()=>{this.sup(_.randsamp('808'),i/iters)}).play(); // more 808 samples each iteration`
-
+---
 - **dec** ( _name_, _amount_to_subtract_ = 1 )
 	- decrements a variable called `name` by `amount_to_add`. This variable can be used in operations.
 	- similar to the `set()` method, when you run the `.dec()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 	- example:
 		`$('example').from(8).set('abc').sometimes(0.5,()=>{this.dec('abc')}).sometimes(0.5,()=>{this.inc('abc')}).iter(abc,()=>{this.sup(_.randsamp('k'),i/iters)}).play(); // start at 8, sometimes increment & sometimes decrement the total number of 808 samples`
+---
+- **setlocal** ( _name_ )
+	- saves a FacetPattern's data locally, making it immediately accessible to later operations in the same command.
+	- in order to acesss a pattern saved with `setlocal()`, use `getlocal()`.
+	- **NOTE**: the data is available only internally, to the command where it runs and cannot be accessed in other commands.
+	- example:
+		- `$('example').drunk(1000,0.2).setlocal('mylocalpattern').reduce(0).iter(1000,()=>{this.append(_.getlocal('mylocalpattern').jam(0.1,0.1).setlocal('mylocalpattern'))}).saveimg().once(); // initial 1000-value drunk walk, each row 10% of the pixels are +/- 10% modified from previous row`
+----
+- **getlocal** ( _name_ )
+	- retrieves a FacetPattern's data that was stored locally via `setlocal()`.
+	- example:
+		- `$('example').drunk(1000,0.2).setlocal('mylocalpattern').reduce(0).iter(1000,()=>{this.append(_.getlocal('mylocalpattern').jam(0.1,0.1).setlocal('mylocalpattern'))}).saveimg().once(); // initial 1000-value drunk walk, each row 10% of the pixels are +/- 10% modified from previous row`
+
 
 ### Utility functions
 - **barmod** ( _modulo_, _values_ )

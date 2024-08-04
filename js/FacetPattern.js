@@ -34,11 +34,11 @@ class FacetPattern {
     this.dacs = [1,2];
     this.data = [];
     this.do_not_regenerate = false;
-    this.env = this.getEnv();
     this.executed_successfully = true;
     this.key_letter = false;
     this.key_scale = false;
     this.is_stopped = false;
+    this.local_patterns = [];
     this.loops_since_generation = 1;
     this.original_data = [];
     this.notes = [];
@@ -52,7 +52,7 @@ class FacetPattern {
     this.sequence_data = [];
     this.sequence_pitch_data = [];
     this.skipped = false;
-    this.utils = this.env + this.getUtils();
+    this.vars = [];
     this.whenmod_modulo_operand = false;
     this.whenmod_equals = false;
   }
@@ -1032,7 +1032,7 @@ waveformSample(waveform, phase) {
     let iters = this.current_total_iterations;
     let s = this.current_slice_number;
     let num_slices = this.current_total_slices;
-    eval(this.env + this.utils + command);
+    eval(global.env + global.vars + utils + command);
     let wet_data = new FacetPattern().from(this.data).times(wet);
     let mixed_data = dry_data.sup(wet_data, 0);
     this.data = mixed_data.data;
@@ -2721,46 +2721,43 @@ scaleLT1 (outMin, outMax, exponent = 1) {
   }
 
   walk (prob, amt) {
-    // swap some of the locations
-    let jammed_sequence = [];
     let x_max = this.data.length - 1;
     amt = Number(amt);
     prob = Number(prob);
-    if ( prob < 0 ) {
-      prob = 0;
+    if (prob < 0) {
+        prob = 0;
+    } else if (prob > 1) {
+        prob = 1;
     }
-    else if ( prob > 1 ) {
-      prob = 1;
+
+    let jammed_sequence = [...this.data]; // copy the original array
+
+    for (let i = 0; i < jammed_sequence.length; i++) {
+        if (Math.random() < prob) {
+            let step_distance = Math.floor(Math.random() * amt);
+            if (step_distance < 1) {
+                step_distance = 1;
+            }
+            if (Math.random() < 0.5) {
+                step_distance = step_distance * -1;
+            }
+            let new_index = i + step_distance;
+            if (new_index < 0) {
+                new_index = x_max - (0 - new_index) % (x_max - 0);
+            } else {
+                new_index = 0 + (new_index - 0) % (x_max - 0);
+            }
+
+            // swap elements
+            let temp = jammed_sequence[i];
+            jammed_sequence[i] = jammed_sequence[new_index];
+            jammed_sequence[new_index] = temp;
+        }
     }
-    for (const [key, step] of Object.entries(this.data)) {
-      if ( Math.random() < prob) {
-        // changed
-        let step_distance = parseInt((Math.random() * amt));
-        if ( step_distance < 1 ) {
-          step_distance = 1;
-        }
-        // half the time make it smaller
-        if ( Math.random() < 0.5 ) {
-          step_distance = step_distance * -1;
-        }
-        let new_step_location = parseInt(key) + parseInt(step_distance);
-        if (new_step_location < 0) {
-          new_step_location = x_max - (0 - new_step_location) % (x_max - 0);
-        }
-        else {
-          new_step_location = 0 + (new_step_location - 0) % (x_max - 0);
-        }
-        jammed_sequence[key] = this.data[new_step_location];
-        jammed_sequence[new_step_location] = step;
-      }
-      else {
-        // unchanged
-        jammed_sequence[key] = step;
-      }
-    }
+
     this.data = jammed_sequence;
     return this;
-  }
+}
 
   warp (base, rotation = 1) {
     // forked from: https://github.com/naomiaro/fade-curves/blob/master/index.js
@@ -3083,7 +3080,7 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
       command = command.toString();
       command = command.replace(/current_slice./g, 'this.');
       command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
-      eval(this.env + this.utils + command);
+      eval(global.env + global.vars + utils + command);
       out_fp.sup(this,0);
     }
     this.data = out_fp.data;
@@ -3111,7 +3108,7 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
     for (var i = 0; i < iters; i++) {
       this.current_iteration_number = i;
       if ( Math.random() < prob ) {
-        eval(this.env + this.utils + command);
+        eval(global.env + global.vars + utils + command);
       }
     }
     return this;
@@ -3269,67 +3266,85 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
     return this;
   }
 
-  inc (pattern_name, amt = 1) {
-    let vars = fs.readFileSync('js/vars.js', 'utf8');
-    let context = {};
-    let script = new vm.Script(vars);
-    script.runInNewContext(context);
-    if (typeof context[pattern_name] == 'number') {
-      // increment
-      context[pattern_name] = context[pattern_name] + amt;
+  setlocal (pattern_name) {
+    if (pattern_name === undefined) {
+      throw (`cannot set local pattern because the pattern name is undefined.`);
     }
-    else {
-      // initialize the pattern to 0
-      this.variables_initialized_during_evaluation = true;
-      context[pattern_name] = 0;
-    }
-    let updatedVars = '';
-    for (let key in context) {
-      if (Array.isArray(context[key])) {
-        updatedVars += `var ${key} = [${context[key].join(',')}];\n`;
-      } else {
-        updatedVars += `var ${key} = ${JSON.stringify(context[key])};\n`;
-      }
-    }
-    fs.writeFileSync('js/vars.js', updatedVars);
+    global[pattern_name] = this.data;
     return this;
   }
 
-  dec (pattern_name, amt = 1) {
-    this.inc(pattern_name, amt * -1);
+  getlocal (pattern_name) {
+    if (pattern_name === undefined) {
+      throw (`cannot get local pattern because the pattern name is undefined.`);
+    }
+    this.data = global[pattern_name];
     return this;
   }
 
   set (pattern_name) {
     if (pattern_name === undefined) {
-      throw (`cannot set pattern because the pattern name is undefined. Use a string!`);
+      throw (`cannot set pattern because the pattern name is undefined.`);
     }
-    let vars = fs.readFileSync('js/vars.js', 'utf8');
-    let context = {};
-    let script = new vm.Script(vars);
-    script.runInNewContext(context);
-  
-    // Delete the existing variable from the context
-    delete context[pattern_name];
-  
-    // Add the new value of the variable to the context
-    if (Array.isArray(this.data) && this.data.length === 1) {
-      context[pattern_name] = parseFloat(this.data[0]);
+    this.vars[pattern_name] = this.data;
+    return this;
+  }
+
+  getSavedPattern(varName, str) {
+    let regex = new RegExp(`var ${varName} = (.*?);`, 'g');
+    let match = regex.exec(str);
+    if (match) {
+        let valueStr = match[1];
+        if (valueStr.startsWith('[') && valueStr.endsWith(']')) {
+            return JSON.parse(valueStr);
+        } else {
+            return parseFloat(valueStr);
+        }
     } else {
-      context[pattern_name] = this.data;
+        return null;
     }
-    
-    let updatedVars = '';
-    for (let key in context) {
-      if (Array.isArray(context[key])) {
-        updatedVars += `var ${key} = [${context[key].join(',')}];\n`;
-      } else {
-        updatedVars += `var ${key} = ${JSON.stringify(context[key])};\n`;
-      }
+  }
+
+  drift ( seed_fp, pattern_name, command ) {
+    if (typeof seed_fp === undefined) {
+      throw (`cannot run grow(): the seed pattern is undefined.`);
     }
-  
-    // Write the updated variables to the file
-    fs.writeFileSync('js/vars.js', updatedVars);
+    if ( typeof command != 'function' ) {
+      throw `3rd argument to .drift() must be a function, type found: ${typeof command}`;
+    }
+    if ( typeof seed_fp == 'number' || Array.isArray(seed_fp) === true ) {
+      seed_fp = new FacetPattern().from(seed_fp);
+    }
+    // check if pattern_name is a pattern. if not, create it with the seed_fp. if yes, run command with pattern_name as this.data
+    let saved_pattern_data = this.getSavedPattern(pattern_name,global.env + global.vars);
+    if ( saved_pattern_data == null || is_rerun === false ) {
+      // create & save new FP from seed
+      this.data = seed_fp.data;
+      this.set(pattern_name);
+    }
+    else {
+      // load & modify with command 
+      this.data = saved_pattern_data;
+      this.run(command);
+      this.set(pattern_name);
+    }
+    return this;
+  }
+
+  inc (pattern_name, amt = 1) {
+    if (typeof pattern_name === undefined) {
+      this.data = 0;
+    }
+    else {
+      this.data = this.getSavedPattern(pattern_name,global.env + global.vars);
+      this.add(amt);
+    }
+    this.set(pattern_name);
+    return this;
+  }
+
+  dec (pattern_name, amt = 1) {
+    this.inc(pattern_name, amt * -1);
     return this;
   }
 
@@ -3358,7 +3373,7 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
       slice_end_pos = slice_start_pos + calc_slice_size;
       current_slice = new FacetPattern().from(this.data).range(slice_start_pos/this.data.length, slice_end_pos/this.data.length);
       if ( Math.random() < prob ) {
-        current_slice = eval(this.env + this.utils + command);
+        current_slice = eval(global.env + global.vars + utils + command);
         current_slice.notes.forEach(n => {
           this.notes.push(n);
         });
@@ -3415,7 +3430,7 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
   
   for (var s = 0; s < num_slices; s++) {
       let current_slice = new FacetPattern().from(segments[s].data);
-      current_slice = eval(this.env + this.utils + command);
+      current_slice = eval(global.env + global.vars + utils + command);
       current_slice.notes.forEach(n => {
         this.notes.push(n);
       });
@@ -3602,7 +3617,7 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
     command = command.toString();
     command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
-    eval(this.env + this.utils + command);
+    eval(global.env + global.vars + utils + command);
 
     beforeData.append(this).sup(afterData,new_max,originalFrameSize);
     this.data = beforeData.data;
@@ -3622,7 +3637,7 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
     let s = this.current_slice_number;
     let num_slices = this.current_total_slices;
     if ( Math.random() < prob ) {
-      eval(this.env + this.utils + command);
+      eval(global.env + global.vars + utils + command);
     }
     return this;
   }
@@ -3853,55 +3868,18 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
     return this;
   }
 
-  getEnv() {
-    let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {
-      if(err) throw err; 
-      return data;
-    });
-  
-    if (env.length === 0) {
-      // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
-      // in that case, try loading again
-      env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {
-        if(err) throw err;
-        return data;
-      });
-    }
-  
-    let vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {
-      if(err) throw err;
-      return data;
-    });
-  
-    if (vars.length === 0) {
-      // in case the app file is empty, try loading again
-      vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {
-        if(err) throw err;
-        return data;
-      });
-    }
-    env += vars;
-    return  env;
-  }
-
-  getUtils() {
-    return fs.readFileSync('js/utils.js', 'utf8', (err, data) => {
-      return data;
-    });
-  }
-
   getWholeNoteNumSamples () {
-    let n1Value = this.env.match(/n1\s*=\s*(\d+)/)[1];
+    let n1Value = global.env.match(/n1\s*=\s*(\d+)/)[1];
     return n1Value;
   }
 
   getBPM () {
-    let bpmValue = this.env.match(/bpm\s*=\s*(\d+)/)[1];
+    let bpmValue = global.env.match(/bpm\s*=\s*(\d+)/)[1];
     return bpmValue;
   }
 
   getBars () {
-    let bpmValue = this.env.match(/bars\s*=\s*(\d+)/)[1];
+    let bpmValue = global.env.match(/bars\s*=\s*(\d+)/)[1];
     return bpmValue;
   }
 

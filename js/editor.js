@@ -401,7 +401,7 @@ socket.on('bpm', (bpm) => {
   if ( browser_sound_output === true ) {
     // adjust the playback speed of all voices
     for (let i = 1; i <= voices.length; i++) {
-      if (voices[i] && sources[i]) {
+      if (voices[i] && sources[i] && !$('#bpm').is(':focus')) {
         let current_bpm = $('#bpm').val();
         let voice_bpm = voices[i].bpm;
         // get the pitch shift value for this voice

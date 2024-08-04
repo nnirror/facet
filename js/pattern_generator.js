@@ -14,16 +14,18 @@ const FacetPattern = require('./FacetPattern.js');
 const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const HOST = FacetConfig.settings.HOST;
+const utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
 let bpm = 90;
 let bars_elapsed = 0;
 let reruns = {};
-let previous_variables = {bpm:-1,bars_elapsed:-1,mousex:-1,mousey:-1};
 let errors = [];
 let workers = []; 
 let percent_cpu = 0;
 let mousex, mousey;
 let cross_platform_copy_command = process.platform == 'win32' ? 'copy \/y' : 'cp';
-let cross_platform_move_command = process.platform == 'win32' ? 'move \/y' : 'mv';
+let vars = [];
+let env = {bpm:-1,bars_elapsed:-1,mousex:-1,mousey:-1};
+let env_string = '';
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
 process.title = 'facet_pattern_generator';
 
@@ -47,17 +49,11 @@ axios.interceptors.request.use(request => {
 
 module.exports = {
   cleanUp: () => {
-    fs.writeFileSync('js/env.js', '');
-    fs.writeFileSync('js/vars.js', '');
     fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
-  },
-  initEnv: () => {
-    fs.writeFileSync('js/env.js', '');
-    fs.writeFileSync('js/vars.js', '');
   },
   run: (code, is_rerun, mode) => {
     if ( (is_rerun === true && percent_cpu < 0.5 ) || is_rerun === false ) {
-      const worker = new Worker("./js/run.js", {workerData:{code:code,mode:mode},resourceLimits:{stackSizeMb:128}});
+      const worker = new Worker("./js/run.js", {workerData:{code:code,mode:mode,vars:vars,env:env_string,utils:utils,is_rerun:is_rerun},resourceLimits:{stackSizeMb:128}});
       workers.push(worker);
       worker.once("message", run_data => {
           // remove the worker from the workers list
@@ -66,7 +62,14 @@ module.exports = {
               workers.splice(index, 1);
           }
           let fps = run_data.fps;
-          Object.values(fps).forEach(fp => {
+            Object.values(fps).forEach(fp => {
+              // set vars here - loop through
+              // console.log(fp.vars);
+              for (let fp_var_key in fp.vars) {
+                if (fp.vars.hasOwnProperty(fp_var_key)) {
+                  vars[fp_var_key] = fp.vars[fp_var_key];
+                }
+              }
             if ( fp.is_stopped === true ) {
               // stop all workers. any commands that weren't stopped will continue to regenerate the next loop
               terminateAllWorkers();
@@ -119,7 +122,6 @@ module.exports = {
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
 app.use(bodyParser.json({limit: '1000mb'}));
 app.use(cors());
-module.exports.initEnv();
 
 // make the tmp/ directory if it doesn't exist
 if ( !fs.existsSync('tmp/')) {
@@ -154,25 +156,18 @@ app.post('/stop', (req, res) => {
 app.post('/meta', (req, res) => {
   bpm = req.body.bpm;
   bars_elapsed = req.body.bars_elapsed;
-    // if any system-level variables have changed, rewrite env.js so those variables that be accessed in all future evals.
-    // it's loaded into each FacetPattern instance on construction
-    if ( bpm != previous_variables.bpm || bars_elapsed != previous_variables.bars_elapsed || mousex != previous_variables.mousex || mousey != previous_variables.mousey ) {
-      fs.writeFileSync('js/env.js',
-      calculateNoteValues(bpm) +
-      `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};`,
-      ()=> {}
-      );
+    if ( bpm != env.bpm || bars_elapsed != env.bars_elapsed || mousex != env.mousex || mousey != env.mousey ) {
+      env_string = calculateNoteValues(bpm) + `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};`;
     }
     res.sendStatus(200);
-
-    previous_variables.bpm = bpm;
-    previous_variables.bars_elapsed = bars_elapsed;
-    previous_variables.mousex = mousex;
-    previous_variables.mousey = mousey;
+    env.bpm = bpm;
+    env.bars_elapsed = bars_elapsed;
+    env.mousex = mousex;
+    env.mousey = mousey;
 });
 
 app.post('/autocomplete', (req, res) => {
-  let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1", "nextPowerOf2"]
+  let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1", "nextPowerOf2","getSavedPattern"]
   let all_methods = getAllFuncs(new FacetPattern());
   let available_methods = []
   for (var i = 0; i < all_methods.length; i++) {

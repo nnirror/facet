@@ -4,29 +4,16 @@ const fs = require('fs');
 const FacetPattern = require('./FacetPattern.js')
 const stop_called_regex = /(?<!{[^}]*)\.stop\(\)(?![^{}]*})/;
 const fp_name_regex = /\$\((['"])(.+?)\1\)/;
-let utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
-let env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
-let vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {return data});
 let bpm_from_env;
 
-parentPort.postMessage(runCode(workerData.code,workerData.mode));
+parentPort.postMessage(runCode(workerData.code,workerData.mode,workerData.vars,workerData.env,workerData.utils,workerData.is_rerun));
 
-function runCode (code,mode) {
+function runCode (code,mode,vars,env,utils,is_rerun) {
   let fps = [];
   let run_errors = [];
   user_input = strip(code);
   user_input = delimitEndsOfCommands(user_input);
   let commands = splitCommandsOnDelimiter(user_input);
-  if (env.length == 0) {
-    // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
-    // in that case, try loading again
-    env = fs.readFileSync('js/env.js', 'utf8', (err, data) => {return data});
-  }
-  if (vars.length == 0) {
-    // in rare cases the env file might be empty if it was attempted to be loaded while it was being refilled.
-    // in that case, try loading again
-    vars = fs.readFileSync('js/vars.js', 'utf8', (err, data) => {return data});
-  }
   Object.values(commands).forEach(command => {
     let original_command = replaceDelimiterWithSemicolon(command);
     command = formatCode(command);
@@ -39,7 +26,8 @@ function runCode (code,mode) {
     if ( mode === 'once' ) {
       command = `${command}.once()`;
     }
-    vars = addMissingVariables(command, vars);
+    let new_vars = generateVarsString(vars);
+    new_vars = addMissingVariables(command, new_vars);
     try {
       let fp;
       let should_be_stopped = stop_called_regex.test(command);
@@ -50,7 +38,12 @@ function runCode (code,mode) {
         fp.is_stopped = true;
       }
       else {
-        fp = eval(env + vars + utils + command);
+        // set these globally so that any commands that eval patterns during their construction like iter() can access them too
+        global.env = env;
+        global.vars = new_vars;
+        global.is_rerun = is_rerun;
+        global.utils = utils;
+        fp = eval(env + new_vars + utils + command);
       }
       // parse the current BPM and add it as a property of the FP.
       // the BPM at generation time is needed in the transport - if BPM has changed
@@ -140,7 +133,7 @@ function parseBpmFromEnv(env_str) {
 }
 
 function addMissingVariables(command, vars) {
-  let regex = /\.set\((.+?)\)|\.inc\((.+?)(?:,.+?)?\)|\.dec\((.+?)(?:,.+?)?\)/g;
+  let regex = /\.set\((.+?)\)/g;
   let matches = command.match(regex);
 
   if (matches) {
@@ -152,6 +145,15 @@ function addMissingVariables(command, vars) {
       }
     });
   }
-
   return vars;
+}
+
+function generateVarsString(obj) {
+  let varsString = '';
+  for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+          varsString += `var ${key} = [${obj[key].join(', ')}];\n`;
+      }
+  }
+  return varsString;
 }
