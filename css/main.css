@@ -17,6 +17,10 @@ body {
   width: 4em;
   text-align: center;
 }
+#time_signature_numerator, #time_signature_denominator {
+  width: 3em;
+  text-align: center;
+}
 #sound {
   width: 1.75em;
   height: 1.75em;

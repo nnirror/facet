@@ -14,6 +14,7 @@ const HOST = FacetConfig.settings.HOST;
 const OSC = require('osc-js')
 const udp_osc_server = new OSC({ plugin: new OSC.DatagramPlugin({ send: { port: FacetConfig.settings.OSC_OUTPORT } }) })
 const Tonal = require('tonal');
+const { time } = require('console');
 udp_osc_server.open({ port: 2134 });
 const EVENT_RESOLUTION_MS = FacetConfig.settings.EVENT_RESOLUTION_MS;
 const server = http.createServer(app);
@@ -30,6 +31,7 @@ let stopped_patterns = [];
 let patterns_that_have_been_stopped = [];
 let patterns_to_delete_at_end_of_loop = [];
 let current_relative_step_position = 0;
+let time_since_last_regen_request = Date.now();
 let event_register = [];
 let sockets = [];
 let transport_on = true;
@@ -54,6 +56,8 @@ io.on('connection', (socket) => {
   // send bpm and bars_elapsed every 20ms
   setInterval(() => {
     socket.emit('bpm', bpm);
+    socket.emit('time_signature_numerator', time_signature_numerator);
+    socket.emit('time_signature_denominator', time_signature_denominator);
     socket.emit('barsElapsed', bars_elapsed);
     socket.emit('progress', current_relative_step_position);
   }, 20);
@@ -97,6 +101,12 @@ app.post('/meta', (req, res) => {
   if ( req.body.type == 'bpm' ) {
     meta_data.bpm = posted_pattern.data;
     meta_data.bpm_over_n = posted_pattern.over_n;
+  }
+  if ( req.body.type == 'time_signature_numerator' ) {
+    time_signature_numerator = posted_pattern.time_signature_numerator;
+  }
+  if ( req.body.type == 'time_signature_denominator' ) {
+    time_signature_denominator = posted_pattern.time_signature_denominator;
   }
   res.sendStatus(200);
 });
@@ -200,6 +210,8 @@ app.get('/status', (req,res)=> {
 
 app.post('/bpm', (req, res) => {
   meta_data.bpm = [Math.abs(Number(req.body.bpm))];
+  time_signature_numerator = req.body.time_signature_numerator;
+  time_signature_denominator = req.body.time_signature_denominator;
   meta_data.bpm_over_n = 1;
   res.sendStatus(200);
 });
@@ -225,10 +237,12 @@ let bpm_recalculation_counter = -1;
 let scaledBpm;
 let delay;
 let bpm_was_changed_this_loop = false;
+let time_signature_numerator = 4;
+let time_signature_denominator = 4;
 
 function tick() {
   let events_per_second = 1000 / EVENT_RESOLUTION_MS;
-  let loops_per_minute = bpm / 4;
+  let loops_per_minute = bpm / (time_signature_numerator / (time_signature_denominator / 4));
   let seconds_per_loop = 60 / loops_per_minute;
   let events_per_loop = seconds_per_loop * events_per_second;
   let relative_step_amount_to_add_per_loop = 1 / events_per_loop;
@@ -252,7 +266,7 @@ function tick() {
   }
 
   checkForBpmRecalculation(events_per_loop);
-  loops_per_minute = bpm / 4;
+  loops_per_minute = bpm / (time_signature_numerator / (time_signature_denominator / 4));
   seconds_per_loop = 60 / loops_per_minute;
   events_per_loop = seconds_per_loop * events_per_second;
   relative_step_amount_to_add_per_loop = 1 / events_per_loop;
@@ -360,7 +374,9 @@ function reportTransportMetaData() {
     axios.post(`http://${HOST}:1123/meta`,
     {
       bpm: JSON.stringify(bpm),
-      bars_elapsed: JSON.stringify(bars_elapsed)
+      bars_elapsed: JSON.stringify(bars_elapsed),
+      time_signature_numerator: time_signature_numerator,
+      time_signature_denominator: time_signature_denominator
     }
   )
   .catch(function (error) {
@@ -526,9 +542,10 @@ function applyNextPatterns() {
 }
 
 function requestNewPatterns () {
-  if ( bars_elapsed > 0 ) {
+  if ( bars_elapsed > 0 && Date.now() - time_since_last_regen_request > 500 ) {
     // tell server to generate any new patterns
     axios.get(`http://${HOST}:1123/update`);
+    time_since_last_regen_request = Date.now();
   }
 }
 

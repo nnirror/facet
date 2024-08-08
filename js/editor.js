@@ -102,11 +102,30 @@ $(document).keydown(function(e) {
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
   if ( $('#bpm').is(':focus') && e.keyCode == 13 ) {
-    $.post(`http://${configSettings.HOST}:3211/bpm`, {bpm:$('#bpm').val()}).done(function( data, status ) {}).fail(function(data) {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
     $('#bpm').blur();
   }
+
+  if ( $('#time_signature_numerator').is(':focus') && e.keyCode == 13 ) {
+    $('#time_signature_numerator').blur();
+  }
+  if ( $('#time_signature_denominator').is(':focus') && e.keyCode == 13 ) {
+    $('#time_signature_denominator').blur();
+  }
+
+  $('#time_signature_numerator').on('blur', function() {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+  });
+  
+  $('#time_signature_denominator').on('blur', function() {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+  });
 
   if ( e.ctrlKey && e.keyCode === 70 ) {
     var cursor = cm.getCursor();
@@ -202,7 +221,6 @@ $('body').on('click', '#midi_refresh', function() {
       let midi_out = data.data[i];
       $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
     }
-    $.growl.notice({ message: 'MIDI outputs refreshed' });
   })
   .fail(function(data) {
     if ( data.statusText == 'error' ) {
@@ -265,6 +283,7 @@ $('body').on('click', '#restart', function() {
 let browser_sound_output = true;
 
 $(document).ready(function() {
+  $('#midi_refresh').click();
   setTimeout(() => {
     initializeMIDISelection();
 }, 100);
@@ -358,18 +377,41 @@ function setStatus(status) {
 }
 
 
-let bpm=90;
+let bpm = 90;
 let prev_bpm = 90;
-// check every 10ms for bpm change and send if changed
-setInterval(()=>{
+let time_signature_numerator = 4;
+let prev_time_signature_numerator = 4;
+let time_signature_denominator = 4;
+let prev_time_signature_denominator = 4;
+
+// check every 50ms for bpm or time signature change and send if changed
+setInterval(() => {
   bpm = $('#bpm').val();
+  time_signature_numerator = $('#time_signature_numerator').val();
+  time_signature_denominator = $('#time_signature_denominator').val();
+
   // send change on increment/decrement by 1
-  if ( !isNaN(bpm) && bpm >= 1 && $('#bpm').is(':focus') && ( Math.abs(bpm-prev_bpm) == 1 ) ) {
-    $.post(`http://${configSettings.HOST}:3211/bpm`, {bpm:bpm}).done(function( data, status ) {}).fail(function(data) {
+  if (!isNaN(bpm) && bpm >= 1 && $('#bpm').is(':focus') && (Math.abs(bpm - prev_bpm) == 1)) {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
   }
+
+  if (!isNaN(time_signature_numerator) && (Math.abs(time_signature_numerator - prev_time_signature_numerator) == 1)) {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+  }
+
+  if (!isNaN(time_signature_denominator) && (Math.abs(time_signature_denominator - prev_time_signature_denominator) == 1)) {
+    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
+      $.growl.error({ message: 'no connection to the Facet server' });
+    });
+  }
+
   prev_bpm = bpm;
+  prev_time_signature_numerator = time_signature_numerator;
+  prev_time_signature_denominator = time_signature_denominator;
 }, 50);
 
 $('#bpm').val(90);
@@ -394,6 +436,19 @@ const socket = io.connect(`http://${configSettings.HOST}:3000`, {
 socket.on('progress', (progress) => {
   $('#progress_bar').width(`${Math.round(progress*100)}%`);
 })
+
+socket.on('time_signature_numerator', (numerator) => {
+  if ( !$('#time_signature_numerator').is(':focus') && prev_time_signature_numerator !== numerator ) {
+    $('#time_signature_numerator').val(`${numerator}`);
+  }
+})
+
+socket.on('time_signature_denominator', (denominator) => {
+  if ( !$('#time_signature_denominator').is(':focus') && prev_time_signature_denominator !== denominator ) {
+    $('#time_signature_denominator').val(`${denominator}`);
+  }
+})
+
 socket.on('bpm', (bpm) => {
   if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
     $('#bpm').val(`${bpm}`);

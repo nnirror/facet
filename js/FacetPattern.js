@@ -52,6 +52,8 @@ class FacetPattern {
     this.sequence_data = [];
     this.sequence_pitch_data = [];
     this.skipped = false;
+    this.time_signature_denominator = false;
+    this.time_signature_numerator = false;
     this.vars = [];
     this.whenmod_modulo_operand = false;
     this.whenmod_equals = false;
@@ -2951,6 +2953,26 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
     }
     this.bpm_pattern = bpm_fp.clip(1,10000);
     this.data = bpm_fp.data;
+    return this;
+  }
+
+  time ( numerator = 4, denominator = 4 ) {
+    numerator = Math.abs(Math.round(numerator));
+    denominator = Math.abs(Math.round(denominator));
+    if ( numerator == 0 ) {
+      numerator = 1;
+    }
+    if ( numerator > 32 ) {
+      numerator = 32;
+    }
+    if ( denominator == 0 ) {
+      numerator = 1;
+    }
+    if ( numerator > 16 ) {
+      numerator = 16;
+    }
+    this.time_signature_numerator = numerator;
+    this.time_signature_denominator = denominator;
     return this;
   }
 

@@ -17,6 +17,8 @@ const HOST = FacetConfig.settings.HOST;
 const utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => {return data});
 let bpm = 90;
 let bars_elapsed = 0;
+let time_signature_numerator = 4;
+let time_signature_denominator = 4;
 let reruns = {};
 let errors = [];
 let workers = []; 
@@ -94,6 +96,12 @@ module.exports = {
             if ( fp.bpm_pattern !== false ) {
               postMetaDataToTransport(fp.bpm_pattern,'bpm');
             }
+            if ( fp.time_signature_denominator ) {
+              postMetaDataToTransport(fp,'time_signature_denominator');
+            }
+            if ( fp.time_signature_numerator ) {
+              postMetaDataToTransport(fp,'time_signature_numerator');
+            }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
               // create wav file at SAMPLE_RATE, 32-bit floating point
               let a_wav = new WaveFile();
@@ -156,8 +164,10 @@ app.post('/stop', (req, res) => {
 app.post('/meta', (req, res) => {
   bpm = req.body.bpm;
   bars_elapsed = req.body.bars_elapsed;
+  time_signature_numerator = req.body.time_signature_numerator;
+  time_signature_denominator = req.body.time_signature_denominator;
     if ( bpm != env.bpm || bars_elapsed != env.bars_elapsed || mousex != env.mousex || mousey != env.mousey ) {
-      env_string = calculateNoteValues(bpm) + `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};`;
+      env_string = calculateNoteValues(bpm,time_signature_numerator,time_signature_denominator) + `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};var time_signature_numerator=${time_signature_numerator};var time_signature_denominator=${time_signature_denominator};`;
     }
     res.sendStatus(200);
     env.bpm = bpm;
@@ -252,10 +262,10 @@ function terminateAllWorkers () {
   workers = [];  // all workers have been terminated
 }
 
-function calculateNoteValues(bpm) {
+function calculateNoteValues(bpm, time_signature_numerator, time_signature_denominator) {
   let out = '';
   for (var i = 1; i <= 128; i++) {
-    let calculated_nv = Math.round((((60000/bpm)/i)*4)*(SAMPLE_RATE*0.001));
+    let calculated_nv = Math.round((((60000/bpm)/i)*(time_signature_numerator/(time_signature_denominator/4)))*(SAMPLE_RATE*0.001));
     out += `var n${i} = ${calculated_nv};`
   }
   return out;

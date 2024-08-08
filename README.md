@@ -45,7 +45,8 @@ Below the text editor, there are several UI elements which control the servers r
 
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
-- Slider for setting the BPM of the global transport (_note_: when the `.bpm()` operation runs, this value is updated automatically)
+- Number input for setting the BPM of the global transport (_note_: when the `.bpm()` operation runs, this value is updated automatically)
+- Number inputs for setting the time signature numerator and denominator of the global transport.
 - MIDI output selector / refresh button
 - ■ = stop playback
 - ⊖ = stop regenerating patterns but continue playback
@@ -98,11 +99,15 @@ There are 128 notevalues variables, corresponding to divisions of 1 whole note. 
 
 #### bpm
 
-The variable `bpm` (representing the current BPM in the Facet transport when the FacetPattern is generated) is available for use in commands as well.
+The variable `bpm` represents the current BPM in the Facet transport when the FacetPattern is generated.
 
 #### bars
 
-The variable `bars` (representing how many loops have occurred since the time the server was started) is available for use in commands as well. This is especially useful with the modulo % operator, e.g.: `bars%4`, which could be either 0, 1, 2, or 3, depending on how many loops have occurred.
+The variable `bars` represents how many loops have occurred since the time the server was started. This is especially useful with the modulo % operator, e.g.: `bars%4`, which could be either 0, 1, 2, or 3, depending on how many loops have occurred.
+
+#### time signature
+
+The variables `time_signature_numerator` and `time_signature_denominator` represent the current time signature of the Facet transport. These variables will update when you modify either the `time signature numerator` or `time signature denominator` number inputs in the user interface.
 
 ## Sample rate
 
