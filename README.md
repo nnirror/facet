@@ -107,7 +107,7 @@ The variable `bars` represents how many loops have occurred since the time the s
 
 #### time signature
 
-The variables `time_num` and `time_denom` represent the current time signature of the Facet transport. These variables will update when you modify either the `time signature numerator` or `time signature denominator` number inputs in the user interface.
+The variables `time_num` and `time_denom` represent the current time signature of the Facet transport. These variables will update when you modify either the `time signature numerator` or `time signature denominator` number inputs in the user interface, or if the `time()` method is dynamically updating the time signature.
 
 ## Sample rate
 
@@ -314,12 +314,24 @@ You need to connect the MIDI device you want to use before starting Facet.
 		- `$('example').silence(2500).iter(8,()=>{this.tri2d(ri(0,49),ri(0,49),ri(0,49),ri(0,49),ri(0,49),ri(0,49),1,0)}).savemidi2d(ts(), 64, 16).once(); // 8 randomly sized triangles in 2d space, all at velocity 64, 16th note durations`
 		- `$('example').silence(2500).iter(10,()=>{this.circle2d(ri(10,40), ri(10,40), 10, 1, 0)}).savemidi2d(ts(), 64, 64).once(); // 10 randomly sized circles in 2d space, all at velocity 64, 64th note durations`
 
-### Methods for controlling transport BPM
-- **bpm** ( )
-	- stores the FacetPattern data in the transport as BPM values to be cycled through over each loop.
+### Methods for controlling time
+- **bpm** ( _bpm_pattern_ ) )
+	- stores the data of `bpm_pattern` in the transport as BPM values to be cycled through over each loop.
 	- the minimum BPM value is 1, and the maximum BPM value is 10000.
+	- using the `over()` method on the `bpm_pattern` will cycle through the BPM pattern over multiple loops.
 	- example:
 		- `$('example').bpm(_.from([20,40,80,160,320]).shuffle()); // each loop will be all 5 of these BPM, randomly ordered`
+		- `$('example').bpm(_.ramp(20,200,64).over(4)); // ramps from 20BPM to 200BPM over 4 loops`
+---
+- **time** ( _time_signature_numerator_pattern_ = 4, _time_signature_denominator_pattern_ = 4 )
+	- sets the time signature for the transport.
+	- if `time_signature_numerator_pattern` or `time_signature_denominator_pattern` has more than one value, those values will be cycled through over each loop.
+	- using the `over()` method on `time_signature_numerator_pattern` or `time_signature_denominator_pattern` will cycle through the time signature pattern over multiple loops.
+	- the minimum `_time_signature_numerator_pattern_` value is 1, and the maximum is 32.
+	- the minimum `_time_signature_denominator_pattern_` value is 1, and the maximum is 16.
+	- example:
+		- `$('example').time(4,4); // set time to 4/4`
+		- `$('example').time(_.ramp(8,1,8).over(8),2); // ramps from 8/2 to 1/2 time over 8 loops`
 
 ### Methods for controlling pattern regeneration
 - **whenmod** ( _modulo_operand_, _equals_value_ = 0 )
