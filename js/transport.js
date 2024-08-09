@@ -35,8 +35,16 @@ let time_since_last_regen_request = Date.now();
 let event_register = [];
 let sockets = [];
 let transport_on = true;
+let time_signature_automation_rate_limit = 50;
+let time_signature_automation_last_run = Date.now();
+let bpm_automation_rate_limit = 50;
+let bpm_automation_last_run = Date.now();
 let meta_data = {
-  bpm: [90]
+  bpm: [90],
+  time_signature_numerator: [4],
+  time_signature_denominator: [4],
+  time_signature_numerator_over_n: 1,
+  time_signature_denominator_over_n: 1
 };
 process.title = 'facet_transport';
 
@@ -103,10 +111,12 @@ app.post('/meta', (req, res) => {
     meta_data.bpm_over_n = posted_pattern.over_n;
   }
   if ( req.body.type == 'time_signature_numerator' ) {
-    time_signature_numerator = posted_pattern.time_signature_numerator;
+    meta_data.time_signature_numerator = posted_pattern.time_signature_numerator.data;
+    meta_data.time_signature_numerator_over_n = posted_pattern.time_signature_numerator.over_n;
   }
   if ( req.body.type == 'time_signature_denominator' ) {
-    time_signature_denominator = posted_pattern.time_signature_denominator;
+    meta_data.time_signature_denominator = posted_pattern.time_signature_denominator.data;
+    meta_data.time_signature_denominator_over_n = posted_pattern.time_signature_denominator.over_n;
   }
   res.sendStatus(200);
 });
@@ -210,9 +220,11 @@ app.get('/status', (req,res)=> {
 
 app.post('/bpm', (req, res) => {
   meta_data.bpm = [Math.abs(Number(req.body.bpm))];
-  time_signature_numerator = req.body.time_signature_numerator;
-  time_signature_denominator = req.body.time_signature_denominator;
   meta_data.bpm_over_n = 1;
+  meta_data.time_signature_numerator = [req.body.time_signature_numerator];
+  meta_data.time_signature_numerator_over_n = 1;
+  meta_data.time_signature_denominator = [req.body.time_signature_denominator];
+  meta_data.time_signature_denominator_over_n = 1;
   res.sendStatus(200);
 });
 
@@ -224,8 +236,10 @@ app.post('/stop', (req, res) => {
   if ( typeof midioutput !== 'undefined' ) {
     midioutput.sendAllNotesOff();
   }
-  // clear out any dynamic BPM patterns, so BPM stays at whatever value it was prior to stopping
+  // clear out any dynamic BPM and time signature patterns, so they stay at whatever values they were prior to stopping
   meta_data.bpm = bpm;
+  meta_data.time_signature_numerator = time_signature_numerator;
+  meta_data.time_signature_denominator = time_signature_denominator;
   res.sendStatus(200);
 });
 
@@ -266,6 +280,7 @@ function tick() {
   }
 
   checkForBpmRecalculation(events_per_loop);
+  checkForTimeSignatureRecalculation(events_per_loop);
   loops_per_minute = bpm / (time_signature_numerator / (time_signature_denominator / 4));
   seconds_per_loop = 60 / loops_per_minute;
   events_per_loop = seconds_per_loop * events_per_second;
@@ -542,7 +557,7 @@ function applyNextPatterns() {
 }
 
 function requestNewPatterns () {
-  if ( bars_elapsed > 0 && Date.now() - time_since_last_regen_request > 500 ) {
+  if ( bars_elapsed > 0 && Date.now() - time_since_last_regen_request > 250 ) {
     // tell server to generate any new patterns
     axios.get(`http://${HOST}:1123/update`);
     time_since_last_regen_request = Date.now();
@@ -557,7 +572,42 @@ function resetEventRegister() {
   }
 }
 
+function checkForTimeSignatureRecalculation(events_per_loop) {
+  const now = Date.now();
+  if ( now - time_signature_automation_last_run < time_signature_automation_rate_limit) {
+    return;
+  }
+  let totalPatternLengthNumerator = events_per_loop * meta_data.time_signature_numerator_over_n;
+  let totalPatternLengthDenominator = events_per_loop * meta_data.time_signature_denominator_over_n;
+  
+  let scaledTimeSignatureNumerator = scalePatternToSteps(meta_data.time_signature_numerator, totalPatternLengthNumerator);
+  let scaledTimeSignatureDenominator = scalePatternToSteps(meta_data.time_signature_denominator, totalPatternLengthDenominator);
+
+  let normalizedStepPosition = current_relative_step_position % 1;
+  let cyclePositionNumerator = bars_elapsed / meta_data.time_signature_numerator_over_n + normalizedStepPosition / meta_data.time_signature_numerator_over_n;
+  let cyclePositionDenominator = bars_elapsed / meta_data.time_signature_denominator_over_n + normalizedStepPosition / meta_data.time_signature_denominator_over_n;
+  
+  cyclePositionNumerator = cyclePositionNumerator % 1;
+  cyclePositionDenominator = cyclePositionDenominator % 1;
+
+  let timeSignatureNumeratorIndex = Math.floor(cyclePositionNumerator * totalPatternLengthNumerator);
+  let timeSignatureDenominatorIndex = Math.floor(cyclePositionDenominator * totalPatternLengthDenominator);
+
+  if (typeof scaledTimeSignatureNumerator[timeSignatureNumeratorIndex] !== 'undefined') {
+    time_signature_numerator = scaledTimeSignatureNumerator[timeSignatureNumeratorIndex];
+  }
+
+  if (typeof scaledTimeSignatureDenominator[timeSignatureDenominatorIndex] !== 'undefined') {
+    time_signature_denominator = scaledTimeSignatureDenominator[timeSignatureDenominatorIndex];
+  }
+  time_signature_automation_last_run = now;
+}
+
 function checkForBpmRecalculation(events_per_loop) {
+  const now = Date.now();
+  if ( now - bpm_automation_last_run < bpm_automation_rate_limit) {
+    return;
+  }
   scaledBpm = scalePatternToSteps(meta_data.bpm, events_per_loop);
   // calculate the total length of the BPM pattern over meta_data.bpm_over_n loops
   let totalPatternLength = events_per_loop * meta_data.bpm_over_n;
@@ -582,6 +632,7 @@ function checkForBpmRecalculation(events_per_loop) {
     bpm_was_changed_this_loop = true;
     prev_bpm = bpm;
   }
+  bpm_automation_last_run = now;
 }
 
 

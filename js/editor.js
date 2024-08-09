@@ -116,15 +116,19 @@ $(document).keydown(function(e) {
   }
 
   $('#time_signature_numerator').on('blur', function() {
-    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
+    if (!isNaN(time_signature_numerator) && Math.abs(time_signature_numerator) >= 1) {
+      $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
+        $.growl.error({ message: 'no connection to the Facet server' });
+      });
+    }
   });
   
   $('#time_signature_denominator').on('blur', function() {
-    $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
+    if (!isNaN(time_signature_denominator) && Math.abs(time_signature_denominator) >= 1) {
+      $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
+        $.growl.error({ message: 'no connection to the Facet server' });
+      });
+    }
   });
 
   if ( e.ctrlKey && e.keyCode === 70 ) {

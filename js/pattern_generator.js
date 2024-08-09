@@ -167,7 +167,7 @@ app.post('/meta', (req, res) => {
   time_signature_numerator = req.body.time_signature_numerator;
   time_signature_denominator = req.body.time_signature_denominator;
     if ( bpm != env.bpm || bars_elapsed != env.bars_elapsed || mousex != env.mousex || mousey != env.mousey ) {
-      env_string = calculateNoteValues(bpm,time_signature_numerator,time_signature_denominator) + `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};var time_signature_numerator=${time_signature_numerator};var time_signature_denominator=${time_signature_denominator};`;
+      env_string = calculateNoteValues(bpm,time_signature_numerator,time_signature_denominator) + `var bpm=${bpm};var bars=${bars_elapsed};var mousex=${mousex};var mousey=${mousey};var time_num=${time_signature_numerator};var time_denom=${time_signature_denominator};`;
     }
     res.sendStatus(200);
     env.bpm = bpm;

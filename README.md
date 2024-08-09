@@ -107,7 +107,7 @@ The variable `bars` represents how many loops have occurred since the time the s
 
 #### time signature
 
-The variables `time_signature_numerator` and `time_signature_denominator` represent the current time signature of the Facet transport. These variables will update when you modify either the `time signature numerator` or `time signature denominator` number inputs in the user interface.
+The variables `time_num` and `time_denom` represent the current time signature of the Facet transport. These variables will update when you modify either the `time signature numerator` or `time signature denominator` number inputs in the user interface.
 
 ## Sample rate
 

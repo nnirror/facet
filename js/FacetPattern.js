@@ -2957,20 +2957,14 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
   }
 
   time ( numerator = 4, denominator = 4 ) {
-    numerator = Math.abs(Math.round(numerator));
-    denominator = Math.abs(Math.round(denominator));
-    if ( numerator == 0 ) {
-      numerator = 1;
+    if ( typeof numerator == 'number' || Array.isArray(numerator) === true ) {
+      numerator = new FacetPattern().from(numerator);
     }
-    if ( numerator > 32 ) {
-      numerator = 32;
+    if ( typeof denominator == 'number' || Array.isArray(denominator) === true ) {
+      denominator = new FacetPattern().from(denominator);
     }
-    if ( denominator == 0 ) {
-      numerator = 1;
-    }
-    if ( numerator > 16 ) {
-      numerator = 16;
-    }
+    numerator.abs().round().clip(1,32);
+    denominator.abs().round().clip(1,16);
     this.time_signature_numerator = numerator;
     this.time_signature_denominator = denominator;
     return this;
