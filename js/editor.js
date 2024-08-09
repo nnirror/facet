@@ -405,13 +405,13 @@ setInterval(() => {
     });
   }
 
-  if (!isNaN(time_signature_numerator) && (Math.abs(time_signature_numerator - prev_time_signature_numerator) == 1)) {
+  if (!isNaN(time_signature_numerator) && $('#time_signature_numerator').is(':focus') && (Math.abs(time_signature_numerator - prev_time_signature_numerator) == 1)) {
     $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
   }
 
-  if (!isNaN(time_signature_denominator) && (Math.abs(time_signature_denominator - prev_time_signature_denominator) == 1)) {
+  if (!isNaN(time_signature_denominator) && $('#time_signature_denominator').is(':focus') && (Math.abs(time_signature_denominator - prev_time_signature_denominator) == 1)) {
     $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
