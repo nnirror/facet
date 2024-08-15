@@ -45,8 +45,8 @@ Below the text editor, there are several UI elements which control the servers r
 
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
-- Number input for setting the BPM of the global transport (_note_: when the `.bpm()` operation runs, this value is updated automatically)
-- Number inputs for setting the time signature numerator and denominator of the global transport.
+- Number input for setting the BPM of the global transport (_note_: when the `.bpm()` operation runs, this value updates automatically)
+- Number inputs for setting the time signature numerator and denominator of the global transport. (_note_: when the `.time()` operation runs, these values update automatically)
 - MIDI output selector / refresh button
 - ■ = stop playback
 - ⊖ = stop regenerating patterns but continue playback
@@ -315,7 +315,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 		- `$('example').silence(2500).iter(10,()=>{this.circle2d(ri(10,40), ri(10,40), 10, 1, 0)}).savemidi2d(ts(), 64, 64).once(); // 10 randomly sized circles in 2d space, all at velocity 64, 64th note durations`
 
 ### Methods for controlling time
-- **bpm** ( _bpm_pattern_ ) )
+- **bpm** ( _bpm_pattern_ )
 	- stores the data of `bpm_pattern` in the transport as BPM values to be cycled through over each loop.
 	- the minimum BPM value is 1, and the maximum BPM value is 10000.
 	- using the `over()` method on the `bpm_pattern` will cycle through the BPM pattern over multiple loops.
@@ -352,7 +352,7 @@ You need to connect the MIDI device you want to use before starting Facet.
 ---
 - **over** ( _n_loops_ = 1 )
 	- distributes all the events that a FacetPattern would fire over `n_loops` so the pattern can last any number of loops before regenerating.
-	- works with audio playback, MIDI note/cc/pitchbend, and OSC.
+	- works with audio playback, MIDI note/cc/pitchbend, OSC, BPM (via `.bpm()`), and time signature (via `.time()`).
 	- example:
 		- `$('example').randsamp('808').play(_.ramp(0,1,16)).over(ri(1,4)); // random sample played 16 times over 1,2,3 or 4 bars`
 		- `$('example').drunk(2048,0.01).cc().over(128); // drunk walk over 128 bars, creates a drifty process that you can map onto device paramters to slowly randomize something`
@@ -365,11 +365,10 @@ These can be useful when you want to access or modify the same pattern across co
 	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If the pattern has one piece of data in it, the corresponding variable will be a float.
 	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 		- example:
-		-  ```
-		$('example').tri(100).set('abc').sine(abc).play(); // run it all in one command - just remember the first evaluated sine will have a frequency of 0
+		-  ```javascript
+		$('set_example').noise(8).scale(0,1).set('my_var').once(); // first, set the variable here
 
-		$('set_example').noise(32).curve().set('my_var').once(); // first, set the variable here
-		$('example').noise(100).times(my_var).play(); // now, you can use my_var in commands
+		$('example').sine(100).times(my_var).play(); // now, you can use my_var in commands
 		```
 ---
 - **drift** ( _seedPattern_, _patternName_, _command_ = function )
@@ -1081,10 +1080,10 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 	- example:
 		- `$('example').sine(1000,n2).stretchto(n1).play(); // 1000Hz sine wave originally a half note long, stretched to a whole note`
 ---
-- **stutter** ( _number_of_repeats_, _start_pos_ = 0, _end_pos_ = 1 )
-	- creates `_number_of_repeats_` identical chunks of data, calculated from the `start_pos` and `end_pos` values, which represent two relative positions between 0 and 1 in the input FacetPattern's data. After all the repeats have been appended to it, the FacetPattern is resized back to its original length.
+- **stutter** ( _number_of_repeats_ )
+	- creates `_number_of_repeats_` identical chunks of data.
 	- example
-		- `$('example').sine(100).stutter(16,rf(),rf()).size(n1).play(); // copies a unique sub-section of the same sine wave 16 times`
+		- `$('example').iter(8,()=>{this.sup(_.randsamp('808').stutter(8),i/iters)}).play(); // 8 random 808 samples, each stuttered 8 times`
 ---
 - **subset** ( _percentage_ )
 	- returns a subset of the FacetPattern with `percentage`% values in it.
@@ -1122,7 +1121,7 @@ When a generator takes a FacetPattern or an array as an argument, it uses that p
 ---
 
 ### Pattern modulators that can take a FacetPattern, number, or array as an argument
-When a modulator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').noise(16).add(4)`, all 16 output values will be between 4 and 5, because 4 is added to every noise value, and noise values are between 0 and 1 by default. But with the command `$('example').noise(16).add(_.ramp(0,4,16))`, the output values will ramp from between 0-1 at the beginning to between 4-5 at the end, since the FacetPattern that is being added is a ramp of values starting at 0 and ending at 4.
+When a modulator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').noise(16).add(4)`, all 16 output values will be between 3 and 5, because 4 is added to every noise value, and noise values are between -1 and 1 by default. But with the command `$('example').noise(16).add(_.ramp(0,4,16))`, the output values will ramp from between [-1, 1] at the beginning to between [4, 5] at the end, since the FacetPattern that is being added is a ramp of values starting at 0 and ending at 4.
 
 - **add** ( _FacetPattern_, _match_sizes_ = true )
 	- adds the first FacetPattern and the second FacetPattern. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.

@@ -398,7 +398,7 @@ class FacetPattern {
         dir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
         files = fs.readdirSync(dir);
         files = files.filter(file => path.extname(file) === '.wav');
-        chosenFile = files[Math.floor(dir_pos * files.length)];
+        chosenFile = files[Math.floor(dir_pos * (files.length-1))];
       } catch (er) {
         // directory not found
         throw er;
@@ -2604,21 +2604,18 @@ scaleLT1 (outMin, outMax, exponent = 1) {
     return this;
   }
 
-  stutter (repeats, start_pos = 0, end_pos = 1) {
+  stutter (repeats) {
     repeats = Math.abs(Math.round(Number(repeats)));
     if ( repeats < 1 ) {
       return this;
     }
-    start_pos = Math.abs(Number(start_pos));
-    if ( start_pos > 1 ) {
-      throw `stutter start_pos value must be between 0 and 1, value found: ${start_pos}`;
+    let start_pos = 0;
+    let end_pos = 1 / repeats;
+    let stutter_fp = new FacetPattern().silence(this.data.length);
+    let cut_fp = new FacetPattern().from(this.data).range(start_pos,end_pos);
+    for (var a = 0; a < repeats; a++) {
+      stutter_fp.sup(cut_fp,a/repeats,this.data.length);
     }
-    end_pos = Math.abs(Number(end_pos));
-    if ( end_pos > 1 ) {
-      throw `stutter end_pos value must be between 0 and 1, value found: ${end_pos}`;
-    }
-    let original_length = this.data.length;
-    let stutter_fp = new FacetPattern().from(this.range(start_pos,end_pos).data).speed(repeats).dup(repeats-1).size(original_length);
     this.data = stutter_fp.data;
     return this;
   }
@@ -4008,7 +4005,7 @@ grow2d(iterations, prob, threshold = 0, mode = 0) {
     if (this.data.length == 0) {
       this.data = new FacetPattern().silence(maxFrameSize).data;
     }
-    startPositions = startPositions.data;
+    startPositions = startPositions.unique().data;
     maxFrameSize = Math.abs(Math.floor(maxFrameSize));
     let output = this.data.slice();
     for (let j = 0; j < startPositions.length; j++) {
