@@ -410,27 +410,35 @@ function applyNextPatterns() {
 
     const processPatternData = (patternData, type, processData) => {
       const eventsPerLoop = Math.ceil(patternData.length / over_n);
-      const startEventIndex = bars_elapsed % over_n * eventsPerLoop;
-      const endEventIndex = Math.min(startEventIndex + eventsPerLoop, patternData.length);
-
+      const currentLoop = bars_elapsed % over_n;
+    
+      // initialize event_register for the current facet_pattern_name
       event_register[facet_pattern_name] = [];
-      for (let i = startEventIndex; i < endEventIndex; i++) {
-        const indexWithinLoop = i - startEventIndex;
-        const newPosition = indexWithinLoop / eventsPerLoop;
-
-        let eventData = {
-          position: newPosition,
-          type: type,
-          data: patternData[i],
-          play_once: posted_pattern.play_once,
-          fired: false
-        };
-
-        if (processData) {
-          processData(eventData, i, indexWithinLoop);
+    
+      for (let i = 0; i < patternData.length; i++) {
+        // calculate in which loop this event should occur
+        const loopPart = Math.floor(patternData[i].position * over_n);
+    
+        // calculate new position within this loop
+        const positionInLoop = (patternData[i].position * over_n) - loopPart;
+    
+        if (loopPart === currentLoop) {
+          let eventData = {
+            position: positionInLoop,
+            type: type,
+            data: patternData[i],
+            play_once: posted_pattern.play_once,
+            fired: false
+          };
+    
+          // process eventData if processData is provided
+          if (processData) {
+            processData(eventData, i, i);
+          }
+    
+          // add the event to the event_register
+          event_register[facet_pattern_name].push(eventData);
         }
-
-        event_register[facet_pattern_name].push(eventData);
       }
     };
 

@@ -104,7 +104,7 @@ class FacetPattern {
     return this;
   }
 
-  cosine(frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true) {
+  cosine(frequencies, length = SAMPLE_RATE, fade_in_and_out = true) {
     let output = [];
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
@@ -113,10 +113,10 @@ class FacetPattern {
     frequencies.size(length);
     let phase = 0;
     for (let i = 0; i < length; i++) {
-        let t = i / sampleRate;
+        let t = i / SAMPLE_RATE;
         let currentFrequency = frequencies.data[i];
         output[i] = Math.cos(phase);
-        phase += 2 * Math.PI * currentFrequency / sampleRate;
+        phase += 2 * Math.PI * currentFrequency / SAMPLE_RATE;
         if (phase >= 2 * Math.PI) {
             phase -= 2 * Math.PI;
         }
@@ -290,7 +290,7 @@ class FacetPattern {
     return this;
   }
 
-  phasor(frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true) {
+  phasor(frequencies, duration = SAMPLE_RATE, fade_in_and_out = true) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -299,7 +299,7 @@ class FacetPattern {
     let wave = [];
     for (let i = 0; i < duration; i++) {
         let frequency = frequencies.data[i];
-        let samplesPerCycle = sampleRate / frequency;
+        let samplesPerCycle = SAMPLE_RATE / frequency;
         let t = i / samplesPerCycle;
         wave[i] = t - Math.floor(t);
     }
@@ -433,7 +433,7 @@ class FacetPattern {
     return this;
   }
 
-  rect (frequencies, duration = SAMPLE_RATE, pulseWidth = 0.5, sampleRate = SAMPLE_RATE, fade_in_and_out = true) {
+  rect (frequencies, duration = SAMPLE_RATE, pulseWidth = 0.5, fade_in_and_out = true) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -443,7 +443,7 @@ class FacetPattern {
     let amplitude = 1;
     for (let i = 0; i < duration; i++) {
         let frequency = frequencies.data[i];
-        let samplesPerCycle = sampleRate / frequency;
+        let samplesPerCycle = SAMPLE_RATE / frequency;
         let t = i / samplesPerCycle;
         wave[i] = (t - Math.floor(t) < pulseWidth) ? amplitude : -amplitude;
     }
@@ -561,7 +561,7 @@ class FacetPattern {
     }
   }
 
-  sine (frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true ) {
+  sine (frequencies, length = SAMPLE_RATE, fade_in_and_out = true ) {
     let output = [];
     if ( typeof frequencies == 'number' || Array.isArray(frequencies) === true ) {
       frequencies = new FacetPattern().from(frequencies);
@@ -570,10 +570,10 @@ class FacetPattern {
     frequencies.size(length);
     let phase = 0;
     for (let i = 0; i < length; i++) {
-        let t = i / sampleRate;
+        let t = i / SAMPLE_RATE;
         let currentFrequency = frequencies.data[i];
         output[i] = Math.sin(phase);
-        phase += 2 * Math.PI * currentFrequency / sampleRate;
+        phase += 2 * Math.PI * currentFrequency / SAMPLE_RATE;
         if (phase >= 2 * Math.PI) {
             phase -= 2 * Math.PI;
         }
@@ -586,7 +586,7 @@ class FacetPattern {
     return this;
   }
 
-  circle(frequencies, length = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
+  circle(frequencies, length = SAMPLE_RATE) {
     let output = [];
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
@@ -595,7 +595,7 @@ class FacetPattern {
     frequencies.size(length);
     let phase = 0;
     for (let i = 0; i < length; i++) {
-        let t = i / sampleRate;
+        let t = i / SAMPLE_RATE;
         let currentFrequency = frequencies.data[i];
         let x = phase / (2 * Math.PI);
         let y;
@@ -605,7 +605,7 @@ class FacetPattern {
             y = Math.sqrt(1 - (2 * (x - 0.5)) * (2 * (x - 0.5)));
         }
         output[i] = y;
-        phase += 2 * Math.PI * currentFrequency / sampleRate;
+        phase += 2 * Math.PI * currentFrequency / SAMPLE_RATE;
         if (phase >= 2 * Math.PI) {
             phase -= 2 * Math.PI;
         }
@@ -635,7 +635,7 @@ class FacetPattern {
     return this;
   }
 
-  square (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE) {
+  square (frequencies, duration = SAMPLE_RATE) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -647,14 +647,14 @@ class FacetPattern {
     for (let i = 0; i < duration; i++) {
         let frequency = frequencies.data[i];
         wave[i] = (phase < 0.5) ? amplitude : -amplitude;
-        phase += frequency / sampleRate;
+        phase += frequency / SAMPLE_RATE;
         phase -= Math.floor(phase);
     }
     this.data = wave;
     return this;
   }
   
-  tri (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true ) {
+  tri (frequencies, duration = SAMPLE_RATE, fade_in_and_out = true ) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -666,7 +666,7 @@ class FacetPattern {
     for (let i = 0; i < duration; i++) {
         let frequency = frequencies.data[i];
         wave[i] = 2 * amplitude * Math.abs(2 * (phase - Math.floor(phase + 0.5))) - amplitude;
-        phase += frequency / sampleRate;
+        phase += frequency / SAMPLE_RATE;
         phase -= Math.floor(phase);
     }
     this.data = wave;
