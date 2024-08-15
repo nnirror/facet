@@ -365,7 +365,7 @@ These can be useful when you want to access or modify the same pattern across co
 	- if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If the pattern has one piece of data in it, the corresponding variable will be a float.
 	- **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 		- example:
-		-  ```javascript
+		```javascript
 		$('set_example').noise(8).scale(0,1).set('my_var').once(); // first, set the variable here
 
 		$('example').sine(100).times(my_var).play(); // now, you can use my_var in commands
