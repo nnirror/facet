@@ -69,6 +69,11 @@ function getLastLineOfBlock(initial_line) {
   return last_line;
 }
 
+// prevent accidental refreshes which would lose unsaved changes
+window.onbeforeunload = function() {
+  return "Are you sure you want to leave? Unsaved changes will be lost.";
+};
+
 $(document).keydown(function(e) {
   // [ctrl + enter] or [ctrl + r] to select text and send to pattern server :1123
   if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {

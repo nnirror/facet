@@ -38,6 +38,8 @@ class FacetPattern {
     this.key_letter = false;
     this.key_scale = false;
     this.is_stopped = false;
+    this.image_width = false;
+    this.image_height = false;
     this.local_patterns = [];
     this.loops_since_generation = 1;
     this.original_data = [];
@@ -122,14 +124,14 @@ class FacetPattern {
         }
     }
     this.data = output;
-    if ( fade_in_and_out == true ) {
+    if ( fade_in_and_out == true && this.data.length > ((SAMPLE_RATE/1000)*30)) {
       this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
       this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     }
     return this;
   }
 
-  from (list) {
+  from (list, size) {
     if ( typeof list == 'number' ) {
       list = [list];
     }
@@ -137,14 +139,20 @@ class FacetPattern {
       list = [];
     }
     this.data = list;
+    if ( size ) {
+      this.size(size);
+    }
     return this;
   }
 
-  drunk (length, intensity = 0.1, d = Math.random() ) {
+  drunk (length, intensity, d = Math.random() ) {
     let drunk_sequence = [];
     length = Math.abs(Number(length));
     if (length < 1 ) {
       length = 1;
+    }
+    if ( !intensity ) {
+      intensity = 1/length;
     }
     for (var i = 0; i < length; i++) {
       let amount_to_add = Math.random() * Number(intensity);
@@ -304,7 +312,7 @@ class FacetPattern {
         wave[i] = t - Math.floor(t);
     }
     this.data = wave;
-    if ( fade_in_and_out == true ) {
+    if ( fade_in_and_out == true && this.data.length > ((SAMPLE_RATE/1000)*30)) {
       this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
       this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     }
@@ -385,47 +393,61 @@ class FacetPattern {
     return this;
   }
 
-  dirsamp(dir = `${process.cwd()}${cross_platform_slash}samples`, dir_pos = 0, channel_index = 0) {
+  dirsamp(dir = `${process.cwd()}${cross_platform_slash}samples`, dir_pos_pattern = 0, command = false, channel_index = 0) {
     let files, chosenFile;
-    try {
-      files = fs.readdirSync(dir);
-      files.sort();
-      files = files.filter(file => path.extname(file) === '.wav');
-      chosenFile = files[Math.floor(dir_pos * files.length)];
-    } catch (e) {
-      // try appending './samples' to the supplied directory name
-      try {
-        dir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
-        files = fs.readdirSync(dir);
-        files = files.filter(file => path.extname(file) === '.wav');
-        chosenFile = files[Math.floor(dir_pos * (files.length-1))];
-      } catch (er) {
-        // directory not found
-        throw er;
-      }
+    if ( typeof dir_pos_pattern == 'number' || Array.isArray(dir_pos_pattern) === true ) {
+      dir_pos_pattern = new FacetPattern().from(dir_pos_pattern);
     }
-    let buffer;
-    let fp_found = false;
-    let load_attempts = 0;
-    while (fp_found !== true) {
-      if (load_attempts > 32) {
-        throw `error in dirsamp(): the supplied directory ${dir} failed to find a sample file 32 times a row`
-      }
+    for (var i = 0; i < dir_pos_pattern.data.length; i++) {
+      let dir_pos = dir_pos_pattern.data[i];
       try {
-        buffer = fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`);
-        this.data = this.loadBuffer(buffer, channel_index);
-        fp_found = true;
+        files = fs.readdirSync(dir);
+        files.sort();
+        files = files.filter(file => path.extname(file) === '.wav');
+        chosenFile = files[Math.floor(dir_pos * files.length)];
       } catch (e) {
+        // try appending './samples' to the supplied directory name
         try {
-          let wav = new WaveFile(fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`));
-          wav.toBitDepth("32f");
-          this.data = wav.getSamples();
-          if (typeof this.data[channel_index] == 'object') {
-            this.data = this.data[channel_index];
+          dir = `${process.cwd()}${cross_platform_slash}samples${cross_platform_slash}${dir}`;
+          files = fs.readdirSync(dir);
+          files = files.filter(file => path.extname(file) === '.wav');
+          chosenFile = files[Math.floor(dir_pos * (files.length-1))];
+        } catch (er) {
+          // directory not found
+          throw er;
+        }
+      }
+      let buffer;
+      let fp_found = false;
+      let load_attempts = 0;
+      while (fp_found !== true) {
+        if (load_attempts > 32) {
+          break;
+        }
+        try {
+          buffer = fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`);
+          let new_fp = new FacetPattern().from(this.loadBuffer(buffer, channel_index));
+          if (typeof command =='function') {
+            new_fp.run(command);
           }
-          return this.flatten();
-        } catch (err) {
-          load_attempts++;
+          this.sup(new_fp, i/dir_pos_pattern.data.length);
+          fp_found = true;
+        } catch (e) {
+          try {
+            let wav = new WaveFile(fs.readFileSync(`${dir}${cross_platform_slash}${chosenFile}`));
+            wav.toBitDepth("32f");
+            let new_fp = new FacetPattern().from(wav.getSamples());
+            if (typeof command =='function') {
+              new_fp.run(command);
+            }
+            this.sup(new_fp, i/dir_pos_pattern.data.length);
+            if (typeof this.data[channel_index] == 'object') {
+              this.data = this.data[channel_index];
+            }
+            return this.flatten();
+          } catch (err) {
+            load_attempts++;
+          }
         }
       }
     }
@@ -448,7 +470,7 @@ class FacetPattern {
         wave[i] = (t - Math.floor(t) < pulseWidth) ? amplitude : -amplitude;
     }
     this.data = wave;
-    if ( fade_in_and_out == true ) {
+    if ( fade_in_and_out == true && this.data.length > ((SAMPLE_RATE/1000)*30)) {
       this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
       this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     }
@@ -579,7 +601,7 @@ class FacetPattern {
         }
     }
     this.data = output;
-    if ( fade_in_and_out == true ) {
+    if ( fade_in_and_out == true && this.data.length > ((SAMPLE_RATE/1000)*30)) {
       this.fadeoutSamples(Math.round((SAMPLE_RATE/1000)*30));
       this.fadeinSamples(Math.round((SAMPLE_RATE/1000)*30));
     }
@@ -654,7 +676,7 @@ class FacetPattern {
     return this;
   }
   
-  tri (frequencies, duration = SAMPLE_RATE, fade_in_and_out = true ) {
+  tri (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true ) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -666,7 +688,7 @@ class FacetPattern {
     for (let i = 0; i < duration; i++) {
         let frequency = frequencies.data[i];
         wave[i] = 2 * amplitude * Math.abs(2 * (phase - Math.floor(phase + 0.5))) - amplitude;
-        phase += frequency / SAMPLE_RATE;
+        phase += frequency / sampleRate;
         phase -= Math.floor(phase);
     }
     this.data = wave;
@@ -1323,39 +1345,24 @@ waveformSample(waveform, phase) {
     return this;
   }
 
-
-
-  flipabove (maximum) {
-    maximum = Number(maximum);
-    let flipped_sequence = [];
-    for (const [key, step] of Object.entries(this.data)) {
-      if ( step > maximum ) {
-        let amount_above = Math.abs(Number(step) - Number(maximum));
-        flipped_sequence[key] = maximum - amount_above;
-      }
-      else {
-        flipped_sequence[key] = step;
-      }
-    }
-    this.data = flipped_sequence;
-    return this;
-  }
-
-  flipbelow (min) {
+  fold(min, max) {
     min = Number(min);
-    let flipped_sequence = [];
+    max = Number(max);
+    let folded_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
-      if ( step < min ) {
-        let amount_below = Math.abs(Number(min) - Number(step));
-        flipped_sequence[key] = min + amount_below;
-      }
-      else {
-        flipped_sequence[key] = step;
-      }
+        if (step < min) {
+            let amount_below = Math.abs(min - step);
+            folded_sequence[key] = min + amount_below;
+        } else if (step > max) {
+            let amount_above = Math.abs(step - max);
+            folded_sequence[key] = max - amount_above;
+        } else {
+            folded_sequence[key] = step;
+        }
     }
-    this.data = flipped_sequence;
+    this.data = folded_sequence;
     return this;
-  }
+}
 
   follow (attackTime = SAMPLE_RATE / 0.1, releaseTime = SAMPLE_RATE / 4) {
     let envelope = [];
@@ -1425,8 +1432,8 @@ waveformSample(waveform, phase) {
   }
 
   interlace (sequence2) {
-      if ( !this.isFacetPattern(sequence2) ) {
-        throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
+      if (typeof sequence2 == 'number' || Array.isArray(sequence2) === true) {
+          sequence2 = new FacetPattern().from(sequence2);
       }
       let interlaced_sequence = [];
       let interlace_every;
@@ -3215,6 +3222,9 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
       pan_amt = new FacetPattern().from(pan_amt);
     }
     pan_amt.clip(0,1);
+    if ( pan_amt.data.length > 1000 ) {
+      pan_amt.size(1000);
+    }
     this.pan_data = pan_amt.data;
     return this;
   }
@@ -3410,8 +3420,8 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
   }
 
   slices2d(num_slices, command) {
-    let width = Math.round(Math.sqrt(this.data.length));
-    let height = width;
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
     let root = Math.round(Math.sqrt(num_slices));
     num_slices = root * root;
     let segmentWidth = Math.ceil(width / Math.sqrt(num_slices));
@@ -3466,6 +3476,56 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
   }
     this.data = out_fp.flat();
     return this;
+}
+
+columns2d(num_columns, command) {
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+  let segmentWidth = Math.ceil(width / num_columns);
+  let segments = [];
+  let out_fp = Array(width).fill().map(() => Array(height).fill(new FacetPattern()));
+
+  this.current_total_slices = num_columns;
+  let i = this.current_iteration_number;
+  let iters = this.current_total_iterations;
+  command = command.toString();
+  command = command.replace(/this./g, 'current_slice.');
+  command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+
+  for (let segment = 0; segment < num_columns; segment++) {
+      let startCol = segment * segmentWidth;
+      let endCol = Math.min(width, startCol + segmentWidth);
+      let segmentData = [];
+
+      for (let row = 0; row < height; row++) {
+          for (let col = startCol; col < endCol; col++) {
+              segmentData.push(this.data[row * width + col]);
+          }
+      }
+      segments.push({data: segmentData, width: endCol - startCol, height: height});
+  }
+
+  for (var c = 0; c < num_columns; c++) {
+      let current_slice = new FacetPattern().from(segments[c].data);
+      current_slice = eval(global.env + global.vars + utils + command);
+      current_slice.notes.forEach(n => {
+          this.notes.push(n);
+      });
+
+      let startCol = c * segmentWidth;
+
+      for (let row = 0; row < height; row++) {
+          for (let col = 0; col < segments[c].width; col++) {
+              let value = current_slice.data[row * segments[c].width + col];
+              if (isNaN(value)) {
+                  value = 0;
+              }
+              out_fp[row][startCol + col] = value;
+          }
+      }
+  }
+  this.data = out_fp.flat();
+  return this;
 }
 
 spectral (stretchFactor = 1) {
@@ -4548,75 +4608,55 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
   }
 
-  savemidi2d (midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127) {
+  
+  savemidi2d(midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127) {
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+
     this.reverse();
-    if ( typeof velocityPattern == 'number' || Array.isArray(velocityPattern) === true ) {
-      velocityPattern = new FacetPattern().from(velocityPattern);
+    
+    if (typeof velocityPattern == 'number' || Array.isArray(velocityPattern)) {
+        velocityPattern = new FacetPattern().from(velocityPattern);
     }
-    velocityPattern.size(this.data.length);
-    velocityPattern.clip(1,100); // for some reason the MIDI writer library only accepts velocities within this range
+    velocityPattern.size(width);
+    velocityPattern.clip(1, 100); // MIDI writer library constraint
 
-    if ( typeof durationPattern == 'number' || Array.isArray(durationPattern) === true ) {
-      durationPattern = new FacetPattern().from(durationPattern);
+    if (typeof durationPattern == 'number' || Array.isArray(durationPattern)) {
+        durationPattern = new FacetPattern().from(durationPattern);
     }
-    durationPattern.size(this.data.length).round();
+    durationPattern.size(width).round();
 
-    const sliceSize = Math.sqrt(this.data.length);
     const track = new MidiWriter.Track();
+    const noteRange = maxNote - minNote;
 
-    const minIndex = 0;
-    const maxIndex = this.data.length - 1;
-
-    const chordIntervalsLength = this.chord_intervals.length;
-
-    for (let i = sliceSize - 1; i >= 0; i--) {
-      const pitches = [];
-      for (let j = 0; j < sliceSize; j++) {
-        const index = j * sliceSize + i;
-        if (this.data[index] !== 0) {
-          const midiNoteNumber = Math.round((index - minIndex) / (maxIndex - minIndex) * (maxNote - minNote) + minNote);
-          let chordIntervalIndex = Math.floor((index / this.data.length) * chordIntervalsLength);
-          let currentChordInterval = this.chord_intervals[chordIntervalIndex];
-          if ( this.chord_intervals.length > 0 ) {
-            for (var c = 0; c < currentChordInterval.length; c++) {
-              let note_to_add = midiNoteNumber + currentChordInterval[c];
-              // check if key needs to be locked
-              if (this.key_scale !== false) {
-                let dataLength = this.data.length;
-                let keyLetterLength = this.key_letter.length;
-                let keyScaleLength = this.key_scale.length;
-            
-                let keyLetterIndex = Math.floor((index / dataLength) * keyLetterLength);
-                let keyScaleIndex = Math.floor((index / dataLength) * keyScaleLength);
-            
-                if (typeof this.key_scale[keyScaleIndex] == 'object') {
-                  // scale made from FP
-                  note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], new FacetPattern().from(this.key_scale[keyScaleIndex].data)).data[0];
-                } else {
-                    // scale from string
-                    note_to_add = new FacetPattern().from(note_to_add).key([this.key_letter[keyLetterIndex]], [this.key_scale[keyScaleIndex]]).data[0];
-                }
-              }
-              pitches.push(Midi.midiToNoteName(note_to_add));
+    // loop through each column
+    for (let x = 0; x < width; x++) {
+        const pitches = [];
+        for (let y = 0; y < height; y++) {
+            const index = y * width + x;
+            if (this.data[index] !== 0) {
+                // calculate MIDI note number based on its position in the column
+                const relativePosition = y / (height - 1); // position in the range [0, 1]
+                const midiNoteNumber = Math.round(relativePosition * noteRange) + minNote;  
+                pitches.push(Midi.midiToNoteName(midiNoteNumber));
             }
-          }
-          pitches.push(Midi.midiToNoteName(midiNoteNumber));
         }
-      }
-      let duration_str = durationPattern.data[i];
-      if ( tick_mode ) {
-        duration_str = 'T' + duration_str; // convert to tick syntax
-      }
-      if (pitches.length > 0) {
-        pitches.reverse()
-        track.addEvent(new MidiWriter.NoteEvent({pitch: pitches, velocity: velocityPattern.data[i], sequential: false, duration: duration_str}));
-      }
+        if (pitches.length > 0) {
+            pitches.reverse();
+            // calculate the index for the velocity and duration patterns
+            const patternIndex = x % Math.min(velocityPattern.data.length, durationPattern.data.length);
+            const velocity = velocityPattern.data[x];
+            const duration_str = durationPattern.data[x];
+            const durationValue = tick_mode ? 'T' + duration_str : duration_str;
+            track.addEvent(new MidiWriter.NoteEvent({ pitch: pitches, velocity: velocity, sequential: false, duration: durationValue }));
+        }
     }
+
     const write = new MidiWriter.Writer([track]);
     fs.writeFileSync(`midi/${midifilename}.mid`, write.buildFile(), 'binary');
     this.reverse();
     return this;
-  }
+}
 
   savemidi (midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, wraps = 1, tick_mode = false) {
     if ( typeof velocityPattern == 'number' || Array.isArray(velocityPattern) === true ) {
@@ -4684,7 +4724,9 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
   }
 
-  saveimg (filename = Date.now(), rgbData, width = Math.round(Math.sqrt(this.data.length)), height = Math.round(Math.sqrt(this.data.length))) {
+  saveimg (filename = Date.now(), rgbData) {
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
     if (typeof filename !== 'string') {
       filename = filename.toString();
     }
@@ -4751,8 +4793,8 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
   }
 
   rotate (angle) {
-    let width = Math.round(Math.sqrt(this.data.length));
-    let height = width;
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
 
     // Wrap the angle to be between 0 and 360
     angle = (angle + 360) % 360;
@@ -4833,8 +4875,8 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     }  
 
   layer2d ( brightness_data, xCoords, yCoords) {
-    let width = Math.round(Math.sqrt(this.data.length));
-    let height = width;
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
     if ( !brightness_data ) {
       throw `layer2d() cannot be called without a brightness argument`;
     }
@@ -4888,8 +4930,8 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
   }
 
   shift2d (x, y) {
-    let width = Math.round(Math.sqrt(this.data.length));
-    let height = width;
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
     // create a new array to hold the moved values
     let movedArr = new Array(this.data.length);
     // loop through each value in the original array
@@ -4908,9 +4950,9 @@ ffilter (minFreqs, maxFreqs, invertMode = false) {
     return this;
 }
 
-circle2d(centerX, centerY, radius, value, mode = 0) {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+circle2d(centerX, centerY, radius, value, mode = 0 ) {
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
   for (let i = 0; i < height * width; i++) {
       let row = Math.floor(i / width);
       let col = i % width;
@@ -4919,7 +4961,7 @@ circle2d(centerX, centerY, radius, value, mode = 0) {
 
       // if mode is 0, only draw the outline by checking if the distance is close to the radius
       // if mode is 1, fill the circle by checking if the distance is less than or equal to the radius
-      if ((mode === 0 && Math.abs(distance - radius) < 0.5) || (mode === 1 && distance <= radius)) {
+      if ((mode === 0 && Math.abs(distance - radius) <= 0.5) || (mode === 1 && distance <= radius)) {
           this.data[i] = value;
       }
   }
@@ -4927,8 +4969,18 @@ circle2d(centerX, centerY, radius, value, mode = 0) {
 }
 
 draw2d(coordinates, fillValue) {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+  if (this.isFacetPattern(coordinates) === true) {
+    coordinates = coordinates.round().data;
+  }
+
+  // If width and height are not provided, default to square size
+  if (!width || !height) {
+    width = Math.round(Math.sqrt(this.data.length));
+    height = width;
+  }
+
   if (fillValue === undefined) {
     throw new Error("fillValue is required for draw2d.");
   }
@@ -4970,14 +5022,14 @@ draw2d(coordinates, fillValue) {
     }
   }
 
-  // wpdate the data property with the new polygon
+  // update the data property with the new polygon
   this.data = polygon.flat();
   return this;
 }
 
 rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
   for (let i = 0; i < height * width; i++) {
       let row = Math.floor(i / width);
       let col = i % width;
@@ -4993,10 +5045,15 @@ rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
   return this;
 }
 
-tri2d(x1, y1, x2, y2, x3, y3, value, mode = 0) {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+dim (width, height) {
+  this.image_width = Math.round(Math.abs(width));
+  this.image_height = Math.round(Math.abs(height));
+  return this;
+}
 
+tri2d(x1, y1, x2, y2, x3, y3, value, mode = 0) {
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
   if (mode === 0) {
     // define the vertices of the triangle
     let vertices = [[x1, y1], [x2, y2], [x3, y3], [x1, y1]];
@@ -5013,12 +5070,17 @@ tri2d(x1, y1, x2, y2, x3, y3, value, mode = 0) {
         let err = dx - dy;
 
         while(true){
-            this.data[yStart * width + xStart] = value;
-
             if ((xStart === xEnd) && (yStart === yEnd)) break;
             let e2 = 2 * err;
             if (e2 > -dy) { err -= dy; xStart += sx; }
             if (e2 < dx) { err += dx; yStart += sy; }
+
+            // Check if the coordinates are within the bounds of the image
+            if (xStart >= 0 && xStart < width && yStart >= 0 && yStart < height) {
+                this.data[yStart * width + xStart] = value;
+            } else {
+                break;
+            }
         }
     }
   } else if (mode === 1) {
@@ -5040,12 +5102,13 @@ tri2d(x1, y1, x2, y2, x3, y3, value, mode = 0) {
   return this;
 }
 
-drawLine(point1, point2, value) {
-  let x1 = point1.x;
-  let y1 = point1.y;
-  let x2 = point2.x;
-  let y2 = point2.y;
-
+drawline(x1, y1, x2, y2, value) {
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  x1 = Math.round(x1);
+  x2 = Math.round(x2);
+  y1 = Math.round(y1);
+  y2 = Math.round(y2);
+  
   let dx = Math.abs(x2 - x1);
   let dy = Math.abs(y2 - y1);
   let sx = (x1 < x2) ? 1 : -1;
@@ -5053,18 +5116,18 @@ drawLine(point1, point2, value) {
   let err = dx - dy;
 
   while(true){
-      this.data[y1 * this.width + x1] = value;
-
+      this.data[y1 * width + x1] = value;
       if ((x1 === x2) && (y1 === y2)) break;
       let e2 = 2 * err;
       if (e2 > -dy) { err -= dy; x1 += sx; }
       if (e2 < dx) { err += dx; y1 += sy; }
   }
+  return this;
 }
 
 palindrome2d() {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
   let newWidth = width * 2;
   let newHeight = height * 2;
   let mirroredData = new Array(newWidth * newHeight).fill(0);
@@ -5082,8 +5145,8 @@ palindrome2d() {
 }
 
 walk2d (percentage, x, y, mode = 0) {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
   let movedArr = [...this.data]; // copy the original data
   let numToMove = Math.floor(percentage * this.data.length);
 
@@ -5131,8 +5194,8 @@ walk2d (percentage, x, y, mode = 0) {
 }
 
 warp2d(warpX, warpY, warpIntensity) {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
   let warpedData = new Array(this.data.length).fill(0);
 
   for (let row = 0; row < height; row++) {
@@ -5165,8 +5228,8 @@ warp2d(warpX, warpY, warpIntensity) {
 }
 
 delay2d(delayX, delayY, intensityDecay = 0.5) {
-  let width = Math.round(Math.sqrt(this.data.length));
-  let height = width;
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
   if (intensityDecay < 0 ) {
     intensityDecay = 0;
   }
@@ -5194,102 +5257,100 @@ delay2d(delayX, delayY, intensityDecay = 0.5) {
   return this;
 }
 
-  rechunk2d( chunks) {
-    if (Math.sqrt(chunks) % 1 !== 0) {
-        throw new Error('The number of chunks must have an integer square root');
-    }
-    let nextLargerSquare = Math.ceil(Math.sqrt(this.data.length));
-    while (nextLargerSquare * nextLargerSquare % chunks !== 0) {
-      nextLargerSquare++;
-    }
-    this.size(nextLargerSquare * nextLargerSquare);
-    const chunkSize = this.data.length / chunks;
-    const chunkSide = Math.sqrt(chunkSize);
-    const side = Math.sqrt(this.data.length);
-    let result = new Array(this.data.length);
-    let chunkOrder = [...Array(chunks).keys()];
-    for (let i = chunkOrder.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [chunkOrder[i], chunkOrder[j]] = [chunkOrder[j], chunkOrder[i]];
-    }
-    for (let i = 0; i < chunks; i++) {
-        let chunkStartRow = Math.floor(chunkOrder[i] / Math.sqrt(chunks)) * chunkSide;
-        let chunkStartCol = (chunkOrder[i] % Math.sqrt(chunks)) * chunkSide;
-        let resultStartRow = Math.floor(i / Math.sqrt(chunks)) * chunkSide;
-        let resultStartCol = (i % Math.sqrt(chunks)) * chunkSide;
-        for (let j = 0; j < chunkSide; j++) {
-            for (let k = 0; k < chunkSide; k++) {
-                result[(resultStartRow + j) * side + resultStartCol + k] = this.data[(chunkStartRow + j) * side + chunkStartCol + k];
-            }
-        }
-    }
-    this.data = result;
-    return this;
+rechunk2d(chunks) {
+  if (Math.sqrt(chunks) % 1 !== 0) {
+      throw new Error('The number of chunks must have an integer square root');
   }
+
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+
+  const chunkWidth = Math.floor(width / Math.sqrt(chunks));
+  const chunkHeight = Math.floor(height / Math.sqrt(chunks));
+  let result = new Array(this.data.length).fill(0);
+  let chunkOrder = [...Array(chunks).keys()];
+
+  for (let i = chunkOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [chunkOrder[i], chunkOrder[j]] = [chunkOrder[j], chunkOrder[i]];
+  }
+
+  for (let i = 0; i < chunks; i++) {
+      let chunkStartRow = Math.floor(chunkOrder[i] / Math.sqrt(chunks)) * chunkHeight;
+      let chunkStartCol = (chunkOrder[i] % Math.sqrt(chunks)) * chunkWidth;
+      let resultStartRow = Math.floor(i / Math.sqrt(chunks)) * chunkHeight;
+      let resultStartCol = (i % Math.sqrt(chunks)) * chunkWidth;
+
+      for (let j = 0; j < chunkHeight; j++) {
+          for (let k = 0; k < chunkWidth; k++) {
+              let row = chunkStartRow + j;
+              let col = chunkStartCol + k;
+              if (row < height && col < width) {
+                  result[(resultStartRow + j) * width + resultStartCol + k] = this.data[row * width + col];
+              }
+          }
+      }
+  }
+  this.data = result;
+  return this;
+}
 
   mutechunks2d (chunks, probability) {
     if (Math.sqrt(chunks) % 1 !== 0) {
         throw new Error('The number of chunks must have an integer square root');
     }
-    let nextLargerSquare = Math.ceil(Math.sqrt(this.data.length));
-    while (nextLargerSquare * nextLargerSquare % chunks !== 0) {
-      nextLargerSquare++;
-    }
-    this.size(nextLargerSquare * nextLargerSquare);
-    const chunkSize = this.data.length / chunks;
-    const chunkSide = Math.sqrt(chunkSize);
-    const side = Math.sqrt(this.data.length);
-    let result = new Array(this.data.length);
-    let chunkOrder = [...Array(chunks).keys()];
-    for (let i = chunkOrder.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [chunkOrder[i], chunkOrder[j]] = [chunkOrder[j], chunkOrder[i]];
-    }
+
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+
+    const chunkWidth = Math.floor(width / Math.sqrt(chunks));
+    const chunkHeight = Math.floor(height / Math.sqrt(chunks));
+    let result = new Array(this.data.length).fill(0);
+
     for (let i = 0; i < chunks; i++) {
-        let chunkStartRow = Math.floor(chunkOrder[i] / Math.sqrt(chunks)) * chunkSide;
-        let chunkStartCol = (chunkOrder[i] % Math.sqrt(chunks)) * chunkSide;
-        let resultStartRow = Math.floor(i / Math.sqrt(chunks)) * chunkSide;
-        let resultStartCol = (i % Math.sqrt(chunks)) * chunkSide;
-        if (Math.random() < probability) {
-            for (let j = 0; j < chunkSide; j++) {
-                for (let k = 0; k < chunkSide; k++) {
-                    result[(resultStartRow + j) * side + resultStartCol + k] = 0;
-                }
-            }
-        } else {
-            for (let j = 0; j < chunkSide; j++) {
-                for (let k = 0; k < chunkSide; k++) {
-                    result[(resultStartRow + j) * side + resultStartCol + k] = this.data[(chunkStartRow + j) * side + chunkStartCol + k];
+        let chunkStartRow = Math.floor(i / Math.sqrt(chunks)) * chunkHeight;
+        let chunkStartCol = (i % Math.sqrt(chunks)) * chunkWidth;
+
+        if (Math.random() >= probability) {
+            for (let j = 0; j < chunkHeight; j++) {
+                for (let k = 0; k < chunkWidth; k++) {
+                    let row = chunkStartRow + j;
+                    let col = chunkStartCol + k;
+                    if (row < height && col < width) {
+                        result[row * width + col] = this.data[row * width + col];
+                    }
                 }
             }
         }
     }
     this.data = result;
     return this;
-  }
+}
 
   size2d ( size ) {
     if (size <= 0 || size > 1) {
         throw new Error('size2d() requires a size between 0 and 1');
     }
 
-    // Calculate the dimensions of the square
-    let squareSize = Math.ceil(Math.sqrt(this.data.length));
-    let newSize = Math.floor(squareSize * size);
+    // calculate the dimensions of the image
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+    let newWidth = Math.floor(width * size);
+    let newHeight = Math.floor(height * size);
 
-    // Create the 2D square array
-    let square = [];
-    for (let i = 0; i < newSize; i++) {
+    // create 2D array
+    let resized = [];
+    for (let i = 0; i < newHeight; i++) {
         let row = [];
-        for (let j = 0; j < newSize; j++) {
-            // Use linear interpolation to find the corresponding index in the original data
-            let index = Math.floor((i / newSize) * squareSize) * squareSize + Math.floor((j / newSize) * squareSize);
+        for (let j = 0; j < newWidth; j++) {
+            // use linear interpolation to find the corresponding index in the original data
+            let index = Math.floor((i / newHeight) * height) * width + Math.floor((j / newWidth) * width);
             row.push(this.data[index]);
         }
-        square.push(row);
+        resized.push(row);
     }
-    this.data = square;
-    this.flatten();
+    this.data = resized.flat();
+    this.dim(width * size, height * size);
     return this;
 }
 

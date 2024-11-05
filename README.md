@@ -1098,8 +1098,9 @@ $('example')
   // 000000001000: padded with 0s
 ```
 ---
-#### **dirsamp** ( _dir_ = `../samples/`, _dir_pos_, _channel_index_ = 0 )
-- loads a wav file from the `dir` directory into memory, based on its alphabetical position. The position is determined by the `dir_pos` argument, which should be a float between 0 and 1. A `dir_pos` value of 0 would load the first wav file in alphabetical order, a `dir_pos` value of 0.5 would load the middle file, and so on.
+#### **dirsamp** ( _dir_ = `../samples/`, _dirPosPattern_, _channel_index_ = 0 )
+- loads a wav file from the `dir` directory into memory, based on its alphabetical position. The position is determined by the `dir_pos` argument, which can be a FacetPattern, array, or float between 0 and 1. A `dir_pos` value of 0 would load the first wav file in alphabetical order, a `dir_pos` value of 0.5 would load the middle file, and so on.
+- The patterns loaded by `dirPosPatern`  will be spread out across the duration of the loop. So if `dirPosPattern` has 16 values, those will be spread out into 16 evenly spaced positions.
 - The default directory is `../samples/`, but you can supply any directory as an argument.
 - By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
@@ -1158,11 +1159,16 @@ $('example')
   // example with a supplied absolute file path
 ```
 ---
-#### **from** ( _pattern_ )
-- allows the user to specify their own pattern as an array. **Note the array syntax!**
+#### **from** ( _pattern_, _size_ )
+- allows the user to specify their own pattern as an array or number.
+- `size` is optional. if supplied, it will re-size the pattern to have a total length of `size` samples.
 ```javascript
 $('example')
   .from([1, 2, 3, 4]);
+  // pattern has 4 values: [1,2,3,4]
+$('example')
+  .from(0.1234,1000);
+  // pattern has 1000 identical values: all 0.1234
 ```
 ---
 #### **image** ( _filepath_, _columnsPerSecond_ = 512, _minimumFrequency_ = 20, _maximumFrequency_ = sample_rate / 2, _frequencyPattern_ )
@@ -2606,6 +2612,22 @@ $('example')
   .saveimg('circle2d', [1, 1, 1], 1250, 800)
   .once();
   // white circle in a 1250x800 image
+```
+---
+#### **columns2d** ( _num_columns_, _command_ )
+- slices the FacetPattern into `num_columns` columns in a 2D grid, and for each slice, runs `command`, appending all columns back together. You can refer to the current column of the algorithm via the reserved word: `this` (see example).
+- the variable `c`, referring to the current column number starting at 0, is also available for use in commands.
+- the variable `num_columns`, referring to the number of columns, is also available for use in commands.
+- the `columns2d()` method does not apply any fading on each slice. Each slice is processed exactly as-is.
+- the `command` is a function that is applied to each slice. The function is converted to a string and any reference to `this` is replaced with `current_slice` to ensure the function operates on the correct data.
+- the method divides the FacetPattern into a grid of slices, each slice being a square segment of the original pattern.
+```javascript
+$('example')
+  .sine(0.3, 1000*1000)
+  .scale(0, 1)
+  .columns2d(1000,()=>{this.times(c/999)})
+  .saveimg('columns2d')
+  .once();
 ```
 ---
 #### **delay2d** (_delayX_, _delayY_, _intensityDecay_ = 0.5 )

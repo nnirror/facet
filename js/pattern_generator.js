@@ -103,14 +103,20 @@ module.exports = {
               postMetaDataToTransport(fp,'time_signature_numerator');
             }
             if ( typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0]) ) {
-              // create wav file at SAMPLE_RATE, 32-bit floating point
-              let a_wav = new WaveFile();
-              a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
-              // store wav file in /tmp/
-              fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+              if ( fp.sequence_data.length > 0 ) {
+                // create wav file at SAMPLE_RATE, 32-bit floating point
+                let a_wav = new WaveFile();
+                a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
+                // store wav file in /tmp/
+                fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(),(err) => {
+                  postToTransport(fp);
+                  checkToSave(fp);
+                });
+              }
+              else {
                 postToTransport(fp);
                 checkToSave(fp);
-              });
+              }
             }
           });
           Object.values(run_data.errors).forEach(error => {
