@@ -2592,7 +2592,7 @@ $('example')
 ---
 # Methods for image generation and processing
 
-Because Facet generates and modifies a 1-dimensional array of data, it is also possible to generate images from data. **NOTE:** images are expected to have equal height and width dimensions (a perfect square). Some methods will produce distorted output or throw errors if you try to run them with patterns that are not perfect squares.
+Because Facet generates and modifies a 1-dimensional array of data, it is also possible to generate images from data. **NOTE:** by default, imaegs will be saved with square dimensions, with the FacetPattern's data going across the image, row by row. You can set a custom width and height for the image the via `.dim()` method.
 
 #### **circle2d** ( _centerX_, _centerY_, _radius_, _value_, _fillMode_ = 0 )
 - adds a circle on top of the existing data in a FacetPattern.
@@ -2642,6 +2642,17 @@ $('example')
   .saveimg('delay2d')
   .once();
   // circle echoing down-left
+```
+---
+#### **dim** (_imageWidth_, _imageHeight_)
+- sets image dimensions so that when an image is saved via `.saveimg()`, its size will be `imageWidth` pixels wide by `imageHeight` pixels.
+```javascript
+$('example')
+  .noise(100 * 2000)
+  .dim(100, 2000)
+  .saveimg()
+  .once();
+  // 100px * 2000px image of noise
 ```
 ---
 #### **draw2d** ( _coordinates_, _fillValue_ )
