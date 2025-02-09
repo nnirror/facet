@@ -439,6 +439,15 @@ ac.destination.channelCount = ac.destination.maxChannelCount;
 ac.destination.channelCountMode = "explicit";
 ac.destination.channelInterpretation = "discrete";
 
+// create limiter for main output
+let compressor = ac.createDynamicsCompressor();
+compressor.threshold.setValueAtTime(-1, ac.currentTime);
+compressor.knee.setValueAtTime(0, ac.currentTime);
+compressor.ratio.setValueAtTime(20, ac.currentTime);
+compressor.attack.setValueAtTime(0, ac.currentTime);
+compressor.release.setValueAtTime(0.1, ac.currentTime);
+compressor.connect(ac.destination);
+
 // connect to the server
 const socket = io.connect(`http://${configSettings.HOST}:3000`, {
   reconnection: true,
@@ -507,7 +516,7 @@ socket.on('play', (data) => {
         
         if (pan_data === false || channels.length === 1) {
           // if pan_data is false or there is only one channel, set the gain value to 1 for all channels
-          gainNode.gain.value = 1;
+          gainNode.gain.value = 0.7;
         } else {
           // schedule changes in the gain value based on pan_data
           let durationPerValue = source.buffer.duration / pan_data.length;
@@ -516,7 +525,7 @@ socket.on('play', (data) => {
             // calculate the normalized channel index
             let normalizedIndex = index / (channels.length - 1);
             // only interpolate the gain for the two channels closest to the pan_data value - otherwise, gain = 0
-            let gainValue = Math.abs(normalizedIndex - panValue) <= 1 / (channels.length - 1) ? 1 - Math.abs(normalizedIndex - panValue) : 0;
+            let gainValue = Math.abs(normalizedIndex - panValue) <= 1 / (channels.length - 1) ? 0.7 * (1 - Math.abs(normalizedIndex - panValue)) : 0;
             gainNode.gain.setValueAtTime(gainValue, ac.currentTime + time);
           });
         }
@@ -525,7 +534,7 @@ socket.on('play', (data) => {
         sources[voice_to_play].push(source);
         lastPlayedTimes[voice_to_play] = Date.now();
       });
-      merger.connect(ac.destination);
+      merger.connect(compressor);
     } else {
       // voice is not loaded yet
     }

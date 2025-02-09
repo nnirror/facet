@@ -266,6 +266,12 @@ function tick() {
     current_relative_step_position = 0;
     bars_elapsed++;
     Object.keys(patterns_to_delete_at_end_of_loop).forEach((fp_name) => {
+      for (let key in event_register[fp_name]) {
+        if (event_register[fp_name].hasOwnProperty(key)) {
+            delete event_register[fp_name][key];
+        }
+      }
+      delete patterns_for_next_loop[fp_name];
       delete event_register[fp_name];
     });
     patterns_to_delete_at_end_of_loop = [];
@@ -374,7 +380,7 @@ function tick() {
     loop_start_time = Date.now();
   }
 
-  if ( current_relative_step_position >= 0.99 ) {
+  if ( current_relative_step_position + relative_step_amount_to_add_per_loop > 1.00001 ) {
     applyNextPatterns();
   }
 

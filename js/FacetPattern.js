@@ -444,7 +444,7 @@ class FacetPattern {
             if (typeof this.data[channel_index] == 'object') {
               this.data = this.data[channel_index];
             }
-            return this.flatten();
+            this.flatten();
           } catch (err) {
             load_attempts++;
           }
@@ -676,7 +676,7 @@ class FacetPattern {
     return this;
   }
   
-  tri (frequencies, duration = SAMPLE_RATE, sampleRate = SAMPLE_RATE, fade_in_and_out = true ) {
+  tri (frequencies, duration = SAMPLE_RATE, fade_in_and_out = true ) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
         frequencies = new FacetPattern().from(frequencies);
     }
@@ -688,7 +688,7 @@ class FacetPattern {
     for (let i = 0; i < duration; i++) {
         let frequency = frequencies.data[i];
         wave[i] = 2 * amplitude * Math.abs(2 * (phase - Math.floor(phase + 0.5))) - amplitude;
-        phase += frequency / sampleRate;
+        phase += frequency / SAMPLE_RATE;
         phase -= Math.floor(phase);
     }
     this.data = wave;
@@ -897,6 +897,7 @@ class FacetPattern {
   at (position, value) {
     let replace_position = Math.round(position * (this.data.length-1));
     this.data[replace_position] = value;
+    this.flatten().fixnan();
     return this;
   }
 
