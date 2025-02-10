@@ -2576,6 +2576,35 @@ $('example')
   // sometimes backwards 100Hz triangle wave, sometimes forwards
 ```
 ---
+#### **spread** ( _iterations_, _command_ = function(), _startRelativePosition_ = 0, _endRelativePosition_ = 1 )
+- generates `iterations` number of FacetPatterns using `command` and spreads them evenly across a range of the loop, specified by `startRelativePosition` and `endRelativePosition`.
+- `command` must start with the reserved word: `this` (see example).
+- the variable `i`, referring to the current iteration number starting at 0, is also available for use in commands.
+- the variable `iters`, referring to the total number of iterations, is also available for use in commands.
+```javascript
+$('example')
+  .spread(8, () => {
+    this.randsamp('808')
+  }).play();
+  // 8 random 808 samples across the whole loop
+  $('example')
+  .spread(8, () => {
+    this.randsamp('808')
+      .truncate(n32)
+      .delay(n128, 0.1)
+  }, 0, 0.25)
+  .sup(_.spread(16, () => {
+    this.randsamp('808')
+  }, 0, 1))
+  .sup(_.spread(32, () => {
+    this.randsamp('808')
+  }, 0.75, 1))
+  .play();
+  // 8 random 808 samples across the first 25% of the loop
+  // 16 random 808 samples across the whole loop
+  // 32 random 808 samples across the last 25% of the loop
+```
+---
 #### **subrange** ( _min_, _max_, _command_ = function() )
 - runs `command` on a subrange of the FacetPattern, specified by `min` and `max`.
 - `min` and `max` should be floats between 0 and 1. They are relative values, so a value of 0 means the beginning of the pattern, and a value of 1 means the end of the pattern.
