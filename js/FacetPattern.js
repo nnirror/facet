@@ -3114,6 +3114,7 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
     if (typeof skipIterations == 'number' || Array.isArray(skipIterations) === true) {
       skipIterations = new FacetPattern().from(skipIterations);
     }
+    skipIterations.round().clip(0, iterations - 1);
     let out_fp = new FacetPattern();
     for (var a = 0; a < iterations; a++) {
       if (!skipIterations.data.includes(a)) {
