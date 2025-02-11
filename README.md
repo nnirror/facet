@@ -2576,11 +2576,12 @@ $('example')
   // sometimes backwards 100Hz triangle wave, sometimes forwards
 ```
 ---
-#### **spread** ( _iterations_, _command_ = function(), _startRelativePosition_ = 0, _endRelativePosition_ = 1 )
+#### **spread** ( _iterations_, _command_ = function(), _startRelativePosition_ = 0, _endRelativePosition_ = 1, _skipIterationsPattern_ = [])
 - generates `iterations` number of FacetPatterns using `command` and spreads them evenly across a range of the loop, specified by `startRelativePosition` and `endRelativePosition`.
 - `command` must start with the reserved word: `this` (see example).
 - the variable `i`, referring to the current iteration number starting at 0, is also available for use in commands.
 - the variable `iters`, referring to the total number of iterations, is also available for use in commands.
+- the FacetPattern `skipIterationsPattern` specifies any iterations that should be skipped. By default, it is empty, e.g. no iterations skip. For example, a `skipIterationsPattern` of `_.from([0,4,7,10])` would skip the 0th, 4th, 7th, and 10th iterations.
 ```javascript
 $('example')
   .spread(8, () => {
