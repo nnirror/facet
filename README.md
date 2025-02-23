@@ -16,7 +16,7 @@ Facet runs on MacOS, Linux, and Windows.
 6. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing through your browser tab. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
 ---
 
-# Facet commandyntax
+# Facet command syntax
 
 Facet commands are based entirely around JavaScript, using a class called a `FacetPattern`. In order to produce audio or MIDI output, create an instance of a FacetPattern, and run some methods:
 
@@ -183,7 +183,6 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 - `PlaybackFacetPattern` should contain floating-point numbers between 0 and 1, corresponding to the relative point in the transport between 0 and 1 when the generated audio should play.
 - `pitchSequenceData` is an optional argument that should contain an array of pitch shift values. These values are used to adjust the pitch of the sound at each step of the sequence. The pitch shift values are spread out over the sequence steps, so if there are fewer pitch shift values than sequence steps, the pitch shift values will be repeated.
 - With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
-- This command should go at the end of the chain of commands. Applying further operations after it could alter the sound. This is because `play()` works by superposing copies of the input FacetPattern at all the playback positions, rather than creating discrete events to fire at each playback position. This helps to keep timing tight, as there is only one event that fires per loop to actually play each voice of audio, and it's always at position 0, where it plays the entire superposed pattern.
 - By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or `[ctrl + /]`, or press the stop button "■".
 ```javascript
     $('example')
@@ -228,7 +227,7 @@ $('example')
 ```
 ---
 #### **channel** ( _channels_ )
-- Facet ultimately creates wav files that can have any number of channels. The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array.
+- The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array.
 ```javascript
 	$('example')
       .randsamp('808')
