@@ -3114,12 +3114,19 @@ rechunk (numChunks, probability = 1, yes_fade = true) {
     if (typeof skipIterations == 'number' || Array.isArray(skipIterations) === true) {
       skipIterations = new FacetPattern().from(skipIterations);
     }
+    let maxFrameSize;
+    if (this.data.length == 0 ) {
+      maxFrameSize = this.getWholeNoteNumSamples();
+    }
+    else {
+      maxFrameSize = this.data.length;
+    }
     skipIterations.round().clip(0, iterations - 1);
     let out_fp = new FacetPattern();
     for (var a = 0; a < iterations; a++) {
       if (!skipIterations.data.includes(a)) {
         let calculatedPosition = startRelativePosition + (a / iterations) * (endRelativePosition - startRelativePosition);
-        out_fp.sup(new FacetPattern().sometimes(1,command,{i:a,iters:iterations}),calculatedPosition);
+        out_fp.sup(new FacetPattern().sometimes(1,command,{i:a,iters:iterations}),calculatedPosition,maxFrameSize);
       }
     }
     this.data = out_fp.data;

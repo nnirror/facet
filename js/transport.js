@@ -317,12 +317,19 @@ function tick() {
             // play any notes at this step
             try {
               if ( typeof midioutput !== 'undefined' ) {
-                midioutput.playNote(event.data.note, {
-                  rawAttack:event.data.velocity,
-                  channels:event.data.channel,
-                  duration:event.data.duration,
-                  rawRelease:64
+                // send the "note on" message
+                midioutput.sendNoteOn(event.data.note, {
+                  rawAttack: event.data.velocity,
+                  channels: event.data.channel
                 });
+
+                // send the "note off" message after the duration
+                setTimeout(() => {
+                  midioutput.sendNoteOff(event.data.note, {
+                    rawRelease: 64,
+                    channels: event.data.channel
+                  });
+                }, event.data.duration);
               }
             } catch (e) {}
           }
