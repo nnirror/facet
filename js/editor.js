@@ -321,6 +321,21 @@ function initializeMIDISelection () {
   }
 }
 
+// adjust playback rates of audio files
+function adjustPlaybackRates(currentBpm) {
+  if (browser_sound_output === true) {
+    for (let i = 1; i <= voices.length; i++) {
+      if (voices[i] && sources[i]) {
+        let voiceBpm = voices[i].bpm;
+        let pitch = pitchShifts[i];
+        sources[i].forEach(source => {
+          source.playbackRate.value = (currentBpm / voiceBpm) * pitch;
+        });
+      }
+    }
+  }
+}
+
 let blockBpmUpdateFromServer;
 let bpmCanBeUpdatedByServer = true;
 $('body').on('change', '#bpm', function() {
@@ -329,6 +344,10 @@ $('body').on('change', '#bpm', function() {
     blockBpmUpdateFromServer = setTimeout(function() {
       bpmCanBeUpdatedByServer = true;
     }, 3000);
+    let currentBpm = $(this).val();
+    if (!isNaN(currentBpm) && currentBpm >= 1) {
+      adjustPlaybackRates(currentBpm);
+    }
 });
 
 $('body').on('blur', '#time_signature_numerator', ()=>{
@@ -472,25 +491,10 @@ socket.on('time_signature_denominator', (denominator) => {
 })
 
 socket.on('bpm', (bpm) => {
-  if ( !$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true ) {
+  if (!$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true) {
     $('#bpm').val(`${bpm}`);
   }
-  if ( browser_sound_output === true ) {
-    // adjust the playback speed of all voices
-    for (let i = 1; i <= voices.length; i++) {
-      if (voices[i] && sources[i] && !$('#bpm').is(':focus')) {
-        let current_bpm = $('#bpm').val();
-        let voice_bpm = voices[i].bpm;
-        // get the pitch shift value for this voice
-        let pitch = pitchShifts[i];
-        // set the playback rate based on the current and original BPM and the pitch shift
-        // for all sources of this voice
-        sources[i].forEach(source => {
-          source.playbackRate.value = (current_bpm / voice_bpm) * pitch;
-        });
-      }
-    }
-  }
+  adjustPlaybackRates($('#bpm').val());
 });
 
 socket.on('play', (data) => {
@@ -541,11 +545,11 @@ socket.on('play', (data) => {
   }
 });
 
-// delete any sources that haven't been played in the past 5 minutes to limit memory usage
+// delete any sources that haven't been played in the past 1 minute to limit memory usage
 setInterval(() => {
   let currentTime = Date.now();
   for (let voice in lastPlayedTimes) {
-    if (currentTime - lastPlayedTimes[voice] > 60 * 5000) {
+    if (currentTime - lastPlayedTimes[voice] > 60 * 1000) {
       sources[voice].disconnect();
       delete sources[voice];
       delete lastPlayedTimes[voice];

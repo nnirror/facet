@@ -107,8 +107,14 @@ app.post('/midi', (req, res) => {
 app.post('/meta', (req, res) => {
   let posted_pattern = JSON.parse(req.body.pattern);
   if ( req.body.type == 'bpm' ) {
-    meta_data.bpm = posted_pattern.data;
-    meta_data.bpm_over_n = posted_pattern.over_n;
+    if ( posted_pattern.is_stopped != false ) {
+      meta_data.bpm = bpm;
+      meta_data.bpm_over_n = 1;
+    }
+    else {
+      meta_data.bpm = posted_pattern.data;
+      meta_data.bpm_over_n = posted_pattern.over_n;
+    }
   }
   if ( req.body.type == 'time_signature_numerator' ) {
     meta_data.time_signature_numerator = posted_pattern.time_signature_numerator.data;
@@ -416,7 +422,9 @@ function reportTransportMetaData() {
 function applyNextPatterns() {
   for (const [facet_pattern_name, posted_pattern] of Object.entries(patterns_for_next_loop)) {
     if (stopped_patterns.includes(facet_pattern_name)) {
-      return;
+      delete patterns_for_next_loop[facet_pattern_name];
+      delete event_register[facet_pattern_name];
+      continue;
     }
 
     let over_n = over_n_values[facet_pattern_name] || 1;

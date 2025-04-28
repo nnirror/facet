@@ -3,6 +3,7 @@ const strip = require('strip-comments');
 const fs = require('fs');
 const FacetPattern = require('./FacetPattern.js')
 const stop_called_regex = /(?<!{[^}]*)\.stop\(\)(?![^{}]*})/;
+const bpm_called_regex = /^(?!\s*\/\/).*\.bpm\(\s*[^)]*\)/m;
 const fp_name_regex = /\$\((['"])(.+?)\1\)/;
 let bpm_from_env;
 
@@ -31,10 +32,15 @@ function runCode (code,mode,vars,env,utils,is_rerun) {
     try {
       let fp;
       let should_be_stopped = stop_called_regex.test(command);
+      let is_bpm_command = bpm_called_regex.test(command);
       if ( should_be_stopped === true ) {
         // without processing the command, create a FacetPattern that will be passed 
         // to the transport where it will stop playback for this pattern
         fp = new FacetPattern(command.match(fp_name_regex)[2]);
+        // if a command controls BPM, that information needs to be preserved
+        if ( is_bpm_command ) {
+          fp.bpm_pattern = true;
+        }
         fp.is_stopped = true;
       }
       else {

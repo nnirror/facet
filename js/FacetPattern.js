@@ -2874,6 +2874,9 @@ scaleLT1 (outMin, outMax, exponent = 1) {
     if ( typeof lookupPattern == 'number' || Array.isArray(lookupPattern) === true ) {
       lookupPattern = new FacetPattern().from(lookupPattern);
     }
+    if (lookupPattern.data.length > 2048) {
+      lookupPattern.size(2048);
+    }
     let outputArray = [];
     let chunkSize = Math.round(this.data.length / lookupPattern.data.length);
     for (let i = 0; i < lookupPattern.data.length; i++) {

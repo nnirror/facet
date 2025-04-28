@@ -66,22 +66,22 @@ module.exports = {
           let fps = run_data.fps;
             Object.values(fps).forEach(fp => {
               // set vars here - loop through
-              // console.log(fp.vars);
               for (let fp_var_key in fp.vars) {
                 if (fp.vars.hasOwnProperty(fp_var_key)) {
                   vars[fp_var_key] = fp.vars[fp_var_key];
                 }
               }
             if ( fp.is_stopped === true ) {
-              // stop all workers. any commands that weren't stopped will continue to regenerate the next loop
-              terminateAllWorkers();
-              postToTransport(fp);
+              if ( fp.bpm_pattern !== false ) {
+                postMetaDataToTransport(fp.bpm_pattern,'bpm');
+              }
+              else {
+                postToTransport(fp);
+              }
               delete reruns[fp.name];
               return;
             }
             if ( fp.do_not_regenerate === true ) {
-              // stop all workers. any commands that weren't stopped will continue to regenerate the next loop
-              terminateAllWorkers();
               delete reruns[fp.name];
             }
 
