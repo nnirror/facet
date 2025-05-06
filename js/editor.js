@@ -474,9 +474,35 @@ const socket = io.connect(`http://${configSettings.HOST}:3000`, {
   reconnectionDelay: 1000,
 });
 
-socket.on('progress', (progress) => {
-  $('#progress_bar').width(`${Math.round(progress * 100)}%`);
-})
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('progress_bar_canvas');
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    function drawProgress(progress) {
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // clear the canvas
+      ctx.clearRect(0, 0, width, height);
+
+      // draw the background
+      ctx.fillStyle = '#afafaf';
+      ctx.fillRect(0, 0, width, height);
+
+      // draw the progress bar
+      ctx.fillStyle = '#2c2c2c';
+      ctx.fillRect(0, 0, Math.round(progress * width), height);
+    }
+
+    // update the progress bar
+    socket.on('progress', (progress) => {
+      drawProgress(progress);
+    });
+  }
+});
 
 socket.on('time_signature_numerator', (numerator) => {
   if (!$('#time_signature_numerator').is(':focus') && prev_time_signature_numerator !== numerator) {

@@ -1657,19 +1657,24 @@ class FacetPattern {
     return this;
   }
 
-  lpf(cutoffPattern, q = 2.5) {
+  lpf(cutoffPattern, qPattern = 2.5) {
     if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
       cutoffPattern = new FacetPattern().from(cutoffPattern);
     }
+    if (typeof qPattern == 'number' || Array.isArray(qPattern) === true) {
+      qPattern = new FacetPattern().from(qPattern);
+    }
+    qPattern.clip(0.01,200);
     let initial_size = this.data.length;
     cutoffPattern.size(initial_size);
     let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
     this.prepend(silencePattern);
     // scale up cutoffPattern to match the size of this.data
     cutoffPattern.prepend(silencePattern);
+    qPattern.size(cutoffPattern.data.length);
     // apply a low-pass filter to this.data
     // using the values in cutoffPattern as the cutoff values
-    this.data = this.lpfInner(this.data, cutoffPattern.data, q);
+    this.data = this.lpfInner(this.data, cutoffPattern.data, qPattern.data);
     this.fixnan();
     this.reverse().truncate(initial_size).reverse();
     return this;
@@ -1681,109 +1686,128 @@ class FacetPattern {
     let prevValue1 = data[0];
     let prevValue2 = data[0];
     let a0, a1, a2, b1, b2;
+
     for (let i = 0; i < data.length; i++) {
-      let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
-      let alpha = Math.sin(w0) / (2 * q);
-      a0 = 1 + alpha;
-      a1 = -2 * Math.cos(w0);
-      a2 = 1 - alpha;
-      b1 = (1 - Math.cos(w0)) / 2;
-      b2 = 1 - Math.cos(w0);
-      if (i < 2) {
-        filteredData[i] = data[i];
-      } else {
-        filteredData[i] = (b1 * data[i] + b2 * prevValue1 + b1 * prevValue2 - a1 * filteredData[i - 1] - a2 * filteredData[i - 2]) / a0;
-      }
-      prevValue2 = prevValue1;
-      prevValue1 = data[i];
+        let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
+        let currentQ = q[i];
+        let alpha = Math.sin(w0) / (2 * currentQ);
+
+        a0 = 1 + alpha;
+        a1 = -2 * Math.cos(w0);
+        a2 = 1 - alpha;
+        b1 = (1 - Math.cos(w0)) / 2;
+        b2 = 1 - Math.cos(w0);
+
+        if (i < 2) {
+            filteredData[i] = data[i];
+        } else {
+            filteredData[i] = (b1 * data[i] + b2 * prevValue1 + b1 * prevValue2 - a1 * filteredData[i - 1] - a2 * filteredData[i - 2]) / a0;
+        }
+
+        prevValue2 = prevValue1;
+        prevValue1 = data[i];
     }
     return filteredData;
-  }
+}
 
-  hpf(cutoffPattern, q = 2.5) {
-    if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
+hpf(cutoffPattern, qPattern = 2.5) {
+  if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
       cutoffPattern = new FacetPattern().from(cutoffPattern);
-    }
-    let initial_size = this.data.length;
-    cutoffPattern.size(initial_size);
-    let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
-    this.prepend(silencePattern);
-    // scale up cutoffPattern to match the size of this.data
-    cutoffPattern.prepend(silencePattern);
-    // apply a high-pass filter to this.data
-    // using the values in cutoffPattern as the cutoff values
-    this.data = this.hpfInner(this.data, cutoffPattern.data, q);
-    this.fixnan();
-    this.reverse().truncate(initial_size).reverse();
-    return this;
   }
+  if (typeof qPattern == 'number' || Array.isArray(qPattern) === true) {
+      qPattern = new FacetPattern().from(qPattern);
+  }
+  qPattern.clip(0.01, 200);
+  let initial_size = this.data.length;
+  cutoffPattern.size(initial_size);
+  let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
+  this.prepend(silencePattern);
+  cutoffPattern.prepend(silencePattern);
+  qPattern.size(cutoffPattern.data.length);
+  this.data = this.hpfInner(this.data, cutoffPattern.data, qPattern.data);
+  this.fixnan();
+  this.reverse().truncate(initial_size).reverse();
+  return this;
+}
 
-  // runs per-sample HPF for hpmod
-  hpfInner(data, cutoffs, q) {
-    let filteredData = [];
-    let prevValue1 = data[0];
-    let prevValue2 = data[0];
-    let a0, a1, a2, b1, b2;
-    for (let i = 0; i < data.length; i++) {
+hpfInner(data, cutoffs, q) {
+  let filteredData = [];
+  let prevValue1 = data[0];
+  let prevValue2 = data[0];
+  let a0, a1, a2, b1, b2;
+
+  for (let i = 0; i < data.length; i++) {
       let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
-      let alpha = Math.sin(w0) / (2 * q);
+      let currentQ = q[i];
+      let alpha = Math.sin(w0) / (2 * currentQ);
+
       a0 = 1 + alpha;
       a1 = -2 * Math.cos(w0);
       a2 = 1 - alpha;
       b1 = (1 + Math.cos(w0)) / 2;
       b2 = -(1 + Math.cos(w0));
+
       if (i < 2) {
-        filteredData[i] = data[i];
+          filteredData[i] = data[i];
       } else {
-        filteredData[i] = (b1 * data[i] + b2 * prevValue1 + b1 * prevValue2 - a1 * filteredData[i - 1] - a2 * filteredData[i - 2]) / a0;
+          filteredData[i] = (b1 * data[i] + b2 * prevValue1 + b1 * prevValue2 - a1 * filteredData[i - 1] - a2 * filteredData[i - 2]) / a0;
       }
+
       prevValue2 = prevValue1;
       prevValue1 = data[i];
-    }
-    return filteredData;
   }
 
-  bpf(cutoffPattern, q = 2.5) {
+  return filteredData;
+}
+
+  bpf(cutoffPattern, qPattern = 2.5) {
     if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
-      cutoffPattern = new FacetPattern().from(cutoffPattern);
+        cutoffPattern = new FacetPattern().from(cutoffPattern);
     }
+    if (typeof qPattern == 'number' || Array.isArray(qPattern) === true) {
+        qPattern = new FacetPattern().from(qPattern);
+    }
+    qPattern.clip(0.01, 200);
     let initial_size = this.data.length;
     cutoffPattern.size(initial_size);
     let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
     this.prepend(silencePattern);
-    // scale up cutoffPattern to match the size of this.data
     cutoffPattern.prepend(silencePattern);
-    // apply a band-pass filter to this.data
-    // using the values in cutoffPattern as the cutoff values
-    this.data = this.bpfInner(this.data, cutoffPattern.data, q);
+    qPattern.size(cutoffPattern.data.length);
+    this.data = this.bpfInner(this.data, cutoffPattern.data, qPattern.data);
     this.fixnan();
     this.reverse().truncate(initial_size).reverse();
     return this;
-  }
+}
 
-  // runs per-sample BPF for bpmod
-  bpfInner(data, cutoffs, q) {
+bpfInner(data, cutoffs, q) {
     let filteredData = [];
     let prevValue1 = data[0];
     let prevValue2 = data[0];
     let a0, a1, a2, b1;
+
     for (let i = 0; i < data.length; i++) {
-      let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
-      let alpha = Math.sin(w0) / (2 * q);
-      a0 = 1 + alpha;
-      a1 = -2 * Math.cos(w0);
-      a2 = 1 - alpha;
-      b1 = alpha;
-      if (i < 2) {
-        filteredData[i] = data[i];
-      } else {
-        filteredData[i] = (b1 * data[i] - b1 * prevValue2 - a1 * filteredData[i - 1] - a2 * filteredData[i - 2]) / a0;
-      }
-      prevValue2 = prevValue1;
-      prevValue1 = data[i];
+        let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
+        let currentQ = q[i];
+        let alpha = Math.sin(w0) / (2 * currentQ);
+
+        a0 = 1 + alpha;
+        a1 = -2 * Math.cos(w0);
+        a2 = 1 - alpha;
+        b1 = alpha;
+
+        if (i < 2) {
+            filteredData[i] = data[i];
+        } else {
+            filteredData[i] = (b1 * data[i] - b1 * prevValue2 - a1 * filteredData[i - 1] - a2 * filteredData[i - 2]) / a0;
+        }
+
+        prevValue2 = prevValue1;
+        prevValue1 = data[i];
     }
+
     return filteredData;
-  }
+}
 
   lt(amt) {
     let lt_sequence = [];

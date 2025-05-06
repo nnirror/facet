@@ -2082,7 +2082,7 @@ $('example')
   // two random samples each loop
 ```
 ---
-#### **bpf** ( _cutoffPattern_ = 1000, _q_ = 2.5 )
+#### **bpf** ( _cutoffPattern_ = 1000, _qPattern_ = 2.5 )
 - applies a bandpass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 ```javascript
 $('example')
@@ -2218,7 +2218,7 @@ $('example')
   // ramping up from 0 harmonics on the 10Hz wave to 200 harmonics
 ```
 ---
-#### **hpf** ( _cutoffPattern_ = 100, _q_ = 2.5 )
+#### **hpf** ( _cutoffPattern_ = 100, _qPattern_ = 2.5 )
 - applies a high pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 ```javascript
 $('example')
@@ -2235,7 +2235,7 @@ $('example')
   // 4-cycle LFO modulating the high pass cutoff between 10000 and 20000 Hz
 ```
 ---
-#### **lpf** ( _cutoffPattern_ )
+#### **lpf** ( _cutoffPattern_, _qPattern_ = 2.5 )
 - applies a low pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 ```javascript
 $('example')
