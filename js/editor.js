@@ -1,23 +1,23 @@
 var cm = CodeMirror(document.body, {
   value: ``,
-  mode:  "javascript",
+  mode: "javascript",
   theme: "mbo",
   lineWrapping: true,
   matchBrackets: true,
-  lint: {options: {esversion: 2021, asi: true}}
+  lint: { options: { esversion: 2021, asi: true } }
 });
 
-var facet_methods  =  [];
+var facet_methods = [];
 
 let mousex = 1, mousey = 1;
-onmousemove = function(e) {
-  mousex = e.clientX/window.innerWidth;
-  mousey = Math.abs(1-(e.clientY/window.innerHeight));
+onmousemove = function (e) {
+  mousex = e.clientX / window.innerWidth;
+  mousey = Math.abs(1 - (e.clientY / window.innerHeight));
 }
 
 try {
   let facet_history = localStorage.getItem('facet_history');
-  if ( facet_history ) {
+  if (facet_history) {
     cm.setValue(facet_history);
   }
 }
@@ -30,15 +30,15 @@ function getFirstLineOfBlock(initial_line) {
   let above_line_is_empty = false;
   let current_line_number = initial_line;
   let first_line;
-  while ( above_line_is_empty == false && current_line_number >= 0 ) {
+  while (above_line_is_empty == false && current_line_number >= 0) {
     // check previous line for conditions that would indicate first line
     // of block; otherwise continue decrementing line number
-    if ( (current_line_number ) == 0 ) {
+    if ((current_line_number) == 0) {
       first_line = 0;
       break;
     }
     let line_above = cm.getLine(current_line_number - 1);
-    if ( line_above.trim() == '' ) {
+    if (line_above.trim() == '') {
       above_line_is_empty = true;
       first_line = current_line_number;
     }
@@ -52,15 +52,15 @@ function getLastLineOfBlock(initial_line) {
   let below_line_is_empty = false;
   let current_line_number = initial_line;
   let last_line;
-  while ( below_line_is_empty == false ) {
-    if ( (current_line_number + 1) == cm.lineCount() ) {
+  while (below_line_is_empty == false) {
+    if ((current_line_number + 1) == cm.lineCount()) {
       last_line = current_line_number;
       break;
     }
     // check below line for conditions that would indicate last line
     // of block; otherwise continue incrementing line number
     let line_below = cm.getLine(current_line_number + 1);
-    if ( line_below.trim() == '' ) {
+    if (line_below.trim() == '') {
       below_line_is_empty = true;
       last_line = current_line_number;
     }
@@ -70,57 +70,57 @@ function getLastLineOfBlock(initial_line) {
 }
 
 // prevent accidental refreshes which would lose unsaved changes
-window.onbeforeunload = function() {
+window.onbeforeunload = function () {
   return "Are you sure you want to leave? Unsaved changes will be lost.";
 };
 
-$(document).keydown(function(e) {
+$(document).keydown(function (e) {
   // [ctrl + enter] or [ctrl + r] to select text and send to pattern server :1123
-  if ( e.ctrlKey && ( e.keyCode == 13 || e.keyCode == 82 )  ) {
+  if (e.ctrlKey && (e.keyCode == 13 || e.keyCode == 82)) {
     runFacet();
   }
-  else if ( e.ctrlKey && e.keyCode == 188 ) {
+  else if (e.ctrlKey && e.keyCode == 188) {
     // clear hooks: [ctrl + ","]
-    $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function( data, status ) {});
+    $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function (data, status) { });
     $.growl.notice({ message: 'regeneration stopped' });
   }
-  else if ( e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191) ) {
+  else if (e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191)) {
     // clear hooks and mute everything: [ctrl + "."] or  [ctrl + "?"]
-    $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function( data, status ) {});
+    $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) { });
     $.growl.notice({ message: 'system muted' });
   }
-  else if ( e.ctrlKey && (e.keyCode == 222 ) ) {
+  else if (e.ctrlKey && (e.keyCode == 222)) {
     // stop command(s)
     runFacet('stop');
     $.growl.notice({ message: 'command(s) stopped' });
   }
-  else if ( e.ctrlKey && (e.keyCode == 186 || e.keyCode == 59 ) ) {
+  else if (e.ctrlKey && (e.keyCode == 186 || e.keyCode == 59)) {
     // keep command(s)
     runFacet('keep');
     $.growl.notice({ message: 'command(s) generated and kept' });
   }
-  else if ( e.ctrlKey && (e.keyCode == 220 ) ) {
+  else if (e.ctrlKey && (e.keyCode == 220)) {
     // command(s) run once
     runFacet('once');
     $.growl.notice({ message: 'command(s) generated to play once' });
   }
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
-  if ( $('#bpm').is(':focus') && e.keyCode == 13 ) {
+  if ($('#bpm').is(':focus') && e.keyCode == 13) {
     $.post(`http://${configSettings.HOST}:3211/bpm`, { bpm: bpm, time_signature_numerator: time_signature_numerator, time_signature_denominator: time_signature_denominator }).done(function (data, status) { }).fail(function (data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
     $('#bpm').blur();
   }
 
-  if ( $('#time_signature_numerator').is(':focus') && e.keyCode == 13 ) {
+  if ($('#time_signature_numerator').is(':focus') && e.keyCode == 13) {
     $('#time_signature_numerator').blur();
   }
-  if ( $('#time_signature_denominator').is(':focus') && e.keyCode == 13 ) {
+  if ($('#time_signature_denominator').is(':focus') && e.keyCode == 13) {
     $('#time_signature_denominator').blur();
   }
 
-  if ( e.ctrlKey && e.keyCode === 70 ) {
+  if (e.ctrlKey && e.keyCode === 70) {
     var cursor = cm.getCursor();
     var currentLine = cursor.line;
     let scroll_info = cm.getScrollInfo();
@@ -130,13 +130,13 @@ $(document).keydown(function(e) {
     }))
     cm.focus();
     cm.setCursor({
-      line: currentLine-1
+      line: currentLine - 1
     });
-    cm.scrollTo(scroll_info.left,scroll_info.top);
+    cm.scrollTo(scroll_info.left, scroll_info.top);
   }
 
-  if ( e.ctrlKey && e.code === 'Space' ) {
-    $.post(`http://${configSettings.HOST}:1123/autocomplete`, {}).done(function( data, status ) {
+  if (e.ctrlKey && e.code === 'Space') {
+    $.post(`http://${configSettings.HOST}:1123/autocomplete`, {}).done(function (data, status) {
       facet_methods = data.data.methods;
       // forked custom hinting from: https://stackoverflow.com/a/39973139
       var options = {
@@ -151,24 +151,24 @@ $(document).keydown(function(e) {
           var curWord = start != end && currentLine.slice(start, end);
           var regex = new RegExp('^' + curWord, 'i');
           var result = {
-              list: (!curWord ? list : list.filter(function (item) {
-                  return item.match(regex);
-              })).sort(),
-              from: CodeMirror.Pos(cursor.line, start),
-              to: CodeMirror.Pos(cursor.line, end)
+            list: (!curWord ? list : list.filter(function (item) {
+              return item.match(regex);
+            })).sort(),
+            from: CodeMirror.Pos(cursor.line, start),
+            to: CodeMirror.Pos(cursor.line, end)
           };
           return result;
         }
       };
-      cm.showHint(options); 
-    }).fail(function(data) {
+      cm.showHint(options);
+    }).fail(function (data) {
       $.growl.error({ message: 'no connection to the Facet server' });
     });
   }
 
 });
 
-$(document).keyup(function(e) {
+$(document).keyup(function (e) {
   // save the entire text block in localstorage
   localStorage.setItem('facet_history', cm.getValue());
 });
@@ -180,16 +180,16 @@ function runFacet(mode = 'run') {
   let first_line_of_block = getFirstLineOfBlock(line);
   let last_line_of_block = getLastLineOfBlock(line);
   // highlight the text that will run for 100ms
-  cm.setSelection({line: first_line_of_block, ch: 0 }, {line: last_line_of_block, ch: 10000 });
+  cm.setSelection({ line: first_line_of_block, ch: 0 }, { line: last_line_of_block, ch: 10000 });
   // de-highlight, set back to initial cursor position
-  setTimeout(function(){ cm.setCursor({line: line, ch: cursor.ch }); }, 100);
+  setTimeout(function () { cm.setCursor({ line: line, ch: cursor.ch }); }, 100);
   setStatus(`processing`);
   let code = cm.getSelection();
-  $.post(`http://${configSettings.HOST}:1123`, {code:code,mode:mode});
+  $.post(`http://${configSettings.HOST}:1123`, { code: code, mode: mode });
 }
 
 let midi_outs;
-$.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function( data, status ) {
+$.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function (data, status) {
   // create <select> dropdown with this -- check every 2 seconds, store
   // in memory, if changed update select #midi_outs add option
   if (data.data != midi_outs) {
@@ -202,33 +202,33 @@ $.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function( data, statu
   }
 });
 
-$('body').on('change', '#midi_outs', function() {
+$('body').on('change', '#midi_outs', function () {
   localStorage.setItem('midi_outs_value', this.value);
-  $.post(`http://${configSettings.HOST}:3211/midi_select`, {output:this.value}).done(function( data, status ) {});
+  $.post(`http://${configSettings.HOST}:3211/midi_select`, { output: this.value }).done(function (data, status) { });
 });
 
-$('body').on('click', '#midi_refresh', function() {
-  $.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function( data, status ) {
+$('body').on('click', '#midi_refresh', function () {
+  $.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function (data, status) {
     $('#midi_outs').html('');
     for (var i = 0; i < data.data.length; i++) {
       let midi_out = data.data[i];
       $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
     }
   })
-  .fail(function(data) {
-    if ( data.statusText == 'error' ) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    }
-  });
+    .fail(function (data) {
+      if (data.statusText == 'error') {
+        $.growl.error({ message: 'no connection to the Facet server' });
+      }
+    });
 });
 
-$('body').on('click', '#sound', function() {
-  if ( localStorage.getItem('facet_browser_sound_output') === 'true' ) {
+$('body').on('click', '#sound', function () {
+  if (localStorage.getItem('facet_browser_sound_output') === 'true') {
     localStorage.setItem('facet_browser_sound_output', 'false');
     $.growl.notice({ message: 'browser sound is off.' });
     setBrowserSound('false');
   }
-  else if ( localStorage.getItem('facet_browser_sound_output') === 'false' ) {
+  else if (localStorage.getItem('facet_browser_sound_output') === 'false') {
     localStorage.setItem('facet_browser_sound_output', 'true');
     $.growl.notice({ message: 'browser sound is on.' });
     setBrowserSound('true');
@@ -241,51 +241,51 @@ $('body').on('click', '#sound', function() {
   }
 });
 
-$('body').on('click', '#stop', function() {
-  $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function( data, status ) {
+$('body').on('click', '#stop', function () {
+  $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) {
     $.growl.notice({ message: 'system muted' });
   })
-  .fail(function(data) {
-    if ( data.statusText == 'error' ) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    }
-  });
+    .fail(function (data) {
+      if (data.statusText == 'error') {
+        $.growl.error({ message: 'no connection to the Facet server' });
+      }
+    });
 });
 
-$('body').on('click', '#clear', function() {
-  $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function( data, status ) {
+$('body').on('click', '#clear', function () {
+  $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function (data, status) {
     $.growl.notice({ message: 'regeneration stopped' });
   });
 });
 
-$('body').on('click', '#rerun', function() {
- runFacet();
+$('body').on('click', '#rerun', function () {
+  runFacet();
 });
 
-$('body').on('click', '#restart', function() {
-  $.post(`http://${configSettings.HOST}:5831/restart`, {}).done(function( data, status ) {
+$('body').on('click', '#restart', function () {
+  $.post(`http://${configSettings.HOST}:5831/restart`, {}).done(function (data, status) {
     if (status == 'success') {
-      $.growl.notice({ message: 'Facet restarted successfully'});
+      $.growl.notice({ message: 'Facet restarted successfully' });
     }
     else {
-      $.growl.error({ message: 'There was an error while restarting Facet'});
+      $.growl.error({ message: 'There was an error while restarting Facet' });
     }
   });
 });
 
 let browser_sound_output = true;
 
-$(document).ready(function() {
+$(document).ready(function () {
   $('#midi_refresh').click();
   setTimeout(() => {
     initializeMIDISelection();
-}, 100);
-try {
-  setBrowserSound(localStorage.getItem('facet_browser_sound_output'));
-}
-catch (e) {
-  // do nothing because there's nothing saved in localStorage
-}
+  }, 100);
+  try {
+    setBrowserSound(localStorage.getItem('facet_browser_sound_output'));
+  }
+  catch (e) {
+    // do nothing because there's nothing saved in localStorage
+  }
 });
 
 setInterval(() => {
@@ -293,31 +293,31 @@ setInterval(() => {
 }, 1000);
 
 function setBrowserSound(true_or_false_local_storage_string) {
-  if ( true_or_false_local_storage_string === 'true' ) {
+  if (true_or_false_local_storage_string === 'true') {
     browser_sound_output = true;
-    $('#sound').css('background',"url('../spkr.png') no-repeat");
-    $('#sound').css('background-size',"100% 200%");
+    $('#sound').css('background', "url('../spkr.png') no-repeat");
+    $('#sound').css('background-size', "100% 200%");
   }
-  else if ( true_or_false_local_storage_string === 'false' ) {
+  else if (true_or_false_local_storage_string === 'false') {
     browser_sound_output = false;
-    $('#sound').css('background',"url('../spkr-off.png') no-repeat");
-    $('#sound').css('background-size',"100% 200%");
+    $('#sound').css('background', "url('../spkr-off.png') no-repeat");
+    $('#sound').css('background-size', "100% 200%");
   }
   else {
     browser_sound_output = true;
-    $('#sound').css('background',"url('../spkr.png') no-repeat");
-    $('#sound').css('background-size',"100% 200%");
+    $('#sound').css('background', "url('../spkr.png') no-repeat");
+    $('#sound').css('background-size', "100% 200%");
   }
-  $.post(`http://${configSettings.HOST}:3211/browser_sound`, {browser_sound_output:browser_sound_output}).done(function( data, status ) {});
+  $.post(`http://${configSettings.HOST}:3211/browser_sound`, { browser_sound_output: browser_sound_output }).done(function (data, status) { });
 }
 
-function initializeMIDISelection () {
+function initializeMIDISelection() {
   // retrieve the previously stored MIDI out destination from localstorage
   var storedValue = localStorage.getItem('midi_outs_value');
   if (storedValue) {
     // reset the most recently used MIDI out destination
     $('#midi_outs').val(storedValue);
-    $.post(`http://${configSettings.HOST}:3211/midi_select`, {output:storedValue}).done(function( data, status ) {});
+    $.post(`http://${configSettings.HOST}:3211/midi_select`, { output: storedValue }).done(function (data, status) { });
   }
 }
 
@@ -338,19 +338,19 @@ function adjustPlaybackRates(currentBpm) {
 
 let blockBpmUpdateFromServer;
 let bpmCanBeUpdatedByServer = true;
-$('body').on('change', '#bpm', function() {
-    bpmCanBeUpdatedByServer = false;
-    clearTimeout(blockBpmUpdateFromServer);
-    blockBpmUpdateFromServer = setTimeout(function() {
-      bpmCanBeUpdatedByServer = true;
-    }, 3000);
-    let currentBpm = $(this).val();
-    if (!isNaN(currentBpm) && currentBpm >= 1) {
-      adjustPlaybackRates(currentBpm);
-    }
+$('body').on('change', '#bpm', function () {
+  bpmCanBeUpdatedByServer = false;
+  clearTimeout(blockBpmUpdateFromServer);
+  blockBpmUpdateFromServer = setTimeout(function () {
+    bpmCanBeUpdatedByServer = true;
+  }, 3000);
+  let currentBpm = $(this).val();
+  if (!isNaN(currentBpm) && currentBpm >= 1) {
+    adjustPlaybackRates(currentBpm);
+  }
 });
 
-$('body').on('blur', '#time_signature_numerator', ()=>{
+$('body').on('blur', '#time_signature_numerator', () => {
   let user_input_time_signature_numerator = $('#time_signature_numerator').val();
   if (!isNaN(user_input_time_signature_numerator) && Math.abs(user_input_time_signature_numerator) >= 1) {
     time_signature_numerator = user_input_time_signature_numerator;
@@ -360,7 +360,7 @@ $('body').on('blur', '#time_signature_numerator', ()=>{
   }
 });
 
-$('body').on('blur', '#time_signature_denominator', ()=>{
+$('body').on('blur', '#time_signature_denominator', () => {
   let user_input_time_signature_denominator = $('#time_signature_denominator').val();
   if (!isNaN(user_input_time_signature_denominator) && Math.abs(user_input_time_signature_denominator) >= 1) {
     time_signature_denominator = user_input_time_signature_denominator;
@@ -374,35 +374,35 @@ $('body').on('blur', '#time_signature_denominator', ()=>{
 checkStatus();
 
 function checkStatus() {
-  setInterval( () => {
+  setInterval(() => {
     $.post(`http://${configSettings.HOST}:1123/status`, {
-      mousex:mousex,
-      mousey:mousey
-    }).done(function( data, status ) {
+      mousex: mousex,
+      mousey: mousey
+    }).done(function (data, status) {
       Object.values(data.data.errors).forEach(error => {
         $.growl.error({ message: error });
       });
       let cpu_percent = Math.round(parseFloat(data.data.cpu).toFixed(2) * 100);
-      cpu_percent = cpu_percent.toString().substring(0,4);
+      cpu_percent = cpu_percent.toString().substring(0, 4);
       $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
       setStatus(`connected`);
     })
-    .fail(function(data) {
-      setStatus(`disconnected`);
-      $('#cpu').html(`[offline]`);
-    });
+      .fail(function (data) {
+        setStatus(`disconnected`);
+        $('#cpu').html(`[offline]`);
+      });
   }, 250);
 }
 
 function setStatus(status) {
   let colored_span = '';
-  if ( status == 'connected' ) {
+  if (status == 'connected') {
     colored_span = `<span style="color:green;"">●</span>`;
   }
-  else if ( status == 'processing' ) {
+  else if (status == 'processing') {
     colored_span = `<span style="color:green;"">●</span>`;
   }
-  else if ( status == 'disconnected' ) {
+  else if (status == 'disconnected') {
     colored_span = `<span style="color:red;"">●</span>`;
   }
   $('#status').html(colored_span);
@@ -475,17 +475,17 @@ const socket = io.connect(`http://${configSettings.HOST}:3000`, {
 });
 
 socket.on('progress', (progress) => {
-  $('#progress_bar').width(`${Math.round(progress*100)}%`);
+  $('#progress_bar').width(`${Math.round(progress * 100)}%`);
 })
 
 socket.on('time_signature_numerator', (numerator) => {
-  if ( !$('#time_signature_numerator').is(':focus') && prev_time_signature_numerator !== numerator ) {
+  if (!$('#time_signature_numerator').is(':focus') && prev_time_signature_numerator !== numerator) {
     $('#time_signature_numerator').val(`${numerator}`);
   }
 })
 
 socket.on('time_signature_denominator', (denominator) => {
-  if ( !$('#time_signature_denominator').is(':focus') && prev_time_signature_denominator !== denominator ) {
+  if (!$('#time_signature_denominator').is(':focus') && prev_time_signature_denominator !== denominator) {
     $('#time_signature_denominator').val(`${denominator}`);
   }
 })
@@ -503,7 +503,7 @@ socket.on('play', (data) => {
   let channels = data.channels;
   let pan_data = data.pan_data;
   pitchShifts[voice_to_play] = pitch;
-  if ( browser_sound_output === true ) {
+  if (browser_sound_output === true) {
     // check if the voice is loaded
     if (voices[voice_to_play]) {
       let merger = ac.createChannelMerger(ac.destination.channelCount);
@@ -517,7 +517,7 @@ socket.on('play', (data) => {
         let gainNode = ac.createGain();
         source.connect(gainNode);
         gainNode.connect(merger, 0, channel - 1);
-        
+
         if (pan_data === false || channels.length === 1) {
           // if pan_data is false or there is only one channel, set the gain value to 1 for all channels
           gainNode.gain.value = 0.7;
@@ -550,29 +550,36 @@ setInterval(() => {
   let currentTime = Date.now();
   for (let voice in lastPlayedTimes) {
     if (currentTime - lastPlayedTimes[voice] > 60 * 1000) {
-      sources[voice].disconnect();
+      if (sources[voice]) {
+        // Iterate over each source and disconnect it
+        sources[voice].forEach(source => {
+          if (source.disconnect) {
+            source.disconnect();
+          }
+        });
+      }
       delete sources[voice];
       delete lastPlayedTimes[voice];
     }
   }
-}, 60 * 5000);
+}, 60 * 1000);
 
-socket.on('load', function(data) {
+socket.on('load', function (data) {
   for (var i = 0; i < data.length; i++) {
-    if ( browser_sound_output === true ) {
+    if (browser_sound_output === true) {
       let load_data = data[i].split(' ');
       let voice_number = load_data[0];
       let fp = load_data[1];
       let voice_bpm = Number(load_data[2]);
       // get any wav files that were just generated
       fetch(`../tmp/${fp}`)
-      .then(response => response.arrayBuffer())
-      .then(arrayBuffer => ac.decodeAudioData(arrayBuffer))
-      .then(audioBuffer => {
-        // add the audioBuffer directly to the voices object
-        voices[voice_number] = {buffer: audioBuffer, bpm: voice_bpm};
-      })
-      .catch(e => console.error(e));
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => ac.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+          // add the audioBuffer directly to the voices object
+          voices[voice_number] = { buffer: audioBuffer, bpm: voice_bpm };
+        })
+        .catch(e => console.error(e));
     }
   }
 });

@@ -1,7 +1,7 @@
 const FacetPattern = require('./FacetPattern.js');
 const { exec } = require('child_process');
 const fs = require('fs');
-const {WebMidi} = require('webmidi');
+const { WebMidi } = require('webmidi');
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -77,19 +77,19 @@ io.on('connection', (socket) => {
 });
 
 // start the HTTP server
-server.listen(3000, () => {});
+server.listen(3000, () => { });
 
 app.use(bodyParser.urlencoded({ limit: '1000mb', extended: true }));
-app.use(bodyParser.json({limit: '1000mb'}));
+app.use(bodyParser.json({ limit: '1000mb' }));
 app.use(cors());
 
 // pass bpm and bars_elapsed every 20ms
-setInterval(reportTransportMetaData,20);
+setInterval(reportTransportMetaData, 20);
 
-axios.interceptors.response.use(res=>{return res}, (error) => {
+axios.interceptors.response.use(res => { return res }, (error) => {
   // do nothing, necessary for windows to preven fatal 500s
   // with axios as transport starts up
- });
+});
 
 WebMidi.enable();
 let midioutput;
@@ -100,14 +100,14 @@ app.post('/midi', (req, res) => {
     midi_port_names.push(WebMidi.outputs[i]._midiOutput.name);
   }
   res.send({
-    data:midi_port_names
+    data: midi_port_names
   });
 });
 
 app.post('/meta', (req, res) => {
   let posted_pattern = JSON.parse(req.body.pattern);
-  if ( req.body.type == 'bpm' ) {
-    if ( posted_pattern.is_stopped != false ) {
+  if (req.body.type == 'bpm') {
+    if (posted_pattern.is_stopped != false) {
       meta_data.bpm = bpm;
       meta_data.bpm_over_n = 1;
     }
@@ -116,11 +116,11 @@ app.post('/meta', (req, res) => {
       meta_data.bpm_over_n = posted_pattern.over_n;
     }
   }
-  if ( req.body.type == 'time_signature_numerator' ) {
+  if (req.body.type == 'time_signature_numerator') {
     meta_data.time_signature_numerator = posted_pattern.time_signature_numerator.data;
     meta_data.time_signature_numerator_over_n = posted_pattern.time_signature_numerator.over_n;
   }
-  if ( req.body.type == 'time_signature_denominator' ) {
+  if (req.body.type == 'time_signature_denominator') {
     meta_data.time_signature_denominator = posted_pattern.time_signature_denominator.data;
     meta_data.time_signature_denominator_over_n = posted_pattern.time_signature_denominator.over_n;
   }
@@ -140,21 +140,28 @@ app.post('/update', (req, res) => {
 
     over_n_values[facet_pattern_name] = posted_pattern.over_n;
 
-    if ( posted_pattern.is_stopped === true || facet_pattern_name in patterns_that_have_been_stopped ) {
+    if (posted_pattern.is_stopped === true || facet_pattern_name in patterns_that_have_been_stopped) {
       stopped_patterns.push(facet_pattern_name);
       stopVoice(posted_pattern.name);
       delete patterns_that_have_been_stopped[facet_pattern_name];
       return;
     }
+    else {
+      // remove the key in stopped_patterns that matches facet_pattern_name
+      const index = stopped_patterns.indexOf(facet_pattern_name);
+      if (index !== -1) {
+        stopped_patterns.splice(index, 1);
+      }
+    }
 
-    if ( posted_pattern.sequence_data.length > 0 ) {
+    if (posted_pattern.sequence_data.length > 0) {
       allocateVoice(posted_pattern);
-      if ( browser_sound_output === true ) {
+      if (browser_sound_output === true) {
         voices_to_send_to_browser.push(`${voice_number_to_load} ${posted_pattern.name}.wav ${posted_pattern.bpm_at_generation_time}`);
       }
-    
+
       let over_n = over_n_values[facet_pattern_name] || 1;
-    
+
       event_register[facet_pattern_name] = [];
       posted_pattern.sequence_data.forEach((step, index) => {
         // calculate the ratio of sequence steps to pitch steps
@@ -163,7 +170,7 @@ app.post('/update', (req, res) => {
         let pitchIndex = Math.floor(index * ratio) % posted_pattern.sequence_pitch_data.length;
         // get the pitch from the pattern's sequence_pitch_data
         let pitch = posted_pattern.sequence_pitch_data[pitchIndex];
-    
+
         // calculate which loop this step belongs to
         let loopIndex = Math.floor(step * over_n);
         // calculate the position within the loop
@@ -214,7 +221,7 @@ app.post('/midi_select', (req, res) => {
   }
 });
 
-app.get('/status', (req,res)=> {
+app.get('/status', (req, res) => {
   res.send({
     data: {
       bpm: bpm,
@@ -239,7 +246,7 @@ app.post('/stop', (req, res) => {
   patterns_for_next_loop = {};
   transport_on = false;
   voice_allocator = initializeVoiceAllocator();
-  if ( typeof midioutput !== 'undefined' ) {
+  if (typeof midioutput !== 'undefined') {
     midioutput.sendAllNotesOff();
   }
   // clear out any dynamic BPM and time signature patterns, so they stay at whatever values they were prior to stopping
@@ -268,13 +275,13 @@ function tick() {
   let relative_step_amount_to_add_per_loop = 1 / events_per_loop;
   bpm_recalculation_counter++;
   current_relative_step_position += relative_step_amount_to_add_per_loop;
-  if ( current_relative_step_position > 1.00001 ) {
+  if (current_relative_step_position > 1.00001) {
     current_relative_step_position = 0;
     bars_elapsed++;
     Object.keys(patterns_to_delete_at_end_of_loop).forEach((fp_name) => {
       for (let key in event_register[fp_name]) {
         if (event_register[fp_name].hasOwnProperty(key)) {
-            delete event_register[fp_name][key];
+          delete event_register[fp_name][key];
         }
       }
       delete patterns_for_next_loop[fp_name];
@@ -298,31 +305,31 @@ function tick() {
   events_per_loop = seconds_per_loop * events_per_second;
   relative_step_amount_to_add_per_loop = 1 / events_per_loop;
 
-  if ( transport_on === true ) {
+  if (transport_on === true) {
     for (const [fp_name, fp_data] of Object.entries(event_register)) {
       let count_times_fp_played = 0;
       fp_data.forEach((event) => {
-        if ( event.position >= current_relative_step_position
-          && (event.position < (current_relative_step_position + relative_step_amount_to_add_per_loop) && (event.fired === false) ) ) {
-            event.fired = true;
+        if (event.position >= current_relative_step_position
+          && (event.position < (current_relative_step_position + relative_step_amount_to_add_per_loop) && (event.fired === false))) {
+          event.fired = true;
           // fire all events for this facetpattern matching the current step
-          if ( event.type === "audio" && (((bars_elapsed - event.bar_posted) % event.over_n) == event.play_on_bar) ) {
+          if (event.type === "audio" && (((bars_elapsed - event.bar_posted) % event.over_n) == event.play_on_bar)) {
             // play any audio files at this step
-            if ( count_times_fp_played < 1 ) {
+            if (count_times_fp_played < 1) {
               let pre_send_delay_ms = 0;
               // osc event to play back audio file in browser
-              setTimeout(()=>{
-                if ( browser_sound_output === true ) {
+              setTimeout(() => {
+                if (browser_sound_output === true) {
                   emitPlayEvent(event);
                 }
-              },pre_send_delay_ms);
+              }, pre_send_delay_ms);
             }
             count_times_fp_played++;
           }
-          if ( event.type === "note" ) {
+          if (event.type === "note") {
             // play any notes at this step
             try {
-              if ( typeof midioutput !== 'undefined' ) {
+              if (typeof midioutput !== 'undefined') {
                 // send the "note on" message
                 midioutput.sendNoteOn(event.data.note, {
                   rawAttack: event.data.velocity,
@@ -337,44 +344,44 @@ function tick() {
                   });
                 }, event.data.duration);
               }
-            } catch (e) {}
+            } catch (e) { }
           }
 
-          if ( event.type === "cc" ) {
+          if (event.type === "cc") {
             // send any cc data at this step
             try {
-              if ( typeof midioutput !== 'undefined' ) {
+              if (typeof midioutput !== 'undefined') {
                 midioutput.sendControlChange(event.data.controller, Math.round(event.data.data), {
-                  channels:event.data.channel
+                  channels: event.data.channel
                 });
               }
-            } catch (e) {}
+            } catch (e) { }
           }
 
-          if ( event.type === "pitchbend" ) {
+          if (event.type === "pitchbend") {
             // send any pitchbend data at this step
             try {
-              if ( typeof midioutput !== 'undefined' ) {
+              if (typeof midioutput !== 'undefined') {
                 midioutput.sendPitchBend(event.data.data, {
-                  channels:event.data.channel
+                  channels: event.data.channel
                 });
               }
-            } catch (e) {}
+            } catch (e) { }
           }
 
-          if ( event.type === "osc" ) {
+          if (event.type === "osc") {
             // send any osc data at this step
             try {
               udp_osc_server.send(new OSC.Message(`${event.data.address}`, event.data.data));
-            } catch (e) {}
+            } catch (e) { }
           }
 
           // remove any events from the event register that are intended to play only once
-          if ( event.play_once === true && event.type === "audio" ) {
+          if (event.play_once === true && event.type === "audio") {
             delete event_register[fp_name];
           }
 
-          if ( event.play_once === true && event.type !== "audio" ) {
+          if (event.play_once === true && event.type !== "audio") {
             // delete event_register[fp_name];
             patterns_to_delete_at_end_of_loop[fp_name] = true;
           }
@@ -387,13 +394,13 @@ function tick() {
   expectedTime += EVENT_RESOLUTION_MS;
 
   // hard-reset loop position if bpm has been static for the entire loop and an entire loop of time has passed
-  if ( bpm_was_changed_this_loop === false && Date.now() - loop_start_time > ((seconds_per_loop * 1000) - EVENT_RESOLUTION_MS) ) {
+  if (bpm_was_changed_this_loop === false && Date.now() - loop_start_time > ((seconds_per_loop * 1000) - EVENT_RESOLUTION_MS)) {
     delay = Math.round((seconds_per_loop * 1000) - (Date.now() - loop_start_time));
     current_relative_step_position = 1;
     loop_start_time = Date.now();
   }
 
-  if ( current_relative_step_position + relative_step_amount_to_add_per_loop > 1.00001 ) {
+  if (current_relative_step_position + relative_step_amount_to_add_per_loop > 1.00001) {
     applyNextPatterns();
   }
 
@@ -404,18 +411,18 @@ tick();
 
 function reportTransportMetaData() {
   // pass along the current bpm and bars elapsed, if the transport is running
-  if ( transport_on === true ) {
+  if (transport_on === true) {
     axios.post(`http://${HOST}:1123/meta`,
-    {
-      bpm: JSON.stringify(bpm),
-      bars_elapsed: JSON.stringify(bars_elapsed),
-      time_signature_numerator: time_signature_numerator,
-      time_signature_denominator: time_signature_denominator
-    }
-  )
-  .catch(function (error) {
-    console.log(`error posting metadata to pattern server: ${error}`);
-  });
+      {
+        bpm: JSON.stringify(bpm),
+        bars_elapsed: JSON.stringify(bars_elapsed),
+        time_signature_numerator: time_signature_numerator,
+        time_signature_denominator: time_signature_denominator
+      }
+    )
+      .catch(function (error) {
+        console.log(`error posting metadata to pattern server: ${error}`);
+      });
   }
 }
 
@@ -432,17 +439,17 @@ function applyNextPatterns() {
     const processPatternData = (patternData, type, processData) => {
       const eventsPerLoop = Math.ceil(patternData.length / over_n);
       const currentLoop = bars_elapsed % over_n;
-    
+
       // initialize event_register for the current facet_pattern_name
       event_register[facet_pattern_name] = [];
-    
+
       for (let i = 0; i < patternData.length; i++) {
         // calculate in which loop this event should occur
         const loopPart = Math.floor(patternData[i].position * over_n);
-    
+
         // calculate new position within this loop
         const positionInLoop = (patternData[i].position * over_n) - loopPart;
-    
+
         if (loopPart === currentLoop) {
           let eventData = {
             position: positionInLoop,
@@ -451,12 +458,12 @@ function applyNextPatterns() {
             play_once: posted_pattern.play_once,
             fired: false
           };
-    
+
           // process eventData if processData is provided
           if (processData) {
             processData(eventData, i, i);
           }
-    
+
           // add the event to the event_register
           event_register[facet_pattern_name].push(eventData);
         }
@@ -474,14 +481,15 @@ function applyNextPatterns() {
           type: 'note',
           data: note_data
         });
-    
+
         if (posted_pattern.chord_intervals && posted_pattern.chord_intervals.length > 0) {
           const chordIntervalsLength = posted_pattern.chord_intervals.length;
-          
-          // process chord intervals if available
-          let chordIntervalIndex = Math.floor((indexWithinLoop / eventsPerLoop) * chordIntervalsLength);
+
+          // process chord intervals
+          let barIndex = Math.floor(indexWithinLoop / eventsPerLoop);
+          let chordIntervalIndex = barIndex % chordIntervalsLength;
           let currentChordInterval = posted_pattern.chord_intervals[chordIntervalIndex];
-          
+
           if (currentChordInterval) {
             for (let c = 0; c < currentChordInterval.length; c++) {
               let note_to_add = note_data.note + currentChordInterval[c];
@@ -503,11 +511,11 @@ function applyNextPatterns() {
       });
     }
 
-    if ( typeof posted_pattern.cc_data.data !== 'undefined' ) {
+    if (typeof posted_pattern.cc_data.data !== 'undefined') {
       let eventsPerLoop = Math.ceil(posted_pattern.cc_data.data.length / over_n);
       let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
       let endEventIndex = startEventIndex + eventsPerLoop;
-    
+
       event_register[facet_pattern_name] = [];
       for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.cc_data.data.length; i++) {
         let cc_object = {
@@ -517,7 +525,7 @@ function applyNextPatterns() {
         };
         let indexWithinLoop = i - startEventIndex;
         let newPosition = indexWithinLoop / eventsPerLoop;
-    
+
         event_register[facet_pattern_name].push(
           {
             position: newPosition,
@@ -529,12 +537,12 @@ function applyNextPatterns() {
         )
       }
     }
-    
-    if ( typeof posted_pattern.pitchbend_data.data !== 'undefined' ) {
+
+    if (typeof posted_pattern.pitchbend_data.data !== 'undefined') {
       let eventsPerLoop = Math.ceil(posted_pattern.pitchbend_data.data.length / over_n);
       let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
       let endEventIndex = startEventIndex + eventsPerLoop;
-    
+
       event_register[facet_pattern_name] = [];
       for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.pitchbend_data.data.length; i++) {
         let pb_object = {
@@ -543,7 +551,7 @@ function applyNextPatterns() {
         };
         let indexWithinLoop = i - startEventIndex;
         let newPosition = indexWithinLoop / eventsPerLoop;
-    
+
         event_register[facet_pattern_name].push(
           {
             position: newPosition,
@@ -555,12 +563,12 @@ function applyNextPatterns() {
         )
       }
     }
-    
-    if ( typeof posted_pattern.osc_data.data !== 'undefined' ) {
+
+    if (typeof posted_pattern.osc_data.data !== 'undefined') {
       let eventsPerLoop = Math.ceil(posted_pattern.osc_data.data.length / over_n);
       let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
       let endEventIndex = startEventIndex + eventsPerLoop;
-    
+
       event_register[facet_pattern_name] = [];
       for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.osc_data.data.length; i++) {
         let osc_object = {
@@ -569,7 +577,7 @@ function applyNextPatterns() {
         };
         let indexWithinLoop = i - startEventIndex;
         let newPosition = indexWithinLoop / eventsPerLoop;
-    
+
         event_register[facet_pattern_name].push(
           {
             position: newPosition,
@@ -585,8 +593,8 @@ function applyNextPatterns() {
   stopped_patterns = [];
 }
 
-function requestNewPatterns () {
-  if ( bars_elapsed > 0 && Date.now() - time_since_last_regen_request > 250 ) {
+function requestNewPatterns() {
+  if (bars_elapsed > 0 && Date.now() - time_since_last_regen_request > 250) {
     // tell server to generate any new patterns
     axios.get(`http://${HOST}:1123/update`);
     time_since_last_regen_request = Date.now();
@@ -603,19 +611,19 @@ function resetEventRegister() {
 
 function checkForTimeSignatureRecalculation(events_per_loop) {
   const now = Date.now();
-  if ( now - time_signature_automation_last_run < time_signature_automation_rate_limit) {
+  if (now - time_signature_automation_last_run < time_signature_automation_rate_limit) {
     return;
   }
   let totalPatternLengthNumerator = events_per_loop * meta_data.time_signature_numerator_over_n;
   let totalPatternLengthDenominator = events_per_loop * meta_data.time_signature_denominator_over_n;
-  
+
   let scaledTimeSignatureNumerator = scalePatternToSteps(meta_data.time_signature_numerator, totalPatternLengthNumerator);
   let scaledTimeSignatureDenominator = scalePatternToSteps(meta_data.time_signature_denominator, totalPatternLengthDenominator);
 
   let normalizedStepPosition = current_relative_step_position % 1;
   let cyclePositionNumerator = bars_elapsed / meta_data.time_signature_numerator_over_n + normalizedStepPosition / meta_data.time_signature_numerator_over_n;
   let cyclePositionDenominator = bars_elapsed / meta_data.time_signature_denominator_over_n + normalizedStepPosition / meta_data.time_signature_denominator_over_n;
-  
+
   cyclePositionNumerator = cyclePositionNumerator % 1;
   cyclePositionDenominator = cyclePositionDenominator % 1;
 
@@ -634,7 +642,7 @@ function checkForTimeSignatureRecalculation(events_per_loop) {
 
 function checkForBpmRecalculation(events_per_loop) {
   const now = Date.now();
-  if ( now - bpm_automation_last_run < bpm_automation_rate_limit) {
+  if (now - bpm_automation_last_run < bpm_automation_rate_limit) {
     return;
   }
   scaledBpm = scalePatternToSteps(meta_data.bpm, events_per_loop);
@@ -665,21 +673,15 @@ function checkForBpmRecalculation(events_per_loop) {
 }
 
 
-function stopVoice (name) {
+function stopVoice(name) {
   // delete pattern from the event register matching this name.
   // run it every 500ms for 3 seconds because it's possible that another command that's currently being 
   // generated will overwrite the first stopVoice call.
   try {
     delete event_register[name];
     patterns_that_have_been_stopped[name] = true;
-    setTimeout(()=>{delete event_register[name]},500);
-    setTimeout(()=>{delete event_register[name]},1000);
-    setTimeout(()=>{delete event_register[name]},1500);
-    setTimeout(()=>{delete event_register[name]},2000);
-    setTimeout(()=>{delete event_register[name]},2500);
-    setTimeout(()=>{delete event_register[name]},3000);
   }
-  catch (e) {}
+  catch (e) { }
 }
 
 function allocateVoice(posted_pattern) {
@@ -689,27 +691,27 @@ function allocateVoice(posted_pattern) {
 }
 
 function initializeVoiceAllocator() {
-	let obj = {};
-	return obj;
+  let obj = {};
+  return obj;
 }
 
 function updateVoiceAllocator() {
-	for (let key in voice_allocator) {
-		if (voice_allocator[key] instanceof AudioPlaybackVoice) {
-			voice_allocator[key].loops_since_generation++;
-			if (voice_allocator[key].loops_since_generation >= voice_allocator[key].every && voice_allocator[key].every > 1 ) {
-				voice_allocator[key] = false;
-			}
-		}
-	}
+  for (let key in voice_allocator) {
+    if (voice_allocator[key] instanceof AudioPlaybackVoice) {
+      voice_allocator[key].loops_since_generation++;
+      if (voice_allocator[key].loops_since_generation >= voice_allocator[key].every && voice_allocator[key].every > 1) {
+        voice_allocator[key] = false;
+      }
+    }
+  }
 }
 
 function scalePatternToSteps(pattern, steps) {
   let result = [];
   let scale = steps / pattern.length;
   for (let i = 0; i < steps; i++) {
-      let index = Math.floor(i / scale);
-      result.push(pattern[index]);
+    let index = Math.floor(i / scale);
+    result.push(pattern[index]);
   }
   return result;
 }
@@ -732,12 +734,12 @@ function emitPlayEvent(event) {
 }
 
 class AudioPlaybackVoice {
-	constructor(posted_pattern) {
-		this.name = posted_pattern.name;
-		this.every = posted_pattern.regenerate_every_n_loops;
+  constructor(posted_pattern) {
+    this.name = posted_pattern.name;
+    this.every = posted_pattern.regenerate_every_n_loops;
     this.loops_since_generation = 0;
-		this.once = posted_pattern.play_once;
-		this.bpm = posted_pattern.bpm_at_generation_time;
-		this.overwritable = posted_pattern.do_not_regenerate === true || posted_pattern.regenerate_every_n_loops > 1 ? false : true;
-	}
+    this.once = posted_pattern.play_once;
+    this.bpm = posted_pattern.bpm_at_generation_time;
+    this.overwritable = posted_pattern.do_not_regenerate === true || posted_pattern.regenerate_every_n_loops > 1 ? false : true;
+  }
 }

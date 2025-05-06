@@ -5,7 +5,7 @@ let configSettings = {
   "HOST": "127.0.0.1",
 }
 
-if ( typeof module !== 'undefined' && typeof module.exports !== 'undefined' ) {
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
   // nodeJS environment
   module.exports = {
     settings: configSettings

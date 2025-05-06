@@ -2434,9 +2434,10 @@ $('example')
   // superpose two samples at the 0% and 50% points through each loop
 ```
 ---
-#### **vocode** ( _carrierPattern_ )
-- creates a vocoder effect where the amplitude envelope of each frequency bin in the input FacetPattern controls the amplitude of each freuqency bin in `carrierPattern`.
+#### **vocode** ( _carrierPattern_, _bands_ = [1000,2000,3000,4000,5000,6000,7000,8000,9000,1000], _q_ = 2.5 )
+- creates a vocoder effect where the amplitude envelope of each frequency bin in the input FacetPattern controls the amplitude of each frequency bin in `carrierPattern`.
 - for a "classic" vocoding effect, use a rhythmic sample as the input FacetPattern and a melodic pattern for `carrierPattern`.
+- the Q argument controls the Q factor of the bandpass filters in the `bands` pattern.
 ```javascript
 $('example')
   .seq('808/* 808/* 808/* 808/* 808/* 808/* 808/* 808/*')
