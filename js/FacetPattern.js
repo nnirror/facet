@@ -1858,7 +1858,7 @@ bpfInner(data, cutoffs, q) {
     this.data = lte_sequence;
     return this;
   }
-  f
+  
   map(fp) {
     if (!this.isFacetPattern(fp) && !Array.isArray(fp)) {
       throw `input must be a FacetPattern or array; type found: ${typeof fp}`;
