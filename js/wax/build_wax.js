@@ -18,14 +18,32 @@ ast.body.forEach(node => {
         method.type === 'MethodDefinition' &&
         included_methods.includes(method.key.name)
       ) {
-        const methodStart = method.start;
-        const methodEnd = method.end;
-        let methodCode = facetPatternContent.slice(methodStart, methodEnd);
+        let methodCode;
 
-        // replace instances of this.getWholeNoteNumSamples() with SAMPLE_RATE
-        methodCode = methodCode.replace(/this\.getWholeNoteNumSamples\(\)/g, 'SAMPLE_RATE');
-        // replace instances of Scale.get with Tonal.Scale.get
-        methodCode = methodCode.replace(/\bScale\.get\b/g, 'Tonal.Scale.get');
+        // special handling for sample() method which is different in wax
+        if (method.key.name === 'sample') {
+          methodCode = `sample(name) {
+    if (!name.endsWith('.wav')) {
+        name += '.wav';
+    }
+    let audioBuffer = audioBuffers[name];
+    if (audioBuffer) {
+        this.data = audioBuffer;
+    } else {
+        throw \`No buffer found with the name \${name}\`;
+    }
+    return this;
+  }`;
+        } else {
+          const methodStart = method.start;
+          const methodEnd = method.end;
+          methodCode = facetPatternContent.slice(methodStart, methodEnd);
+
+          // replace instances of this.getWholeNoteNumSamples() with SAMPLE_RATE
+          methodCode = methodCode.replace(/this\.getWholeNoteNumSamples\(\)/g, 'SAMPLE_RATE');
+          // replace instances of Scale.get with Tonal.Scale.get
+          methodCode = methodCode.replace(/\bScale\.get\b/g, 'Tonal.Scale.get');
+        }
 
         extractedMethods.push(methodCode);
       }
