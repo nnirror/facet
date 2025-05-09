@@ -106,30 +106,46 @@ class FacetPattern {
     return this;
   }
 
-  cosine(frequencies, length = SAMPLE_RATE, fade_in_and_out = true) {
+  cosine(frequencies, length = SAMPLE_RATE, fade_in_and_out = false) {
     let output = [];
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
-      frequencies = new FacetPattern().from(frequencies);
+        frequencies = new FacetPattern().from(frequencies);
     }
     length = Math.round(length);
     frequencies.size(length);
+
     let phase = 0;
+
     for (let i = 0; i < length; i++) {
-      let t = i / SAMPLE_RATE;
-      let currentFrequency = frequencies.data[i];
-      output[i] = Math.cos(phase);
-      phase += 2 * Math.PI * currentFrequency / SAMPLE_RATE;
-      if (phase >= 2 * Math.PI) {
-        phase -= 2 * Math.PI;
-      }
+        let currentFrequency = frequencies.data[i % frequencies.data.length];
+        output[i] = Math.cos(phase);
+        phase += 2 * Math.PI * currentFrequency / SAMPLE_RATE;
+        if (phase >= 2 * Math.PI) {
+            phase -= 2 * Math.PI;
+        }
     }
+
+    // extend the output to ensure it ends at the next zero-crossing
+    let lastFrequency = frequencies.data[(length - 1) % frequencies.data.length];
+    if (Math.max(...frequencies.data) <= 1 && Math.min(...frequencies.data) >= -1) {
+        while (Math.abs(output[output.length - 1]) > 1e-6) { // tolerance for zero-crossing
+            output.push(Math.cos(phase));
+            phase += 2 * Math.PI * lastFrequency / SAMPLE_RATE;
+            if (phase >= 2 * Math.PI) {
+                phase -= 2 * Math.PI;
+            }
+        }
+    }
+
     this.data = output;
+
     if (fade_in_and_out == true && this.data.length > ((SAMPLE_RATE / 1000) * 30)) {
-      this.fadeoutSamples(Math.round((SAMPLE_RATE / 1000) * 30));
-      this.fadeinSamples(Math.round((SAMPLE_RATE / 1000) * 30));
+        this.fadeoutSamples(Math.round((SAMPLE_RATE / 1000) * 30));
+        this.fadeinSamples(Math.round((SAMPLE_RATE / 1000) * 30));
     }
+
     return this;
-  }
+}
 
   from(list, size) {
     if (typeof list == 'number') {
@@ -267,7 +283,7 @@ class FacetPattern {
         let brightness = (r + g + b) / (255 * 3);
         brightness_data.push(brightness);
       }
-      this.sup(new FacetPattern().sine(frequency, samplesPerColumn * png.width).times(new FacetPattern().from(brightness_data).curve()), 0);
+      this.sup(new FacetPattern().sine(frequency, samplesPerColumn * png.width, true).times(new FacetPattern().from(brightness_data).curve()), 0);
     }
     this.full();
     return this;
@@ -298,7 +314,7 @@ class FacetPattern {
     return this;
   }
 
-  phasor(frequencies, duration = SAMPLE_RATE, fade_in_and_out = true) {
+  phasor(frequencies, duration = SAMPLE_RATE, fade_in_and_out = false) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
       frequencies = new FacetPattern().from(frequencies);
     }
@@ -455,7 +471,7 @@ class FacetPattern {
     return this;
   }
 
-  rect(frequencies, duration = SAMPLE_RATE, pulseWidth = 0.5, fade_in_and_out = true) {
+  rect(frequencies, duration = SAMPLE_RATE, pulseWidth = 0.5, fade_in_and_out = false) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
       frequencies = new FacetPattern().from(frequencies);
     }
@@ -583,30 +599,46 @@ class FacetPattern {
     }
   }
 
-  sine(frequencies, length = SAMPLE_RATE, fade_in_and_out = true) {
+  sine(frequencies, length = SAMPLE_RATE, fade_in_and_out = false) {
     let output = [];
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
-      frequencies = new FacetPattern().from(frequencies);
+        frequencies = new FacetPattern().from(frequencies);
     }
     length = Math.round(length);
     frequencies.size(length);
+
     let phase = 0;
+
     for (let i = 0; i < length; i++) {
-      let t = i / SAMPLE_RATE;
-      let currentFrequency = frequencies.data[i];
-      output[i] = Math.sin(phase);
-      phase += 2 * Math.PI * currentFrequency / SAMPLE_RATE;
-      if (phase >= 2 * Math.PI) {
-        phase -= 2 * Math.PI;
-      }
+        let currentFrequency = frequencies.data[i % frequencies.data.length];
+        output[i] = Math.sin(phase);
+        phase += 2 * Math.PI * currentFrequency / SAMPLE_RATE;
+        if (phase >= 2 * Math.PI) {
+            phase -= 2 * Math.PI;
+        }
     }
+
+    // extend the output to ensure it ends at the next zero-crossing
+    let lastFrequency = frequencies.data[(length - 1) % frequencies.data.length];
+    if (Math.max(...frequencies.data) <= 1 && Math.min(...frequencies.data) >= -1) {
+        while (Math.abs(output[output.length - 1]) > 1e-6) { // tolerance for zero-crossing
+            output.push(Math.sin(phase));
+            phase += 2 * Math.PI * lastFrequency / SAMPLE_RATE;
+            if (phase >= 2 * Math.PI) {
+                phase -= 2 * Math.PI;
+            }
+        }
+    }
+
     this.data = output;
+
     if (fade_in_and_out == true && this.data.length > ((SAMPLE_RATE / 1000) * 30)) {
-      this.fadeoutSamples(Math.round((SAMPLE_RATE / 1000) * 30));
-      this.fadeinSamples(Math.round((SAMPLE_RATE / 1000) * 30));
+        this.fadeoutSamples(Math.round((SAMPLE_RATE / 1000) * 30));
+        this.fadeinSamples(Math.round((SAMPLE_RATE / 1000) * 30));
     }
+
     return this;
-  }
+}
 
   circle(frequencies, length = SAMPLE_RATE) {
     let output = [];
@@ -676,7 +708,7 @@ class FacetPattern {
     return this;
   }
 
-  tri(frequencies, duration = SAMPLE_RATE, fade_in_and_out = true) {
+  tri(frequencies, duration = SAMPLE_RATE, fade_in_and_out = false) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
       frequencies = new FacetPattern().from(frequencies);
     }

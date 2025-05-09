@@ -21,12 +21,6 @@ Facet runs on MacOS, Linux, and Windows.
 Facet commands are based entirely around JavaScript, using a class called a `FacetPattern`. In order to produce audio or MIDI output, create an instance of a FacetPattern, and run some methods:
 
 ```javascript
-new FacetPattern('example').sine(100).play();
-```
-
-There is a shorthand for creating a new FacetPattern instance:
-
-```javascript
 $('example').sine(100).play();
 ```
 
@@ -75,6 +69,7 @@ Below the text editor, there are several UI elements which control the servers r
 - Stop regenerating all patterns: `[ctrl + ,]`
 - Autocomplete / list methods: `[ctrl + space]`. This will list all available methods including their arguments in a dropdown menu, filtered by the text preceding the cursor position. If only one matching method is found, it will autocomplete that method.
 - Autoformat code: `[ctrl + f]`
+- Begin to create a new FacetPattern: `[ctrl + n]`. This will create a `$('').` at the current cursor position and place the cursor between the two single-quotes so the FacetPattern can be named.
 ---
 
 # Running "npm run facet"
@@ -889,22 +884,22 @@ $('example')
 # FacetPattern generators that can take a FacetPattern, number, array, or object as an argument
 When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').sine(440).play();`, the output is a static 440Hz wave. But with the command `$('example').sine(_.sine(5).scale(20,2000))).play();`, the frequency of the sine wave is being modulated by a 5 Hz sine wave which is generating values between 20 and 2000. This produces a classic frequency modulation sound, but since you can supply any FacetPattern as an argument, there are lots of sound design possibilities.
 
-#### **sine** ( _frequencyPattern_, _duration_ = sample_rate, _fade_in_and_out_ = true )
+#### **sine** ( _frequencyPattern_, _duration_ = sample_rate, _fade_in_and_out_ = false )
 - generates a sine wave at `frequencyPattern` Hertz, lasting for `duration` samples.
 - output range is from -1 - 1.
-- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
+- by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
 $('example')
-  .sine(440, n4)
+  .sine(440, n4).fadeout(0.01)
   .play();
   // 440 Hz sine wave for a quarter note
 $('example')
-  .sine(_.ramp(10, 2000, 300))
+  .sine(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
 $('example')
   .sine(_.sine(5)
-    .scale(20, 2000))
+    .scale(20, 2000)).fadeout(0.01)
   .play();
   // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz
 ```
@@ -912,19 +907,19 @@ $('example')
 #### **cosine** ( _frequencyPattern_, _duration_ = 1 second, _fade_in_and_out_ = true )
 - generates a cosine wave at `frequencyPattern` Hertz, lasting for `duration` samples.
 - output range is from -1 - 1.
-- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
+- by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
 $('example')
-  .cosine(440, n4)
+  .cosine(440, n4).fadeout(0.01)
   .play();
   // 440 Hz cosine wave for a quarter note
 $('example')
-  .cosine(_.ramp(10, 2000, 300))
+  .cosine(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
 $('example')
   .cosine(_.cosine(5)
-    .scale(20, 2000))
+    .scale(20, 2000)).fadeout(0.01)
   .play();
   // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz
 ```
@@ -1005,19 +1000,19 @@ this.seq(this.data)
 #### **phasor** ( _frequencyPattern_, _duration_ = 1 second, _fade_in_and_out_ = true )
 - generates a phasor wave at `frequencyPattern` Hertz, lasting for `duration` samples.
 - output range is from -1 - 1.
-- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
+- by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
 $('example')
-  .phasor(440, n4)
+  .phasor(440, n4).fadeout(0.01)
   .play();
   // 440 Hz phasor wave for a quarter note
 $('example')
-  .phasor(_.ramp(10, 2000, 300))
+  .phasor(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
 $('example')
   .phasor(_.phasor(5)
-    .scale(20, 2000))
+    .scale(20, 2000)).fadeout(0.01)
   .play();
   // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz
 ```
@@ -1025,19 +1020,19 @@ $('example')
 #### **rect** ( _frequencyPattern_, _duration_ = 1 second, _pulse_width_ = 0.5, _fade_in_and_out_ = true )
 - generates a rectangle wave at `frequencyPattern` Hertz, with a pulse width defined by `pulse_width`, lasting for `duration` samples.
 - output range is from -1 - 1.
-- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
+- by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
 $('example')
-  .rect(440, n4, rf())
+  .rect(440, n4, rf()).fadeout(0.01)
   .play();
   // 440 Hz rectangle wave for a quarter note, different bandwidth each time
 $('example')
-  .rect(_.ramp(10, 2000, 300))
+  .rect(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
 $('example')
   .rect(_.rect(5)
-    .scale(20, 2000))
+    .scale(20, 2000)).fadeout(0.01)
   .play();
   // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz
 ```
@@ -1047,16 +1042,16 @@ $('example')
 - output range is from -1 - 1.
 ```javascript
 $('example')
-  .square(440, n4)
+  .square(440, n4).fadeout(0.01)
   .play();
   // 440 Hz square wave for a quarter note
 $('example')
-  .square(_.ramp(10, 2000, 300))
+  .square(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
 $('example')
   .square(_.square(5)
-    .scale(20, 2000))
+    .scale(20, 2000)).fadeout(0.01)
   .play();
   // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz
 ```
@@ -1064,19 +1059,19 @@ $('example')
 #### **tri** ( _frequencyPattern_, _duration_ = sample_rate, _fade_in_and_out_ = true )
 - generates a triangle wave at `frequencyPattern` Hertz, lasting for `duration` samples.
 - output range is from -1 - 1.
-- by default, the `fade_in_and_out` argument is set to true. This will cause the first 30 milliseconds to be faded in an out, to avoid audible clicks. Using a non-truthy value for `fade_in_and_out` will generate the signal without applying any fade.
+- by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
 $('example')
-  .tri(440, n4)
+  .tri(440, n4).fadeout(0.01)
   .play();
   // 440 Hz triangle wave for a quarter note
 $('example')
-  .tri(_.ramp(10, 2000, 300))
+  .tri(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
 $('example')
   .tri(_.tri(5)
-    .scale(20, 2000))
+    .scale(20, 2000)).fadeout(0.01)
   .play();
   // 5Hz frequency modulation with output frequencies oscillating between 20Hz and 2000Hz
 ```

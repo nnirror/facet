@@ -104,6 +104,11 @@ $(document).keydown(function (e) {
     runFacet('once');
     $.growl.notice({ message: 'command(s) generated to play once' });
   }
+  else if (e.ctrlKey && (e.keyCode == 78)) {
+    // auto-add the begining of a new FacetPattern syntax at the current cursor position: $('').
+    cm.replaceSelection("$('').");
+    cm.setCursor(cm.getCursor().line, cm.getCursor().ch - 3);
+  }
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
   if ($('#bpm').is(':focus') && e.keyCode == 13) {
