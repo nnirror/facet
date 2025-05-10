@@ -1,6 +1,22 @@
 const fs = require('fs');
 const path = require('path');
 const acorn = require('acorn');
+const { sample,
+  slices,
+  spread,
+  iter,
+  parallel,
+  run,
+  mix,
+  fftPhase,
+  fftMag,
+  ftilt,
+  flookup,
+  fgate,
+  tune,
+  fkey,
+  ffilter,
+  fshift } = require('./wax_methods');
 const facetPatternPath = path.join(__dirname, '../FacetPattern.js');
 const facetPatternContent = fs.readFileSync(facetPatternPath, 'utf-8');
 const ast = acorn.parse(facetPatternContent, { ecmaVersion: 2020 });
@@ -13,43 +29,96 @@ let extractedMethods = [];
 // find the FacetPattern class and its methods
 ast.body.forEach(node => {
   if (node.type === 'ClassDeclaration' && node.id.name === 'FacetPattern') {
-    node.body.body.forEach(method => {
-      if (
-        method.type === 'MethodDefinition' &&
-        included_methods.includes(method.key.name)
-      ) {
-        let methodCode;
+      node.body.body.forEach(method => {
+          if (
+              method.type === 'MethodDefinition' &&
+              included_methods.includes(method.key.name)
+          ) {
+              let methodCode;
+              // special handling for methods that have differences between facet and wax
+              if (method.key.name === 'sample') {
+                  methodCode = sample.toString();
+                  methodCode = methodCode.replace('function', '');
+              } else if (method.key.name === 'slices') {
+                  methodCode = slices.toString();
+                  methodCode = methodCode.replace('function', '');
+                  console.log(methodCode);
+              }
+              else if (method.key.name === 'spread') {
+                  methodCode = spread.toString();
+                  methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'iter') {
+                methodCode = spread.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'parallel') {
+                methodCode = parallel.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'run') {
+                methodCode = run.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'mix') {
+                methodCode = mix.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'fftPhase') {
+                methodCode = fftPhase.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'fftMag') {
+                methodCode = fftMag.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'ftilt') {
+                methodCode = ftilt.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'flookup') {
+                methodCode = flookup.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'fgate') {
+                methodCode = fgate.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'tune') {
+                methodCode = tune.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'fkey') {
+                methodCode = fkey.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'ffilter') {
+                methodCode = ffilter.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+              else if (method.key.name === 'fshift') {
+                methodCode = fshift.toString();
+                methodCode = methodCode.replace('function', '');
+              }
+               else {
+                  // extract the method code directly from the FacetPattern.js file
+                  const methodStart = method.start;
+                  const methodEnd = method.end;
+                  methodCode = facetPatternContent.slice(methodStart, methodEnd);
 
-        // special handling for sample() method which is different in wax
-        if (method.key.name === 'sample') {
-          methodCode = `sample(name) {
-    if (!name.endsWith('.wav')) {
-        name += '.wav';
-    }
-    let audioBuffer = audioBuffers[name];
-    if (audioBuffer) {
-        this.data = audioBuffer;
-    } else {
-        throw \`No buffer found with the name \${name}\`;
-    }
-    return this;
-  }`;
-        } else {
-          const methodStart = method.start;
-          const methodEnd = method.end;
-          methodCode = facetPatternContent.slice(methodStart, methodEnd);
+                  // replace instances of this.getWholeNoteNumSamples() with SAMPLE_RATE (since there is global BPM in wax)
+                  methodCode = methodCode.replace(/this\.getWholeNoteNumSamples\(\)/g, 'SAMPLE_RATE');
+                  // replace instances of Scale.get with Tonal.Scale.get (different name spacing between wax and facet for tone.js)
+                  methodCode = methodCode.replace(/\bScale\.get\b/g, 'Tonal.Scale.get');
+              }
 
-          // replace instances of this.getWholeNoteNumSamples() with SAMPLE_RATE
-          methodCode = methodCode.replace(/this\.getWholeNoteNumSamples\(\)/g, 'SAMPLE_RATE');
-          // replace instances of Scale.get with Tonal.Scale.get
-          methodCode = methodCode.replace(/\bScale\.get\b/g, 'Tonal.Scale.get');
-        }
-
-        extractedMethods.push(methodCode);
-      }
-    });
+              extractedMethods.push(methodCode);
+          }
+      });
   }
 });
+
+
 const beginningOfFile = `const SAMPLE_RATE = 44100;
 const NYQUIST = SAMPLE_RATE / 2;
 
