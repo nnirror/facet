@@ -528,40 +528,147 @@ socket.on('bpm', (bpm) => {
   adjustPlaybackRates($('#bpm').val());
 });
 
+let mutedVoices = {};
+let fpNameToVoiceMap = {};
+let gainNodes = {};
+
+socket.on('uniqueFpNames', (data) => {
+  const container = document.getElementById('voiceControls');
+
+  // create set of current fpNames for comparison
+  const currentFpNames = new Set(Object.keys(mutedVoices));
+
+  // add new voices
+  data.forEach(fpName => {
+    if (!currentFpNames.has(fpName)) {
+      // add new voice to mutedVoices with default state (unmuted)
+      mutedVoices[fpName] = false;
+
+      // create a wrapper div to hold the voice-control and stop button
+      const wrapperDiv = document.createElement('div');
+      wrapperDiv.className = 'voice-wrapper';
+
+      // create UI for mute/unmute
+      const controlDiv = document.createElement('div');
+      controlDiv.className = 'voice-control';
+      controlDiv.dataset.fpName = fpName;
+
+      // set initial color based on mute state
+      controlDiv.style.backgroundColor = mutedVoices[fpName] ? '#ff4d4d' : 'green';
+      controlDiv.textContent = fpName;
+
+      // add click event handler for mute/unmute
+      controlDiv.addEventListener('click', () => {
+        const isMuted = !mutedVoices[fpName];
+        mutedVoices[fpName] = isMuted; // update mute state
+
+        // update color based on new mute state
+        controlDiv.style.backgroundColor = isMuted ? '#ff4d4d' : 'green';
+
+        // dynamically update gain for the corresponding voice with a fade
+        const voice_to_play = fpNameToVoiceMap[fpName];
+        if (voice_to_play && gainNodes[voice_to_play]) {
+          const fadeDuration = 0.02; // 20ms fade duration
+          const currentTime = ac.currentTime;
+
+          if (isMuted) {
+            // fade out
+            gainNodes[voice_to_play].gain.setTargetAtTime(0, currentTime, fadeDuration);
+          } else {
+            // fade in
+            gainNodes[voice_to_play].gain.setTargetAtTime(1, currentTime, fadeDuration);
+          }
+        }
+
+        // emit the mute/unmute state to the server for MIDI and OSC
+        socket.emit('midiMuteToggle', { fp_name: fpName, muted: isMuted });
+      });
+
+      // create a "Stop" button
+      const stopButton = document.createElement('button');
+      stopButton.className = 'voice-stop-button';
+      stopButton.textContent = 'stop';
+
+      // add click handler for the stop button
+      stopButton.addEventListener('click', (e) => {
+        e.stopPropagation(); // prevent triggering the mute/unmute click event
+        $.post(`http://${configSettings.HOST}:1123`, { code: `$('${fpName}').stop()`, mode: 'stop' })
+          .done(() => {
+            console.log(`Stop command sent for ${fpName}`);
+          })
+          .fail(() => {
+            console.error(`Failed to send stop command for ${fpName}`);
+          });
+      });
+
+      // append the voice-control and stop button as siblings to the wrapper
+      wrapperDiv.appendChild(controlDiv);
+      wrapperDiv.appendChild(stopButton);
+      container.appendChild(wrapperDiv);
+    }
+  });
+
+  // remove voices that are no longer in the data
+  Array.from(container.children).forEach(child => {
+    const fpName = child.querySelector('.voice-control').dataset.fpName;
+    if (!data.includes(fpName)) {
+      delete mutedVoices[fpName];
+      container.removeChild(child);
+    }
+  });
+
+  // adjust padding-top of the container based on the number of children (to be completely hidden with 0 patterns)
+  container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
+});
+
 socket.on('play', (data) => {
-  let voice_to_play = data.voice;
-  let pitch = data.pitch;
-  let channels = data.channels;
-  let pan_data = data.pan_data;
+  const voice_to_play = data.voice;
+  const pitch = data.pitch;
+  const channels = data.channels;
+  const pan_data = data.pan_data;
+
+  // map fp_name to voice_to_play
+  fpNameToVoiceMap[data.fp_name] = voice_to_play;
+
   pitchShifts[voice_to_play] = pitch;
+
   if (browser_sound_output === true) {
     // check if the voice is loaded
     if (voices[voice_to_play]) {
-      let merger = ac.createChannelMerger(ac.destination.channelCount);
+      const merger = ac.createChannelMerger(ac.destination.channelCount);
       sources[voice_to_play] = [];
       channels.forEach((channel, index) => {
-        let source = ac.createBufferSource();
+        const source = ac.createBufferSource();
         source.buffer = voices[voice_to_play].buffer;
-        let current_bpm = $('#bpm').val();
+        const current_bpm = $('#bpm').val();
         source.playbackRate.value = (current_bpm / voices[voice_to_play].bpm) * pitch;
-        // create a gain node for each channel
-        let gainNode = ac.createGain();
-        source.connect(gainNode);
-        gainNode.connect(merger, 0, channel - 1);
+
+        // create or reuse a gain node for this voice
+        if (!gainNodes[voice_to_play]) {
+          gainNodes[voice_to_play] = ac.createGain();
+        }
+
+        // reset gain to baseline (1 for unmuted, 0 for muted)
+        gainNodes[voice_to_play].gain.value = mutedVoices[data.fp_name] ? 0 : 1;
+
+        source.connect(gainNodes[voice_to_play]);
+        gainNodes[voice_to_play].connect(merger, 0, channel - 1);
 
         if (pan_data === false || channels.length === 1) {
-          // if pan_data is false or there is only one channel, set the gain value to 1 for all channels
-          gainNode.gain.value = 0.7;
+          // adjust overall gain for single-channel or no pan data
+          gainNodes[voice_to_play].gain.value *= 0.7;
         } else {
-          // schedule changes in the gain value based on pan_data
-          let durationPerValue = source.buffer.duration / pan_data.length;
+          const durationPerValue = source.buffer.duration / pan_data.length;
           pan_data.forEach((panValue, i) => {
-            let time = i * durationPerValue;
-            // calculate the normalized channel index
-            let normalizedIndex = index / (channels.length - 1);
-            // only interpolate the gain for the two channels closest to the pan_data value - otherwise, gain = 0
-            let gainValue = Math.abs(normalizedIndex - panValue) <= 1 / (channels.length - 1) ? 0.7 * (1 - Math.abs(normalizedIndex - panValue)) : 0;
-            gainNode.gain.setValueAtTime(gainValue, ac.currentTime + time);
+            const time = i * durationPerValue;
+            const normalizedIndex = index / (channels.length - 1);
+            const gainValue = Math.abs(normalizedIndex - panValue) <= 1 / (channels.length - 1)
+              ? 0.7 * (1 - Math.abs(normalizedIndex - panValue))
+              : 0;
+            gainNodes[voice_to_play].gain.setValueAtTime(
+              gainValue * (mutedVoices[data.fp_name] ? 0 : 1),
+              ac.currentTime + time
+            );
           });
         }
 

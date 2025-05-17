@@ -155,8 +155,6 @@ module.exports = {
               errors.push(error);
             }
           });
-          // end the worker after processing
-          worker.terminate();
         });
       });
     }

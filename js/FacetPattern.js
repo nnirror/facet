@@ -5058,60 +5058,56 @@ bpfInner(data, cutoffs, q) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
     if (this.isFacetPattern(coordinates) === true) {
-      coordinates = coordinates.round().data;
+        coordinates = coordinates.round().data;
     }
 
-    // If width and height are not provided, default to square size
+    // if width and height are not provided, default to square size
     if (!width || !height) {
-      width = Math.round(Math.sqrt(this.data.length));
-      height = width;
+        width = Math.round(Math.sqrt(this.data.length));
+        height = width;
     }
 
     if (fillValue === undefined) {
-      throw new Error("fillValue is required for draw2d.");
+        throw new Error("fillValue is required for draw2d.");
     }
     if (coordinates.length % 2 !== 0) {
-      throw new Error("Invalid number of coordinates for draw2d. The array length must be divisible by 2.");
+        throw new Error("Invalid number of coordinates for draw2d. The array length must be divisible by 2.");
     }
 
-    // create a 2D array with the dimensions of the polygon
-    let polygon = new Array(height).fill(null).map(() => new Array(width).fill(0));
     let points = [];
     for (let i = 0; i < coordinates.length; i += 2) {
-      points.push({ x: coordinates[i], y: coordinates[i + 1] });
+        points.push({ x: coordinates[i], y: coordinates[i + 1] });
     }
 
     // process each pair of points
     for (let i = 0; i < points.length - 1; i++) {
-      let start = points[i];
-      let end = points[i + 1];
+        let start = points[i];
+        let end = points[i + 1];
 
-      // check if the points are within the bounds of the polygon
-      if (start.x < 0 || start.x >= width || end.x < 0 || end.x >= width || start.y < 0 || start.y >= height || end.y < 0 || end.y >= height) {
-        throw new Error(`Coordinates (${start.x}, ${start.y}) or (${end.x}, ${end.y}) are out of bounds.`);
-      }
+        // check if the points are within the bounds of the data
+        if (start.x < 0 || start.x >= width || end.x < 0 || end.x >= width || start.y < 0 || start.y >= height || end.y < 0 || end.y >= height) {
+            throw new Error(`Coordinates (${start.x}, ${start.y}) or (${end.x}, ${end.y}) are out of bounds.`);
+        }
 
-      // fill the line between the points with the fill value
-      let dx = Math.abs(end.x - start.x);
-      let dy = Math.abs(end.y - start.y);
-      let sx = (start.x < end.x) ? 1 : -1;
-      let sy = (start.y < end.y) ? 1 : -1;
-      let err = dx - dy;
+        // fill the line between the points with the fill value
+        let dx = Math.abs(end.x - start.x);
+        let dy = Math.abs(end.y - start.y);
+        let sx = (start.x < end.x) ? 1 : -1;
+        let sy = (start.y < end.y) ? 1 : -1;
+        let err = dx - dy;
 
-      while (true) {
-        polygon[start.y][start.x] = fillValue;
+        while (true) {
+            let index = start.y * width + start.x;
+            this.data[index] = fillValue; // directly update the existing data
 
-        if ((start.x === end.x) && (start.y === end.y)) break;
-        let e2 = 2 * err;
-        if (e2 > -dy) { err -= dy; start.x += sx; }
-        if (e2 < dx) { err += dx; start.y += sy; }
-      }
+            if ((start.x === end.x) && (start.y === end.y)) break;
+            let e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; start.x += sx; }
+            if (e2 < dx) { err += dx; start.y += sy; }
+        }
     }
-
-    // update the data property with the new polygon
-    this.data = polygon.flat();
     return this;
-  }
+}
 
   rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));

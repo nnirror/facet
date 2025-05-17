@@ -28,6 +28,7 @@ let voices_to_send_to_browser = [];
 let patterns_for_next_loop = {};
 let over_n_values = {};
 let stopped_patterns = [];
+let mutedPatterns = {};
 let patterns_that_have_been_stopped = [];
 let patterns_to_delete_at_end_of_loop = [];
 let current_relative_step_position = 0;
@@ -73,6 +74,22 @@ io.on('connection', (socket) => {
   // listen for the client disconnecting
   socket.on('disconnect', () => {
     sockets = sockets.filter(s => s !== socket);
+  });
+
+  socket.on('midiMuteToggle', (data) => {
+    const { fp_name, muted } = data;
+
+    // Update the mute state in the global map
+    mutedPatterns[fp_name] = muted;
+
+    // Update the mute state for the events in the event register
+    if (event_register[fp_name]) {
+      event_register[fp_name].forEach(event => {
+        if (event.type === 'note' || event.type === 'cc' || event.type === 'pitchbend' || event.type === 'osc') {
+          event.muted = muted;
+        }
+      });
+    }
   });
 });
 
@@ -320,13 +337,13 @@ function tick() {
               // osc event to play back audio file in browser
               setTimeout(() => {
                 if (browser_sound_output === true) {
-                  emitPlayEvent(event);
+                  emitPlayEvent(event, fp_name);
                 }
               }, pre_send_delay_ms);
             }
             count_times_fp_played++;
           }
-          if (event.type === "note") {
+          if (event.type === "note" && !event.muted) {
             // play any notes at this step
             try {
               if (typeof midioutput !== 'undefined') {
@@ -347,7 +364,7 @@ function tick() {
             } catch (e) { }
           }
 
-          if (event.type === "cc") {
+          if (event.type === "cc" && !event.muted) {
             // send any cc data at this step
             try {
               if (typeof midioutput !== 'undefined') {
@@ -358,7 +375,7 @@ function tick() {
             } catch (e) { }
           }
 
-          if (event.type === "pitchbend") {
+          if (event.type === "pitchbend" && !event.muted) {
             // send any pitchbend data at this step
             try {
               if (typeof midioutput !== 'undefined') {
@@ -369,7 +386,7 @@ function tick() {
             } catch (e) { }
           }
 
-          if (event.type === "osc") {
+          if (event.type === "osc" && !event.muted) {
             // send any osc data at this step
             try {
               udp_osc_server.send(new OSC.Message(`${event.data.address}`, event.data.data));
@@ -456,7 +473,8 @@ function applyNextPatterns() {
             type: type,
             data: patternData[i],
             play_once: posted_pattern.play_once,
-            fired: false
+            fired: false,
+            muted: mutedPatterns[facet_pattern_name] || false
           };
 
           // process eventData if processData is provided
@@ -479,7 +497,8 @@ function applyNextPatterns() {
         event_register[facet_pattern_name].push({
           position: eventData.position,
           type: 'note',
-          data: note_data
+          data: note_data,
+          muted: mutedPatterns[facet_pattern_name] || false
         });
 
         if (posted_pattern.chord_intervals && posted_pattern.chord_intervals.length > 0) {
@@ -502,7 +521,8 @@ function applyNextPatterns() {
                   velocity: note_data.velocity,
                   duration: note_data.duration,
                   play_once: posted_pattern.play_once,
-                  fired: false
+                  fired: false,
+                  muted: mutedPatterns[facet_pattern_name] || false
                 }
               });
             }
@@ -532,7 +552,8 @@ function applyNextPatterns() {
             type: "cc",
             data: cc_object,
             play_once: posted_pattern.play_once,
-            fired: false
+            fired: false,
+            muted: mutedPatterns[facet_pattern_name] || false
           }
         )
       }
@@ -558,7 +579,8 @@ function applyNextPatterns() {
             type: "pitchbend",
             data: pb_object,
             play_once: posted_pattern.play_once,
-            fired: false
+            fired: false,
+            muted: mutedPatterns[facet_pattern_name] || false
           }
         )
       }
@@ -584,7 +606,8 @@ function applyNextPatterns() {
             type: "osc",
             data: osc_object,
             play_once: posted_pattern.play_once,
-            fired: false
+            fired: false,
+            muted: mutedPatterns[facet_pattern_name] || false
           }
         )
       }
@@ -645,6 +668,9 @@ function checkForBpmRecalculation(events_per_loop) {
   if (now - bpm_automation_last_run < bpm_automation_rate_limit) {
     return;
   }
+
+  emitUniqueFpNames();
+
   scaledBpm = scalePatternToSteps(meta_data.bpm, events_per_loop);
   // calculate the total length of the BPM pattern over meta_data.bpm_over_n loops
   let totalPatternLength = events_per_loop * meta_data.bpm_over_n;
@@ -716,6 +742,17 @@ function scalePatternToSteps(pattern, steps) {
   return result;
 }
 
+function getUniqueFpNames(eventRegister) {
+  return Object.keys(eventRegister);
+}
+
+function emitUniqueFpNames() {
+  const uniqueFpNames = getUniqueFpNames(event_register);
+  for (let socket of sockets) {
+    socket.emit('uniqueFpNames', uniqueFpNames);
+  }
+}
+
 function emitLoadEvent() {
   for (let socket of sockets) {
     socket.emit('load', voices_to_send_to_browser);
@@ -723,13 +760,13 @@ function emitLoadEvent() {
   voices_to_send_to_browser = [];
 }
 
-function emitPlayEvent(event) {
+function emitPlayEvent(event, fp_name) {
   let voice = event.voice;
   let pitch = event.pitch;
   let channels = event.channels;
   let pan_data = event.pan_data;
   for (let socket of sockets) {
-    socket.emit('play', { voice: voice, pitch: pitch, channels: channels, pan_data: pan_data });
+    socket.emit('play', { voice: voice, pitch: pitch, channels: channels, pan_data: pan_data, fp_name: fp_name });
   }
 }
 

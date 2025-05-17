@@ -1,26 +1,37 @@
 html {
   height: 100%;
 }
+
 body {
   height: 100%;
   overflow: hidden;
 }
+
 .CodeMirror {
   height: calc(100% - 50px);
   font-size: 1em;
 }
-#status, #bpm_control, #cpu, #midi, #transport {
+
+#status,
+#bpm_control,
+#cpu,
+#midi,
+#transport {
   padding-left: 0.25em;
   margin-right: 0.25em;
 }
+
 #bpm {
   width: 4em;
   text-align: center;
 }
-#time_signature_numerator, #time_signature_denominator {
+
+#time_signature_numerator,
+#time_signature_denominator {
   width: 3em;
   text-align: center;
 }
+
 #sound {
   width: 1.75em;
   height: 1.75em;
@@ -32,59 +43,75 @@ body {
   cursor: pointer;
   margin-left: 2px;
 }
+
 #sound:hover {
   background-position: 0 -1.75em !important;
 }
+
 #steps {
   text-align: center;
 }
+
 #transport {
   top: -2px;
   padding-top: 0;
 }
+
 #transport span {
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
 }
+
 #transport span:hover {
   color: #f7d952;
 }
-#stop, #clear, #restart {
+
+#stop,
+#clear,
+#restart {
   font-size: 28px;
   position: relative;
   top: -2px;
   float: left;
   margin-left: 2px;
 }
+
 #end {
   font-size: 20px;
 }
+
 #cpu {
   width: 4.5em;
   top: 10px;
 }
+
 #bpm_control {
   overflow: scroll;
 }
+
 #midi {
   position: relative;
   display: inline-table;
-  padding-left:0;
+  padding-left: 0;
   min-width: 130px;
 }
+
 #midi_refresh {
   background-color: green;
   color: white;
   min-width: 20px;
   height: 2em;
 }
+
 #midi_refresh:hover {
   background-color: forestgreen;
 }
+
 .error {
   background-color: rgba(204, 0, 0, 0.5);
 }
+
 #midi_label {
   display: inline;
 }
@@ -100,11 +127,63 @@ body {
   border-top: 1px solid #afafaf;
 }
 
+#voiceControls {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 200px;
+  z-index: 1000;
+  font-family: monospace;
+  background: #888;
+  border-radius: 0px 0px 0px 12px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.voice-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.voice-control {
+  cursor: pointer;
+  padding: 10px;
+  margin: 5px;
+  border-radius: 5px;
+  text-align: center;
+  color: white;
+  font-weight: bold;
+  user-select: none;
+  width: calc(100% - 70px);
+  overflow: hidden;
+}
+
+.voice-stop-button {
+  margin: 5px;
+  padding: 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: bold;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+}
+
+.voice-control.unmuted {
+  background-color: #4caf50;
+}
+
+.voice-control.muted {
+  background-color: #ff4d4d;
+}
+
 @media screen and (max-width: 799px) {
   #midi_label {
     display: none;
   }
 }
+
 .wave {
   display: none;
 }
@@ -113,27 +192,34 @@ body {
   display: flex;
   justify-content: space-between;
 }
-.left, .right {
+
+.left,
+.right {
   display: flex;
   align-items: center;
 }
-.left div, .right div {
+
+.left div,
+.right div {
   margin: 0 10px;
 }
 
 @media only screen and (max-width: 767px) {
   #navbar {
-    flex-direction: column; 
+    flex-direction: column;
   }
+
   .left {
     margin-top: 10px;
   }
-  .left, .right {
-    flex-direction: row; 
+
+  .left,
+  .right {
+    flex-direction: row;
   }
+
   .CodeMirror {
     height: calc(100% - 100px);
     font-size: 1em;
   }
 }
-

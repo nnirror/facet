@@ -46,7 +46,9 @@ $('example').iter(16,()=>{this.append(_.randsamp('808').speed(10))}).play();
 ---
 # In-browser text editor and user interface
 
-Below the text editor, there are several UI elements which control the servers running in the background. Moving from left to right:
+## Bottom controls
+
+At the bottom of the page, there are several UI elements which control the servers running in the background. Moving from left to right:
 
 - Server connection status indicator (green = online; red = offline)
 - CPU% indicator
@@ -57,6 +59,17 @@ Below the text editor, there are several UI elements which control the servers r
 - ⊖ = stop regenerating patterns but continue playback
 - ↻ = restart system (in case it becomes unresponsive)
 - 🔉 = toggle browser sound on / off
+
+## Top-right controls
+
+In the top-right corner, a UI element lists all commands that are currently producing audio, MIDI, or OSC. Each command will be listed by its FacetPattern name, so if your command looked like this:
+
+```javascript
+$('example').sine(440).play();
+```
+
+The corresponding button would be listed with the name "example". This button toggles back and forth to mute/unmute playback while the pattern continues regenerating. Clicking the "stop" button will stop playback and prevent new patterns from generating. This provides a global level of control on the commands that are running and allows the user to manage and/or improvise with them without needing to fiddle around with the keyboard or cursor.
+
 ---
 
 # Key-combination shortcuts
@@ -2339,6 +2352,24 @@ $('example')
   .chaos(_.drunk(n1, 0.01))
   .play();
 ```
+
+```javascript
+// generate a 1000px * 1000px mandelbrot set between [-2,2]
+$('example')
+  .ramp(-2, 2, 1000)
+  .setlocal('x')
+  .ramp(-2, 2, 1000)
+  .setlocal('y')
+  .reduce(0)
+  .iter(1000, () => {
+    this.append(_.getlocal('x')
+      .chaos(_.from(_.getlocal('y')
+        .data[i]))
+      .size(1000))
+  })
+  .saveimg()
+  .once();
+```
 ---
 #### **convolve** ( _FacetPattern_ )
 - computes the convolution between the two FacetPatterns.
@@ -2686,11 +2717,13 @@ $('example')
 - the `fillValue` parameter is the value used to fill the lines of the polygon.
 ```javascript
 $('example')
-  .silence(10000)
-  .draw2d([0, 0, 99, 99], 1)
-  .saveimg('draw2d')
+  .silence(1000000)
+  .iter(32, () => {
+    this.draw2d([ri(0, 999), ri(0, 999), ri(0, 999), ri(0, 999)], 1)
+  })
+  .saveimg()
   .once();
-  // draw a line from (0, 0) to (99, 99) with a fill value of 1
+  // draw 32 lines from 32 random points inside a 1000px * 1000px square, with a fill value of 1
 ```
 ---
 #### **grow2d** ( _iterations_, _prob_, _threshold_ = 0, _mode_ = 0 )
