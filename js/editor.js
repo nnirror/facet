@@ -428,13 +428,14 @@ function adjustPlaybackRates(currentBpm) {
       if (voices[i] && sources[i]) {
         let voiceBpm = voices[i].bpm;
         let pitch = pitchShifts[i];
-        
-        // Validate values before setting playbackRate
-        if (typeof voiceBpm === 'number' && isFinite(voiceBpm) && voiceBpm > 0 &&
-            typeof pitch === 'number' && isFinite(pitch) && pitch > 0 &&
-            typeof currentBpm === 'number' && isFinite(currentBpm) && currentBpm > 0) {
+
+        // validate all values before calculating playback rate
+        if (isFinite(currentBpm) && isFinite(voiceBpm) && isFinite(pitch) && 
+            voiceBpm > 0 && currentBpm > 0 && pitch > 0) {
           const playbackRate = (currentBpm / voiceBpm) * pitch;
-          if (isFinite(playbackRate) && playbackRate > 0) {
+          
+          // ensure playback rate is finite and within reasonable bounds
+          if (isFinite(playbackRate) && playbackRate > 0 && playbackRate <= 16) {
             sources[i].forEach(source => {
               source.playbackRate.value = playbackRate;
             });
