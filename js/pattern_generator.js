@@ -58,7 +58,7 @@ module.exports = {
     fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   },
   run: (code, is_rerun, mode) => {
-    if ((is_rerun === true && percent_cpu < 0.5) || is_rerun === false) {
+    if ((is_rerun === true && percent_cpu < 0.7) || is_rerun === false) {
       user_input = strip(code);
       user_input = parser.delimitEndsOfCommands(user_input);
       let commands = parser.splitCommandsOnDelimiter(user_input);
@@ -80,13 +80,17 @@ module.exports = {
         workerMap.set(worker, fp_name);
         workers.push(worker);
         worker.once("message", run_data => {
-          // remove the worker from the workers list
-          let index = workers.findIndex(workerObj => workerObj === worker);
-          if (index !== -1) {
-            workers.splice(index, 1);
-          }
           let fps = run_data.fps;
           Object.values(fps).forEach(fp => {
+            // remove the worker from the workers list
+            let index = workers.findIndex(workerObj => workerObj === worker);
+            if (index !== -1) {
+              workers.splice(index, 1);
+              // images need to continue after the pattern is processed so the worker cannot be terminated
+              if (!fp.is_image) {
+                worker.terminate();
+              }
+            }
             // set vars here - loop through
             for (let fp_var_key in fp.vars) {
               if (fp.vars.hasOwnProperty(fp_var_key)) {
@@ -130,7 +134,7 @@ module.exports = {
             if (fp.time_signature_numerator) {
               postMetaDataToTransport(fp, 'time_signature_numerator');
             }
-            if (typeof fp == 'object' && fp.skipped !== true && !isNaN(fp.data[0])) {
+            if (typeof fp == 'object' && fp.skipped !== true ) {
               if (fp.sequence_data.length > 0) {
                 // create wav file at SAMPLE_RATE, 32-bit floating point
                 let a_wav = new WaveFile();
@@ -249,11 +253,9 @@ app.get('/update', (req, res) => {
     if (fp.whenmod_modulo_operand == false
       || ((fp.loops_since_generation > 0) && ((bars_elapsed % fp.whenmod_modulo_operand) == fp.whenmod_equals))
     ) {
-      if (fp.available_for_next_request == true) {
-        module.exports.run(fp.original_command, true, 'run');
-        fp.available_for_next_request = false;
-        fp.loops_since_generation = 1;
-      }
+      module.exports.run(fp.original_command, true, 'run');
+      fp.available_for_next_request = false;
+      fp.loops_since_generation = 1;
     }
     else {
       fp.loops_since_generation++;

@@ -5,10 +5,12 @@ html {
 body {
   height: 100%;
   overflow: hidden;
+  background: #222 !important;
 }
 
 .CodeMirror {
   height: calc(100% - 50px);
+  width: calc(100% - 200px);
   font-size: 1em;
 }
 
@@ -134,21 +136,28 @@ body {
   width: 200px;
   z-index: 1000;
   font-family: monospace;
-  background: #888;
-  border-radius: 0px 0px 0px 12px;
+  background: #222;
   padding-left: 10px;
-  padding-right: 10px;
+  padding-right: 5px;
+  overflow-y: scroll;
+  max-height: calc(100% - 50px);
 }
 
 .voice-wrapper {
   display: flex;
+  flex-direction: column;
+  margin-bottom: 5px;
+}
+
+.voice-controls-row {
+  display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 2px;
 }
 
 .voice-control {
   cursor: pointer;
-  padding: 10px;
+  padding: 5px;
   margin: 5px;
   border-radius: 5px;
   text-align: center;
@@ -161,11 +170,11 @@ body {
 
 .voice-stop-button {
   margin: 5px;
-  padding: 10px;
+  padding: 5px;
   border-radius: 3px;
   cursor: pointer;
   font-weight: bold;
-  background-color: #ff4d4d;
+  background-color: #aa2424;
   color: white;
   border: none;
 }
@@ -175,7 +184,43 @@ body {
 }
 
 .voice-control.muted {
-  background-color: #ff4d4d;
+  background-color: #303030;
+}
+
+.gain-slider {
+  width: calc(100% - 10px);
+  margin: 0 5px;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  background: #555;
+  outline: none;
+  border-radius: 4px;
+}
+
+.gain-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #4caf50;
+  cursor: pointer;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.gain-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #4caf50;
+  cursor: pointer;
+  border-radius: 50%;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.growl {
+  width: 155px !important;
 }
 
 @media screen and (max-width: 799px) {
@@ -189,6 +234,7 @@ body {
 }
 
 #navbar {
+  background: white;
   display: flex;
   justify-content: space-between;
 }
@@ -204,22 +250,18 @@ body {
   margin: 0 10px;
 }
 
-@media only screen and (max-width: 767px) {
-  #navbar {
-    flex-direction: column;
+@media only screen and (max-width: 600px) {
+  #midi_outs {
+    width: 100px;
   }
-
-  .left {
-    margin-top: 10px;
+  #cpu {
+    width: 20px;
+    margin-left: 0;
   }
-
-  .left,
-  .right {
-    flex-direction: row;
+  #status {
+    margin-left: 0;
   }
-
-  .CodeMirror {
-    height: calc(100% - 100px);
-    font-size: 1em;
+  #bpm {
+    width: 50px;
   }
 }

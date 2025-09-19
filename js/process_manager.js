@@ -16,9 +16,13 @@ app.post('/restart', (req, res) => {
   console.log(`restarting Facet...`);
   exec(`${crossPlatformkillProcessCommand('facet_pattern_generator')}`, (error, stdout, stderr) => {
     runCommand(commands[0].command, commands[0].name, (err, res) => { });
-    res.sendStatus(200);
-    console.log(`Facet has restarted.`);
+    console.log(`Facet pattern generator has restarted.`);
   });
+  exec(`${crossPlatformkillProcessCommand('facet_transport')}`, (error, stdout, stderr) => {
+    runCommand(commands[1].command, commands[1].name, (err, res) => { });
+    console.log(`Facet transport has restarted.`);
+  });
+  res.sendStatus(200);
 });
 
 function crossPlatformkillProcessCommand(process_name) {

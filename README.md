@@ -417,9 +417,10 @@ $('example')
 ```
 ---
 #### **osc** ( _address_ )
-- sends a packet of OSC data to OSC address `address` for every value in the FacetPattern's data.
+- sends a packet of OSC data to OSC address (or array of addresses) `address`, for every value in the FacetPattern's data.
 - The OSC server sends output to port 5813 by default but can be modified by changing `OSC_OUTPORT` in `js/config.js`.
 - The `address` argument must begin with a backslash: `/`.
+- Since this is intended for control-rate data, large patterns are automatically reduced in size, if ncessary, so they will never output more than 100 values per second.
 - _Note_: This method does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
 ```javascript
 $('example').noise(128).osc('/test');
@@ -1141,13 +1142,11 @@ $('example')
 ---
 #### **euclid** ( _pulses_, _steps_ )
 - generates a Euclidean sequence with `pulses` pulses over `steps` steps.
-- output range is from 0 - 1.
+- outputs the relative positions from 0 - 1 where the pulses occur.
 ```javascript
 $('example')
-  .sine(100)
-  .times(_.euclid(4, 8))
-  .play();
-  // gating a sine wave with a euclidean sequence
+  .randsamp('808')
+  .play(_.euclid(5,8)) // plays at positions [ 0, 0.125, 0.375, 0.5, 0.75 ]
 ```
 ---
 #### **file** ( _filepath_ )
@@ -1286,7 +1285,7 @@ $('example')
 ```
 ---
 #### **spiral** ( _length_, _degrees_ = 360/length, _angle_phase_offset_ = 0 )
-- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number between 0 and 360. By default `degrees` is set to `360/length` which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
+- generates a spiral of length `length` of continually ascending values in a circular loop between 0 and 1, where each value is `degrees` away from the previous value. `degrees` can be any number or FacetPattern with values expected between 0 and 360. By default `degrees` is set to `360/length` which produces an output pattern similar to branching leaves, where each value is as far away as possible from the previous value.
 - The `angle_phase_offset` argument changes where the sequence starts. At its default value of 0, the first value will be 0. You can supply any float between 0 and 1, and the sequence will begin at that value instead.
 - output range is from 0 - 1.
 ```javascript
@@ -1295,6 +1294,17 @@ $('example')
   .times(_.spiral(1000, ri(1, 360)))
   .play();
   // a 1Hz sine wave with amplitude modulated by a spiral
+```
+---
+#### **steps** ( _semitones_ )
+- converts semitone intervals to frequency ratios using the formula `2^(semitones/12)`.
+- example
+```javascript
+$('example')
+  .randsamp('808')
+  .pitch(_.steps([0, 12, -12, 7]))
+  .play();
+  // random 808 sample at 1x pitch, 0.5x pitch, 2x pitch, 1.5x pitch
 ```
 ---
 #### **turing** ( _length_ )
@@ -1364,6 +1374,19 @@ $('example')
   .bitshift(16)
   .play();
   // rotates the bits of a 1000Hz sine wave by 16 positions
+```
+---
+#### **bounce** ( _num_ = 15, _sizeChange_ = 0.95, _amplitudeChange_ = 0.95 )
+- creates a "bouncing ball" effect by appending multiple copies of the FacetPattern with progressively smaller sizes and amplitudes.
+- `num` is the number of bounces to create.
+- `sizeChange` is the factor by which the size decreases with each bounce.
+- `amplitudeChange` is the factor by which the amplitude decreases with each bounce.
+```javascript
+$('example')
+  .sine(440, 1000)
+  .bounce(10, 0.9, 0.8)
+  .play();
+  // water droplet effect from a 440Hz sine wave that bounces 10 times, with each bounce 90% the size and 80% the amplitude of the previous
 ```
 ---
 #### **changed** ( )
@@ -1754,8 +1777,8 @@ $('example')
   // squished at the beginning
 ```
 ---
-#### **prob** ( _amt_ )
-- sets some values in the FacetPattern to 0. `prob` (float 0-1) sets the likelihood of each value changing.
+#### **prob** ( _amtPattern_ )
+- sets some values in the FacetPattern to 0. `amtPattern` (clipped to range 0-1) sets the likelihood of each value changing.
 ```javascript
 $('example')
   .from([1, 2, 3, 4])
@@ -2546,11 +2569,12 @@ $('example')
   // alternating c and g whole notes made from tuned noise
 ```
 ---
-#### **seq** ( _sequencePattern_, _commands_ = function )
+#### **seq** ( _sequencePattern_, _commands_ = function, _maxFrameSize_ = getWholeNoteNumSamples() )
 - superposes the samples specified in `sequencePattern` across the loop. `sequencePattern` can either be a string or a FacetPattern composed of strings.
 - the character `*` at the end of a member of the `sequencePattern` string will select a random sample from that directory (see examples).
 - the character `_` in a `sequencePattern` specifies to insert silence instead of a sample.
 - the `commands` will run on each sample as it is superposed onto the output pattern.
+- `maxFrameSize` controls the length across which the sequence is spread. Defaults to the whole note duration in samples.
 - example: 
 ```javascript
 $('example')
@@ -2650,6 +2674,18 @@ $('example')
 
 Because Facet generates and modifies a 1-dimensional array of data, it is also possible to generate images from data. **NOTE:** by default, imaegs will be saved with square dimensions, with the FacetPattern's data going across the image, row by row. You can set a custom width and height for the image the via `.dim()` method.
 
+#### **blur2d** ( )
+- applies a 3x3 box blur filter to the 2D image data.
+- averages each pixel with its 8 surrounding neighbors to create a smoothing effect.
+```javascript
+$('example')
+  .noise(1000000)
+  .iter(7,()=>{this.blur2d()})
+  .saveimg('blur2d')
+  .once();
+  // blurred noise
+```
+---
 #### **circle2d** ( _centerX_, _centerY_, _radius_, _value_, _fillMode_ = 0 )
 - adds a circle on top of the existing data in a FacetPattern.
 - `centerX` and `centerY` are the x,y coordinates of the center of the circle.
@@ -2783,6 +2819,22 @@ $('example')
   // 128 rectangles in a 2d palindrome
 ```
 ---
+#### **perspective3d** ( _copies_ = 5, _scaleFactor_ = 0.8, _vanishX_ = 0, _vanishY_ = 0, _intensityDecay_ = 0.5 )
+- creates a 3D perspective effect by layering multiple scaled copies of the image.
+- `copies` is the number of perspective layers to create.
+- `scaleFactor` controls how much smaller each successive layer becomes (values less than 1 create depth).
+- `vanishX` and `vanishY` set the vanishing point coordinates where the perspective converges.
+- `intensityDecay` controls how much dimmer each successive layer becomes (0 = no decay, 1 = maximum decay).
+```javascript
+$('example')
+  .silence(1000000)
+  .rect2d(400, 400, 200, 200, 1)
+  .perspective3d(8, 0.85, 500, 300, 0.3)
+  .saveimg('perspective3d')
+  .once();
+  // white square with 3D perspective effect vanishing toward point (500, 300)
+```
+---
 #### **rechunk2d** ( _num_chunks_ )
 - slices the input FacetPattern into `chunks` chunks in 2D space and shuffles the chunks around.
 - `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
@@ -2793,6 +2845,23 @@ $('example')
   .rechunk2d(36)
   .saveimg('rechunk2d')
   .once();
+```
+---
+#### **react2d** ( _generations_ = 100, _activatorSize_ = 1, _inhibitorSize_ = 1, _feedRate_ = 0.08, _killRate_ = 0.001, _cutoffFrequency_ = 5000, _sampleRate_ = 44100 )
+- applies a reaction-diffusion simulation to create organic 2-dimensional patterns.
+- `generations` controls how many simulation steps to run (can be a FacetPattern for variable evolution across the image).
+- `activatorSize` and `inhibitorSize` control the diffusion rates of the activator and inhibitor agents.
+- `feedRate` controls how fast the activator is fed into the system.
+- `killRate` controls how fast the inhibitor kills the activator.
+- `cutoffFrequency` and `sampleRate` are used for post-processing smoothing with a biquad low-pass filter, so that this method can also be run on audio patterns.
+```javascript
+$('example')
+  .silence(500*500)
+  .circle2d(250, 250, 250, 1, 1)
+  .react2d(100, 1.5, 0.8, 0.055, 0.062)
+  .saveimg('react2d')
+  .once();
+  // organic spreading pattern starting from a circle in the middle of the image
 ```
 ---
 #### **rect2d** ( _topLeftX_, _topLeftY_, _rectWidth_, _rectHeight_, _value_, _fillMode_ = 0 )
@@ -2864,7 +2933,7 @@ $('example')
   .once();
 ```
 ---
-#### **shift2d** ( _xAmt_, _yAmt_, _mode_ )
+#### **shift2d** ( _xAmt_, _yAmt_ )
 - shifts the FacetPattern in 2D space, by `xAmt` pixels to the left/right, and by `yAmt` pixels up/down.
 ```javascript
 $('example')

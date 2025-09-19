@@ -38,6 +38,7 @@ class FacetPattern {
     this.key_letter = false;
     this.key_scale = false;
     this.is_stopped = false;
+    this.is_image = false;
     this.image_width = false;
     this.image_height = false;
     this.local_patterns = [];
@@ -160,6 +161,10 @@ class FacetPattern {
     }
     return this;
   }
+  
+  f (list, size) {
+    return this.from(list, size);
+  }
 
   drunk(length, intensity, d = Math.random()) {
     let drunk_sequence = [];
@@ -189,44 +194,57 @@ class FacetPattern {
   }
 
   euclid(pulses, steps) {
-    if (pulses >= steps) {
-      throw `argument 1 to euclid() must be smaller than argument 2`;
+    if (pulses > steps) {
+        pulses = steps;
     }
-    pulses = Math.abs(Math.floor(Number(pulses)));
-    steps = Math.abs(Math.floor(Number(steps)));
-    let sequence = [];
-    let counts = new Array(pulses).fill(1);
-    let remainders = [];
-    remainders = new Array(steps - pulses).fill(0);
-    let divisor = Math.floor(steps / pulses);
-    let max_iters = 100;
-    let current_iter = 0;
-    while (true) {
-      for (let i = 0; i < remainders.length; i++) {
-        counts.push(divisor);
-      }
-      if (remainders.length <= 1 || current_iter >= max_iters) {
-        break;
-      }
-      steps = remainders.length;
-      pulses = counts.length - steps;
-      remainders = counts.splice(pulses);
-      divisor = Math.floor(steps / pulses);
-      current_iter++;
+
+    const pattern = new Array(steps).fill(0);
+    const stepInterval = steps / pulses;
+    
+    let currentStep = 0;
+    for (let i = 0; i < pulses; i++) {
+        pattern[Math.floor(currentStep)] = 1;
+        currentStep += stepInterval;
     }
-    for (let i = 0; i < counts.length; i++) {
-      for (let j = 0; j < counts[i]; j++) {
-        sequence.push(1);
-      }
-      if (i < remainders.length) {
-        for (let j = 0; j < remainders[i]; j++) {
-          sequence.push(0);
+    this.data = pattern;
+
+    if (!Array.isArray(this.data)) {
+      throw new Error('Data must be an array.');
+    }
+
+    const positions = [];
+    const length = this.data.length;
+
+    this.data.forEach((value, index) => {
+        if (value === 1) {
+            positions.push(index / length); // relative position
         }
-      }
-    }
-    this.data = sequence;
+    });
+    this.data = positions;
     return this;
   }
+
+  boolean(length) {
+    if (!Array.isArray(this.data)) {
+        throw new Error('Data must be an array.');
+    }
+    if (typeof length !== 'number' || length <= 0) {
+        throw new Error('Length must be a positive number.');
+    }
+
+    const booleanRepresentation = new Array(length).fill(0);
+
+    this.data.forEach(relativePosition => {
+        if (relativePosition < 0 || relativePosition > 1) {
+            throw new Error('Relative positions in data must be between 0 and 1.');
+        }
+        const index = Math.floor(relativePosition * length);
+        booleanRepresentation[index] = 1;
+    });
+
+    this.data = booleanRepresentation;
+    return this;
+}
 
   primes(n, offset = 2, skip = 1) {
     n = Math.abs(Math.floor(Number(n)));
@@ -541,6 +559,11 @@ class FacetPattern {
     }
   }
 
+  // short-hand alias for sample()
+  s ( file_name, channel_index = 0 ) {
+    return this.sample(file_name, channel_index);
+  }
+
   silence(length) {
     length = Math.abs(Math.floor(length));
     this.data = new Array(length).fill(0);
@@ -671,23 +694,30 @@ class FacetPattern {
   spiral(length, angle_degrees = 360 / length, angle_phase_offset = 0) {
     angle_phase_offset = Math.abs(Number(angle_phase_offset));
     let spiral_sequence = [], i = 1, angle = 360 * angle_phase_offset;
-    angle_degrees = Math.abs(Number(angle_degrees));
+
+    if (typeof angle_degrees === 'number' || Array.isArray(angle_degrees) === true) {
+        angle_degrees = new FacetPattern().from(angle_degrees);
+    }
+
+    angle_degrees.size(length);
+
     length = Math.abs(Number(length));
     if (length < 1) {
-      length = 1;
+        length = 1;
     }
+
     while (i <= length) {
-      angle += angle_degrees;
-      if (angle >= 360) {
-        angle = Math.abs(360 - angle);
-      }
-      // convert degrees back to radians, and then to a 0. - 1. range
-      spiral_sequence.push((angle * (Math.PI / 180)) / (Math.PI * 2));
-      i++;
+        angle += angle_degrees.data[i - 1];
+        if (angle >= 360) {
+            angle = Math.abs(360 - angle);
+        }
+        // convert degrees back to radians, and then to a 0. - 1. range
+        spiral_sequence.push((angle * (Math.PI / 180)) / (Math.PI * 2));
+        i++;
     }
     this.data = spiral_sequence;
     return this;
-  }
+}
 
   square(frequencies, duration = SAMPLE_RATE) {
     if (typeof frequencies == 'number' || Array.isArray(frequencies) === true) {
@@ -1344,6 +1374,19 @@ class FacetPattern {
     return this;
   }
 
+  bounce(num = 15, sizeChange = 0.95, amplitudeChange = 0.95) {
+    let fpCopy = new FacetPattern().from(this.data);
+    let originalSizeChange = sizeChange;
+    let originalAmplitudeChange = amplitudeChange;
+    for (var b = 0; b < num; b++) {
+      this.append(new FacetPattern().from(fpCopy.data).size(fpCopy.data.length * sizeChange).times(amplitudeChange));
+      sizeChange *= originalSizeChange;
+      amplitudeChange *= originalAmplitudeChange;
+    } 
+    this.flatten()
+    return this;
+  }
+
   equals(sequence2, match_sizes = true) {
     if (!this.isFacetPattern(sequence2)) {
       throw `input must be a FacetPattern object; type found: ${typeof sequence2}`;
@@ -1861,27 +1904,43 @@ bpfInner(data, cutoffs, q) {
   
   map(fp) {
     if (!this.isFacetPattern(fp) && !Array.isArray(fp)) {
-      throw `input must be a FacetPattern or array; type found: ${typeof fp}`;
+        throw `input must be a FacetPattern or array; type found: ${typeof fp}`;
     }
-    if (Array.isArray(fp) === true) {
-      fp = new FacetPattern().from(fp);
+    if (Array.isArray(fp)) {
+        fp = new FacetPattern().from(fp);
     }
-    // scale the data so it's in the range of the new_values
-    this.scale(Math.min.apply(Math, fp.data), Math.max.apply(Math, fp.data));
-    // safeguard against mapping more than 1 second's worth samples to another pattern.
-    this.reduce(SAMPLE_RATE);
-    let same_size_arrays = this.makePatternsTheSameSize(this, fp);
-    let sequence = same_size_arrays[0];
-    let new_values = same_size_arrays[1];
-    let mapped_sequence = [];
-    for (const [key, step] of Object.entries(sequence.data)) {
-      mapped_sequence[key] = new_values.data.reduce((a, b) => {
-        return Math.abs(b - step) < Math.abs(a - step) ? b : a;
-      });
-    }
-    this.data = mapped_sequence;
+
+    // scale data to match the range of the new values
+    this.scale(Math.min(...fp.data), Math.max(...fp.data));
+
+    // ensure both patterns have the same size
+    let [sequence, new_values] = this.makePatternsTheSameSize(this, fp);
+
+    // sort new_values.data for efficient binary search
+    let sortedValues = [...new_values.data].sort((a, b) => a - b);
+
+    // binary search to find the closest value
+    const findClosest = (value) => {
+        let left = 0, right = sortedValues.length - 1;
+        while (left <= right) {
+            let mid = Math.floor((left + right) / 2);
+            if (sortedValues[mid] === value) return sortedValues[mid];
+            if (sortedValues[mid] < value) left = mid + 1;
+            else right = mid - 1;
+        }
+        // return closest value
+        if (left >= sortedValues.length) return sortedValues[right];
+        if (right < 0) return sortedValues[left];
+        return Math.abs(sortedValues[left] - value) < Math.abs(sortedValues[right] - value)
+            ? sortedValues[left]
+            : sortedValues[right];
+    };
+
+    // map each value in sequence.data to the closest value in sortedValues
+    this.data = sequence.data.map(findClosest);
+
     return this;
-  }
+}
 
   mtof() {
     let mtof_sequence = [];
@@ -2022,16 +2081,13 @@ bpfInner(data, cutoffs, q) {
   }
 
   prob(amt) {
-    amt = Number(amt);
-    if (amt < 0) {
-      amt = 0;
+    if (typeof amt == 'number' || Array.isArray(amt) === true) {
+      amt = new FacetPattern().from(amt);
     }
-    else if (amt > 1) {
-      amt = 1;
-    }
+    amt.size(this.data.length).clip(0,1);
     let prob_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
-      if (Math.random() < amt) {
+      if (Math.random() < amt.data[key]) {
         prob_sequence[key] = step;
       }
       else {
@@ -2524,19 +2580,56 @@ bpfInner(data, cutoffs, q) {
   }
 
   speed(ratio) {
-    ratio = Math.abs(Number(ratio));
-    let upscaled_data = [];
-    let new_samps = Math.floor(this.data.length / ratio);
-    let copies_of_each_value = Math.floor(new_samps / this.data.length) + 1;
-    for (var n = 0; n < this.data.length; n++) {
-      let i = 0;
-      while (i < copies_of_each_value) {
-        upscaled_data.push(this.data[n]);
-        i++;
+    if (typeof ratio == 'number' || Array.isArray(ratio) === true) {
+      ratio = new FacetPattern().from(ratio);
+    }
+    
+    // check for invalid ratios
+    for (let i = 0; i < ratio.data.length; i++) {
+      let ratioValue = Math.abs(Number(ratio.data[i]));
+      if (ratioValue <= 0) {
+        ratioValue = 0.1
       }
     }
-    this.data = upscaled_data;
-    this.reduce(new_samps);
+    
+    // resize ratio pattern
+    if (ratio.data.length !== this.data.length) {
+      let resizedRatio = [];
+      for (let i = 0; i < this.data.length; i++) {
+        let sourceIndex = Math.floor((i / this.data.length) * ratio.data.length);
+        resizedRatio[i] = ratio.data[sourceIndex];
+      }
+      ratio.data = resizedRatio;
+    }
+    
+    // calculate output length
+    let totalOutputSamples = 0;
+    for (let i = 0; i < this.data.length; i++) {
+      let currentRatio = Math.abs(Number(ratio.data[i]));
+      totalOutputSamples += Math.ceil(1 / currentRatio);
+    }
+    
+    let output = [];
+    let inputIndex = 0;
+    let fractionalAccumulator = 0;
+    
+    while (inputIndex < this.data.length) {
+      let currentRatio = Math.abs(Number(ratio.data[inputIndex]));
+      let samplesPerInput = 1 / currentRatio;
+      
+      // add the fractional accumulator
+      fractionalAccumulator += samplesPerInput;
+      
+      // output whole samples
+      while (fractionalAccumulator >= 1 && inputIndex < this.data.length) {
+        output.push(this.data[inputIndex]);
+        fractionalAccumulator -= 1;
+      }
+      
+      inputIndex++;
+    }
+    
+    this.data = output;
     return this;
   }
 
@@ -2555,13 +2648,26 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
-  size(new_size) {
+  size(new_size, fillValue = null) {
     new_size = Math.round(Math.abs(Number(new_size)));
-    // get ratio between current size and new size
     let change_ratio = this.data.length / new_size;
-    this.speed(change_ratio);
+
+    if (fillValue !== null) {
+        let upscaled_data = [];
+        let copies_of_each_value = Math.floor(new_size / this.data.length);
+        for (let n = 0; n < this.data.length; n++) {
+            upscaled_data.push(this.data[n]);
+            for (let i = 1; i < copies_of_each_value; i++) {
+                upscaled_data.push(fillValue);
+            }
+        }
+        this.data = upscaled_data.slice(0, new_size);
+    } else {
+        this.speed(change_ratio);
+    }
+
     return this;
-  }
+}
 
   stretch(stretchFactors, chunksPerSecond = new FacetPattern().from(128)) {
     if (typeof stretchFactors == 'number' || Array.isArray(stretchFactors) === true) {
@@ -2645,29 +2751,33 @@ bpfInner(data, cutoffs, q) {
   sticky(amt) {
     amt = Number(amt);
     if (amt < 0) {
-      amt = 0;
+        amt = 0;
+    } else if (amt > 1) {
+        amt = 1;
     }
-    else if (amt > 1) {
-      amt = 1;
-    }
-    amt = Math.pow(amt, 10);
+
     let sticky_sequence = [];
-    let stuck_key;
+    let stuck_key = 0;
+
     for (const [key, step] of Object.entries(this.data)) {
-      if (Math.random() > amt) {
-        stuck_key = key;
-        sticky_sequence[key] = step;
-      }
-      else {
-        if (this.data[stuck_key]) {
+        if (Math.random() > amt) {
+            stuck_key = key;
+            sticky_sequence[key] = step;
+        } else {
           sticky_sequence[key] = this.data[stuck_key];
         }
-        else {
-          sticky_sequence[key] = step;
-        }
-      }
     }
+
     this.data = sticky_sequence;
+    return this;
+}
+
+  steps(semitones) {
+    if (typeof semitones == 'number' || Array.isArray(semitones) === true) {
+      semitones = new FacetPattern().from(semitones);
+    }
+    // convert semitones to frequency ratios
+    this.data = semitones.data.map(step => Math.pow(2, step / 12));
     return this;
   }
 
@@ -2757,7 +2867,7 @@ bpfInner(data, cutoffs, q) {
     else {
       if (this.data.length >= sequence2.data.length) {
         for (const [key, step] of Object.entries(this.data)) {
-          if (isNaN(sequence2.data[key])) {
+          if (key >= sequence2.data.length || isNaN(sequence2.data[key])) {
             out[key] = 0;
           }
           else {
@@ -2767,7 +2877,7 @@ bpfInner(data, cutoffs, q) {
       }
       else {
         for (const [key, step] of Object.entries(sequence2.data)) {
-          if (isNaN(this.data[key])) {
+          if (key >= this.data.length || isNaN(this.data[key])) {
             out[key] = 0;
           }
           else {
@@ -3071,7 +3181,8 @@ bpfInner(data, cutoffs, q) {
           'major seventh', 'maj7',
           'minor seventh', 'm7',
           'diminished', 'dim',
-          'add2', 'add9'
+          'add2', 'add9',
+          'm11', 'm13', 'maj9', 'maj11', 'maj13',
         ];
         if (!VALID_CHORD_NAMES.includes(cn)) {
           throw `invalid chord name: ${cn}`;
@@ -3126,6 +3237,21 @@ bpfInner(data, cutoffs, q) {
           case 'add9':
             chord_intervals_to_add = [4, 7, 14];
             break;
+          case 'm11':
+            chord_intervals_to_add = [3, 7, 10, 14, 17];
+            break;
+          case 'm13':
+            chord_intervals_to_add = [3, 7, 10, 14, 17, 21];
+            break;
+          case 'maj9':
+            chord_intervals_to_add = [4, 7, 11, 14];
+            break;
+          case 'maj11':
+            chord_intervals_to_add = [4, 7, 11, 14, 17];
+            break;
+          case 'maj13':
+            chord_intervals_to_add = [4, 7, 11, 14, 17, 21];
+            break;
           default:
         }
 
@@ -3168,7 +3294,6 @@ bpfInner(data, cutoffs, q) {
     }
     this.data = out_fp.data;
     this.fixnan();
-    this.full(initial_maximum_value);
     return this;
   }
 
@@ -3211,6 +3336,8 @@ bpfInner(data, cutoffs, q) {
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     let s = this.current_slice_number;
     let num_slices = this.current_total_slices;
+    let image_width = this.image_width;
+    let image_height = this.image_height;
     for (var i = 0; i < iters; i++) {
       this.current_iteration_number = i;
       if (Math.random() < prob) {
@@ -3292,16 +3419,30 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
-  osc(address) {
-    if (address.charAt(0) !== '/') {
-      throw `invalid OSC address: ${address}. All OSC commands must have an address starting with the / character.`;
+  osc(address, sendAsOneBatch = false) {
+    if (typeof address === 'string') {
+        if (address.charAt(0) !== '/') {
+            address = `/${address}`;
+        }
+        this.osc_data.push({
+            data: this.data,
+            address: address,
+            sendAsOneBatch: sendAsOneBatch
+        });
+    } else if (Array.isArray(address)) {
+        address.forEach(addr => {
+            if (addr.charAt(0) !== '/') {
+                addr = `/${addr}`;
+            }
+            this.osc_data.push({
+                data: this.data,
+                address: addr,
+                sendAsOneBatch: sendAsOneBatch
+            });
+        });
     }
-    this.osc_data = {
-      data: this.data,
-      address: address
-    };
     return this;
-  }
+}
 
   pan(pan_amt) {
     if (typeof pan_amt == 'number' || Array.isArray(pan_amt) === true) {
@@ -3476,6 +3617,8 @@ bpfInner(data, cutoffs, q) {
     let current_slice;
     let i = this.current_iteration_number;
     let iters = this.current_total_iterations;
+    let image_width = this.image_width;
+    let image_height = this.image_height;
     for (var s = 0; s < num_slices; s++) {
       this.current_slice_number = s;
       slice_start_pos = s * calc_slice_size;
@@ -3614,59 +3757,6 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
-  spectral(stretchFactor = 1) {
-    let width = Math.sqrt(this.data.length), height = Math.sqrt(this.data.length);
-    this.rotate(270);
-
-    // Double the width and height
-    width *= 2;
-    height *= 2;
-
-    let signal = [];
-    for (let y = 0; y < height; y++) {
-      let row = [];
-      for (let x = 0; x < width; x++) {
-        // Fill the upper half of the array with zeros
-        if (y >= height / 2 || x >= width / 2) {
-          row.push([0, 0]);
-        } else {
-          // treating each value of data as an amplitude of a frequency bin
-          let amplitude = this.data[y * width / 2 + x];
-          // assuming an arbitrary phase
-          let phase = 0;
-          row.push([amplitude, phase]);
-        }
-      }
-
-      // Stretch and interpolate the row
-      let stretchedRow = [];
-      for (let i = 0; i < row.length - 1; i++) {
-        for (let j = 0; j < stretchFactor; j++) {
-          let t = j / stretchFactor;
-          let interpolatedValue = (1 - t) * row[i][0] + t * row[i + 1][0];
-          stretchedRow.push([interpolatedValue, 0]);
-        }
-      }
-      // Add the last element of the row
-      stretchedRow.push(row[row.length - 1]);
-      row = stretchedRow;
-
-      let powerOfTwo = this.nextPowerOf2(row.length);
-      while (row.length < powerOfTwo) {
-        row.push([0, 0]);  // Padding with zeros
-      }
-
-      // Computing the IFFT for the given row
-      let ifftData = ifft(row);
-      // Interpreting the real component of the ifftData as the sound signal
-      let soundSignalForRow = ifftData.map(([real, imaginary]) => real);
-      signal = signal.concat(soundSignalForRow);
-    }
-    this.data = signal;
-    this.range(0, 0.5);
-    return this;
-  }
-
   nextPowerOf2(n) {
     let count = 0;
 
@@ -3795,13 +3885,15 @@ bpfInner(data, cutoffs, q) {
     let iters = vars.iters ? vars.iters : this.current_total_iterations;
     let s = this.current_slice_number;
     let num_slices = this.current_total_slices;
+    let image_width = this.image_width;
+    let image_height = this.image_height;
     if (Math.random() < prob) {
       eval(global.env + global.vars + utils + command);
     }
     return this;
   }
 
-  seq(seqArg, operations) {
+  seq(seqArg, operations, maxFrameSize = this.getWholeNoteNumSamples()) {
     this.data = [];
     let seqPattern = [];
     if (operations && typeof operations != 'function') {
@@ -3841,7 +3933,7 @@ bpfInner(data, cutoffs, q) {
         if (operations) {
           fp.sometimes(1, operations);
         }
-        this.sup(fp, i / seqPattern.length);
+        this.sup(fp, i / seqPattern.length, maxFrameSize);
       }
       else {
         if (currentSampleName == '_') {
@@ -3854,7 +3946,7 @@ bpfInner(data, cutoffs, q) {
         if (operations) {
           fp.sometimes(1, operations);
         }
-        this.sup(fp, i / seqPattern.length);
+        this.sup(fp, i / seqPattern.length, maxFrameSize);
       }
     }
     return this;
@@ -4473,7 +4565,12 @@ bpfInner(data, cutoffs, q) {
 
     for (let s = 0; s < minFreqs.length; s++) {
       let minFreq = Math.max(minFreqs[s], 0);
-      let maxFreq = Math.max(maxFreqs[s], 0);
+      let maxFreq = maxFreqs[s] <= 0 ? SAMPLE_RATE / 2 : Math.max(maxFreqs[s], 0);
+      
+      // ensure maxFreq is not less than minFreq
+      if (maxFreq < minFreq) {
+        maxFreq = minFreq;
+      }
 
       let sliceSize = Math.ceil(this.data.length / minFreqs.length);
       let sliceStart = s * sliceSize;
@@ -4495,8 +4592,8 @@ bpfInner(data, cutoffs, q) {
         let j = Complex.reverseBits(i, m);
         output[j] = inputComplex[i];
       }
-      for (let s = 1; s <= m; s++) {
-        let m2 = Math.pow(2, s);
+      for (let stage = 1; stage <= m; stage++) {
+        let m2 = Math.pow(2, stage);
         let wm = new Complex.Complex(Math.cos(-2 * Math.PI / m2), Math.sin(-2 * Math.PI / m2));
         for (let k = 0; k < n; k += m2) {
           let w = new Complex.Complex(1, 0);
@@ -4612,18 +4709,84 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
-  savespectrogram(filename = Date.now(), windowSize = 2048) {
-    // apply butterworth filter before sampling the signal
-    let filter = this.butterworthFilter(2, SAMPLE_RATE / 2);
-    for (let i = 0; i < this.data.length; i++) {
-      let y = 0;
-      for (let j = 0; j < filter.roots.length; j++) {
-        y += filter.gain * this.data[i] / (1 + Math.pow(this.data[i] - filter.roots[j][0], 2) + Math.pow(-filter.roots[j][1], 2));
-      }
-      this.data[i] = y;
+  spectral(windowSize = null) {
+    const originalLength = this.data.length;
+
+    // calculate windowSize based on length of data
+    if (!windowSize) {
+        if (this.data.length > SAMPLE_RATE * 15) { // longer than 15 seconds
+            windowSize = 8192;
+        } else if (this.data.length > SAMPLE_RATE * 5) { // between 5-15 seconds
+            windowSize = 4096;
+        } else { // shorter audio
+            windowSize = 2048;
+        }
     }
-    // scale the data to [0, 0.1] so the spectrogram is easier to see
-    this.scale(0, 0.1);
+
+    // define the overlap between windows
+    let overlap = 0.5; // 50% overlap
+    // calculate the number of windows in the data
+    let stepSize = Math.round(windowSize * (1 - overlap));
+    let numWindows = Math.ceil((this.data.length - windowSize) / stepSize) + 1;
+
+    // initialize the spectrogram data
+    let spectrogramData = new Array(numWindows * (windowSize / 2)).fill(0);
+
+    for (let i = 0; i < numWindows; i++) {
+        // get the data for this window
+        let start = i * stepSize;
+        let windowData = this.data.slice(start, start + windowSize);
+        while (windowData.length < windowSize) {
+            windowData.push(0);
+        }
+
+        // convert the window data to complex numbers
+        let complexWindowData = windowData.map(value => [value, 0]);
+
+        // apply Fourier transform to the window data
+        let phasors = fft(complexWindowData);
+
+        // convert the phasors to decibels
+        let magnitudes = fftUtil.fftMag(phasors);
+        magnitudes = new FacetPattern().from(magnitudes).scale(0, 255).round().data; // Scale to [0, 255]
+
+        // write the magnitudes to the spectrogram data in reverse order
+        for (let j = 0; j < windowSize / 2; j++) {
+            let idx = ((windowSize / 2 - 1 - j) * numWindows) + i; // Reverse the frequency axis
+            spectrogramData[idx] = magnitudes[j];
+        }
+    }
+
+    // adjust the length of spectrogramData to match the original length
+    if (spectrogramData.length > originalLength) {
+        this.data = spectrogramData.slice(0, originalLength); // truncate
+    } else if (spectrogramData.length < originalLength) {
+        this.data = spectrogramData.concat(new Array(originalLength - spectrogramData.length).fill(0)); // pad with zeros
+    } else {
+        this.data = spectrogramData;
+    }
+
+    // set the dimensions for the image
+    this.dim(numWindows, windowSize / 2);
+    this.scale(0,1);
+    this.truncate(this.image_width * this.image_height);
+    return this;
+}
+
+  savespectrogram(filename = Date.now(), windowSize = null) {
+    this.is_image = true;
+
+    // calculate windowSize based on length of data
+    if (!windowSize) {
+        if (this.data.length > SAMPLE_RATE * 15) { // longer than 15 seconds
+            windowSize = 8192;
+        } else if (this.data.length > SAMPLE_RATE * 5) { // between 5-15 seconds
+            windowSize = 4096;
+        } else { // shorter audio
+            windowSize = 2048;
+        }
+    }
+
     // define the overlap between windows
     let overlap = 0.5; // 50% overlap
     // calculate the number of windows in the data
@@ -4632,67 +4795,44 @@ bpfInner(data, cutoffs, q) {
 
     // create a new PNG image
     let png = new PNG({
-      width: numWindows,
-      height: windowSize / 2,
-      filterType: -1
+        width: numWindows,
+        height: windowSize / 2,
+        filterType: -1
     });
 
     for (let i = 0; i < numWindows; i++) {
-      // get the data for this window
-      let start = i * stepSize;
-      let windowData = this.data.slice(start, start + windowSize);
-      while (windowData.length < windowSize) {
-        windowData.push(0);
-      }
-
-      // convert the window data to complex numbers
-      let complexWindowData = windowData.map(value => [value, 0]);
-
-      // apply the Fourier transform to the window data
-      let phasors = fft(complexWindowData);
-
-      // convert the phasors to decibels
-      let magnitudes = fftUtil.fftMag(phasors);
-
-      // write the magnitudes to the PNG data
-      for (let j = 0; j < windowSize / 2; j++) {
-        let idx = (png.width * (png.height - j - 1) + i) << 2;  // flip the spectrogram
-        let value = magnitudes[j];
-        // convert the magnitude to decibels and scale it from [0, 1] to [0, 255]
-        value = Math.round(value * 255);
-
-        // map the value to a color
-        let color = [];
-
-        if (value < 1) {
-          color[0] = 0;
-          color[1] = 0;
-          color[2] = 0;
-        }
-        else {
-          if (value < 128) {
-            // interpolate between blue and green
-            color[0] = 0;
-            color[1] = Math.round(value * 2);
-            color[2] = 128 - color[1];
-          } else {
-            // interpolate between green and red
-            color[0] = Math.round((value - 128) * 2);
-            color[1] = 128 - color[0];
-            color[2] = 0;
-          }
+        // get the data for this window
+        let start = i * stepSize;
+        let windowData = this.data.slice(start, start + windowSize);
+        while (windowData.length < windowSize) {
+            windowData.push(0);
         }
 
-        // write the pixel data
-        png.data[idx] = color[0];
-        png.data[idx + 1] = color[1];
-        png.data[idx + 2] = color[2];
-        png.data[idx + 3] = 255;
-      }
+        // convert the window data to complex numbers
+        let complexWindowData = windowData.map(value => [value, 0]);
+
+        // apply the Fourier transform to the window data
+        let phasors = fft(complexWindowData);
+
+        // convert the phasors to decibels
+        let magnitudes = fftUtil.fftMag(phasors);
+        magnitudes = new FacetPattern().from(magnitudes).scale(0, 255).round().data; // scale to [0, 255]
+
+        // write the magnitudes to the PNG data
+        for (let j = 0; j < windowSize / 2; j++) {
+            let idx = (png.width * (png.height - j - 1) + i) << 2;  // flip the spectrogram
+            let value = magnitudes[j];
+
+            // map the value to grayscale
+            png.data[idx] = value;
+            png.data[idx + 1] = value;
+            png.data[idx + 2] = value;
+            png.data[idx + 3] = 255;
+        }
     }
     png.pack().pipe(fs.createWriteStream(`img/${filename}.png`));
     return this;
-  }
+}
 
 
   savemidi2d(midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127) {
@@ -4811,6 +4951,7 @@ bpfInner(data, cutoffs, q) {
   }
 
   saveimg(filename = Date.now(), rgbData) {
+    this.is_image = true;
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
     if (typeof filename !== 'string') {
@@ -4878,17 +5019,17 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
-  rotate(angle) {
+  rotate(angle, wrap = true) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
 
-    // Wrap the angle to be between 0 and 360
+    // wrap the angle to be between 0 and 360
     angle = (angle + 360) % 360;
     if (angle < 0) {
       throw `rotate() cannot be called without a positive angle value`;
     }
 
-    // Step 1: Scale up the image by a factor of 2
+    // step 1: scale up the image by a factor of 2
     const scale = 2;
     const scaledWidth = width * scale;
     const scaledHeight = height * scale;
@@ -4907,7 +5048,7 @@ bpfInner(data, cutoffs, q) {
       }
     }
 
-    // Step 2: Rotate the scaled image using a standard rotation algorithm
+    // step 2: 2 rotate the scaled image
     const rotatedScaledFloatArray = new Float32Array(scaledWidth * scaledHeight);
 
     const centerX = scaledWidth / 2;
@@ -4924,19 +5065,26 @@ bpfInner(data, cutoffs, q) {
         const ux = Math.round(rx + centerX);
         const uy = Math.round(ry + centerY);
 
-        // Wrap the values around the image using modulo operation
-        const wrappedUx = ((ux % scaledWidth) + scaledWidth) % scaledWidth;
-        const wrappedUy = ((uy % scaledHeight) + scaledHeight) % scaledHeight;
+        if (wrap) {
+          // wrap the values around the image using modulo
+          const wrappedUx = ((ux % scaledWidth) + scaledWidth) % scaledWidth;
+          const wrappedUy = ((uy % scaledHeight) + scaledHeight) % scaledHeight;
 
-        if (wrappedUx >= 0 && wrappedUx < scaledWidth && wrappedUy >= 0 && wrappedUy < scaledHeight) {
           const srcIdx = wrappedUy * scaledWidth + wrappedUx;
           const dstIdx = y * scaledWidth + x;
           rotatedScaledFloatArray[dstIdx] = scaledFloatArray[srcIdx];
+        } else {
+          // instead of wrapping, we check if the indices are within bounds
+          if (ux >= 0 && ux < scaledWidth && uy >= 0 && uy < scaledHeight) {
+            const srcIdx = uy * scaledWidth + ux;
+            const dstIdx = y * scaledWidth + x;
+            rotatedScaledFloatArray[dstIdx] = scaledFloatArray[srcIdx];
+          }
         }
       }
     }
 
-    // Step3: Scale down the rotated image to its original size
+    // step 3: scale down the rotated image to its original size
     this.size(width * height);
     const rotatedFloatArray = new Float32Array(this.data.length);
 
@@ -4958,7 +5106,7 @@ bpfInner(data, cutoffs, q) {
     this.fixnan();
     this.flatten();
     return this;
-  }
+}
 
   layer2d(brightness_data, xCoords, yCoords) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
@@ -5039,20 +5187,46 @@ bpfInner(data, cutoffs, q) {
   circle2d(centerX, centerY, radius, value, mode = 0) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
-    for (let i = 0; i < height * width; i++) {
-      let row = Math.floor(i / width);
-      let col = i % width;
-      // calculate distance from the current position to the center point
-      let distance = Math.sqrt(Math.pow(col - centerX, 2) + Math.pow(row - centerY, 2));
 
-      // if mode is 0, only draw the outline by checking if the distance is close to the radius
-      // if mode is 1, fill the circle by checking if the distance is less than or equal to the radius
-      if ((mode === 0 && Math.abs(distance - radius) <= 0.5) || (mode === 1 && distance <= radius)) {
-        this.data[i] = value;
-      }
+    // precompute the number of pixels in the circle
+    let pixelCount = 0;
+    for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
+            let distance = Math.sqrt(Math.pow(col - centerX, 2) + Math.pow(row - centerY, 2));
+            if ((mode === 0 && Math.abs(distance - radius) <= 0.5) || (mode === 1 && distance <= radius)) {
+                pixelCount++;
+            }
+        }
+    }
+
+    // convert value to a FacetPattern if it's not already and resize it to match the pixel count
+    if (typeof value === 'number' || Array.isArray(value)) {
+        value = new FacetPattern().from(value).size(pixelCount);
+    } else {
+        value.size(pixelCount);
+    }
+
+    let valueIndex = 0; // to cycle through the FacetPattern values
+
+    for (let i = 0; i < height * width; i++) {
+        let row = Math.floor(i / width);
+        let col = i % width;
+
+        // calculate distance from the current position to the center point
+        let distance = Math.sqrt(Math.pow(col - centerX, 2) + Math.pow(row - centerY, 2));
+
+        // if mode is 0, only draw the outline by checking if the distance is close to the radius
+        // if mode is 1, fill the circle by checking if the distance is less than or equal to the radius
+        if ((mode === 0 && Math.abs(distance - radius) <= 0.5) || (mode === 1 && distance <= radius)) {
+            // add the value to the existing data
+            this.data[i] = (this.data[i] || 0) + value.data[valueIndex];
+
+            // cycle through the FacetPattern values
+            valueIndex = (valueIndex + 1) % value.data.length;
+        }
     }
     return this;
-  }
+}
 
   draw2d(coordinates, fillValue) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
@@ -5070,6 +5244,7 @@ bpfInner(data, cutoffs, q) {
     if (fillValue === undefined) {
         throw new Error("fillValue is required for draw2d.");
     }
+
     if (coordinates.length % 2 !== 0) {
         throw new Error("Invalid number of coordinates for draw2d. The array length must be divisible by 2.");
     }
@@ -5078,6 +5253,11 @@ bpfInner(data, cutoffs, q) {
     for (let i = 0; i < coordinates.length; i += 2) {
         points.push({ x: coordinates[i], y: coordinates[i + 1] });
     }
+
+    // convert fillValue to a FacetPattern if it's not already
+    if (typeof fillValue === 'number' || Array.isArray(fillValue) === true) {
+      fillValue = new FacetPattern().from(fillValue).size(points.length);
+  }
 
     // process each pair of points
     for (let i = 0; i < points.length - 1; i++) {
@@ -5089,18 +5269,24 @@ bpfInner(data, cutoffs, q) {
             throw new Error(`Coordinates (${start.x}, ${start.y}) or (${end.x}, ${end.y}) are out of bounds.`);
         }
 
-        // fill the line between the points with the fill value
+        // calculate the total distance of the line
         let dx = Math.abs(end.x - start.x);
         let dy = Math.abs(end.y - start.y);
+        let totalSteps = Math.max(dx, dy);
+
         let sx = (start.x < end.x) ? 1 : -1;
         let sy = (start.y < end.y) ? 1 : -1;
         let err = dx - dy;
 
-        while (true) {
+        for (let step = 0; step <= totalSteps; step++) {
             let index = start.y * width + start.x;
-            this.data[index] = fillValue; // directly update the existing data
 
-            if ((start.x === end.x) && (start.y === end.y)) break;
+            // use the progress to determine the value from the fillValue pattern
+            let currentFillValue = fillValue.data[i];
+
+            this.data[index] = currentFillValue;
+
+            if (start.x === end.x && start.y === end.y) break;
             let e2 = 2 * err;
             if (e2 > -dy) { err -= dy; start.x += sx; }
             if (e2 < dx) { err += dx; start.y += sy; }
@@ -5109,23 +5295,246 @@ bpfInner(data, cutoffs, q) {
     return this;
 }
 
-  rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
-    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
-    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
-    for (let i = 0; i < height * width; i++) {
+blur2d() {
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+  let blurredData = new Array(this.data.length).fill(0);
+
+  for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+          let sum = 0;
+          let count = 0;
+
+          // iterate over the surrounding 8 pixels (and the current pixel)
+          for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                  let nx = x + dx;
+                  let ny = y + dy;
+
+                  // handle edge cases by skipping out-of-bounds pixels
+                  if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                      sum += this.data[ny * width + nx];
+                      count++;
+                  }
+              }
+          }
+
+          // calculate the average and assign it to the blurred data
+          blurredData[y * width + x] = sum / count;
+      }
+  }
+
+  this.data = blurredData;
+  return this;
+}
+
+rect2d(topLeftX, topLeftY, rectWidth, rectHeight, value, mode = 0) {
+  let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+  let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+
+  // convert value to a FacetPattern if it's not already
+  if (typeof value === 'number' || Array.isArray(value)) {
+      value = new FacetPattern().from(value).size(rectWidth * rectHeight);
+  }
+  else {
+    value.size(rectWidth * rectHeight);
+  }
+
+  let valueIndex = 0; // to cycle through the FacetPattern values
+
+  for (let i = 0; i < height * width; i++) {
       let row = Math.floor(i / width);
       let col = i % width;
 
-      // if mode is 0, only draw the outline by checking if the point is on the edge of the rectangle
-      // if mode is 1, fill the rectangle by checking if the point is within the rectangle
-      if ((mode === 0 && ((col === topLeftX || col === topLeftX + rectWidth - 1) && row >= topLeftY && row < topLeftY + rectHeight) ||
-        ((row === topLeftY || row === topLeftY + rectHeight - 1) && col >= topLeftX && col < topLeftX + rectWidth)) ||
-        (mode === 1 && col >= topLeftX && col < topLeftX + rectWidth && row >= topLeftY && row < topLeftY + rectHeight)) {
-        this.data[i] = value;
+      // check if the current point is part of the rectangle
+      let isInRectangle =
+          (mode === 0 && (
+              ((col === topLeftX || col === topLeftX + rectWidth - 1) && row >= topLeftY && row < topLeftY + rectHeight) ||
+              ((row === topLeftY || row === topLeftY + rectHeight - 1) && col >= topLeftX && col < topLeftX + rectWidth)
+          )) ||
+          (mode === 1 && col >= topLeftX && col < topLeftX + rectWidth && row >= topLeftY && row < topLeftY + rectHeight);
+
+      if (isInRectangle) {
+          // add the value to the existing data
+          this.data[i] = (this.data[i] || 0) + value.data[valueIndex];
+
+          // cycle through the FacetPattern values
+          valueIndex = (valueIndex + 1) % value.data.length;
       }
-    }
-    return this;
   }
+  return this;
+}
+
+  react2d(generations = 100, activatorSize = 1, inhibitorSize = 1, feedRate = 0.08, killRate = 0.001, cutoffFrequency = 5000, sampleRate = 44100) {
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+
+    // initialize activator and inhibitor fields
+    let activator = new Array(height).fill(0).map(() => new Array(width).fill(0));
+    let inhibitor = new Array(height).fill(0).map(() => new Array(width).fill(0));
+
+    // populate activator and inhibitor fields from this.data
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            let index = i * width + j;
+            activator[i][j] = this.data[index];
+            inhibitor[i][j] = 1 - this.data[index]; // initialize inhibitor as complementary to activator
+        }
+    }
+
+    // if generations is a FacetPattern, ensure it matches the size of the data
+    let generationsData = [];
+    if (this.isFacetPattern(generations)) {
+        generations.size(this.data.length);
+        generationsData = generations.data;
+    } else {
+        generationsData = new Array(this.data.length).fill(generations);
+    }
+
+    // preallocate nextActivator and nextInhibitor arrays
+    let nextActivator = activator.map(row => row.slice());
+    let nextInhibitor = inhibitor.map(row => row.slice());
+
+    function applyBiquadLowPassFilter(row, cutoffFrequency, sampleRate) {
+      const normalizedCutoff = cutoffFrequency / (sampleRate / 2); // normalize cutoff frequency
+      const omega = 2 * Math.PI * normalizedCutoff;
+      const alpha = Math.sin(omega) / (2 * Math.sqrt(2)); // Q = sqrt(2)/2 for Butterworth
+      const cosOmega = Math.cos(omega);
+  
+      const b0 = (1 - cosOmega) / 2;
+      const b1 = 1 - cosOmega;
+      const b2 = (1 - cosOmega) / 2;
+      const a0 = 1 + alpha;
+      const a1 = -2 * cosOmega;
+      const a2 = 1 - alpha;
+  
+      const b = [b0 / a0, b1 / a0, b2 / a0];
+      const a = [1, a1 / a0, a2 / a0];
+  
+      const smoothedRowLeft = new Array(row.length).fill(0);
+      const smoothedRowRight = new Array(row.length).fill(0);
+  
+      // pass 1: start from the left
+      let prevInput1 = 0, prevInput2 = 0;
+      let prevOutput1 = 0, prevOutput2 = 0;
+      for (let i = 0; i < row.length; i++) {
+          const input = row[i];
+          const output = b[0] * input + b[1] * prevInput1 + b[2] * prevInput2
+                       - a[1] * prevOutput1 - a[2] * prevOutput2;
+  
+          smoothedRowLeft[i] = output;
+  
+          prevInput2 = prevInput1;
+          prevInput1 = input;
+          prevOutput2 = prevOutput1;
+          prevOutput1 = output;
+      }
+  
+      // pass 2: start from the right
+      prevInput1 = 0; prevInput2 = 0;
+      prevOutput1 = 0; prevOutput2 = 0;
+      for (let i = row.length - 1; i >= 0; i--) {
+          const input = row[i];
+          const output = b[0] * input + b[1] * prevInput1 + b[2] * prevInput2
+                       - a[1] * prevOutput1 - a[2] * prevOutput2;
+  
+          smoothedRowRight[i] = output;
+  
+          prevInput2 = prevInput1;
+          prevInput1 = input;
+          prevOutput2 = prevOutput1;
+          prevOutput1 = output;
+      }
+  
+      // merge the two passes
+      const mergedRow = new Array(row.length);
+      for (let i = 0; i < row.length; i++) {
+          const weightLeft = i / (row.length - 1); // increases from 0 to 1
+          const weightRight = 1 - weightLeft;     // decreases from 1 to 0
+  
+          // normalize the blended result to avoid amplitude dips
+          const normalizationFactor = weightLeft + weightRight;
+          mergedRow[i] = ((weightLeft * smoothedRowLeft[i]) + (weightRight * smoothedRowRight[i])) / normalizationFactor;
+      }
+  
+      return mergedRow;
+  }
+
+    // run the reaction-diffusion simulation for the maximum number of generations
+    let maxGenerations = Math.max(...generationsData);
+    for (let gen = 0; gen < maxGenerations; gen++) {
+        // precompute Laplacians for the entire grid
+        let laplacianA = this.computeLaplacian(activator, width, height);
+        let laplacianB = this.computeLaplacian(inhibitor, width, height);
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                // skip pixels whose generation value is less than the current iteration
+                if (generationsData[y * width + x] <= gen) {
+                    continue;
+                }
+
+                let a = activator[y][x];
+                let b = inhibitor[y][x];
+
+                // reaction-diffusion equations
+                let diffusionA = laplacianA[y][x] * activatorSize;
+                let diffusionB = laplacianB[y][x] * inhibitorSize;
+                let reaction = a * b * b;
+
+                nextActivator[y][x] = a + (diffusionA - reaction + feedRate * (1 - a));
+                nextInhibitor[y][x] = b + (diffusionB + reaction - (killRate + feedRate) * b);
+
+                // clamp values to [0, 1]
+                nextActivator[y][x] = Math.max(0, Math.min(1, nextActivator[y][x]));
+                nextInhibitor[y][x] = Math.max(0, Math.min(1, nextInhibitor[y][x]));
+            }
+        }
+
+        // swap activator and inhibitor arrays
+        [activator, nextActivator] = [nextActivator, activator];
+        [inhibitor, nextInhibitor] = [nextInhibitor, inhibitor];
+    }
+
+    // apply the biquad low-pass filter to each row of the final activator and inhibitor fields
+    for (let y = 0; y < height; y++) {
+        activator[y] = applyBiquadLowPassFilter(activator[y], cutoffFrequency, sampleRate);
+        inhibitor[y] = applyBiquadLowPassFilter(inhibitor[y], cutoffFrequency, sampleRate);
+    }
+
+    // update this.data with the final activator field
+    for (let i = 0; i < height; i++) {
+        for (let j = 0; j < width; j++) {
+            this.data[i * width + j] = activator[i][j];
+        }
+    }
+    this.fixnan();
+    return this;
+}
+
+// helper function to compute Laplacian
+computeLaplacian(field, width, height) {
+    let laplacianField = new Array(height).fill(0).map(() => new Array(width).fill(0));
+    let kernel = [
+      [0.05, 0.2, 0.05],
+      [0.2, -1, 0.2],
+      [0.05, 0.2, 0.05]
+    ];
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            let sum = 0;
+            for (let ky = -1; ky <= 1; ky++) {
+                for (let kx = -1; kx <= 1; kx++) {
+                    let nx = (x + kx + width) % width; // wrap around edges
+                    let ny = (y + ky + height) % height; // wrap around edges
+                    sum += field[ny][nx] * kernel[ky + 1][kx + 1];
+                }
+            }
+            laplacianField[y][x] = sum;
+        }
+    }
+    return laplacianField;
+}
 
   dim(width, height) {
     this.image_width = Math.round(Math.abs(width));
@@ -5136,53 +5545,110 @@ bpfInner(data, cutoffs, q) {
   tri2d(x1, y1, x2, y2, x3, y3, value, mode = 0) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+
+    // precompute the number of pixels in the triangle
+    let pixelCount = 0;
     if (mode === 0) {
-      // define the vertices of the triangle
-      let vertices = [[x1, y1], [x2, y2], [x3, y3], [x1, y1]];
+        // count pixels along the edges of the triangle
+        let vertices = [[x1, y1], [x2, y2], [x3, y3], [x1, y1]];
+        for (let v = 0; v < 3; v++) {
+            let [xStart, yStart] = vertices[v];
+            let [xEnd, yEnd] = vertices[v + 1];
 
-      // draw lines between the vertices
-      for (let v = 0; v < 3; v++) {
-        let [xStart, yStart] = vertices[v];
-        let [xEnd, yEnd] = vertices[v + 1];
+            let dx = Math.abs(xEnd - xStart);
+            let dy = Math.abs(yEnd - yStart);
+            let sx = (xStart < xEnd) ? 1 : -1;
+            let sy = (yStart < yEnd) ? 1 : -1;
+            let err = dx - dy;
 
-        let dx = Math.abs(xEnd - xStart);
-        let dy = Math.abs(yEnd - yStart);
-        let sx = (xStart < xEnd) ? 1 : -1;
-        let sy = (yStart < yEnd) ? 1 : -1;
-        let err = dx - dy;
-
-        while (true) {
-          if ((xStart === xEnd) && (yStart === yEnd)) break;
-          let e2 = 2 * err;
-          if (e2 > -dy) { err -= dy; xStart += sx; }
-          if (e2 < dx) { err += dx; yStart += sy; }
-
-          // Check if the coordinates are within the bounds of the image
-          if (xStart >= 0 && xStart < width && yStart >= 0 && yStart < height) {
-            this.data[yStart * width + xStart] = value;
-          } else {
-            break;
-          }
+            while (true) {
+                if (xStart >= 0 && xStart < width && yStart >= 0 && yStart < height) {
+                    pixelCount++;
+                }
+                if (xStart === xEnd && yStart === yEnd) break;
+                let e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; xStart += sx; }
+                if (e2 < dx) { err += dx; yStart += sy; }
+            }
         }
-      }
     } else if (mode === 1) {
-      for (let i = 0; i < height * width; i++) {
-        let row = Math.floor(i / width);
-        let col = i % width;
+        // count pixels inside the filled triangle
+        for (let i = 0; i < height * width; i++) {
+            let row = Math.floor(i / width);
+            let col = i % width;
 
-        // calculate the barycentric coordinates for the current position
-        let w1 = ((y2 - y3) * (col - x3) + (x3 - x2) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
-        let w2 = ((y3 - y1) * (col - x3) + (x1 - x3) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
-        let w3 = 1 - w1 - w2;
+            // calculate the barycentric coordinates for the current position
+            let w1 = ((y2 - y3) * (col - x3) + (x3 - x2) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+            let w2 = ((y3 - y1) * (col - x3) + (x1 - x3) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+            let w3 = 1 - w1 - w2;
 
-        if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
-          this.data[i] = value;
+            if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+                pixelCount++;
+            }
         }
-      }
+    }
+
+    // convert value to a FacetPattern if it's not already and resize it to match the pixel count
+    if (typeof value === 'number' || Array.isArray(value)) {
+        value = new FacetPattern().from(value).size(pixelCount);
+    } else {
+        value.size(pixelCount);
+    }
+
+    let valueIndex = 0; // to cycle through the FacetPattern values
+
+    if (mode === 0) {
+        // define the vertices of the triangle
+        let vertices = [[x1, y1], [x2, y2], [x3, y3], [x1, y1]];
+
+        // draw lines between the vertices
+        for (let v = 0; v < 3; v++) {
+            let [xStart, yStart] = vertices[v];
+            let [xEnd, yEnd] = vertices[v + 1];
+
+            let dx = Math.abs(xEnd - xStart);
+            let dy = Math.abs(yEnd - yStart);
+            let sx = (xStart < xEnd) ? 1 : -1;
+            let sy = (yStart < yEnd) ? 1 : -1;
+            let err = dx - dy;
+
+            while (true) {
+                // check if the coordinates are within the bounds of the image
+                if (xStart >= 0 && xStart < width && yStart >= 0 && yStart < height) {
+                    let index = yStart * width + xStart;
+                    this.data[index] = (this.data[index] || 0) + value.data[valueIndex]; // add value to existing data
+
+                    // cycle through the FacetPattern values
+                    valueIndex = (valueIndex + 1) % value.data.length;
+                }
+                if (xStart === xEnd && yStart === yEnd) break;
+                let e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; xStart += sx; }
+                if (e2 < dx) { err += dx; yStart += sy; }
+            }
+        }
+    } else if (mode === 1) {
+        for (let i = 0; i < height * width; i++) {
+            let row = Math.floor(i / width);
+            let col = i % width;
+
+            // calculate the barycentric coordinates for the current position
+            let w1 = ((y2 - y3) * (col - x3) + (x3 - x2) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+            let w2 = ((y3 - y1) * (col - x3) + (x1 - x3) * (row - y3)) / ((y2 - y3) * (x1 - x3) + (x3 - x2) * (y1 - y3));
+            let w3 = 1 - w1 - w2;
+
+            if (w1 >= 0 && w2 >= 0 && w3 >= 0) {
+                let index = row * width + col;
+                this.data[index] = (this.data[index] || 0) + value.data[valueIndex]; // add value to existing data
+
+                // cycle through the FacetPattern values
+                valueIndex = (valueIndex + 1) % value.data.length;
+            }
+        }
     }
 
     return this;
-  }
+}
 
   drawline(x1, y1, x2, y2, value) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
@@ -5338,6 +5804,61 @@ bpfInner(data, cutoffs, q) {
     this.data = delayedData;
     return this;
   }
+
+  perspective3d(copies = 5, scaleFactor = 0.8, vanishX = 0, vanishY = 0, intensityDecay = 0.5) {
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+    let perspectiveData = new Array(this.data.length).fill(0);
+
+    intensityDecay = Math.min(Math.max(intensityDecay, 0), 1);
+
+    let originalCenterX = width / 2;
+    let originalCenterY = height / 2;
+
+    for (let copy = 0; copy < copies; copy++) {
+        let scale = Math.pow(scaleFactor, copy);
+        let decayFactor = 1 - (intensityDecay * copy / copies);
+
+        let scaledWidth = Math.max(1, Math.floor(width * scale));
+        let scaledHeight = Math.max(1, Math.floor(height * scale));
+
+        let stepX = (vanishX - originalCenterX) * (1 - scale);
+        let stepY = (vanishY - originalCenterY) * (1 - scale);
+
+        for (let row = 0; row < scaledHeight; row++) {
+            for (let col = 0; col < scaledWidth; col++) {
+                // calculate the area to average in the original image
+                let startOriginalRow = Math.floor(row / scale);
+                let endOriginalRow = Math.min(height, Math.ceil((row + 1) / scale));
+                let startOriginalCol = Math.floor(col / scale);
+                let endOriginalCol = Math.min(width, Math.ceil((col + 1) / scale));
+
+                // sampling and averaging
+                let total = 0;
+                let count = 0;
+                for (let i = startOriginalRow; i < endOriginalRow; i++) {
+                    for (let j = startOriginalCol; j < endOriginalCol; j++) {
+                        total += this.data[i * width + j];
+                        count++;
+                    }
+                }
+                let average = total / count;
+
+                let newRow = Math.round(row + (originalCenterY - scaledHeight / 2 + stepY));
+                let newCol = Math.round(col + (originalCenterX - scaledWidth / 2 + stepX));
+
+                if (newRow >= 0 && newRow < height && newCol >= 0 && newCol < width) {
+                    let newIndex = newRow * width + newCol;
+                    perspectiveData[newIndex] += average * decayFactor;
+                }
+            }
+        }
+    }
+
+    this.data = perspectiveData;
+    this.fixnan();
+    return this;
+}
 
   rechunk2d(chunks) {
     if (Math.sqrt(chunks) % 1 !== 0) {

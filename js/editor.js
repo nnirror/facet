@@ -26,7 +26,7 @@ catch (e) {
 }
 
 function getFirstLineOfBlock(initial_line) {
-  // true if line above is empty or the line number gets to 0
+  // true if line above is empty or the line number is 0
   let above_line_is_empty = false;
   let current_line_number = initial_line;
   let first_line;
@@ -87,12 +87,74 @@ $(document).keydown(function (e) {
   else if (e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191)) {
     // clear hooks and mute everything: [ctrl + "."] or  [ctrl + "?"]
     $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) { });
-    $.growl.notice({ message: 'system muted' });
+    $.growl.notice({ message: 'all commands stopped' });
+    
+    // immediately clear all voice controls from UI
+    const container = document.getElementById('voiceControls');
+    if (container) {
+      container.innerHTML = '';
+      container.style.paddingTop = '0px';
+    }
+    
+    // enable global stop mode to prevent any new voice controls
+    globalStopMode = true;
+    
+    // clear all related data
+    mutedVoices = {};
+    fpNameToVoiceMap = {};
+    gainNodes = {};
+    manualGainValues = {};
+    recentlyStoppedVoices.clear();
+    permanentlyStoppedVoices.clear();
+    
+    // reset global stop mode after a delay to allow server to process stop
+    setTimeout(() => {
+      globalStopMode = false;
+    }, 3000); // 3 second delay
   }
   else if (e.ctrlKey && (e.keyCode == 222)) {
     // stop command(s)
+    // get the current block to determine which patterns to stop
+    let cursor = cm.getCursor();
+    let line = cursor.line;
+    let first_line_of_block = getFirstLineOfBlock(line);
+    let last_line_of_block = getLastLineOfBlock(line);
+    let blockCode = '';
+    for (let i = first_line_of_block; i <= last_line_of_block; i++) {
+      blockCode += cm.getLine(i) + '\n';
+    }
+    
+    // extract pattern names from the block using regex
+    const patternNameRegex = /\$\(['"]([^'"]+)['"]\)/g;
+    const patternNamesToStop = [];
+    let match;
+    while ((match = patternNameRegex.exec(blockCode)) !== null) {
+      patternNamesToStop.push(match[1]);
+    }
+    
     runFacet('stop');
     $.growl.notice({ message: 'command(s) stopped' });
+    
+    // immediately remove voice controls for the stopped patterns
+    const container = document.getElementById('voiceControls');
+    if (container && patternNamesToStop.length > 0) {
+      Array.from(container.children).forEach(child => {
+        const voiceControlElement = child.querySelector('.voice-control');
+        if (voiceControlElement) {
+          const fpName = voiceControlElement.dataset.fpName;
+          if (patternNamesToStop.includes(fpName)) {
+            container.removeChild(child);
+            delete mutedVoices[fpName];
+            delete manualGainValues[fpName];
+            recentlyStoppedVoices.set(fpName, Date.now());
+            permanentlyStoppedVoices.add(fpName);
+          }
+        }
+      });
+      
+      // adjust padding-top based on remaining children
+      container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
+    }
   }
   else if (e.ctrlKey && (e.keyCode == 186 || e.keyCode == 59)) {
     // keep command(s)
@@ -190,6 +252,16 @@ function runFacet(mode = 'run') {
   setTimeout(function () { cm.setCursor({ line: line, ch: cursor.ch }); }, 100);
   setStatus(`processing`);
   let code = cm.getSelection();
+  
+  // when running new patterns, remove them from permanently stopped list so they can play
+  if (mode === 'run' || mode === 'keep' || mode === 'once') {
+    const patternNameRegex = /\$\(['"]([^'"]+)['"]\)/g;
+    let match;
+    while ((match = patternNameRegex.exec(code)) !== null) {
+      permanentlyStoppedVoices.delete(match[1]);
+    }
+  }
+  
   $.post(`http://${configSettings.HOST}:1123`, { code: code, mode: mode });
 }
 
@@ -248,13 +320,36 @@ $('body').on('click', '#sound', function () {
 
 $('body').on('click', '#stop', function () {
   $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) {
-    $.growl.notice({ message: 'system muted' });
+    $.growl.notice({ message: 'all commands stopped' });
   })
     .fail(function (data) {
       if (data.statusText == 'error') {
         $.growl.error({ message: 'no connection to the Facet server' });
       }
     });
+    
+  // immediately clear all voice controls from UI
+  const container = document.getElementById('voiceControls');
+  if (container) {
+    container.innerHTML = '';
+    container.style.paddingTop = '0px';
+  }
+  
+  // enable global stop mode to prevent any new voice controls
+  globalStopMode = true;
+  
+  // clear all related data
+  mutedVoices = {};
+  fpNameToVoiceMap = {};
+  gainNodes = {};
+  manualGainValues = {};
+  recentlyStoppedVoices.clear();
+  permanentlyStoppedVoices.clear();
+  
+  // reset global stop mode after a delay to allow server to process stop
+  setTimeout(() => {
+    globalStopMode = false;
+  }, 3000); // 3 second delay
 });
 
 $('body').on('click', '#clear', function () {
@@ -333,9 +428,18 @@ function adjustPlaybackRates(currentBpm) {
       if (voices[i] && sources[i]) {
         let voiceBpm = voices[i].bpm;
         let pitch = pitchShifts[i];
-        sources[i].forEach(source => {
-          source.playbackRate.value = (currentBpm / voiceBpm) * pitch;
-        });
+        
+        // Validate values before setting playbackRate
+        if (typeof voiceBpm === 'number' && isFinite(voiceBpm) && voiceBpm > 0 &&
+            typeof pitch === 'number' && isFinite(pitch) && pitch > 0 &&
+            typeof currentBpm === 'number' && isFinite(currentBpm) && currentBpm > 0) {
+          const playbackRate = (currentBpm / voiceBpm) * pitch;
+          if (isFinite(playbackRate) && playbackRate > 0) {
+            sources[i].forEach(source => {
+              source.playbackRate.value = playbackRate;
+            });
+          }
+        }
       }
     }
   }
@@ -349,11 +453,15 @@ $('body').on('change', '#bpm', function () {
   blockBpmUpdateFromServer = setTimeout(function () {
     bpmCanBeUpdatedByServer = true;
   }, 3000);
-  let currentBpm = $(this).val();
-  if (!isNaN(currentBpm) && currentBpm >= 1) {
-    adjustPlaybackRates(currentBpm);
-  }
 });
+
+
+// $('body').on('blur', '#bpm', function () {
+//   let currentBpm = $(this).val();
+//   if (!isNaN(currentBpm) && currentBpm >= 1) {
+//     adjustPlaybackRates(currentBpm);
+//   }
+// });
 
 $('body').on('blur', '#time_signature_numerator', () => {
   let user_input_time_signature_numerator = $('#time_signature_numerator').val();
@@ -458,19 +566,16 @@ let sources = [];
 let pitchShifts = {};
 let lastPlayedTimes = {};
 let ac;
+
+let pendingLoads = new Map(); // track fetch requests in progress
+let loadTiming = new Map(); // track timing of load operations
+let requestedVoices = new Set(); // track which voices have been requested to load
+let playRequestedVoices = new Set(); // track which voices have been requested to play
+let patternVoiceHistory = new Map(); // track voice history by pattern name for fallback
 ac = new AudioContext();
 ac.destination.channelCount = ac.destination.maxChannelCount;
 ac.destination.channelCountMode = "explicit";
 ac.destination.channelInterpretation = "discrete";
-
-// create limiter for main output
-let compressor = ac.createDynamicsCompressor();
-compressor.threshold.setValueAtTime(-1, ac.currentTime);
-compressor.knee.setValueAtTime(0, ac.currentTime);
-compressor.ratio.setValueAtTime(20, ac.currentTime);
-compressor.attack.setValueAtTime(0, ac.currentTime);
-compressor.release.setValueAtTime(0.1, ac.currentTime);
-compressor.connect(ac.destination);
 
 // connect to the server
 const socket = io.connect(`http://${configSettings.HOST}:3000`, {
@@ -531,22 +636,46 @@ socket.on('bpm', (bpm) => {
 let mutedVoices = {};
 let fpNameToVoiceMap = {};
 let gainNodes = {};
+let manualGainValues = {}; // track manual gain values for each voice (0-1)
+let recentlyStoppedVoices = new Map(); // track voices recently stopped with timestamps
+let permanentlyStoppedVoices = new Set(); // track voices that should never be re-added until cleared
+let globalStopMode = false; // when true, prevents ALL voice controls from being created
 
 socket.on('uniqueFpNames', (data) => {
   const container = document.getElementById('voiceControls');
 
+  // handle both old format (array) and new format (object with names and types)
+  const fpNames = Array.isArray(data) ? data : (data && data.names ? data.names : []);
+  const patternTypes = Array.isArray(data) ? {} : (data && data.types ? data.types : {});
+
   // create set of current fpNames for comparison
   const currentFpNames = new Set(Object.keys(mutedVoices));
 
-  // add new voices
-  data.forEach(fpName => {
-    if (!currentFpNames.has(fpName)) {
+  // add new voices - but only if not in global stop mode
+  if (fpNames && fpNames.length > 0 && !globalStopMode) {
+    fpNames.forEach(fpName => {
+      // check if this voice was recently stopped (within last 2 seconds)
+      const recentlyStoppedTime = recentlyStoppedVoices.get(fpName);
+      const isRecentlyStopped = recentlyStoppedTime && (Date.now() - recentlyStoppedTime < 2000);
+      
+      // also check if this voice is in the permanently stopped list
+      const isPermanentlyStopped = permanentlyStoppedVoices.has(fpName);
+    
+    if (!currentFpNames.has(fpName) && !isRecentlyStopped && !isPermanentlyStopped) {
       // add new voice to mutedVoices with default state (unmuted)
       mutedVoices[fpName] = false;
+      // initialize manual gain value to 0.7 (default gain for audio patterns) only if not already set
+      if (!(fpName in manualGainValues)) {
+        manualGainValues[fpName] = 0.7;
+      }
 
-      // create a wrapper div to hold the voice-control and stop button
+      // create a wrapper div to hold all controls
       const wrapperDiv = document.createElement('div');
       wrapperDiv.className = 'voice-wrapper';
+
+      // create a row div to hold the voice-control and stop button
+      const controlsRow = document.createElement('div');
+      controlsRow.className = 'voice-controls-row';
 
       // create UI for mute/unmute
       const controlDiv = document.createElement('div');
@@ -563,7 +692,7 @@ socket.on('uniqueFpNames', (data) => {
         mutedVoices[fpName] = isMuted; // update mute state
 
         // update color based on new mute state
-        controlDiv.style.backgroundColor = isMuted ? '#ff4d4d' : 'green';
+        controlDiv.style.backgroundColor = isMuted ? '#303030' : 'green';
 
         // dynamically update gain for the corresponding voice with a fade
         const voice_to_play = fpNameToVoiceMap[fpName];
@@ -575,8 +704,9 @@ socket.on('uniqueFpNames', (data) => {
             // fade out
             gainNodes[voice_to_play].gain.setTargetAtTime(0, currentTime, fadeDuration);
           } else {
-            // fade in
-            gainNodes[voice_to_play].gain.setTargetAtTime(1, currentTime, fadeDuration);
+            // fade in to the manual gain value
+            const targetGain = manualGainValues[fpName] ?? 0.7;
+            gainNodes[voice_to_play].gain.setTargetAtTime(targetGain, currentTime, fadeDuration);
           }
         }
 
@@ -592,34 +722,129 @@ socket.on('uniqueFpNames', (data) => {
       // add click handler for the stop button
       stopButton.addEventListener('click', (e) => {
         e.stopPropagation(); // prevent triggering the mute/unmute click event
+        
+        // track that this voice was recently stopped with a timestamp
+        recentlyStoppedVoices.set(fpName, Date.now());
+        
+        // add to permanently stopped list to prevent regeneration
+        permanentlyStoppedVoices.add(fpName);
+        
+        // immediately remove the UI element
+        container.removeChild(wrapperDiv);
+        delete mutedVoices[fpName];
+        delete manualGainValues[fpName];
+        
+        // adjust padding-top based on remaining children
+        container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
+        
+        // send stop command to server
         $.post(`http://${configSettings.HOST}:1123`, { code: `$('${fpName}').stop()`, mode: 'stop' })
-          .done(() => {
-            console.log(`Stop command sent for ${fpName}`);
-          })
-          .fail(() => {
-            console.error(`Failed to send stop command for ${fpName}`);
-          });
       });
 
-      // append the voice-control and stop button as siblings to the wrapper
-      wrapperDiv.appendChild(controlDiv);
-      wrapperDiv.appendChild(stopButton);
+      // create gain slider only for audio patterns
+      const patternType = patternTypes[fpName];
+      let gainSlider = null;
+      if (patternType === 'audio') {
+        gainSlider = document.createElement('input');
+        gainSlider.type = 'range';
+        gainSlider.min = '0';
+        gainSlider.max = '1';
+        gainSlider.step = '0.01';
+        gainSlider.value = (manualGainValues[fpName] ?? 0.7).toString();
+        gainSlider.className = 'gain-slider';
+        gainSlider.title = 'Gain';
+
+        // add event listener for gain changes
+        gainSlider.addEventListener('input', (e) => {
+          const newGain = parseFloat(e.target.value);
+          manualGainValues[fpName] = newGain;
+
+          // apply gain change with smooth ramp if not muted
+          const voice_to_play = fpNameToVoiceMap[fpName];
+          if (voice_to_play && gainNodes[voice_to_play] && !mutedVoices[fpName]) {
+            const currentTime = ac.currentTime;
+            const rampDuration = 0.05; // 50ms smooth ramp
+            gainNodes[voice_to_play].gain.setTargetAtTime(newGain, currentTime, rampDuration);
+          }
+        });
+      }
+
+      // append the voice-control and stop button to the controls row
+      controlsRow.appendChild(controlDiv);
+      controlsRow.appendChild(stopButton);
+      
+      // append the controls row to the wrapper
+      wrapperDiv.appendChild(controlsRow);
+      
+      // append the gain slider to the wrapper if it exists
+      if (gainSlider) {
+        wrapperDiv.appendChild(gainSlider);
+      }
+      
       container.appendChild(wrapperDiv);
     }
   });
 
-  // remove voices that are no longer in the data
+  // remove voices that are no longer in the data or are permanently stopped
   Array.from(container.children).forEach(child => {
-    const fpName = child.querySelector('.voice-control').dataset.fpName;
-    if (!data.includes(fpName)) {
-      delete mutedVoices[fpName];
-      container.removeChild(child);
+    const voiceControlElement = child.querySelector('.voice-control');
+    if (voiceControlElement) {
+      const fpName = voiceControlElement.dataset.fpName;
+      // Remove if fpNames is empty array, if fpName is not in fpNames, or if permanently stopped
+      if (!fpNames || fpNames.length === 0 || !fpNames.includes(fpName) || permanentlyStoppedVoices.has(fpName)) {
+        delete mutedVoices[fpName];
+        // Only delete manual gain values if permanently stopped, not during regeneration
+        if (permanentlyStoppedVoices.has(fpName)) {
+          delete manualGainValues[fpName];
+        }
+        recentlyStoppedVoices.delete(fpName); // clean up tracking when server confirms removal
+        container.removeChild(child);
+      }
     }
   });
+  }
 
   // adjust padding-top of the container based on the number of children (to be completely hidden with 0 patterns)
   container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
 });
+
+// periodically clean up old entries from recentlyStoppedVoices to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [fpName, timestamp] of recentlyStoppedVoices.entries()) {
+    if (now - timestamp > 2000) { // remove entries older than 2 seconds
+      recentlyStoppedVoices.delete(fpName);
+    }
+  }
+}, 5000); // run cleanup every 5 seconds
+
+// periodically ensure permanently stopped voices are removed from UI
+// this catches cases where server sends new uniqueFpNames events that try to re-add stopped patterns
+setInterval(() => {
+  const container = document.getElementById('voiceControls');
+  if (container && permanentlyStoppedVoices.size > 0) {
+    let removedAny = false;
+    Array.from(container.children).forEach(child => {
+      const voiceControlElement = child.querySelector('.voice-control');
+      if (voiceControlElement) {
+        const fpName = voiceControlElement.dataset.fpName;
+        if (permanentlyStoppedVoices.has(fpName)) {
+          container.removeChild(child);
+          delete mutedVoices[fpName];
+          delete manualGainValues[fpName];
+          removedAny = true;
+        }
+      }
+    });
+    
+    if (removedAny) {
+      // adjust padding-top based on remaining children
+      container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
+    }
+  }
+}, 1000); // run every second to catch regenerating patterns quickly
+
+let mergerNodes = {};
 
 socket.on('play', (data) => {
   const voice_to_play = data.voice;
@@ -627,58 +852,114 @@ socket.on('play', (data) => {
   const channels = data.channels;
   const pan_data = data.pan_data;
 
+  // Track that this voice was requested to play
+  playRequestedVoices.add(Number(voice_to_play));
+
+  // immediately block playback if pattern is permanently stopped or in global stop mode
+  if (permanentlyStoppedVoices.has(data.fp_name) || globalStopMode) {
+    return; // don't play audio for stopped patterns
+  }
+
   // map fp_name to voice_to_play
   fpNameToVoiceMap[data.fp_name] = voice_to_play;
+
+  // track voice history for this pattern name at load time and play time
+  if (!patternVoiceHistory.has(data.fp_name)) {
+    patternVoiceHistory.set(data.fp_name, []);
+  }
+  
+  // add current voice to history if it's loaded and not already there
+  const voiceHistory = patternVoiceHistory.get(data.fp_name);
+  if (voices[voice_to_play] && !voiceHistory.includes(voice_to_play)) {
+    voiceHistory.push(voice_to_play);
+    // keep only the last 5 voices for each pattern to avoid memory bloat
+    if (voiceHistory.length > 5) {
+      voiceHistory.shift();
+    }
+  }
 
   pitchShifts[voice_to_play] = pitch;
 
   if (browser_sound_output === true) {
     // check if the voice is loaded
+    let actualVoiceToPlay = voice_to_play;
+    let isFallback = false;
+    
     if (voices[voice_to_play]) {
-      const merger = ac.createChannelMerger(ac.destination.channelCount);
-      sources[voice_to_play] = [];
+    } else {
+      // voice did not load in time - try to find the previous voice for this pattern
+      const voiceHistory = patternVoiceHistory.get(data.fp_name);
+      
+      if (voiceHistory && voiceHistory.length > 0) {
+        // find the most recent loaded voice for this pattern (search backwards)
+        for (let i = voiceHistory.length - 1; i >= 0; i--) {
+          const fallbackVoice = voiceHistory[i];
+          if (voices[fallbackVoice] && fallbackVoice !== voice_to_play) {
+            actualVoiceToPlay = fallbackVoice;
+            isFallback = true;
+            break;
+          }
+        }
+      }
+    }
+    
+    // continue with playback using actualVoiceToPlay (either original or fallback)
+    if (voices[actualVoiceToPlay]) {
+      // merger is created once per voice
+      if (!sources[actualVoiceToPlay]) {
+        if (!mergerNodes[actualVoiceToPlay]) {
+          mergerNodes[actualVoiceToPlay] = ac.createChannelMerger(ac.destination.maxChannelCount);
+          mergerNodes[actualVoiceToPlay].connect(ac.destination);
+        }
+        sources[actualVoiceToPlay] = [];
+      }
+
       channels.forEach((channel, index) => {
         const source = ac.createBufferSource();
-        source.buffer = voices[voice_to_play].buffer;
-        const current_bpm = $('#bpm').val();
-        source.playbackRate.value = (current_bpm / voices[voice_to_play].bpm) * pitch;
+        source.buffer = voices[actualVoiceToPlay].buffer;
 
         // create or reuse a gain node for this voice
-        if (!gainNodes[voice_to_play]) {
-          gainNodes[voice_to_play] = ac.createGain();
+        if (!gainNodes[actualVoiceToPlay]) {
+          gainNodes[actualVoiceToPlay] = ac.createGain();
         }
 
-        // reset gain to baseline (1 for unmuted, 0 for muted)
-        gainNodes[voice_to_play].gain.value = mutedVoices[data.fp_name] ? 0 : 1;
+        // reset gain to baseline (manual gain value for unmuted, 0 for muted)
+        const manualGain = manualGainValues[data.fp_name] ?? 0.7;
+        gainNodes[actualVoiceToPlay].gain.value = mutedVoices[data.fp_name] ? 0 : manualGain;
 
-        source.connect(gainNodes[voice_to_play]);
-        gainNodes[voice_to_play].connect(merger, 0, channel - 1);
+        // only connect if not already connected
+        if (!sources[actualVoiceToPlay].includes(source)) {
+          source.connect(gainNodes[actualVoiceToPlay]);
+          gainNodes[actualVoiceToPlay].connect(mergerNodes[actualVoiceToPlay], 0, channel - 1);
+        }
 
         if (pan_data === false || channels.length === 1) {
           // adjust overall gain for single-channel or no pan data
-          gainNodes[voice_to_play].gain.value *= 0.7;
+          const manualGain = manualGainValues[data.fp_name] ?? 0.7;
+          gainNodes[actualVoiceToPlay].gain.value = mutedVoices[data.fp_name] ? 0 : manualGain;
         } else {
           const durationPerValue = source.buffer.duration / pan_data.length;
           pan_data.forEach((panValue, i) => {
             const time = i * durationPerValue;
             const normalizedIndex = index / (channels.length - 1);
+            const manualGain = manualGainValues[data.fp_name] ?? 0.7;
             const gainValue = Math.abs(normalizedIndex - panValue) <= 1 / (channels.length - 1)
-              ? 0.7 * (1 - Math.abs(normalizedIndex - panValue))
+              ? manualGain * (1 - Math.abs(normalizedIndex - panValue))
               : 0;
-            gainNodes[voice_to_play].gain.setValueAtTime(
+            gainNodes[actualVoiceToPlay].gain.setValueAtTime(
               gainValue * (mutedVoices[data.fp_name] ? 0 : 1),
               ac.currentTime + time
             );
           });
         }
 
-        source.start();
-        sources[voice_to_play].push(source);
-        lastPlayedTimes[voice_to_play] = Date.now();
+        try {
+          source.start();
+        } catch (error) {}
+        
+        sources[actualVoiceToPlay].push(source);
+        lastPlayedTimes[actualVoiceToPlay] = Date.now();
       });
-      merger.connect(compressor);
-    } else {
-      // voice is not loaded yet
     }
   }
 });
@@ -709,15 +990,89 @@ socket.on('load', function (data) {
       let voice_number = load_data[0];
       let fp = load_data[1];
       let voice_bpm = Number(load_data[2]);
+      
+      // track that this voice was requested to load
+      requestedVoices.add(Number(voice_number));
+      
+      const startTime = Date.now();
+      const loadKey = `${voice_number}_${fp}`;
+      
+      pendingLoads.set(loadKey, startTime);
+      loadTiming.set(loadKey, { start: startTime, voice_number, fp });
+      
       // get any wav files that were just generated
       fetch(`../tmp/${fp}`)
-        .then(response => response.arrayBuffer())
-        .then(arrayBuffer => ac.decodeAudioData(arrayBuffer))
+        .then(response => {
+          const fetchTime = Date.now() - startTime;
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
+          return response.arrayBuffer();
+        })
+        .then(arrayBuffer => {
+          const arrayBufferTime = Date.now() - startTime;
+          return ac.decodeAudioData(arrayBuffer);
+        })
         .then(audioBuffer => {
+          const totalTime = Date.now() - startTime;
+          
           // add the audioBuffer directly to the voices object
           voices[voice_number] = { buffer: audioBuffer, bpm: voice_bpm };
+
+          // track this voice in pattern history when it's successfully loaded
+          // extract pattern name
+          const patternName = fp.split('---')[0];
+          
+          if (patternName) {
+            if (!patternVoiceHistory.has(patternName)) {
+              patternVoiceHistory.set(patternName, []);
+            }
+            const voiceHistory = patternVoiceHistory.get(patternName);
+            if (!voiceHistory.includes(Number(voice_number))) {
+              voiceHistory.push(Number(voice_number));
+              // keep only the last 5 voices for each pattern to avoid memory bloat
+              if (voiceHistory.length > 5) {
+                voiceHistory.shift();
+              }
+            }
+          }
+          
+          // clean up tracking
+          pendingLoads.delete(loadKey);
+          loadTiming.delete(loadKey);
         })
-        .catch(e => console.error(e));
+        .catch(e => {
+          const totalTime = Date.now() - startTime;
+          
+          // clean up tracking
+          pendingLoads.delete(loadKey);
+          loadTiming.delete(loadKey);
+        });
     }
   }
+});
+
+socket.on('transport_cleanup', () => {
+  // clean up voices and related audio objects when transport shuts down
+  voices = [];
+  sources = [];
+  pitchShifts = {};
+  lastPlayedTimes = {};
+  mutedVoices = {};
+  fpNameToVoiceMap = {};
+  gainNodes = {};
+  manualGainValues = {}; // clear manual gain values
+  mergerNodes = {};
+  recentlyStoppedVoices.clear(); // clear recently stopped tracking
+  permanentlyStoppedVoices.clear(); // clear permanently stopped tracking
+  patternVoiceHistory.clear(); // clear pattern voice history for fallback
+  
+  // clear the voice controls UI
+  const container = document.getElementById('voiceControls');
+  if (container) {
+    container.innerHTML = '';
+    container.style.paddingTop = '0px';
+  }
+
 });

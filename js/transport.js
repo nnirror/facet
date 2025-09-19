@@ -270,6 +270,8 @@ app.post('/stop', (req, res) => {
   meta_data.bpm = bpm;
   meta_data.time_signature_numerator = time_signature_numerator;
   meta_data.time_signature_denominator = time_signature_denominator;
+  // emit updated unique FP names (should be empty now)
+  emitUniqueFpNames();
   res.sendStatus(200);
 });
 
@@ -304,6 +306,10 @@ function tick() {
       delete patterns_for_next_loop[fp_name];
       delete event_register[fp_name];
     });
+    if (Object.keys(patterns_to_delete_at_end_of_loop).length > 0) {
+      // emit updated unique FP names if any patterns were deleted
+      emitUniqueFpNames();
+    }
     patterns_to_delete_at_end_of_loop = [];
     // tell pattern server to start processing next loop
     requestNewPatterns();
@@ -399,7 +405,6 @@ function tick() {
           }
 
           if (event.play_once === true && event.type !== "audio") {
-            // delete event_register[fp_name];
             patterns_to_delete_at_end_of_loop[fp_name] = true;
           }
 
@@ -586,32 +591,77 @@ function applyNextPatterns() {
       }
     }
 
-    if (typeof posted_pattern.osc_data.data !== 'undefined') {
-      let eventsPerLoop = Math.ceil(posted_pattern.osc_data.data.length / over_n);
-      let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
-      let endEventIndex = startEventIndex + eventsPerLoop;
+    const max_events_per_second = 100; // maximum OSC events per second
 
-      event_register[facet_pattern_name] = [];
-      for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.osc_data.data.length; i++) {
-        let osc_object = {
-          data: posted_pattern.osc_data.data[i],
-          address: posted_pattern.osc_data.address,
-        };
-        let indexWithinLoop = i - startEventIndex;
-        let newPosition = indexWithinLoop / eventsPerLoop;
+  if (Array.isArray(posted_pattern.osc_data) && posted_pattern.osc_data.length > 0) {
+    event_register[facet_pattern_name] = [];
 
-        event_register[facet_pattern_name].push(
-          {
-            position: newPosition,
+    posted_pattern.osc_data.forEach((osc_entry) => {
+      if ( osc_entry.sendAsOneBatch === true) {
+        udp_osc_server.send(new OSC.Message(`${osc_entry.address}`, ...osc_entry.data));
+        return; // skip further processing for this entry
+      }
+      if (typeof osc_entry.data !== 'undefined') {
+        // calculate the maximum allowable size for osc_entry.data
+        const beats_per_minute = bpm;
+        const beats_per_bar = meta_data.time_signature_numerator[0] ? meta_data.time_signature_numerator[0] : 4;
+        const bars_per_minute = beats_per_minute / beats_per_bar;
+        const seconds_per_bar = 60 / bars_per_minute;
+        const seconds_per_loop = seconds_per_bar * over_n;
+        const max_events_per_loop = Math.ceil(max_events_per_second * seconds_per_loop);
+
+        // resize osc_entry.data only if it exceeds the maximum allowable size
+        if (osc_entry.data.length > max_events_per_loop) {
+          const resize_factor = osc_entry.data.length / max_events_per_loop;
+          const resized_data = [];
+          for (let i = 0; i < max_events_per_loop; i++) {
+            const new_index = Math.floor(i * resize_factor);
+            resized_data.push(osc_entry.data[new_index]);
+          }
+          osc_entry.data = resized_data; // replace the original data with the resized data
+        }
+
+        let eventsPerLoop = Math.ceil(osc_entry.data.length / over_n);
+        let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
+        let endEventIndex = startEventIndex + eventsPerLoop;
+
+        if (typeof osc_entry.data[0] === 'string') {
+          let osc_object = {
+            data: osc_entry.data,
+            address: osc_entry.address,
+          };
+          event_register[facet_pattern_name].push({
+            position: 0.01,
             type: "osc",
             data: osc_object,
             play_once: posted_pattern.play_once,
             fired: false,
             muted: mutedPatterns[facet_pattern_name] || false
+          });
+        } else {
+          // normal case where data is numbers, not strings
+          for (var i = startEventIndex; i < endEventIndex && i < osc_entry.data.length; i++) {
+            let osc_object = {
+              data: osc_entry.data[i],
+              address: osc_entry.address,
+            };
+            let indexWithinLoop = i - startEventIndex;
+            let newPosition = indexWithinLoop / eventsPerLoop;
+
+            event_register[facet_pattern_name].push({
+              position: newPosition,
+              type: "osc",
+              data: osc_object,
+              play_once: posted_pattern.play_once,
+              fired: false,
+              muted: mutedPatterns[facet_pattern_name] || false
+            });
           }
-        )
+        }
       }
-    }
+    });
+  }
+
   }
   stopped_patterns = [];
 }
@@ -690,6 +740,7 @@ function checkForBpmRecalculation(events_per_loop) {
   if (typeof scaledBpm[bpmIndex] !== 'undefined') {
     bpm = scaledBpm[bpmIndex];
   }
+  udp_osc_server.send(new OSC.Message('/bpm', bpm));
 
   if (prev_bpm !== bpm) {
     bpm_was_changed_this_loop = true;
@@ -706,6 +757,8 @@ function stopVoice(name) {
   try {
     delete event_register[name];
     patterns_that_have_been_stopped[name] = true;
+    // emit updated unique FP names to reflect the removal
+    emitUniqueFpNames();
   }
   catch (e) { }
 }
@@ -746,10 +799,23 @@ function getUniqueFpNames(eventRegister) {
   return Object.keys(eventRegister);
 }
 
+function getPatternTypesMap(eventRegister) {
+  const patternTypes = {};
+  for (const fpName in eventRegister) {
+    if (eventRegister[fpName] && eventRegister[fpName].length > 0) {
+      // get the type from the first event of this pattern
+      const firstEvent = eventRegister[fpName][0];
+      patternTypes[fpName] = firstEvent.type || 'unknown';
+    }
+  }
+  return patternTypes;
+}
+
 function emitUniqueFpNames() {
   const uniqueFpNames = getUniqueFpNames(event_register);
+  const patternTypes = getPatternTypesMap(event_register);
   for (let socket of sockets) {
-    socket.emit('uniqueFpNames', uniqueFpNames);
+    socket.emit('uniqueFpNames', { names: uniqueFpNames, types: patternTypes });
   }
 }
 
@@ -780,3 +846,21 @@ class AudioPlaybackVoice {
     this.overwritable = posted_pattern.do_not_regenerate === true || posted_pattern.regenerate_every_n_loops > 1 ? false : true;
   }
 }
+
+// emit cleanup event to all connected clients when process is closing
+function emitCleanupEvent() {
+  for (let socket of sockets) {
+    socket.emit('transport_cleanup');
+  }
+}
+
+// do stuff when app is closing
+process.on('exit', () => {
+  emitCleanupEvent();
+});
+
+// catches ctrl+c event
+process.on('SIGINT', () => {
+  emitCleanupEvent();
+  process.exit();
+});

@@ -88,7 +88,7 @@ function runCode(code, mode, vars, env, utils, is_rerun) {
 }
 
 function parseBpmFromEnv(env_str) {
-  const match = env_str.match(/bpm=[\d]+[.]*[\d]+/gm);
+  const match = env_str.match(/bpm=\d+(\.\d+)?/gm);
   return match ? match[0].split('bpm=')[1] : null;
 }
 
