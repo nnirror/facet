@@ -86,6 +86,10 @@ $(document).keydown(function (e) {
   }
   else if (e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191)) {
     // clear hooks and mute everything: [ctrl + "."] or  [ctrl + "?"]
+    
+    // activate frontend gate immediately
+    frontendGateActive = true;
+    
     $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) { });
     $.growl.notice({ message: 'all commands stopped' });
     
@@ -241,6 +245,9 @@ $(document).keyup(function (e) {
 });
 
 function runFacet(mode = 'run') {
+  // deactivate frontend gate when running new commands
+  frontendGateActive = false;
+  
   // select the entire block surrounding the cursor pos, based on if newlines exist above and below
   let cursor = cm.getCursor();
   let line = cursor.line;
@@ -319,6 +326,9 @@ $('body').on('click', '#sound', function () {
 });
 
 $('body').on('click', '#stop', function () {
+  // activate frontend gate immediately
+  frontendGateActive = true;
+  
   $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) {
     $.growl.notice({ message: 'all commands stopped' });
   })
@@ -616,18 +626,33 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 socket.on('time_signature_numerator', (numerator) => {
+  // if frontend gate is active, block time signature updates
+  if (frontendGateActive) {
+    return;
+  }
+  
   if (!$('#time_signature_numerator').is(':focus') && prev_time_signature_numerator !== numerator) {
     $('#time_signature_numerator').val(`${numerator}`);
   }
 })
 
 socket.on('time_signature_denominator', (denominator) => {
+  // if frontend gate is active, block time signature updates
+  if (frontendGateActive) {
+    return;
+  }
+  
   if (!$('#time_signature_denominator').is(':focus') && prev_time_signature_denominator !== denominator) {
     $('#time_signature_denominator').val(`${denominator}`);
   }
 })
 
 socket.on('bpm', (bpm) => {
+  // if frontend gate is active, block BPM updates
+  if (frontendGateActive) {
+    return;
+  }
+
   if (!$('#bpm').is(':focus') && bpmCanBeUpdatedByServer === true) {
     $('#bpm').val(`${bpm}`);
   }
@@ -641,8 +666,13 @@ let manualGainValues = {}; // track manual gain values for each voice (0-1)
 let recentlyStoppedVoices = new Map(); // track voices recently stopped with timestamps
 let permanentlyStoppedVoices = new Set(); // track voices that should never be re-added until cleared
 let globalStopMode = false; // when true, prevents ALL voice controls from being created
+let frontendGateActive = false; // when true, blocks all audio playback, bpm updates, and UI updates
 
 socket.on('uniqueFpNames', (data) => {
+  // if frontend gate is active, ignore all pattern updates
+  if (frontendGateActive) {
+    return;
+  }
   const container = document.getElementById('voiceControls');
 
   // handle both old format (array) and new format (object with names and types)
@@ -848,6 +878,11 @@ setInterval(() => {
 let mergerNodes = {};
 
 socket.on('play', (data) => {
+  // if frontend gate is active, block all audio playback
+  if (frontendGateActive) {
+    return;
+  }
+
   const voice_to_play = data.voice;
   const pitch = data.pitch;
   const channels = data.channels;
@@ -985,6 +1020,11 @@ setInterval(() => {
 }, 60 * 1000);
 
 socket.on('load', function (data) {
+  // if frontend gate is active, block all audio loading
+  if (frontendGateActive) {
+    return;
+  }
+
   for (var i = 0; i < data.length; i++) {
     if (browser_sound_output === true) {
       let load_data = data[i].split(' ');
@@ -1055,6 +1095,9 @@ socket.on('load', function (data) {
 });
 
 socket.on('transport_cleanup', () => {
+  // deactivate frontend gate when transport cleanly shuts down
+  frontendGateActive = false;
+  
   // clean up voices and related audio objects when transport shuts down
   voices = [];
   sources = [];
