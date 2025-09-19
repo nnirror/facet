@@ -79,16 +79,33 @@ io.on('connection', (socket) => {
   socket.on('midiMuteToggle', (data) => {
     const { fp_name, muted } = data;
 
-    // Update the mute state in the global map
+    // update the mute state in the global map
     mutedPatterns[fp_name] = muted;
 
-    // Update the mute state for the events in the event register
+    // update the mute state for the events in the event register
     if (event_register[fp_name]) {
       event_register[fp_name].forEach(event => {
         if (event.type === 'note' || event.type === 'cc' || event.type === 'pitchbend' || event.type === 'osc') {
           event.muted = muted;
         }
       });
+    }
+  });
+
+  socket.on('getMidiPorts', () => {
+    let midi_port_names = [];
+    for (var i = 0; i < WebMidi.outputs.length; i++) {
+      midi_port_names.push(WebMidi.outputs[i]._midiOutput.name);
+    }
+    socket.emit('midiPorts', midi_port_names);
+  });
+
+  socket.on('selectMidiOutput', (data) => {
+    try {
+      midioutput = WebMidi.getOutputByName(data.output);
+      socket.emit('midiSelectResponse', { status: 'success' });
+    } catch (e) {
+      socket.emit('midiSelectResponse', { status: 'error', error: e.message });
     }
   });
 });
@@ -110,16 +127,6 @@ axios.interceptors.response.use(res => { return res }, (error) => {
 
 WebMidi.enable();
 let midioutput;
-
-app.post('/midi', (req, res) => {
-  let midi_port_names = [];
-  for (var i = 0; i < WebMidi.outputs.length; i++) {
-    midi_port_names.push(WebMidi.outputs[i]._midiOutput.name);
-  }
-  res.send({
-    data: midi_port_names
-  });
-});
 
 app.post('/meta', (req, res) => {
   let posted_pattern = JSON.parse(req.body.pattern);
@@ -224,18 +231,6 @@ app.post('/update', (req, res) => {
 app.post('/browser_sound', (req, res) => {
   browser_sound_output = req.body.browser_sound_output === 'true' ? true : false;
   res.sendStatus(200);
-});
-
-app.post('/midi_select', (req, res) => {
-  try {
-    midioutput = WebMidi.getOutputByName(req.body.output);
-    res.sendStatus(200);
-  } catch (e) {
-    res.send({
-      status: 400,
-      error: e
-    });
-  }
 });
 
 app.get('/status', (req, res) => {

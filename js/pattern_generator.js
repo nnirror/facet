@@ -7,6 +7,8 @@ const axios = require('axios');
 const app = express();
 const frontEndWebApp = express();
 const cors = require('cors');
+const http = require('http');
+const socketIo = require('socket.io');
 const fs = require('fs');
 const os_utils = require('os-utils');
 const strip = require('strip-comments');
@@ -33,6 +35,20 @@ let vars = [];
 let env = { bpm: -1, bars_elapsed: -1, mousex: -1, mousey: -1 };
 let env_string = '';
 let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
+
+// request queue management
+const BASE_MAX_WORKERS = 4; // base limit for concurrent pattern generation
+const requestQueue = [];
+let activeWorkers = 0;
+
+// dynamic worker limit based on CPU usage
+function getMaxWorkers() {
+  if (percent_cpu < 0.4) return BASE_MAX_WORKERS + 2;
+  if (percent_cpu < 0.6) return BASE_MAX_WORKERS + 1;
+  if (percent_cpu < 0.8) return BASE_MAX_WORKERS;
+  return Math.max(2, BASE_MAX_WORKERS - 1);
+}
+
 process.title = 'facet_pattern_generator';
 
 // Log uncaught exceptions
@@ -58,109 +74,12 @@ module.exports = {
     fs.readdirSync('tmp/').forEach(f => fs.rmSync(`tmp/${f}`));
   },
   run: (code, is_rerun, mode) => {
-    if ((is_rerun === true && percent_cpu < 0.7) || is_rerun === false) {
-      user_input = strip(code);
-      user_input = parser.delimitEndsOfCommands(user_input);
-      let commands = parser.splitCommandsOnDelimiter(user_input);
-      Object.values(commands).forEach(command => {
-        let code = parser.replaceDelimiterWithSemicolon(command);
-        code = parser.formatCode(code);
-        fp_name = code.match(fp_name_regex)[2];
-        if (is_rerun === false) {
-          // when manually run, find and stop any existing worker with the supplied fp name
-          for (const [worker, name] of workerMap.entries()) {
-            if (name === fp_name) {
-              worker.terminate();
-              workerMap.delete(worker);
-              delete reruns[fp_name];
-            }
-          }
-        }
-        let worker = new Worker("./js/run.js", { workerData: { code: code, mode: mode, vars: vars, env: env_string, utils: utils, is_rerun: is_rerun, fp_name: fp_name }, resourceLimits: { stackSizeMb: 128 } });
-        workerMap.set(worker, fp_name);
-        workers.push(worker);
-        worker.once("message", run_data => {
-          let fps = run_data.fps;
-          Object.values(fps).forEach(fp => {
-            // remove the worker from the workers list
-            let index = workers.findIndex(workerObj => workerObj === worker);
-            if (index !== -1) {
-              workers.splice(index, 1);
-              // images need to continue after the pattern is processed so the worker cannot be terminated
-              if (!fp.is_image) {
-                worker.terminate();
-              }
-            }
-            // set vars here - loop through
-            for (let fp_var_key in fp.vars) {
-              if (fp.vars.hasOwnProperty(fp_var_key)) {
-                vars[fp_var_key] = fp.vars[fp_var_key];
-              }
-            }
-            if (fp.is_stopped == true || mode == 'stop') {
-              delete reruns[fp.name];
-              // if the command is to stop playback, find the worker and stop it
-              for (const [worker, name] of workerMap.entries()) {
-                if (name === fp.name) {
-                  worker.terminate();
-                  workerMap.delete(worker);
-                }
-              }
-              if (fp.bpm_pattern !== false) {
-                postMetaDataToTransport(fp.bpm_pattern, 'bpm');
-              }
-              else {
-                postToTransport(fp);
-              }
-            }
-            if (fp.do_not_regenerate === true) {
-              delete reruns[fp.name];
-            }
-
-            if (fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false && fp.is_stopped !== true) {
-              // and only add to reruns the first time the code is POSTed and runs successfully
-              reruns[fp.name] = fp;
-            }
-            if (reruns[fp.name] && fp.is_stopped !== true) {
-              reruns[fp.name].available_for_next_request = true;
-            }
-            fp.name = fp.name + `---${Date.now()}`;
-            if (fp.bpm_pattern !== false) {
-              postMetaDataToTransport(fp.bpm_pattern, 'bpm');
-            }
-            if (fp.time_signature_denominator) {
-              postMetaDataToTransport(fp, 'time_signature_denominator');
-            }
-            if (fp.time_signature_numerator) {
-              postMetaDataToTransport(fp, 'time_signature_numerator');
-            }
-            if (typeof fp == 'object' && fp.skipped !== true ) {
-              if (fp.sequence_data.length > 0) {
-                // create wav file at SAMPLE_RATE, 32-bit floating point
-                let a_wav = new WaveFile();
-                a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
-                // store wav file in /tmp/
-                fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(), (err) => {
-                  postToTransport(fp);
-                  checkToSave(fp);
-                });
-              }
-              else {
-                postToTransport(fp);
-                checkToSave(fp);
-              }
-            }
-          });
-          Object.values(run_data.errors).forEach(error => {
-            if (error.message) {
-              errors.push(error.message);
-            }
-            else {
-              errors.push(error);
-            }
-          });
-        });
-      });
+    // add to queue if at capacity, otherwise execute immediately
+    const maxWorkers = getMaxWorkers();
+    if (activeWorkers >= maxWorkers) {
+      requestQueue.push({ code, is_rerun, mode });
+    } else {
+      executePattern(code, is_rerun, mode);
     }
   }
 }
@@ -173,31 +92,6 @@ app.use(cors());
 if (!fs.existsSync('tmp/')) {
   fs.mkdirSync('tmp/');
 };
-
-// receive and run commands via HTTP POST
-app.post('/', (req, res) => {
-  startTransport();
-  module.exports.run(req.body.code, false, req.body.mode);
-  res.send({
-    status: 200,
-  });
-});
-
-app.post('/hooks/clear', (req, res) => {
-  reruns = {};
-  terminateAllWorkers();
-  res.sendStatus(200);
-});
-
-app.post('/stop', (req, res) => {
-  reruns = {};
-  terminateAllWorkers();
-  axios.post(`http://${HOST}:3211/stop`, {})
-    .catch(function (error) {
-      console.log(`error stopping transport server: ${error}`);
-    });
-  res.sendStatus(200);
-});
 
 app.post('/meta', (req, res) => {
   bpm = req.body.bpm;
@@ -212,39 +106,6 @@ app.post('/meta', (req, res) => {
   env.bars_elapsed = bars_elapsed;
   env.mousex = mousex;
   env.mousey = mousey;
-});
-
-app.post('/autocomplete', (req, res) => {
-  let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1", "nextPowerOf2", "getSavedPattern"]
-  let all_methods = getAllFuncs(new FacetPattern());
-  let available_methods = []
-  for (var i = 0; i < all_methods.length; i++) {
-    let method = all_methods[i];
-    if (!blacklist.includes(method.name)) {
-      available_methods.push(method.example);
-    }
-  }
-  res.send({
-    data: {
-      methods: available_methods
-    },
-    status: 200
-  });
-});
-
-app.post('/status', (req, res) => {
-  // set mousex and mousey variables from the mouse position in the browser editor
-  mousex = req.body.mousex;
-  mousey = req.body.mousey;
-  res.send({
-    data: {
-      bpm: bpm,
-      cpu: percent_cpu,
-      errors: errors
-    },
-    status: 200
-  });
-  errors = [];
 });
 
 app.get('/update', (req, res) => {
@@ -269,11 +130,78 @@ app.get('/cleanup', (req, res) => {
   res.sendStatus(200);
 });
 
-// run the server
-const server = app.listen(1123);
+// run the server with WebSocket support
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
+// ws event handlers
+io.on('connection', (socket) => {
+
+  // handle code execution
+  socket.on('runCode', (data) => {
+    startTransport();
+    module.exports.run(data.code, false, data.mode);
+  });
+
+  // handle hooks clear
+  socket.on('clearHooks', () => {
+    reruns = {};
+    terminateAllWorkers();
+  });
+
+  // handle stop command
+  socket.on('stop', () => {
+    reruns = {};
+    terminateAllWorkers();
+    axios.post(`http://${HOST}:3211/stop`, {})
+      .catch(function (error) {});
+  });
+
+  // handle autocomplete request
+  socket.on('autocomplete', () => {
+    let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1", "nextPowerOf2", "getSavedPattern"]
+    let all_methods = getAllFuncs(new FacetPattern());
+    let available_methods = []
+    for (var i = 0; i < all_methods.length; i++) {
+      let method = all_methods[i];
+      if (!blacklist.includes(method.name)) {
+        available_methods.push(method.example);
+      }
+    }
+    socket.emit('autocompleteResponse', {
+      methods: available_methods
+    });
+  });
+
+  // handle status request
+  socket.on('status', (data) => {
+    // set mousex and mousey variables from the mouse position in the browser editor
+    mousex = data.mousex;
+    mousey = data.mousey;
+    socket.emit('statusResponse', {
+      bpm: bpm,
+      cpu: percent_cpu,
+      errors: errors,
+      queueLength: requestQueue.length,
+      activeWorkers: activeWorkers,
+      maxWorkers: getMaxWorkers()
+    });
+    errors = [];
+  });
+});
+
+server.listen(1123);
 
 // reports CPU usage of the process every 500ms
 setInterval(getCpuUsage, 50);
+
+// process queue periodically to ensure no requests get stuck
+setInterval(processQueue, 100);
 
 // initialize and open a window in the browser with the text editor
 frontEndWebApp.use(express.static(path.join(__dirname, '../')));
@@ -296,6 +224,131 @@ function terminateAllWorkers() {
     worker.terminate();  // cancel the worker thread
   });
   workers = [];  // all workers have been terminated
+  activeWorkers = 0;
+  requestQueue.length = 0; // clear the queue
+}
+
+function processQueue() {
+  const maxWorkers = getMaxWorkers();
+  if (requestQueue.length > 0 && activeWorkers < maxWorkers) {
+    const nextRequest = requestQueue.shift();
+    executePattern(nextRequest.code, nextRequest.is_rerun, nextRequest.mode);
+  }
+}
+
+function executePattern(code, is_rerun, mode) {
+  if ((is_rerun === true && percent_cpu < 0.7) || is_rerun === false) {
+    activeWorkers++;
+    
+    user_input = strip(code);
+    user_input = parser.delimitEndsOfCommands(user_input);
+    let commands = parser.splitCommandsOnDelimiter(user_input);
+    Object.values(commands).forEach(command => {
+      let code = parser.replaceDelimiterWithSemicolon(command);
+      code = parser.formatCode(code);
+      fp_name = code.match(fp_name_regex)[2];
+      if (is_rerun === false) {
+        // when manually run, find and stop any existing worker with the supplied fp name
+        for (const [worker, name] of workerMap.entries()) {
+          if (name === fp_name) {
+            worker.terminate();
+            workerMap.delete(worker);
+            delete reruns[fp_name];
+          }
+        }
+      }
+      let worker = new Worker("./js/run.js", { workerData: { code: code, mode: mode, vars: vars, env: env_string, utils: utils, is_rerun: is_rerun, fp_name: fp_name }, resourceLimits: { stackSizeMb: 128 } });
+      workerMap.set(worker, fp_name);
+      workers.push(worker);
+      worker.once("message", run_data => {
+        // decrement active workers when this worker finishes
+        activeWorkers--;
+        
+        let fps = run_data.fps;
+        Object.values(fps).forEach(fp => {
+          // ...existing worker message handling code...
+          let index = workers.findIndex(workerObj => workerObj === worker);
+          if (index !== -1) {
+            workers.splice(index, 1);
+            // images need to continue after the pattern is processed so the worker cannot be terminated
+            if (!fp.is_image) {
+              worker.terminate();
+            }
+          }
+          // set vars here - loop through
+          for (let fp_var_key in fp.vars) {
+            if (fp.vars.hasOwnProperty(fp_var_key)) {
+              vars[fp_var_key] = fp.vars[fp_var_key];
+            }
+          }
+          if (fp.is_stopped == true || mode == 'stop') {
+            delete reruns[fp.name];
+            // if the command is to stop playback, find the worker and stop it
+            for (const [worker, name] of workerMap.entries()) {
+              if (name === fp.name) {
+                worker.terminate();
+                workerMap.delete(worker);
+              }
+            }
+            if (fp.bpm_pattern !== false) {
+              postMetaDataToTransport(fp.bpm_pattern, 'bpm');
+            }
+            else {
+              postToTransport(fp);
+            }
+          }
+          if (fp.do_not_regenerate === true) {
+            delete reruns[fp.name];
+          }
+
+          if (fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false && fp.is_stopped !== true) {
+            // and only add to reruns the first time the code is POSTed and runs successfully
+            reruns[fp.name] = fp;
+          }
+          if (reruns[fp.name] && fp.is_stopped !== true) {
+            reruns[fp.name].available_for_next_request = true;
+          }
+          fp.name = fp.name + `---${Date.now()}`;
+          if (fp.bpm_pattern !== false) {
+            postMetaDataToTransport(fp.bpm_pattern, 'bpm');
+          }
+          if (fp.time_signature_denominator) {
+            postMetaDataToTransport(fp, 'time_signature_denominator');
+          }
+          if (fp.time_signature_numerator) {
+            postMetaDataToTransport(fp, 'time_signature_numerator');
+          }
+          if (typeof fp == 'object' && fp.skipped !== true ) {
+            if (fp.sequence_data.length > 0) {
+              // create wav file at SAMPLE_RATE, 32-bit floating point
+              let a_wav = new WaveFile();
+              a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
+              // store wav file in /tmp/
+              fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(), (err) => {
+                postToTransport(fp);
+                checkToSave(fp);
+              });
+            }
+            else {
+              postToTransport(fp);
+              checkToSave(fp);
+            }
+          }
+        });
+        Object.values(run_data.errors).forEach(error => {
+          if (error.message) {
+            errors.push(error.message);
+          }
+          else {
+            errors.push(error);
+          }
+        });
+
+        // process next item in queue
+        processQueue();
+      });
+    });
+  }
 }
 
 function calculateNoteValues(bpm, time_signature_numerator, time_signature_denominator) {

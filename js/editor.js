@@ -81,7 +81,7 @@ $(document).keydown(function (e) {
   }
   else if (e.ctrlKey && e.keyCode == 188) {
     // clear hooks: [ctrl + ","]
-    $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function (data, status) { });
+    patternSocket.emit('clearHooks');
     $.growl.notice({ message: 'regeneration stopped' });
   }
   else if (e.ctrlKey && (e.keyCode == 190 || e.keyCode == 191)) {
@@ -90,7 +90,7 @@ $(document).keydown(function (e) {
     // activate frontend gate immediately
     frontendGateActive = true;
     
-    $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) { });
+    patternSocket.emit('stop');
     $.growl.notice({ message: 'all commands stopped' });
     
     // immediately clear all voice controls from UI
@@ -207,34 +207,7 @@ $(document).keydown(function (e) {
   }
 
   if (e.ctrlKey && e.code === 'Space') {
-    $.post(`http://${configSettings.HOST}:1123/autocomplete`, {}).done(function (data, status) {
-      facet_methods = data.data.methods;
-      // forked custom hinting from: https://stackoverflow.com/a/39973139
-      var options = {
-        hint: function (editor) {
-          var list = facet_methods;
-          var cursor = editor.getCursor();
-          var currentLine = editor.getLine(cursor.line);
-          var start = cursor.ch;
-          var end = start;
-          while (end < currentLine.length && /[\w$]+/.test(currentLine.charAt(end))) ++end;
-          while (start && /[\w$]+/.test(currentLine.charAt(start - 1))) --start;
-          var curWord = start != end && currentLine.slice(start, end);
-          var regex = new RegExp('^' + curWord, 'i');
-          var result = {
-            list: (!curWord ? list : list.filter(function (item) {
-              return item.match(regex);
-            })).sort(),
-            from: CodeMirror.Pos(cursor.line, start),
-            to: CodeMirror.Pos(cursor.line, end)
-          };
-          return result;
-        }
-      };
-      cm.showHint(options);
-    }).fail(function (data) {
-      $.growl.error({ message: 'no connection to the Facet server' });
-    });
+    patternSocket.emit('autocomplete');
   }
 
 });
@@ -269,41 +242,18 @@ function runFacet(mode = 'run') {
     }
   }
   
-  $.post(`http://${configSettings.HOST}:1123`, { code: code, mode: mode });
+  patternSocket.emit('runCode', { code: code, mode: mode });
 }
 
 let midi_outs;
-$.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function (data, status) {
-  // create <select> dropdown with this -- check every 2 seconds, store
-  // in memory, if changed update select #midi_outs add option
-  if (data.data != midi_outs) {
-    midi_outs = data.data;
-    $('#midi_outs').append('<option value="">-- MIDI output --</option>');
-    for (var i = 0; i < midi_outs.length; i++) {
-      let midi_out = midi_outs[i];
-      $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
-    }
-  }
-});
 
 $('body').on('change', '#midi_outs', function () {
   localStorage.setItem('midi_outs_value', this.value);
-  $.post(`http://${configSettings.HOST}:3211/midi_select`, { output: this.value }).done(function (data, status) { });
+  socket.emit('selectMidiOutput', { output: this.value });
 });
 
 $('body').on('click', '#midi_refresh', function () {
-  $.post(`http://${configSettings.HOST}:3211/midi`, {}).done(function (data, status) {
-    $('#midi_outs').html('');
-    for (var i = 0; i < data.data.length; i++) {
-      let midi_out = data.data[i];
-      $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
-    }
-  })
-    .fail(function (data) {
-      if (data.statusText == 'error') {
-        $.growl.error({ message: 'no connection to the Facet server' });
-      }
-    });
+  socket.emit('getMidiPorts');
 });
 
 $('body').on('click', '#sound', function () {
@@ -329,14 +279,8 @@ $('body').on('click', '#stop', function () {
   // activate frontend gate immediately
   frontendGateActive = true;
   
-  $.post(`http://${configSettings.HOST}:1123/stop`, {}).done(function (data, status) {
-    $.growl.notice({ message: 'all commands stopped' });
-  })
-    .fail(function (data) {
-      if (data.statusText == 'error') {
-        $.growl.error({ message: 'no connection to the Facet server' });
-      }
-    });
+  patternSocket.emit('stop');
+  $.growl.notice({ message: 'all commands stopped' });
     
   // immediately clear all voice controls from UI
   const container = document.getElementById('voiceControls');
@@ -363,9 +307,8 @@ $('body').on('click', '#stop', function () {
 });
 
 $('body').on('click', '#clear', function () {
-  $.post(`http://${configSettings.HOST}:1123/hooks/clear`, {}).done(function (data, status) {
-    $.growl.notice({ message: 'regeneration stopped' });
-  });
+  patternSocket.emit('clearHooks');
+  $.growl.notice({ message: 'regeneration stopped' });
 });
 
 $('body').on('click', '#rerun', function () {
@@ -386,10 +329,7 @@ $('body').on('click', '#restart', function () {
 let browser_sound_output = true;
 
 $(document).ready(function () {
-  $('#midi_refresh').click();
-  setTimeout(() => {
-    initializeMIDISelection();
-  }, 100);
+  $('#midi_refresh').click(); // request MIDI ports via ws
   try {
     setBrowserSound(localStorage.getItem('facet_browser_sound_output'));
   }
@@ -397,10 +337,6 @@ $(document).ready(function () {
     // do nothing because there's nothing saved in localStorage
   }
 });
-
-setInterval(() => {
-  initializeMIDISelection();
-}, 1000);
 
 function setBrowserSound(true_or_false_local_storage_string) {
   if (true_or_false_local_storage_string === 'true') {
@@ -421,13 +357,14 @@ function setBrowserSound(true_or_false_local_storage_string) {
   $.post(`http://${configSettings.HOST}:3211/browser_sound`, { browser_sound_output: browser_sound_output }).done(function (data, status) { });
 }
 
+// initialize MIDI selection from localStorage when requested
 function initializeMIDISelection() {
   // retrieve the previously stored MIDI out destination from localstorage
   var storedValue = localStorage.getItem('midi_outs_value');
-  if (storedValue) {
+  if (storedValue && midi_outs && midi_outs.includes(storedValue)) {
     // reset the most recently used MIDI out destination
     $('#midi_outs').val(storedValue);
-    $.post(`http://${configSettings.HOST}:3211/midi_select`, { output: storedValue }).done(function (data, status) { });
+    socket.emit('selectMidiOutput', { output: storedValue });
   }
 }
 
@@ -499,22 +436,10 @@ checkStatus();
 
 function checkStatus() {
   setInterval(() => {
-    $.post(`http://${configSettings.HOST}:1123/status`, {
+    patternSocket.emit('status', {
       mousex: mousex,
       mousey: mousey
-    }).done(function (data, status) {
-      Object.values(data.data.errors).forEach(error => {
-        $.growl.error({ message: error });
-      });
-      let cpu_percent = Math.round(parseFloat(data.data.cpu).toFixed(2) * 100);
-      cpu_percent = cpu_percent.toString().substring(0, 4);
-      $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
-      setStatus(`connected`);
-    })
-      .fail(function (data) {
-        setStatus(`disconnected`);
-        $('#cpu').html(`[offline]`);
-      });
+    });
   }, 250);
 }
 
@@ -588,11 +513,65 @@ ac.destination.channelCount = ac.destination.maxChannelCount;
 ac.destination.channelCountMode = "explicit";
 ac.destination.channelInterpretation = "discrete";
 
-// connect to the server
+// connect to the servers
 const socket = io.connect(`http://${configSettings.HOST}:3000`, {
   reconnection: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
+});
+
+// connect to pattern generator server via WebSocket
+const patternSocket = io.connect(`http://${configSettings.HOST}:1123`, {
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+});
+
+// Set up pattern socket event handlers
+patternSocket.on('autocompleteResponse', (data) => {
+  facet_methods = data.methods;
+  // forked custom hinting from: https://stackoverflow.com/a/39973139
+  var options = {
+    hint: function (editor) {
+      var list = facet_methods;
+      var cursor = editor.getCursor();
+      var currentLine = editor.getLine(cursor.line);
+      var start = cursor.ch;
+      var end = start;
+      while (end < currentLine.length && /[\w$]+/.test(currentLine.charAt(end))) ++end;
+      while (start && /[\w$]+/.test(currentLine.charAt(start - 1))) --start;
+      var curWord = start != end && currentLine.slice(start, end);
+      var regex = new RegExp('^' + curWord, 'i');
+      var result = {
+        list: (!curWord ? list : list.filter(function (item) {
+          return item.match(regex);
+        })).sort(),
+        from: CodeMirror.Pos(cursor.line, start),
+        to: CodeMirror.Pos(cursor.line, end)
+      };
+      return result;
+    }
+  };
+  cm.showHint(options);
+});
+
+patternSocket.on('error', () => {
+  $.growl.error({ message: 'no connection to the Facet server' });
+});
+
+patternSocket.on('statusResponse', (data) => {
+  Object.values(data.errors).forEach(error => {
+    $.growl.error({ message: error });
+  });
+  let cpu_percent = Math.round(parseFloat(data.cpu).toFixed(2) * 100);
+  cpu_percent = cpu_percent.toString().substring(0, 4);
+  $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
+  setStatus(`connected`);
+});
+
+patternSocket.on('disconnect', () => {
+  setStatus(`disconnected`);
+  $('#cpu').html(`[offline]`);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -657,6 +636,46 @@ socket.on('bpm', (bpm) => {
     $('#bpm').val(`${bpm}`);
   }
   adjustPlaybackRates($('#bpm').val());
+});
+
+// handle socket connection
+socket.on('connect', () => {
+  // request MIDI ports when connected
+  socket.emit('getMidiPorts');
+});
+
+// ws event handler for MIDI ports response
+socket.on('midiPorts', (data) => {
+  // only update if we don't have MIDI devices yet or if they've actually changed
+  if (!midi_outs || JSON.stringify(data) !== JSON.stringify(midi_outs)) {
+    midi_outs = data;
+    const currentSelection = $('#midi_outs').val(); // preserve current selection
+    $('#midi_outs').html(''); // clear existing options
+    $('#midi_outs').append('<option value="">-- MIDI output --</option>');
+    for (var i = 0; i < midi_outs.length; i++) {
+      let midi_out = midi_outs[i];
+      $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
+    }
+    
+    // restore the selection
+    if (currentSelection) {
+      $('#midi_outs').val(currentSelection);
+    } else {
+      // if no current selection, try to restore from localStorage
+      const storedValue = localStorage.getItem('midi_outs_value');
+      if (storedValue && midi_outs.includes(storedValue)) {
+        $('#midi_outs').val(storedValue);
+        socket.emit('selectMidiOutput', { output: storedValue });
+      }
+    }
+  }
+});
+
+// ws event handler for MIDI selection response
+socket.on('midiSelectResponse', (data) => {
+  if (data.status === 'error') {
+    $.growl.error({ message: 'MIDI selection error: ' + data.error });
+  }
 });
 
 let mutedVoices = {};
@@ -769,7 +788,7 @@ socket.on('uniqueFpNames', (data) => {
         container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
         
         // send stop command to server
-        $.post(`http://${configSettings.HOST}:1123`, { code: `$('${fpName}').stop()`, mode: 'stop' })
+        patternSocket.emit('runCode', { code: `$('${fpName}').stop()`, mode: 'stop' })
       });
 
       // create gain slider only for audio patterns
