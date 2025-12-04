@@ -29,6 +29,7 @@ let errors = [];
 let workers = [];
 let workerMap = new Map();
 let percent_cpu = 0;
+let globalStopFlag = false;
 let mousex, mousey;
 let cross_platform_copy_command = process.platform == 'win32' ? 'copy \/y' : 'cp';
 let vars = [];
@@ -109,6 +110,12 @@ app.post('/meta', (req, res) => {
 });
 
 app.get('/update', (req, res) => {
+  // don't process any updates if global stop flag is set
+  if (globalStopFlag) {
+    res.sendStatus(200);
+    return;
+  }
+  
   for (const [fp_name, fp] of Object.entries(reruns)) {
     // determine which patterns to rerun 
     if (fp.whenmod_modulo_operand == false
@@ -144,6 +151,7 @@ io.on('connection', (socket) => {
 
   // handle code execution
   socket.on('runCode', (data) => {
+    globalStopFlag = false;
     startTransport();
     module.exports.run(data.code, false, data.mode);
   });
@@ -151,12 +159,17 @@ io.on('connection', (socket) => {
   // handle hooks clear
   socket.on('clearHooks', () => {
     reruns = {};
+    globalStopFlag = true;
     terminateAllWorkers();
+    setTimeout(() => {
+      globalStopFlag = false;
+    }, 100);
   });
 
   // handle stop command
   socket.on('stop', () => {
     reruns = {};
+    globalStopFlag = true;
     terminateAllWorkers();
     axios.post(`http://${HOST}:3211/stop`, {})
       .catch(function (error) {});
@@ -164,7 +177,7 @@ io.on('connection', (socket) => {
 
   // handle autocomplete request
   socket.on('autocomplete', () => {
-    let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1", "nextPowerOf2", "getSavedPattern"]
+    let blacklist = ["__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "bpfInner", "biquad", "chaosInner", "constructor", "convertSamplesToSeconds", "fadeArrays", "fixnan", "getEnv", "getMaximumValue", "getUtils", "hannWindow", "hasOwnProperty", "hpfInner", "isFacetPattern", "isPrototypeOf", "loadBuffer", "logslider", "lpfInner", "makePatternsTheSameSize", "prevPowerOf2", "propertyIsEnumerable", "resample", "resizeInner", "sliceEndFade", "stringLeftRotate", "stringRightRotate", "toLocaleString", "toString", "valueOf", "butterworthFilter", "fftPhase", "fftMag", "scaleLT1", "nextPowerOf2", "getSavedPattern","calculateRepeatScore"]
     let all_methods = getAllFuncs(new FacetPattern());
     let available_methods = []
     for (var i = 0; i < all_methods.length; i++) {
@@ -224,11 +237,17 @@ function terminateAllWorkers() {
     worker.terminate();  // cancel the worker thread
   });
   workers = [];  // all workers have been terminated
+  workerMap.clear();
   activeWorkers = 0;
   requestQueue.length = 0; // clear the queue
 }
 
 function processQueue() {
+  // don't process queue if global stop flag is set
+  if (globalStopFlag) {
+    return;
+  }
+  
   const maxWorkers = getMaxWorkers();
   if (requestQueue.length > 0 && activeWorkers < maxWorkers) {
     const nextRequest = requestQueue.shift();
@@ -237,6 +256,11 @@ function processQueue() {
 }
 
 function executePattern(code, is_rerun, mode) {
+  // don't execute if global stop flag is set
+  if (globalStopFlag) {
+    return;
+  }
+  
   if ((is_rerun === true && percent_cpu < 0.7) || is_rerun === false) {
     activeWorkers++;
     
@@ -246,7 +270,13 @@ function executePattern(code, is_rerun, mode) {
     Object.values(commands).forEach(command => {
       let code = parser.replaceDelimiterWithSemicolon(command);
       code = parser.formatCode(code);
-      fp_name = code.match(fp_name_regex)[2];
+      const match = code.match(fp_name_regex);
+      if (!match || !match[2]) {
+        // skip commands that don't have a valid pattern name format
+        activeWorkers--;
+        return;
+      }
+      fp_name = match[2];
       if (is_rerun === false) {
         // when manually run, find and stop any existing worker with the supplied fp name
         for (const [worker, name] of workerMap.entries()) {
@@ -261,6 +291,12 @@ function executePattern(code, is_rerun, mode) {
       workerMap.set(worker, fp_name);
       workers.push(worker);
       worker.once("message", run_data => {
+        // if global stop flag is set, ignore all worker results
+        if (globalStopFlag) {
+          activeWorkers--;
+          return;
+        }
+        
         // decrement active workers when this worker finishes
         activeWorkers--;
         
@@ -290,10 +326,10 @@ function executePattern(code, is_rerun, mode) {
                 workerMap.delete(worker);
               }
             }
-            if (fp.bpm_pattern !== false) {
+            if (fp.bpm_pattern !== false && !globalStopFlag) {
               postMetaDataToTransport(fp.bpm_pattern, 'bpm');
             }
-            else {
+            else if (!globalStopFlag) {
               postToTransport(fp);
             }
           }
@@ -301,32 +337,34 @@ function executePattern(code, is_rerun, mode) {
             delete reruns[fp.name];
           }
 
-          if (fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false && fp.is_stopped !== true) {
+          if (fp.executed_successfully === true && fp.do_not_regenerate === false && is_rerun === false && fp.is_stopped !== true && !globalStopFlag) {
             // and only add to reruns the first time the code is POSTed and runs successfully
             reruns[fp.name] = fp;
           }
-          if (reruns[fp.name] && fp.is_stopped !== true) {
+          if (reruns[fp.name] && fp.is_stopped !== true && !globalStopFlag) {
             reruns[fp.name].available_for_next_request = true;
           }
           fp.name = fp.name + `---${Date.now()}`;
-          if (fp.bpm_pattern !== false) {
+          if (fp.bpm_pattern !== false && !globalStopFlag) {
             postMetaDataToTransport(fp.bpm_pattern, 'bpm');
           }
-          if (fp.time_signature_denominator) {
+          if (fp.time_signature_denominator && !globalStopFlag) {
             postMetaDataToTransport(fp, 'time_signature_denominator');
           }
-          if (fp.time_signature_numerator) {
+          if (fp.time_signature_numerator && !globalStopFlag) {
             postMetaDataToTransport(fp, 'time_signature_numerator');
           }
-          if (typeof fp == 'object' && fp.skipped !== true ) {
+          if (typeof fp == 'object' && fp.skipped !== true && !globalStopFlag) {
             if (fp.sequence_data.length > 0) {
               // create wav file at SAMPLE_RATE, 32-bit floating point
               let a_wav = new WaveFile();
               a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
               // store wav file in /tmp/
               fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(), (err) => {
-                postToTransport(fp);
-                checkToSave(fp);
+                if (!globalStopFlag) {  // double-check before posting
+                  postToTransport(fp);
+                  checkToSave(fp);
+                }
               });
             }
             else {

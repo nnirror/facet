@@ -193,7 +193,7 @@ class FacetPattern {
     return this;
   }
 
-  euclid(pulses, steps) {
+  euclid(pulses, steps, inverse = false) {
     if (pulses > steps) {
         pulses = steps;
     }
@@ -216,7 +216,8 @@ class FacetPattern {
     const length = this.data.length;
 
     this.data.forEach((value, index) => {
-        if (value === 1) {
+        // compute opposite for inverse patterns
+        if ((inverse && value === 0) || (!inverse && value === 1)) {
             positions.push(index / length); // relative position
         }
     });
@@ -1783,7 +1784,45 @@ class FacetPattern {
         prevValue1 = data[i];
     }
     return filteredData;
-}
+  }
+
+  onepole(cutoffPattern) {
+    if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
+      cutoffPattern = new FacetPattern().from(cutoffPattern);
+    }
+    let initial_size = this.data.length;
+    cutoffPattern.size(initial_size);
+    let silencePattern = new FacetPattern().silence(SAMPLE_RATE);
+    this.prepend(silencePattern);
+    // scale up cutoffPattern to match the size of this.data
+    cutoffPattern.prepend(silencePattern);
+    // apply a one-pole low-pass filter to this.data
+    // using the values in cutoffPattern as the cutoff values
+    this.data = this.onepoleInner(this.data, cutoffPattern.data);
+    this.fixnan();
+    this.reverse().truncate(initial_size).reverse();
+    return this;
+  }
+
+  // runs per-sample one-pole LPF for lpf1 (6dB/octave rolloff)
+  onepoleInner(data, cutoffs) {
+    let filteredData = [];
+    let prevOutput = data[0];
+
+    for (let i = 0; i < data.length; i++) {
+        let w0 = 2 * Math.PI * cutoffs[i] / SAMPLE_RATE;
+        let alpha = Math.exp(-w0);
+        
+        if (i === 0) {
+            filteredData[i] = data[i];
+        } else {
+            filteredData[i] = (1 - alpha) * data[i] + alpha * prevOutput;
+        }
+        
+        prevOutput = filteredData[i];
+    }
+    return filteredData;
+  }
 
 hpf(cutoffPattern, qPattern = 2.5) {
   if (typeof cutoffPattern == 'number' || Array.isArray(cutoffPattern) === true) {
@@ -2896,6 +2935,68 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
+  norepeat() {
+    if (this.data.length <= 1) {
+      return this;
+    }
+
+    let result = [...this.data];
+    let improved = true;
+
+    // improve the arrangement until no improvements can be made
+    while (improved) {
+      improved = false;
+      
+      // look for consecutive repeating values
+      for (let i = 0; i < result.length - 1; i++) {
+        if (result[i] === result[i + 1]) {
+          // found a repeat, try to find a better position for the second occurrence
+          let valueToMove = result[i + 1];
+          let bestPosition = i + 1;
+          let bestScore = this.calculateRepeatScore(result);
+          
+          // try moving the repeating value to each other position
+          for (let j = 0; j < result.length; j++) {
+            if (j === i + 1) continue;
+            
+            // create a test array with the value moved
+            let testArray = [...result];
+            testArray.splice(i + 1, 1); // remove from current position
+            testArray.splice(j, 0, valueToMove); // insert at new position
+            
+            let testScore = this.calculateRepeatScore(testArray);
+            if (testScore < bestScore) {
+              bestScore = testScore;
+              bestPosition = j;
+              improved = true;
+            }
+          }
+          
+          // apply the best move
+          if (bestPosition !== i + 1) {
+            result.splice(i + 1, 1);
+            result.splice(bestPosition, 0, valueToMove);
+            break; // start over
+          }
+        }
+      }
+    }
+
+    this.data = result;
+    console.log(this.data);
+    return this;
+  }
+
+  calculateRepeatScore(arr) {
+    let score = 0;
+    for (let i = 0; i < arr.length - 1; i++) {
+      if (arr[i] === arr[i + 1]) {
+        score++;
+      }
+    }
+    return score;
+  }
+
   walk(prob, amt) {
     let x_max = this.data.length - 1;
     amt = Number(amt);
@@ -3529,6 +3630,11 @@ bpfInner(data, cutoffs, q) {
       throw (`cannot get local pattern because the pattern name is undefined.`);
     }
     this.data = global[pattern_name];
+    // return single-value instead of pattern when the saved data is only 1 number,
+    // since single values will work with any operation without needing to be a pattern
+    if (this.data.length === 1) {
+      return this.data;
+    }
     return this;
   }
 
@@ -3712,7 +3818,7 @@ bpfInner(data, cutoffs, q) {
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
     let segmentWidth = Math.ceil(width / num_columns);
     let segments = [];
-    let out_fp = Array(width).fill().map(() => Array(height).fill(new FacetPattern()));
+    let out_fp = Array(height).fill().map(() => Array(width).fill(0));
 
     this.current_total_slices = num_columns;
     let i = this.current_iteration_number;
@@ -4711,6 +4817,7 @@ bpfInner(data, cutoffs, q) {
 
   spectral(windowSize = null) {
     const originalLength = this.data.length;
+    this.is_image = true;
 
     // calculate windowSize based on length of data
     if (!windowSize) {
@@ -4773,6 +4880,404 @@ bpfInner(data, cutoffs, q) {
     return this;
 }
 
+  resynthesize(scale = 1, targetSamples = null, speed = 1) {
+    if (!this.is_image || !this.image_width || !this.image_height) {
+      this.image_width = Math.floor(Math.sqrt(this.data.length));
+      this.image_height = Math.ceil(this.data.length / this.image_width);
+      this.is_image = true;
+    }
+    
+    let numWindows = this.image_width;
+    let freqBins = this.image_height;
+    
+    // if we have a target length, upscale the x-axis (time dimension) to provide enough material
+    if (targetSamples !== null) {
+      targetSamples = Math.abs(Math.round(targetSamples));
+      
+      // calculate how much we need to stretch
+      const originalEstimatedLength = numWindows * 1024; // rough estimate of original audio length
+      const stretchRatio = targetSamples / originalEstimatedLength;
+      
+      if (stretchRatio > 2) {
+        // upscale the x-axis by interpolating between columns
+        const newNumWindows = Math.ceil(numWindows * Math.sqrt(stretchRatio));
+        let upscaledData = [];
+        
+        for (let row = 0; row < freqBins; row++) {
+          for (let newCol = 0; newCol < newNumWindows; newCol++) {
+            // map new column back to original position
+            const originalPos = (newCol / (newNumWindows - 1)) * (numWindows - 1);
+            const leftCol = Math.floor(originalPos);
+            const rightCol = Math.min(leftCol + 1, numWindows - 1);
+            const t = originalPos - leftCol;
+            
+            // get values from original data
+            const leftIndex = row * numWindows + leftCol;
+            const rightIndex = row * numWindows + rightCol;
+            const leftValue = this.data[leftIndex] || 0;
+            const rightValue = this.data[rightIndex] || leftValue;
+            
+            // linear interpolation
+            const interpolatedValue = leftValue * (1 - t) + rightValue * t;
+            upscaledData.push(interpolatedValue);
+          }
+        }
+        
+        // update the data and dimensions
+        this.data = upscaledData;
+        this.image_width = newNumWindows;
+        numWindows = newNumWindows;
+      }
+    }
+    
+    let speedPattern = null;
+    let isPatternSpeed = false;
+    if (typeof speed === 'number' || Array.isArray(speed)) {
+      speedPattern = new FacetPattern().from(speed).size(numWindows);
+    } else if (typeof speed === 'object' && speed.data) {
+      speedPattern = new FacetPattern().from(speed.data).size(numWindows);
+      isPatternSpeed = true;
+    } else {
+      speedPattern = new FacetPattern().from(1).size(numWindows);
+    }
+    
+    // clamp speed values to reasonable range and apply reciprocal transformation
+    speedPattern.data = speedPattern.data.map(s => {
+      const clampedValue = Math.max(0.001, Math.min(1000, Math.abs(s)));
+      return 1 / clampedValue;
+    }); 
+    
+    // find minimum speed to adjust window parameters for gap prevention
+    const minSpeed = Math.min(...speedPattern.data);
+    
+    // calculate optimal window size
+    let windowSize;
+    if (targetSamples !== null) {
+      targetSamples = Math.abs(Math.round(targetSamples));
+      // work backwards from desired length to find good window size
+      const overlap = 0.75;
+      const windowSizeMultiplier = (numWindows - 1) * (1 - overlap) + 1;
+      windowSize = Math.round(targetSamples / windowSizeMultiplier);
+      
+      // ensure window size is reasonable and power of 2
+      windowSize = Math.max(64, windowSize); // minimum window size
+      windowSize = Math.min(8192, windowSize); // maximum window size
+      windowSize = Math.pow(2, Math.round(Math.log2(windowSize))); // nearest power of 2
+    } else {
+      // no target specified, use spectral data dimensions to determine good window size
+      if (freqBins <= 512) {
+        windowSize = freqBins; // use the spectral height directly
+      } else if (freqBins <= 2048) {
+        windowSize = 1024;
+      } else if (freqBins <= 4096) {
+        windowSize = 2048;
+      } else {
+        windowSize = 4096;
+      }
+    }
+    
+    // adjust window size based on minimum speed to prevent gaps
+    if (minSpeed < 0.5) {
+      // for very slow speeds, use larger windows to ensure overlap
+      let speedAdjustmentFactor = Math.max(1, 1 / minSpeed);
+      // use linear scaling for extreme speeds instead of sqrt for more aggressive sizing
+      if (minSpeed < 0.1) {
+        windowSize = Math.min(32768, Math.round(windowSize * speedAdjustmentFactor * 0.5));
+      } else {
+        windowSize = Math.min(16384, Math.round(windowSize * Math.sqrt(speedAdjustmentFactor)));
+      }
+      // ensure window size is power of 2
+      windowSize = Math.pow(2, Math.round(Math.log2(windowSize)));
+    }
+    
+    // calculate default target length with speed adjustment
+    const defaultOverlap = 0.75;
+    const defaultStepSize = Math.round(windowSize * (1 - defaultOverlap));
+    
+    // calculate effective length by simulating the cumulative position
+    let simulatedPosition = 0;
+    let targetLength;
+    
+    // if targetSamples is specified, use it as the exact target length
+    if (targetSamples !== null) {
+      targetSamples = Math.abs(Math.round(targetSamples));
+      // for dynamic speed patterns, we can't pre-calculate the final length
+      // we'll calculate it as we go through the windows
+      targetLength = targetSamples; // this is the base length, will be modified by speed
+    } else {
+      // only simulate when no explicit target is given
+      const baseStepSize = Math.round(windowSize * (1 - defaultOverlap));
+      const maxReasonableLength = SAMPLE_RATE * 3600; // 1 hour max to prevent memory issues
+      
+      for (let i = 0; i < numWindows; i++) {
+        let currentSpeed = speedPattern.data[i] || 1;
+        currentSpeed = Math.max(0.001, Math.abs(currentSpeed));
+        const adjustedStepSize = Math.round(baseStepSize / currentSpeed);
+        simulatedPosition += adjustedStepSize;
+        
+        // safety check - if simulation gets too large, cap it
+        if (simulatedPosition > maxReasonableLength) {
+          simulatedPosition = maxReasonableLength;
+          break;
+        }
+      }
+      
+      targetLength = simulatedPosition + windowSize; // add windowSize for the last window
+    }
+    
+    // initialize output signal with extra buffer space to handle variable speeds
+    let bufferMultiplier = targetSamples !== null ? 1.2 : 1.5; // less extra space when we know the target
+    let initialBufferSize = Math.round(targetLength * bufferMultiplier);
+    const maxArrayLength = Math.floor(2**31 / 8); // safe array size limit
+    initialBufferSize = Math.min(initialBufferSize, maxArrayLength);
+    
+    if (initialBufferSize <= 0 || !Number.isFinite(initialBufferSize)) {
+      initialBufferSize = windowSize * numWindows * 2; // fallback size
+    }
+    
+    let resynthesizedSignal = new Array(initialBufferSize).fill(0);
+    
+    // overlap and step size for reconstruction
+    const overlap = defaultOverlap;
+    let cumulativePosition = 0; // track actual position in output for speed stretching
+    let maxPositionReached = 0; // track the furthest we've written to
+    
+    // calculate how to distribute windows across the target length
+    let baseStepSize;
+    if (targetSamples !== null) {
+      // for dynamic speed patterns, calculate base step size from target
+      // this will be scaled by individual speeds during synthesis
+      if (numWindows === 1) {
+        baseStepSize = targetLength;
+      } else {
+        baseStepSize = (targetLength - windowSize) / (numWindows - 1);
+      }
+      
+      // ensure step size is reasonable for overlap-add synthesis
+      let maxSmoothStepSize = Math.round(windowSize * (1 - overlap));
+      
+      if (baseStepSize > maxSmoothStepSize) {
+        // if step size would cause gaps, increase window size
+        let requiredWindowSizeMultiplier = baseStepSize / maxSmoothStepSize;
+        let newWindowSize = Math.round(windowSize * requiredWindowSizeMultiplier);
+        // ensure it's a power of 2 for FFT efficiency
+        newWindowSize = Math.pow(2, Math.round(Math.log2(newWindowSize)));
+        // cap at reasonable maximum
+        newWindowSize = Math.min(65536, newWindowSize);
+        
+        windowSize = newWindowSize;
+        // recalculate with new window size
+        baseStepSize = (targetLength - windowSize) / (numWindows - 1);
+      }
+    } else {
+      // use default step size based on overlap
+      baseStepSize = Math.round(windowSize * (1 - overlap));
+    }
+    
+    // store the original targetSamples for reference, actual output will be targetLength
+    let originalTargetSamples = targetSamples;
+    
+    for (let i = 0; i < numWindows; i++) {
+      // get speed for this window
+      let currentSpeed = speedPattern.data[i] || 1;
+      currentSpeed = Math.max(0.001, Math.abs(currentSpeed)); // prevent zero/negative speeds
+      
+      // calculate step size based on speed
+      let adjustedStepSize;
+      let currentWindowSize = windowSize; // start with base window size
+      
+      if (targetSamples !== null) {
+        // for explicit targets, scale step size by current speed
+        // this creates dynamic time-stretching based on the speed pattern
+        adjustedStepSize = Math.round(baseStepSize * currentSpeed);
+        
+        // dynamically adjust window size to prevent gaps when step size is large
+        let maxSmoothStepSize = Math.round(currentWindowSize * (1 - overlap));
+        if (adjustedStepSize > maxSmoothStepSize) {
+          // increase window size to accommodate larger step sizes
+          let requiredWindowSizeMultiplier = adjustedStepSize / maxSmoothStepSize;
+          currentWindowSize = Math.round(windowSize * requiredWindowSizeMultiplier);
+          // ensure it's a power of 2 for FFT efficiency
+          currentWindowSize = Math.pow(2, Math.round(Math.log2(currentWindowSize)));
+          // cap at reasonable maximum
+          currentWindowSize = Math.min(65536, currentWindowSize);
+        }
+      } else {
+        // original calculation for auto-sized outputs
+        const autoBaseStepSize = Math.round(windowSize * (1 - overlap));
+        adjustedStepSize = Math.round(autoBaseStepSize / currentSpeed);
+      }
+      
+      // extract spectral column from 2D data
+      // flip vertically so bottom pixels = bass frequencies
+      let magnitudes = [];
+      for (let j = 0; j < freqBins; j++) {
+        let flippedJ = freqBins - 1 - j; // flip the row index
+        let dataIndex = flippedJ * numWindows + i;
+        // ensure we have valid data, default to 0
+        magnitudes.push(this.data[dataIndex] !== undefined ? this.data[dataIndex] : 0);
+      }
+      
+      // ensure magnitudes array has at least one element
+      if (magnitudes.length === 0) {
+        magnitudes.push(0);
+      }
+      
+      // create full spectrum (mirrored for real IFFT)
+      let fullSpectrum = [];
+      
+      // map image data to meaningful frequency range (DC to Nyquist) with scaling
+      const meaningfulFreqBins = Math.floor(currentWindowSize / 2) + 1; // DC to Nyquist inclusive
+      
+      // determine scaling method
+      let isPatternScale = false;
+      let scalePattern = null;
+      let currentScale = scale;
+      
+      if (typeof scale === 'object' && scale.data) {
+        // FacetPattern scaling
+        isPatternScale = true;
+        scalePattern = new FacetPattern().from(scale.data).size(numWindows);
+        currentScale = scalePattern.data[i] || 1; // will be updated per window
+      }
+      
+      for (let j = 0; j < meaningfulFreqBins; j++) {
+        let magIndex;
+        
+        if (isPatternScale) {
+          // use the scale value for this specific window
+          currentScale = scalePattern.data[i] || 1;
+        }
+        
+        if (currentScale === 1) {
+          // linear mapping
+          magIndex = Math.floor((j / (meaningfulFreqBins - 1)) * (magnitudes.length - 1));
+        } else {
+          // logarithmic frequency mapping
+          let internalScale;
+          if (currentScale <= 2) {
+            internalScale = Math.pow(10, (currentScale - 1) * 3);
+          } else {
+            internalScale = Math.pow(10, (currentScale - 1) * 3);
+          }
+          
+          let normalizedJ = j / (meaningfulFreqBins - 1);
+          
+          let scaledJ;
+          if (internalScale > 1) {
+            let logBase = internalScale;
+            scaledJ = Math.log(1 + normalizedJ * (logBase - 1)) / Math.log(logBase);
+          } else {
+            // for values < 1, invert the warping
+            let invScale = 1 / internalScale;
+            scaledJ = (Math.pow(invScale, normalizedJ) - 1) / (invScale - 1);
+          }
+          
+          magIndex = Math.floor(scaledJ * (magnitudes.length - 1));
+        }
+        
+        magIndex = Math.min(magIndex, magnitudes.length - 1);
+        let magnitude = magnitudes[magIndex] || 0;
+        
+        if (j === 0 || j === meaningfulFreqBins - 1) {
+          // DC and Nyquist should be real only
+          fullSpectrum.push([magnitude, 0]);
+        } else {
+          // use random phases for other frequencies
+          let phase = Math.random() * 2 * Math.PI;
+          fullSpectrum.push([magnitude * Math.cos(phase), magnitude * Math.sin(phase)]);
+        }
+      }
+      
+      // mirror for negative frequencies
+      for (let j = meaningfulFreqBins - 2; j >= 1; j--) {
+        // use the conjugate of the corresponding positive frequency
+        let realPart = fullSpectrum[j][0];
+        let imagPart = -fullSpectrum[j][1];
+        fullSpectrum.push([realPart, imagPart]);
+      }
+      
+      // pad to next power of 2 for IFFT
+      let targetSize = Math.max(currentWindowSize, fullSpectrum.length);
+      // find next power of 2
+      targetSize = Math.pow(2, Math.ceil(Math.log2(targetSize)));
+      
+      while (fullSpectrum.length < targetSize) {
+        fullSpectrum.push([0, 0]);
+      }
+      
+      // inverse FFT to get time domain signal
+      let timeDomainSignal = ifft(fullSpectrum);
+      
+      // ensure IFFT returned valid data
+      if (!timeDomainSignal || timeDomainSignal.length === 0) {
+        console.warn(`IFFT returned invalid data for window ${i}`);
+        continue;
+      }
+      
+      // apply Hann window to reduce artifacts at frame boundaries
+      for (let j = 0; j < timeDomainSignal.length; j++) {
+        // ensure each element is a complex number [real, imag]
+        if (!timeDomainSignal[j] || !Array.isArray(timeDomainSignal[j])) {
+          timeDomainSignal[j] = [0, 0];
+        }
+        let windowValue = 0.5 * (1 - Math.cos(2 * Math.PI * j / (timeDomainSignal.length - 1)));
+        timeDomainSignal[j][0] *= windowValue;
+      }
+      
+      // overlap-add into output signal
+      const startSample = Math.round(cumulativePosition);
+      
+      // expand buffer if needed
+      let endSample = startSample + timeDomainSignal.length;
+      if (endSample > resynthesizedSignal.length) {
+        let newSize = Math.max(endSample, Math.round(resynthesizedSignal.length * 1.5));
+        const maxArrayLength = Math.floor(2**31 / 8); // safe array size limit
+        newSize = Math.min(newSize, maxArrayLength);
+        
+        if (newSize <= resynthesizedSignal.length || !Number.isFinite(newSize)) {
+          // can't expand safely, truncate instead
+          endSample = Math.min(endSample, resynthesizedSignal.length);
+        } else {
+          let expandedSignal = new Array(newSize).fill(0);
+          for (let k = 0; k < resynthesizedSignal.length; k++) {
+            expandedSignal[k] = resynthesizedSignal[k];
+          }
+          resynthesizedSignal = expandedSignal;
+        }
+      }
+      
+      for (let j = 0; j < timeDomainSignal.length && startSample + j < resynthesizedSignal.length; j++) {
+        // ensure we have valid complex number before accessing real part
+        const realPart = (timeDomainSignal[j] && typeof timeDomainSignal[j][0] === 'number') ? timeDomainSignal[j][0] : 0;
+        resynthesizedSignal[startSample + j] += realPart;
+      }
+      
+      // track the maximum position we've written to
+      maxPositionReached = Math.max(maxPositionReached, Math.min(endSample, resynthesizedSignal.length));
+      
+      // advance position by the speed-adjusted step size
+      cumulativePosition += adjustedStepSize;
+    }
+    
+    // handle final output length based on whether targetSamples was specified
+    if (originalTargetSamples !== null) {
+      // for dynamic speed patterns, don't force exact length - let the speed pattern determine final duration
+      // the final length is the natural result of applying the speed pattern
+      resynthesizedSignal = resynthesizedSignal.slice(0, maxPositionReached);
+    } else {
+      // for auto-sized outputs, trim to actual used length
+      resynthesizedSignal = resynthesizedSignal.slice(0, maxPositionReached);
+    }
+    
+    // set the resynthesized audio as the new data
+    this.data = resynthesizedSignal;
+    this.is_image = false;
+    this.image_width = false;
+    this.image_height = false;
+    return this;
+  }
+
   savespectrogram(filename = Date.now(), windowSize = null) {
     this.is_image = true;
 
@@ -4834,6 +5339,43 @@ bpfInner(data, cutoffs, q) {
     return this;
 }
 
+  loadimage(imagePath, targetHeight = 4096) {
+    // read the image file
+    const fileData = fs.readFileSync(imagePath);
+    const png = PNG.sync.read(fileData);
+    
+    // upscale height to power of 2 for clean spectral mapping
+    const upscaledHeight = targetHeight;
+    
+    // set image properties
+    this.is_image = true;
+    this.image_width = png.width;
+    this.image_height = upscaledHeight;
+    
+    // create spectral data array going row by row with upscaling
+    let spectralData = [];
+    
+    for (let y = 0; y < upscaledHeight; y++) {
+      // map upscaled row to original image row
+      let originalY = Math.floor((y / (upscaledHeight - 1)) * (png.height - 1));
+      originalY = Math.min(originalY, png.height - 1);
+      
+      for (let x = 0; x < png.width; x++) {
+        let idx = (png.width * originalY + x) << 2;
+        let r = png.data[idx];
+        let g = png.data[idx + 1];
+        let b = png.data[idx + 2];
+        
+        // convert RGB to grayscale brightness (0-1 range)
+        let brightness = (r + g + b) / (255 * 3);
+        spectralData.push(brightness);
+      }
+    }
+    
+    // set the data
+    this.data = spectralData;
+    return this;
+  }
 
   savemidi2d(midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
@@ -5226,7 +5768,74 @@ bpfInner(data, cutoffs, q) {
         }
     }
     return this;
-}
+  }
+
+  gradient2d(centerX, centerY, radius, innerValue, outerValue, mode = 1) {
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+
+    // precompute the number of pixels that will be affected
+    let pixelCount = 0;
+    for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
+            let distance = Math.sqrt(Math.pow(col - centerX, 2) + Math.pow(row - centerY, 2));
+            if (distance <= radius) {
+                pixelCount++;
+            }
+        }
+    }
+
+    // convert values to FacetPatterns if they're not already and resize them to match the pixel count
+    if (typeof innerValue === 'number' || Array.isArray(innerValue)) {
+        innerValue = new FacetPattern().from(innerValue).size(pixelCount);
+    } else {
+        innerValue.size(pixelCount);
+    }
+
+    if (typeof outerValue === 'number' || Array.isArray(outerValue)) {
+        outerValue = new FacetPattern().from(outerValue).size(pixelCount);
+    } else {
+        outerValue.size(pixelCount);
+    }
+
+    let valueIndex = 0;
+
+    for (let i = 0; i < height * width; i++) {
+        let row = Math.floor(i / width);
+        let col = i % width;
+
+        // calculate distance from the current position to the center point
+        let distance = Math.sqrt(Math.pow(col - centerX, 2) + Math.pow(row - centerY, 2));
+
+        if (distance <= radius) {
+            // calculate gradient interpolation factor (0 at center, 1 at edge)
+            let gradientFactor = distance / radius;
+            
+            // handle different gradient modes
+            if (mode === 0) {
+                // linear gradient
+                gradientFactor = gradientFactor;
+            } else if (mode === 1) {
+                // radial gradient (default)
+                gradientFactor = gradientFactor;
+            } else if (mode === 2) {
+                // exponential gradient (steeper falloff)
+                gradientFactor = Math.pow(gradientFactor, 2);
+            } else if (mode === 3) {
+                // logarithmic gradient (gentler falloff)
+                gradientFactor = Math.sqrt(gradientFactor);
+            }
+
+            // interpolate between inner and outer values
+            let interpolatedValue = innerValue.data[valueIndex] + gradientFactor * (outerValue.data[valueIndex] - innerValue.data[valueIndex]);
+
+            // add the interpolated value to the existing data
+            this.data[i] = (this.data[i] || 0) + interpolatedValue;
+            valueIndex = (valueIndex + 1) % Math.min(innerValue.data.length, outerValue.data.length);
+        }
+    }
+    return this;
+  }
 
   draw2d(coordinates, fillValue) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
@@ -5539,6 +6148,7 @@ computeLaplacian(field, width, height) {
   dim(width, height) {
     this.image_width = Math.round(Math.abs(width));
     this.image_height = Math.round(Math.abs(height));
+    this.is_image = true;
     return this;
   }
 

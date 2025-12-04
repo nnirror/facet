@@ -642,6 +642,17 @@ socket.on('bpm', (bpm) => {
 socket.on('connect', () => {
   // request MIDI ports when connected
   socket.emit('getMidiPorts');
+  
+  // also send stored MIDI device immediately on connection
+  const storedMidiDevice = localStorage.getItem('midi_outs_value');
+  if (storedMidiDevice) {
+    socket.emit('storedMidiDevice', { output: storedMidiDevice });
+  }
+  
+  // request current mute states for synchronization
+  setTimeout(() => {
+    socket.emit('requestMuteStates');
+  }, 100);
 });
 
 // ws event handler for MIDI ports response
@@ -657,16 +668,17 @@ socket.on('midiPorts', (data) => {
       $('#midi_outs').append('<option value="' + midi_out + '">' + midi_out + '</option>');
     }
     
-    // restore the selection
-    if (currentSelection) {
-      $('#midi_outs').val(currentSelection);
-    } else {
+    // restore the selection and always ensure it's sent to the server
+    let valueToRestore = currentSelection;
+    if (!valueToRestore) {
       // if no current selection, try to restore from localStorage
-      const storedValue = localStorage.getItem('midi_outs_value');
-      if (storedValue && midi_outs.includes(storedValue)) {
-        $('#midi_outs').val(storedValue);
-        socket.emit('selectMidiOutput', { output: storedValue });
-      }
+      valueToRestore = localStorage.getItem('midi_outs_value');
+    }
+    
+    if (valueToRestore && midi_outs.includes(valueToRestore)) {
+      $('#midi_outs').val(valueToRestore);
+      // always send the selection to the server to ensure it's properly set
+      socket.emit('selectMidiOutput', { output: valueToRestore });
     }
   }
 });
@@ -678,6 +690,12 @@ socket.on('midiSelectResponse', (data) => {
   }
 });
 
+// handle transport server requesting stored MIDI device
+socket.on('requestStoredMidiDevice', () => {
+  const storedMidiDevice = localStorage.getItem('midi_outs_value');
+  socket.emit('storedMidiDevice', { output: storedMidiDevice || '' });
+});
+
 let mutedVoices = {};
 let fpNameToVoiceMap = {};
 let gainNodes = {};
@@ -686,6 +704,44 @@ let recentlyStoppedVoices = new Map(); // track voices recently stopped with tim
 let permanentlyStoppedVoices = new Set(); // track voices that should never be re-added until cleared
 let globalStopMode = false; // when true, prevents ALL voice controls from being created
 let frontendGateActive = false; // when true, blocks all audio playback, bpm updates, and UI updates
+
+// shared method for synchronizing frontend and backend mute states
+function syncMuteStates(fpNames, backendMuteStates) {
+  fpNames.forEach(fpName => {
+    if (mutedVoices.hasOwnProperty(fpName) && backendMuteStates.hasOwnProperty(fpName)) {
+      const backendMuteState = backendMuteStates[fpName];
+      
+      // if frontend is unmuted but backend is muted, unmute the backend
+      if (!mutedVoices[fpName] && backendMuteState) {
+        socket.emit('midiMuteToggle', { fp_name: fpName, muted: false });
+      }
+      // if frontend is muted and backend state differs, sync to backend state
+      else if (mutedVoices[fpName] && mutedVoices[fpName] !== backendMuteState) {
+        mutedVoices[fpName] = backendMuteState;
+        
+        // update UI color
+        const voiceControl = document.querySelector(`[data-fp-name="${fpName}"]`);
+        if (voiceControl) {
+          voiceControl.style.backgroundColor = backendMuteState ? '#303030' : 'green';
+        }
+        
+        // update audio gain if it's an audio pattern
+        const voice_to_play = fpNameToVoiceMap[fpName];
+        if (voice_to_play && gainNodes[voice_to_play]) {
+          const fadeDuration = 0.02;
+          const currentTime = ac.currentTime;
+          
+          if (backendMuteState) {
+            gainNodes[voice_to_play].gain.setTargetAtTime(0, currentTime, fadeDuration);
+          } else {
+            const targetGain = manualGainValues[fpName] ?? 0.7;
+            gainNodes[voice_to_play].gain.setTargetAtTime(targetGain, currentTime, fadeDuration);
+          }
+        }
+      }
+    }
+  });
+}
 
 socket.on('uniqueFpNames', (data) => {
   // if frontend gate is active, ignore all pattern updates
@@ -697,6 +753,7 @@ socket.on('uniqueFpNames', (data) => {
   // handle both old format (array) and new format (object with names and types)
   const fpNames = Array.isArray(data) ? data : (data && data.names ? data.names : []);
   const patternTypes = Array.isArray(data) ? {} : (data && data.types ? data.types : {});
+  const backendMuteStates = Array.isArray(data) ? {} : (data && data.muteStates ? data.muteStates : {});
 
   // create set of current fpNames for comparison
   const currentFpNames = new Set(Object.keys(mutedVoices));
@@ -712,8 +769,16 @@ socket.on('uniqueFpNames', (data) => {
       const isPermanentlyStopped = permanentlyStoppedVoices.has(fpName);
     
     if (!currentFpNames.has(fpName) && !isRecentlyStopped && !isPermanentlyStopped) {
-      // add new voice to mutedVoices with default state (unmuted)
+      // always default new patterns to unmuted in frontend
       mutedVoices[fpName] = false;
+      
+      // if backend has this pattern muted, unmute it immediately
+      const backendMuteState = backendMuteStates.hasOwnProperty(fpName) ? backendMuteStates[fpName] : false;
+      if (backendMuteState) {
+        // send unmute command to backend immediately
+        socket.emit('midiMuteToggle', { fp_name: fpName, muted: false });
+      }
+      
       // initialize manual gain value to 0.7 (default gain for audio patterns) only if not already set
       if (!(fpName in manualGainValues)) {
         manualGainValues[fpName] = 0.7;
@@ -732,12 +797,19 @@ socket.on('uniqueFpNames', (data) => {
       controlDiv.className = 'voice-control';
       controlDiv.dataset.fpName = fpName;
 
-      // set initial color based on mute state
-      controlDiv.style.backgroundColor = mutedVoices[fpName] ? '#ff4d4d' : 'green';
+      // always start new patterns as (unmuted)
+      controlDiv.style.backgroundColor = 'green';
       controlDiv.textContent = fpName;
 
-      // add click event handler for mute/unmute
+      // click event handler for mute/unmute with debounce to prevent rapid clicking
+      let lastClickTime = 0;
       controlDiv.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastClickTime < 100) { // 100ms debounce
+          return;
+        }
+        lastClickTime = now;
+        
         const isMuted = !mutedVoices[fpName];
         mutedVoices[fpName] = isMuted; // update mute state
 
@@ -834,6 +906,9 @@ socket.on('uniqueFpNames', (data) => {
       container.appendChild(wrapperDiv);
     }
   });
+
+  // sync existing voices with backend mute states, but prioritize keeping them unmuted for new patterns
+  syncMuteStates(fpNames, backendMuteStates);
 
   // remove voices that are no longer in the data or are permanently stopped
   Array.from(container.children).forEach(child => {
@@ -1138,4 +1213,26 @@ socket.on('transport_cleanup', () => {
     container.style.paddingTop = '0px';
   }
 
+});
+
+// handle backend mute state confirmation to ensure sync
+socket.on('muteStateConfirmation', (data) => {
+  const { fp_name, muted } = data;
+  
+  // update frontend state to match confirmed backend state
+  if (mutedVoices.hasOwnProperty(fp_name)) {
+    mutedVoices[fp_name] = muted;
+    
+    // update UI color
+    const voiceControl = document.querySelector(`[data-fp-name="${fp_name}"]`);
+    if (voiceControl) {
+      voiceControl.style.backgroundColor = muted ? '#303030' : 'green';
+    }
+  }
+});
+
+// handle requests for current mute states
+socket.on('currentMuteStates', (backendMuteStates) => {
+  // sync frontend states with backend, but prioritize keeping patterns unmuted
+  syncMuteStates(Object.keys(mutedVoices), backendMuteStates);
 });

@@ -1728,6 +1728,26 @@ $('example')
   // 33% of 16 audio slices muted
 ```
 ---
+#### **nonzero** ( )
+- replaces all instances of 0 with the previous nonzero value. Useful after with probability controls, which by default will set some values to 0. Chaining a nonzero() after that would replace the 0s with the other values the pattern. Particularly in a MIDI context with .prob(), you probably don't want to send MIDI note values of 0, so this will effectively sample and hold each nonzero value, keeping the MIDI note values in the expected range.
+```javascript
+$('example')
+  .from([1, 2, 3, 4])
+  .prob(0.5)
+  .nonzero();
+  // if 2 and 4 are set to 0 by prob(0.5), the output of .nonzero() would be 1 1 3 3
+```
+
+---
+#### **norepeat** ( )
+- rearranges the values in the FacetPattern to minimize consecutive repeating values.
+```javascript
+$('example')
+  .from([1, 1, 1, 2, 2, 3])
+  .norepeat();
+  // 1 2 1 2 1 3
+```
+---
 #### **normalize** ( )
 - scales the FacetPattern to the 0 - 1 range.
 ```javascript
@@ -1741,16 +1761,6 @@ $('example')
   .scale(-10, 10)
   .normalize();
   // works with negative values
-```
----
-#### **nonzero** ( )
-- replaces all instances of 0 with the previous nonzero value. Useful after with probability controls, which by default will set some values to 0. Chaining a nonzero() after that would replace the 0s with the other values the pattern. Particularly in a MIDI context with .prob(), you probably don't want to send MIDI note values of 0, so this will effectively sample and hold each nonzero value, keeping the MIDI note values in the expected range.
-```javascript
-$('example')
-  .from([1, 2, 3, 4])
-  .prob(0.5)
-  .nonzero();
-  // if 2 and 4 are set to 0 by prob(0.5), the output of .nonzero() would be 1 1 3 3
 ```
 ---
 #### **palindrome** ( )
@@ -2283,6 +2293,23 @@ $('example')
   // 4-cycle LFO modulating the high pass cutoff between 10 and 2000 Hz
 ```
 ---
+#### **onepole** ( _cutoffPattern_ )
+- applies a one-pole low pass filter with 6dB/octave rolloff to the FacetPattern.
+```javascript
+$('example')
+  .noise(n1)
+  .onepole(100)
+  .full()
+  .play();
+  // gently low-passed noise with 6dB/octave rolloff
+$('example')
+  .noise(n1)
+  .lpf1(_.sine(4)
+    .scale(20, 1000))
+  .play();
+  // 4-cycle LFO modulating the one-pole filter cutoff
+```
+---
 #### **pitch** (  _pitchShiftPattern_ )
 - pitch-shifts the FacetPattern. `pitchShiftPattern` values between 0 and 1 will lower the pitch; e.g. a value of 0.5 will shift it down an octave. Values higher than 1 will increase the pitch; e.g. a value of 2 will be an octave higher.
 ```javascript
@@ -2762,6 +2789,29 @@ $('example')
   // draw 32 lines from 32 random points inside a 1000px * 1000px square, with a fill value of 1
 ```
 ---
+#### **gradient2d** ( _centerX_, _centerY_, _radius_, _innerValue_, _outerValue_, _mode_ = 1 )
+- adds a gradient circle on top of the existing data in a FacetPattern, with smooth interpolation between inner and outer values.
+- `centerX` and `centerY` are the x,y coordinates of the center of the gradient circle.
+- `radius` controls the radius of the circle.
+- `innerValue` is the brightness value(s) at the center of the circle (can be number, array, or FacetPattern).
+- `outerValue` is the brightness value(s) at the edge of the circle (can be number, array, or FacetPattern).
+- `mode` controls the gradient style: 0 = linear, 1 = radial (default), 2 = exponential (steeper falloff), 3 = logarithmic (gentler falloff).
+```javascript
+$('example')
+  .silence(1000000)
+  .gradient2d(500, 500, 200, 1, 0)
+  .saveimg('gradient2d_basic')
+  .once();
+  // radial gradient from white at center to black at edge
+$('example')
+  .silence(1000000)
+  .gradient2d(250, 250, 150, 0.8, 0.2, 2)
+  .gradient2d(750, 750, 100, 0.6, 0, 3)
+  .saveimg('gradient2d_multiple')
+  .once();
+  // two overlapping gradients with different modes
+```
+---
 #### **grow2d** ( _iterations_, _prob_, _threshold_ = 0, _mode_ = 0 )
 - applies a growth algorithm to the FacetPattern in 2D space. The algorithm iterates over each "pixel" in the pattern and, based on a probability, spreads its value to adjacent pixels.
 - the `iterations` parameter determines how many times the algorithm is applied to the pattern.
@@ -2790,6 +2840,20 @@ $('example')
   .saveimg('layer2d')
   .once();
   // layers a ramp from 0,0 to 100,100 over a sine wave background
+```
+---
+#### **loadimage** ( _imagePath_, _targetHeight_ = 4096 )
+- loads an image file and converts it to spectral data for audio resynthesis.
+- `imagePath` is the file path to the image to load (PNG format supported).
+- `targetHeight` controls the frequency resolution - higher values provide more detailed frequency mapping but use more memory.
+- the image is converted to grayscale and each row represents a frequency band, with pixels mapped to spectral magnitude values.
+- use with `.resynthesize()` to convert the spectral data back to audio.
+```javascript
+$('example')
+  .loadimage('img/myspectrogram.png', 2048) // load a PNG file
+  .resynthesize(1, ms(6000)) // make it 6 seconds long, linear frequency scale
+  .play()
+  .once();
 ```
 ---
 #### **mutechunks2d** ( _num_chunks_, _probabilty_ )
@@ -2862,6 +2926,30 @@ $('example')
   .saveimg('react2d')
   .once();
   // organic spreading pattern starting from a circle in the middle of the image
+```
+---
+#### **resynthesize** ( _scale_ = 1, _targetSamples_ = null, _speed_ = 1 )
+- converts 2D spectral image data back into audio using inverse FFT.
+- `scale` controls frequency mapping: 1 = linear, 1.5 = moderate logarithmic, 2 = full logarithmic (like Photosounder). Can be a FacetPattern for variable scaling.
+- `targetSamples` sets the exact output length in samples. If null, length is calculated automatically.
+- `speed` controls time stretching: 1 = normal, 0.5 = half speed, 2 = double speed. Can be a FacetPattern for variable speed.
+- each row of the image represents a frequency band, with brightness controlling amplitude.
+- use after loading an image with `.loadimage()` or after generating 2D patterns in Facet.
+```javascript
+$('example')
+  .loadimage('img/spectrogram.png') // load image
+  .resynthesize(1.5, n1) // resynthesisze to last a whole note, linear frequency scale
+  .play()
+  .once();
+  
+  $('example')
+  .silence(100 * 100)
+  .circle2d(49, 49, 20, 1, 0) // generate a circle in a 100x100 space
+  .delay2d(4, 20, 0.99) // create copies of it around the 2d space
+  .resynthesize(1, ms(1000)) // resynthesize to 1 second of audio
+  .full()
+  .play()
+  .once();
 ```
 ---
 #### **rect2d** ( _topLeftX_, _topLeftY_, _rectWidth_, _rectHeight_, _value_, _fillMode_ = 0 )

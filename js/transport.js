@@ -71,6 +71,9 @@ io.on('connection', (socket) => {
     socket.emit('progress', current_relative_step_position);
   }, 20);
 
+  // request the client's stored MIDI device on connection
+  socket.emit('requestStoredMidiDevice');
+
   // listen for the client disconnecting
   socket.on('disconnect', () => {
     sockets = sockets.filter(s => s !== socket);
@@ -90,6 +93,14 @@ io.on('connection', (socket) => {
         }
       });
     }
+
+    // send back confirmation to ensure frontend stays in sync
+    socket.emit('muteStateConfirmation', { fp_name, muted });
+  });
+
+  // handle requests for current mute states
+  socket.on('requestMuteStates', () => {
+    socket.emit('currentMuteStates', mutedPatterns);
   });
 
   socket.on('getMidiPorts', () => {
@@ -106,6 +117,28 @@ io.on('connection', (socket) => {
       socket.emit('midiSelectResponse', { status: 'success' });
     } catch (e) {
       socket.emit('midiSelectResponse', { status: 'error', error: e.message });
+    }
+  });
+
+  // handle stored MIDI device from client
+  socket.on('storedMidiDevice', (data) => {
+    if (data.output && data.output !== '') {
+      try {
+        // verify WebMidi is enabled and device exists before setting it
+        if (WebMidi.outputs && WebMidi.outputs.length > 0) {
+          const availableOutputs = WebMidi.outputs.map(output => output._midiOutput.name);
+          if (availableOutputs.includes(data.output)) {
+            midioutput = WebMidi.getOutputByName(data.output);
+            socket.emit('midiSelectResponse', { status: 'success' });
+          } else {
+            socket.emit('midiSelectResponse', { status: 'error', error: 'Stored MIDI device not found' });
+          }
+        } else {
+          socket.emit('midiSelectResponse', { status: 'error', error: 'MIDI system not ready yet' });
+        }
+      } catch (e) {
+        socket.emit('midiSelectResponse', { status: 'error', error: e.message });
+      }
     }
   });
 });
@@ -519,11 +552,11 @@ function applyNextPatterns() {
                   note: note_to_add,
                   channel: note_data.channel,
                   velocity: note_data.velocity,
-                  duration: note_data.duration,
-                  play_once: posted_pattern.play_once,
-                  fired: false,
-                  muted: mutedPatterns[facet_pattern_name] || false
-                }
+                  duration: note_data.duration
+                },
+                play_once: posted_pattern.play_once,
+                fired: false,
+                muted: mutedPatterns[facet_pattern_name] || false
               });
             }
           }
@@ -735,7 +768,6 @@ function checkForBpmRecalculation(events_per_loop) {
   if (typeof scaledBpm[bpmIndex] !== 'undefined') {
     bpm = scaledBpm[bpmIndex];
   }
-  udp_osc_server.send(new OSC.Message('/bpm', bpm));
 
   if (prev_bpm !== bpm) {
     bpm_was_changed_this_loop = true;
@@ -810,7 +842,11 @@ function emitUniqueFpNames() {
   const uniqueFpNames = getUniqueFpNames(event_register);
   const patternTypes = getPatternTypesMap(event_register);
   for (let socket of sockets) {
-    socket.emit('uniqueFpNames', { names: uniqueFpNames, types: patternTypes });
+    socket.emit('uniqueFpNames', { 
+      names: uniqueFpNames, 
+      types: patternTypes, 
+      muteStates: mutedPatterns 
+    });
   }
 }
 
