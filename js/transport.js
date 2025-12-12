@@ -29,6 +29,7 @@ let patterns_for_next_loop = {};
 let over_n_values = {};
 let stopped_patterns = [];
 let mutedPatterns = {};
+let soloedPatterns = {};
 let patterns_that_have_been_stopped = [];
 let patterns_to_delete_at_end_of_loop = [];
 let current_relative_step_position = 0;
@@ -47,7 +48,6 @@ let meta_data = {
   time_signature_numerator_over_n: 1,
   time_signature_denominator_over_n: 1
 };
-process.title = 'facet_transport';
 
 // attach Socket.IO to the HTTP server
 const io = socketIo(server, {
@@ -62,14 +62,14 @@ io.on('connection', (socket) => {
   // new client connected
   sockets.push(socket);
 
-  // send bpm and bars_elapsed every 20ms
+  // send bpm and bars_elapsed every 100ms (reduced from 20ms for better performance)
   setInterval(() => {
     socket.emit('bpm', bpm);
     socket.emit('time_signature_numerator', time_signature_numerator);
     socket.emit('time_signature_denominator', time_signature_denominator);
     socket.emit('barsElapsed', bars_elapsed);
     socket.emit('progress', current_relative_step_position);
-  }, 20);
+  }, 100);
 
   // request the client's stored MIDI device on connection
   socket.emit('requestStoredMidiDevice');
@@ -88,7 +88,7 @@ io.on('connection', (socket) => {
     // update the mute state for the events in the event register
     if (event_register[fp_name]) {
       event_register[fp_name].forEach(event => {
-        if (event.type === 'note' || event.type === 'cc' || event.type === 'pitchbend' || event.type === 'osc') {
+        if (event.type === 'note' || event.type === 'cc' || event.type === 'pitchbend' || event.type === 'osc' || event.type === 'solo') {
           event.muted = muted;
         }
       });
@@ -96,6 +96,16 @@ io.on('connection', (socket) => {
 
     // send back confirmation to ensure frontend stays in sync
     socket.emit('muteStateConfirmation', { fp_name, muted });
+  });
+
+  socket.on('midiSoloToggle', (data) => {
+    const { fp_name, soloed } = data;
+    
+    // update the solo state in the global map
+    soloedPatterns[fp_name] = soloed;
+    
+    // send back confirmation to ensure frontend stays in sync
+    socket.emit('soloStateConfirmation', { fp_name, soloed });
   });
 
   // handle requests for current mute states
@@ -252,13 +262,12 @@ app.post('/update', (req, res) => {
           )
         }
       });
-      emitLoadEvent();
     }
     else {
       patterns_for_next_loop[facet_pattern_name] = posted_pattern;
     }
   }
-  res.sendStatus(200);
+  res.send({ voice_number: voice_number_to_load });
 });
 
 app.post('/browser_sound', (req, res) => {
@@ -377,7 +386,7 @@ function tick() {
             }
             count_times_fp_played++;
           }
-          if (event.type === "note" && !event.muted) {
+          if (event.type === "note" && shouldPatternPlay(fp_name, event)) {
             // play any notes at this step
             try {
               if (typeof midioutput !== 'undefined') {
@@ -398,7 +407,7 @@ function tick() {
             } catch (e) { }
           }
 
-          if (event.type === "cc" && !event.muted) {
+          if (event.type === "cc" && shouldPatternPlay(fp_name, event)) {
             // send any cc data at this step
             try {
               if (typeof midioutput !== 'undefined') {
@@ -409,7 +418,7 @@ function tick() {
             } catch (e) { }
           }
 
-          if (event.type === "pitchbend" && !event.muted) {
+          if (event.type === "pitchbend" && shouldPatternPlay(fp_name, event)) {
             // send any pitchbend data at this step
             try {
               if (typeof midioutput !== 'undefined') {
@@ -420,20 +429,41 @@ function tick() {
             } catch (e) { }
           }
 
-          if (event.type === "osc" && !event.muted) {
+          if (event.type === "osc" && shouldPatternPlay(fp_name, event)) {
             // send any osc data at this step
             try {
               udp_osc_server.send(new OSC.Message(`${event.data.address}`, event.data.data));
             } catch (e) { }
           }
 
+          if (event.type === "solo" && !event.muted) {
+            // send solo data to browser via websocket
+            try {
+              sockets.forEach(socket => {
+                socket.emit('solo', { 
+                  fp_name: fp_name,
+                  value: event.data.data 
+                });
+              });
+            } catch (e) {
+            }
+          }
+
           // remove any events from the event register that are intended to play only once
           if (event.play_once === true && event.type === "audio") {
             delete event_register[fp_name];
+            // notify browser to remove UI element for once-played audio pattern
+            sockets.forEach(socket => {
+              socket.emit('removeOncePattern', { fp_name: fp_name });
+            });
           }
 
           if (event.play_once === true && event.type !== "audio") {
             patterns_to_delete_at_end_of_loop[fp_name] = true;
+            // notify browser to remove UI element for once-played non-audio pattern
+            sockets.forEach(socket => {
+              socket.emit('removeOncePattern', { fp_name: fp_name });
+            });
           }
 
         }
@@ -584,6 +614,34 @@ function applyNextPatterns() {
             position: newPosition,
             type: "cc",
             data: cc_object,
+            play_once: posted_pattern.play_once,
+            fired: false,
+            muted: mutedPatterns[facet_pattern_name] || false
+          }
+        )
+      }
+    }
+
+    if (typeof posted_pattern.solo_data.data !== 'undefined') {
+      let eventsPerLoop = Math.ceil(posted_pattern.solo_data.data.length / over_n);
+      let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
+      let endEventIndex = startEventIndex + eventsPerLoop;
+
+      if (!event_register[facet_pattern_name]) {
+        event_register[facet_pattern_name] = [];
+      }
+      for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.solo_data.data.length; i++) {
+        let solo_object = {
+          data: posted_pattern.solo_data.data[i]
+        };
+        let indexWithinLoop = i - startEventIndex;
+        let newPosition = indexWithinLoop / eventsPerLoop;
+        
+        event_register[facet_pattern_name].push(
+          {
+            position: newPosition,
+            type: "solo",
+            data: solo_object,
             play_once: posted_pattern.play_once,
             fired: false,
             muted: mutedPatterns[facet_pattern_name] || false
@@ -747,32 +805,29 @@ function checkForBpmRecalculation(events_per_loop) {
     return;
   }
 
-  emitUniqueFpNames();
+  const hasActivePatterns = Object.keys(event_register).length > 0;
+  if (hasActivePatterns) {
+    emitUniqueFpNames();
+  }
 
-  scaledBpm = scalePatternToSteps(meta_data.bpm, events_per_loop);
-  // calculate the total length of the BPM pattern over meta_data.bpm_over_n loops
-  let totalPatternLength = events_per_loop * meta_data.bpm_over_n;
+  const totalPatternLength = events_per_loop * meta_data.bpm_over_n;
   scaledBpm = scalePatternToSteps(meta_data.bpm, totalPatternLength);
 
-  // find the overall position in the cycle, combining bars_elapsed and current_relative_step_position
-  // normalize the current_relative_step_position between 0 (inclusive) and 1 (exclusive)
-  let normalizedStepPosition = current_relative_step_position % 1;
-  // calculate the position within the entire cycle
-  let cyclePosition = bars_elapsed / meta_data.bpm_over_n + normalizedStepPosition / meta_data.bpm_over_n;
-  // ensure the cyclePosition wraps around properly
-  cyclePosition = cyclePosition % 1;
+  const normalizedStepPosition = current_relative_step_position % 1;
+  const cyclePosition = ((bars_elapsed + normalizedStepPosition) / meta_data.bpm_over_n) % 1;
 
   // use the cyclePosition to find the index in the scaled BPM pattern
-  let bpmIndex = Math.floor(cyclePosition * totalPatternLength);
+  const bpmIndex = Math.floor(cyclePosition * totalPatternLength);
 
-  if (typeof scaledBpm[bpmIndex] !== 'undefined') {
-    bpm = scaledBpm[bpmIndex];
+  if (bpmIndex < scaledBpm.length && scaledBpm[bpmIndex] !== undefined) {
+    const newBpm = scaledBpm[bpmIndex];
+    if (prev_bpm !== newBpm) {
+      bpm = newBpm;
+      bpm_was_changed_this_loop = true;
+      prev_bpm = newBpm;
+    }
   }
 
-  if (prev_bpm !== bpm) {
-    bpm_was_changed_this_loop = true;
-    prev_bpm = bpm;
-  }
   bpm_automation_last_run = now;
 }
 
@@ -845,16 +900,10 @@ function emitUniqueFpNames() {
     socket.emit('uniqueFpNames', { 
       names: uniqueFpNames, 
       types: patternTypes, 
-      muteStates: mutedPatterns 
+      muteStates: mutedPatterns,
+      soloStates: soloedPatterns 
     });
   }
-}
-
-function emitLoadEvent() {
-  for (let socket of sockets) {
-    socket.emit('load', voices_to_send_to_browser);
-  }
-  voices_to_send_to_browser = [];
 }
 
 function emitPlayEvent(event, fp_name) {
@@ -864,6 +913,25 @@ function emitPlayEvent(event, fp_name) {
   let pan_data = event.pan_data;
   for (let socket of sockets) {
     socket.emit('play', { voice: voice, pitch: pitch, channels: channels, pan_data: pan_data, fp_name: fp_name });
+  }
+}
+
+// determine if a pattern should play based on solo/mute state
+function shouldPatternPlay(fp_name, event) {
+  // if event is already muted, don't play
+  if (event.muted) {
+    return false;
+  }
+  
+  // check if any patterns are soloed
+  const anyPatternsSoloed = Object.values(soloedPatterns).some(solo => solo);
+  
+  if (anyPatternsSoloed) {
+    // if any patterns are soloed, only play soloed patterns (ignore mute state)
+    return soloedPatterns[fp_name];
+  } else {
+    // if no patterns are soloed, use normal mute logic (already checked above)
+    return true;
   }
 }
 

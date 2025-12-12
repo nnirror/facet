@@ -8,41 +8,43 @@ Facet runs on MacOS, Linux, and Windows.
 
 # Installation and getting started
 
-1. Download and install Node.js (must be v14 or greater) and npm: https://www.npmjs.com/get-np
+1. Download and install Node.js (must be v14 or greater) and npm: https://docs.npmjs.com/getting-started
 2. Download or clone the Facet repository.
 3. In a terminal, navigate to the root of the Facet repository, and run `npm install`.
 4. After the previous command completes, run `npm run facet`. This will start the servers that run in the background for generating and patterns and keeping time. If running on Windows: Windows has a firewall by default for local connections (on the same private network), and it needs to be disabled, or you can manually allow the connection via the confirmation dialog from the Windows firewall system when starting up the servers.
 5. In a browser tab (Firefox, Chrome, and Edge work best), navigate to http://localhost:1124. This is the browser-based code editor which can also handle stereo audio playback.
-6. Copy this command into the code editor in the browser: `$('test').sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing through your browser tab. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
+6. Copy this command into the code editor in the browser: `test.sine(100).play();` Move your cursor so it's on the line. Hit `[ctrl + enter]` to run the command. The code editor application will always briefly highlights to illustrate what command(s) ran. You should hear a sine wave playing through your browser tab. Hit `[ctrl + .]` or `[ctrl + /]` (Windows) to stop.
 ---
 
 # Facet command syntax
 
-Facet commands are based entirely around JavaScript, using a class called a `FacetPattern`. In order to produce audio or MIDI output, create an instance of a FacetPattern, and run some methods:
+Facet commands are based entirely around JavaScript, using a class called a `FacetPattern`. In order to produce audio or MIDI output, create an instance of a FacetPattern by typing any name, such as `example`, and running some methods:
 
 ```javascript
-$('example').sine(100).play();
+example.sine(100).play();
+// 1 second, 100Hz sine wave plays at beginning of each loop
 ```
 
-Some FacetPatterns might contain other FacetPatterns. The most outer-facing one must have a name via the above method `$()`, but other FacetPatterns inside the code can use a separate, more concise shorthand, `_`:
+Some FacetPatterns might contain other FacetPatterns. FacetPatterns contained inside other commands can be created with a shorthand, `_`:
 
 ```javascript
-$('example').sine(100).times(_.sine(100)).play();
+example.sine(100).times(_.sine(100)).play();
 ```
 
 There are lots of methods to generate, translate, and orchestrate playback on FacetPattern data:
 
 ```javascript
-$('example').sine(100).times(random()).play();
+example.sine(100).times(random()).play();
 // each time you run ^, the same sine wave at a different volume
 ```
 
 Certain operations (e.g. `sometimes()`, `iter()`, `slices()`, `mix()`, `run()`) allow you to supply functions as arguments:
 
 ```javascript
-$('example').iter(16,()=>{this.append(_.randsamp('808').speed(10))}).play();
+example.iter(16,()=>{this.append(_.randsamp('808').speed(10))}).play();
 // stitches together 16 random samples, each playing at 10x normal speed
 ```
+
 ---
 # In-browser text editor and user interface
 
@@ -65,7 +67,7 @@ At the bottom of the page, there are several UI elements which control the serve
 In the top-right corner, a UI element lists all commands that are currently producing audio, MIDI, or OSC. Each command will be listed by its FacetPattern name, so if your command looked like this:
 
 ```javascript
-$('example').sine(440).play();
+example.sine(440).play();
 ```
 
 The corresponding button would be listed with the name "example". This button toggles back and forth to mute/unmute playback while the pattern continues regenerating. Clicking the "stop" button will stop playback and prevent new patterns from generating. This provides a global level of control on the commands that are running and allows the user to manage and/or improvise with them without needing to fiddle around with the keyboard or cursor.
@@ -82,7 +84,6 @@ The corresponding button would be listed with the name "example". This button to
 - Stop regenerating all patterns: `[ctrl + ,]`
 - Autocomplete / list methods: `[ctrl + space]`. This will list all available methods including their arguments in a dropdown menu, filtered by the text preceding the cursor position. If only one matching method is found, it will autocomplete that method.
 - Autoformat code: `[ctrl + f]`
-- Begin to create a new FacetPattern: `[ctrl + n]`. This will create a `$('').` at the current cursor position and place the cursor between the two single-quotes so the FacetPattern can be named.
 ---
 
 # Running "npm run facet"
@@ -93,7 +94,7 @@ A server, known as the `process manager`, starts up on http://localhost:5831. Th
 
 1. The `transport server` starts up on http://localhost:3211. This server is responsible for handling the timing and playback of audio, MIDI, and OSC events.
 
-2. The `pattern generator` server starts up on http://localhost:1123. This server listens to requests from the text editor UI in the browser located at http://localhost:1124 and interprets those commands into data. If the pattern is intended to be played back as audio, a corresponding .wav file will be stored in the `tmp/` subdirectory in the Facet repo. Otherwise, if the pattern is intended for MIDI or OSC output, the data will be posted directly to the transport server.
+2. The `pattern generator` server starts up on http://localhost:1123. This server listens to requests from the text editor UI in the browser located at http://localhost:1124 and interprets those commands into data that can be outputted as audio, MIDI, or OSC data.
 ---
 
 # Configuration for Max
@@ -129,7 +130,7 @@ Variables output a single floating-point number that can be used as an argument 
 Both `mousex` and `mousey`, as floating-point number representations of your cursor's position _in the browser window_, are available for use in commands, e.g.:
 
 ```javascript
-$('example').sine(100).times(mousey).play();
+example.sine(100).times(mousey).play();
 // cursor y position controls volume every time the code runs
 ```
 
@@ -140,11 +141,11 @@ $('example').sine(100).times(mousey).play();
 There are 128 "notevalues" variables, corresponding to the number of audio samples relative to geometric divisions of one transport loop (a "whole note"). A whole note is `n1`, a half note is `n2`, etc... up to `n128`.
 
 ```javascript
-$('example').noise(n1);
+example.noise(n1);
 // ^ at 120bpm 4/4  = 2 second transport loop = 88200 samples
 // ^ at 120bpm 3/4  = 1.5 second transport loop = 66150 samples
 
-$('example').noise(n128);
+example.noise(n128);
 // ^ at 120bpm 4/4 = 517 samples
 ```
 
@@ -174,7 +175,7 @@ The sample rate for audio generated and played back with Facet can be changed by
 
 In Facet commands, the constant `SAMPLE_RATE` refers to the configured sample rate, which is useful for doing something for a specific number of seconds. The constant `NYQUIST` refers to the Nyquist frequency which is `SAMPLE_RATE/2`.
 ```javascript
-$('example').noise(SAMPLE_RATE).play();
+example.noise(SAMPLE_RATE).play();
 // generate and continually play back exactly 1 second of noise
 ```
 ---
@@ -193,20 +194,20 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 - With no arguments, the command will regenerate at point 0, i.e. at the beginning of each whole note. You can supply a number, array, or FacetPattern as the argument.
 - By default, the FacetPattern will continue to regenerate and play. To prevent it from regenerating, include a `keep()` operation. To stop playback, use the key command `[ctrl + .]` or `[ctrl + /]`, or press the stop button "■".
 ```javascript
-    $('example')
+    example
       .randsamp('808')
       .play();
     // plays once at beginning of loop
-    $('example')
+    example
       .randsamp('808')
       .play(0.5);
     // plays once at middle point
-    $('example')
+    example
       .randsamp('808')
       .play(_.noise(4)
         .scale(0, 1));
     // plays once at 4 random positions
-    $('example')
+    example
       .randsamp('808')
       .play(_.noise(4)
         .scale(0, 1), _.ramp(1, 4, 4));
@@ -217,14 +218,14 @@ Facet can synthesize and orchestrate the playback of multiple FacetPatterns simu
 - dynamically moves the FacetPattern between however many channels are specified in a seperate `.channels()` call. Without a call to `.channels()`, it will default to spatially positioning the FacetPattern between channels 1 and 2.
 - the values in `PanningFacetPattern` should be between 0 and 1. Values beyond that will be clipped to the 0 - 1 range. A value of 0 will hard-pan the sound to the first active channel that is set via a `.channels()` call (or defaulting to stereo). A value of 1 will hard-pan the sound to the last active channel. Values between 0 and 1 will crossfade between all the specified active channels.
 ```javascript
-$('example')
+example
   .noise(n1)
   .times(_.ramp(1, 0, n1))
   .pan(_.sine(1, n1)
     .scale(0, 1))
   .play();
 // no channels are specified; defaults to stereo panning
-$('example')
+example
   .noise(n1)
   .times(_.ramp(1, 0, n1))
   .channels([1, 2, 4])
@@ -237,17 +238,17 @@ $('example')
 #### **channel** ( _channels_ )
 - The `.channel()` method (and equivalent `channels()` method) allow you to route the output of a FacetPattern onto the specified channel(s) in the `channels` input array.
 ```javascript
-	$('example')
+	example
       .randsamp('808')
       .channel(1)
       .play();
     // first channel only
-    $('example')
+    example
       .randsamp('808')
       .channels([1, 3])
       .play();
     // channels 1 & 3 only
-    $('example')
+    example
       .randsamp('808')
       .channel(_.from([9, 10, 11, 12, 13, 14, 15, 16])
         .shuffle()
@@ -256,11 +257,12 @@ $('example')
     // play on a random number of channels from 9-16
 ```
 ---
-#### **saveas** ( _filename_ )
+#### **saveas** ( _filename_, _absolute_path_ = false )
 - saves a monophonic, 32-bit depth wav file in the `samples/` directory or a sub-directory, containing the FacetPattern. If the directory doesn't exist, it will be created.
+- to save a file to a location outside of the `samples/` directory, supply a truthy `absolute_path` argument.
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 ```javascript
-	$('example')
+	example
       .iter(6, () => {
           this.append(_.sine(ri(1, 40)))
             .saveas('/myNoiseStuff/' + Date.now())})
@@ -272,8 +274,9 @@ $('example')
 #### **stop** ( )
 - stops the command from regenerating and playing back in future loops.
 - any time a `.stop()` is found in a command, the entire command will be skipped and not executed. This helps to preserve CPU.
+- you can also stop any command with the `[ctrl]` + `'` key combination while the cursor is on that command.
 ```javascript
-$('example')
+example
   .noise(n16)
   .play()
   .stop();
@@ -290,14 +293,14 @@ Facet has various methods for generating and outputting MIDI and OSC data to con
 - the `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 - the `PositionPattern` argument is optional. When not supplied, the positions will calculate automatically and spread pattern data across the entire whole note, playing the first value in the data at relative position 0, and playing the last value in the data at relative position 1. By supplying a `PositionPattern`, you can program when each note should play.
 ```javascript
-	$('example')
+	example
       .sine(1)
       .size(32)
       .scale(36, 90)
       .round()
       .note();
     // sine wave of 32 notes going from 36 to 90 and back each loop
-    $('example')
+    example
       .noise(16)
       .scale(60, 80)
       .sort()
@@ -313,7 +316,7 @@ Facet has various methods for generating and outputting MIDI and OSC data to con
 - the `lowNote` and `highNote` arguments define the range of MIDI notes that can be played. By default, this range is from 0 (inclusive) to 127 (inclusive).
 - the data length must be a perfect square, as it is processed in columns to form a 2D grid of notes.
 ```javascript
-$('example')
+example
   .silence(2500)
   .circle2d(25, 25, 25, 1)
   .saveimg()
@@ -327,9 +330,9 @@ $('example')
 - _Note_: This method is automatically scaled into the expected data range for MIDI CC data. It expects a FacetPattern of values between 0 and 1.
 - The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 ```javascript
-$('example').drunk(64,0.1).cc();
+example.drunk(64,0.1).cc();
 // sends out cc channel 70
-$('example2').drunk(64,0.1).cc(71);
+example2.drunk(64,0.1).cc(71);
 // sends out cc channel 71
 ```
 ---
@@ -352,21 +355,21 @@ $('example2').drunk(64,0.1).cc(71);
 - if `chord_type` is a string, the `inversion_mode` can be 0, 1, 2, or 3. This number represents how many of the values in the chord have been inverted and are now below the root.
 - _Note_: to force chords into a certain key, use the `key()` operation _after_ the `chord()` operation.
 ```javascript
-	$('example')
+	example
       .ramp(36, 72, 32)
       .chord('maj7')
       .add((bars % 4) * 12)
       .key('F#', 'major')
       .note(50, 100, 1);
     // same maj7 chord run, getting an octave higher for 4 octaves then resets
-    $('example')
+    example
       .noise(16)
       .scale(36, 90)
       .chord(_.from([3, 5, 7, 10, 11, 14, 16, 20, 25]))
       .key('c', 'major')
       .note();
     // 9-note chords mapped onto c major
-    $('example')
+    example
       .noise(8)
       .scale(30, 80)
       .chord('maj7')
@@ -384,31 +387,31 @@ $('example2').drunk(64,0.1).cc(71);
 ["major pentatonic", "major", "minor", "major blues", "minor blues", "melodic minor", "harmonic minor", "bebop", "diminished", "dorian", "lydian", "mixolydian", "phrygian", "locrian", "ionian pentatonic", "mixolydian pentatonic", "ritusen", "egyptian", "neopolitan major pentatonic", "vietnamese 1", "pelog", "kumoijoshi", "hirajoshi", "iwato", "in-sen", "lydian pentatonic", "malkos raga", "locrian pentatonic", "minor pentatonic", "minor six pentatonic", "flat three pentatonic", "flat six pentatonic", "scriabin", "whole tone pentatonic", "lydian #5P pentatonic", "lydian dominant pentatonic", "minor #7M pentatonic", "super locrian pentatonic", "minor hexatonic", "augmented", "piongio", "prometheus neopolitan", "prometheus", "mystery #1", "six tone symmetric", "whole tone", "messiaen's mode #5", "locrian major", "double harmonic lydian", "altered", "locrian #2", "mixolydian b6", "lydian dominant", "lydian augmented", "dorian b2", "ultralocrian", "locrian 6", "augmented heptatonic", "dorian #4", "lydian diminished", "leading whole tone", "lydian minor", "phrygian dominant", "balinese", "neopolitan major", "harmonic major", "double harmonic major", "hungarian minor", "hungarian major", "oriental", "flamenco", "todi raga", "persian", "enigmatic", "major augmented", "lydian #9", "messiaen's mode #4", "purvi raga", "spanish heptatonic", "bebop minor", "bebop major", "bebop locrian", "minor bebop", "ichikosucho", "minor six diminished", "half-whole diminished", "kafi raga", "messiaen's mode #6", "composite blues", "messiaen's mode #3", "messiaen's mode #7", "chromatic"]
 ```
 ```javascript
-$('example')
+example
   .randsamp('808')
   .reduce(32)
   .scale(36, 51)
   .key('F#', 'bebop')
   .note();
-$('example')
+example
   .noise(16)
   .scale(30, 80)
   .key('c', _.from([1]))
   .note();
 // octave scale, via custom FacetPattern
-$('example')
+example
   .noise(16)
   .scale(30, 80)
   .key('c', _.from([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
   .note();
 // equivalent to the above custom octave scale; the padded zeroes are optional
-$('example')
+example
   .noise(16)
   .scale(30, 80)
   .key('c', _.from([1, 0, 0, 0, 0, 0, 1]))
   .note();
 // octave + perfect fifth scale, via custom FacetPattern
-$('example')
+example
   .noise(16)
   .scale(30, 80)
   .key(['c', 'f#'], ['major', 'minor'])
@@ -423,7 +426,7 @@ $('example')
 - Since this is intended for control-rate data, large patterns are automatically reduced in size, if ncessary, so they will never output more than 100 values per second.
 - _Note_: This method does _not_ automatically scale the FacetPattern values between 0 and 1, so the user can send any range of numbers over OSC.
 ```javascript
-$('example').noise(128).osc('/test');
+example.noise(128).osc('/test');
 ```
 ---
 #### **pitchbend** ( _channel_ = 1 )
@@ -431,11 +434,13 @@ $('example').noise(128).osc('/test');
 - The `channel` argument by default sends the MIDI out channel 1. It can be set to any channel between 1-16.
 - _Note_: This method is automatically scaled into the expected range for MIDI pitchbend data. It expects a FacetPattern of values between -1 and 1, with 0 meaning no pitchbend.
 ```javascript
-$('example').sine(1).size(128).pitchbend();
+example.sine(1).size(128).pitchbend();
 ```
 ---
-#### **savemidi** (_midifilename_ = Date.now(), _velocityPattern_ = 64, _durationPattern_ = 16, _wraps_ = 1, _tick_mode_ = false_)
-- creates a MIDI file of MIDI notes named `midifilename` in the `midi` directory, with the FacetPattern's data.
+#### **savemidi** (_midifilename_ = Date.now(), _velocityPattern_ = 64, _durationPattern_ = 16, _wraps_ = 1, _tick_mode_ = false, _absolute_path_ = false)
+- creates a MIDI file of MIDI notes named `midifilename` in the `midi/` directory or a sub-directory, with the FacetPattern's data.
+- to save a file to a location outside of the `midi/` directory, supply a truthy `absolute_path` argument.
+- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 - `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
 - The `velocityPattern` expects values between 1 and 100. (This range is set by the midi-writer-js npm package).
 - The `wraps` parameter controls how many times to wrap the data back around onto itself, allowing for MIDI polyphony. For example, if your FacetPattern has 8 different 128-note patterns appended together in a sequence, a `wraps` of 8 would superpose all of those patterns on top of each other, while a `wraps` value of 4 would produce four patterns on top of each other, followed by four more patterns on top of each other.
@@ -460,14 +465,14 @@ $('example').sine(1).size(128).pitchbend();
 	'64'  =   sixty-fourth note
 ```
 ```javascript
-$('example')
+example
   .noise(64)
   .scale(20, 90)
   .key('c major')
   .savemidi(ts(), 64, 16)
   .once();
 // 64 random notes in c major at 64 velocity, each lasting a 16th note
-$('example')
+example
   .noise(64)
   .scale(20, 90)
   .key('c major')
@@ -475,7 +480,7 @@ $('example')
     .scale(1, 100), 4, 1, true)
   .once();
 // 64 random notes in c major, each with a random velocity between 1 - 100, each lasting 4 ticks
-$('example')
+example
   .iter(8, () => {
     this.append(_.sine(choose([1, 2, 3, 4]))
       .size(128)
@@ -487,8 +492,10 @@ $('example')
 // 8 sine wave patterns playing notes in c major, superposed on top of each other. try changing the wraps argument to values other than 8
 ```
 ---
-#### **savemidi2d()** (_midifilename_ = Date.now(), _velocityPattern_ = 64, _durationPattern_ = 16, _tick_mode_ = false_, min_note = 0, max_note = 127)
-- creates a MIDI file of MIDI notes named `midifilename` in the `midi` directory, with the FacetPattern's data, assuming that the data was created using the 2d methods for image generation and processing. All nonzero "pixel" values will be translated into a MIDI note. Go to the [methods for image generation and processing](#methods-for-image-generation-and-processing) section for more details on these methods.
+#### **savemidi2d()** (_midifilename_ = Date.now(), _velocityPattern_ = 64, _durationPattern_ = 16, _tick_mode_ = false, _min_note_ = 0, _max_note_ = 127, _absolute_path_ = false)
+- creates a MIDI file of MIDI notes named `midifilename` in the `midi/` directory or a sub-directory, with the FacetPattern's data, assuming that the data was created using the 2d methods for image generation and processing. All nonzero "pixel" values will be translated into a MIDI note. Go to the [methods for image generation and processing](#methods-for-image-generation-and-processing) section for more details on these methods.
+- to save a file to a location outside of the `midi/` directory, supply a truthy `absolute_path` argument.
+- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 - `VelocityPattern` and `DurationPattern` will automatically scale to match the note pattern. This allows you to modulate MIDI velocity and duration over the course of the whole note.
 - The `velocityPattern` expects values between 1 and 100. (This range is set by the midi-writer-js npm package).
 - The `min_note` and `max_note` values control the range of notes that the corresponding 2d pattern will be generated between.
@@ -513,7 +520,7 @@ $('example')
 		'64'  =   sixty-fourth note
 ```
 ```javascript
-$('example')
+example
   .silence(2500)
   .iter(8, () => {
     this.tri2d(ri(0, 49), ri(0, 49), ri(0, 49), ri(0, 49), ri(0, 49), ri(0, 49), 1, 0)
@@ -521,7 +528,7 @@ $('example')
   .savemidi2d(ts(), 64, 16)
   .once();
   // 8 randomly sized triangles in 2d space, all at velocity 64, 16th note durations
-$('example')
+example
   .silence(2500)
   .iter(10, () => {
     this.circle2d(ri(10, 40), ri(10, 40), 10, 1, 0)
@@ -537,10 +544,10 @@ $('example')
 - the minimum BPM value is 1, and the maximum BPM value is 10000.
 - using the `over()` method on the `bpm_pattern` will cycle through the BPM pattern over multiple loops.
 ```javascript
-$('example')
+example
   .bpm(_.from([20, 40, 80, 160, 320])
     .shuffle()); // each loop will be all 5 of these BPM, randomly ordered
-$('example')
+example
   .bpm(_.ramp(20, 200, 64)
     .over(4)); // ramps from 20BPM to 200BPM over 4 loops
 ```
@@ -552,9 +559,9 @@ $('example')
 - the minimum `_time_signature_numerator_pattern_` value is 1, and the maximum is 32.
 - the minimum `_time_signature_denominator_pattern_` value is 1, and the maximum is 16.
 ```javascript
-$('example')
+example
   .time(4, 4); // set time to 4/4
-$('example')
+example
   .time(_.ramp(8, 1, 8)
     .over(8), 2); // ramps from 8/2 to 1/2 time over 8 loops
 ```
@@ -563,10 +570,10 @@ $('example')
 #### **whenmod** ( _modulo_operand_, _equals_value_ = 0 )
 - only regenerates the pattern when the number of bars elapsed, modulo the `modulo_operand`, equals the `equals_value` argument. This can be useful when you want to conditionally skip certain commands, only rerunning every n bars.
 ```javascript
-$('example_0')
+example_1
   .sine(ri(100, 400))
   .whenmod(4, 0); // regenerates the pattern once every 4 bars
-$('example_2')
+example_2
   .sine(ri(100, 400))
   .whenmod(4, 2); // regenerates the pattern once every 4 bars, but 2 bars away from the above example
 ```
@@ -574,7 +581,7 @@ $('example_2')
 #### **keep** (  )
 - preserve the generated FacetPattern so that it plays each loop. Without including `keep()`, the FacetPattern will regenerate each loop by default.
 ```javascript
-$('example')
+example
   .sine(ri(10, 500))
   .keep()
   .play();
@@ -583,7 +590,7 @@ $('example')
 #### **once** (  )
 - only play the generated FacetPattern a single time. Without including `once()`, the FacetPattern will regenerate and play back each loop by default.
 ```javascript
-$('example')
+example
   .noise(4096)
   .play()
   .once();
@@ -593,11 +600,11 @@ $('example')
 - distributes all the events that a FacetPattern would fire over `n_loops` so the pattern can last any number of loops before regenerating.
 - works with audio playback, MIDI note/cc/pitchbend, OSC, BPM (via `.bpm()`), and time signature (via `.time()`).
 ```javascript
-$('example')
+example
   .randsamp('808')
   .play(_.ramp(0, 1, 16))
   .over(ri(1, 4)); // random sample played 16 times over 1,2,3 or 4 bars
-$('example')
+example
   .drunk(2048, 0.01)
   .cc()
   .over(128); // drunk walk over 128 bars, creates a drifty process that you can map onto device paramters to slowly randomize something
@@ -611,14 +618,14 @@ These can be useful when you want to access or modify the same pattern across co
 - if a pattern stored with `set()` has more than one piece of data in it, the corresponding variable will be an array. If the pattern has one piece of data in it, the corresponding variable will be a float.
 - **NOTE**: when you run the `.set()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 ```javascript
-$('set_example')
+set_example
   .noise(8)
   .scale(0, 1)
   .set('my_var')
   .once();
   // first, set the variable here
 
-$('example')
+example
   .sine(100)
   .times(my_var)
   .play();
@@ -630,7 +637,7 @@ $('example')
 - when the command is executed manually by the user, it will create and store (internally, via `set()`) a new pattern, named `patternName`, using `seedPattern`.
 - each time the command reruns, it checks if a pattern named `patternName` has been stored. If so, it will modify and replace the saved pattern based on the code in `command`.
 ```javascript
-$('example')
+example
   .drift(_.noise(16)
     .scale(36, 72)
     .sort(), 'mynotes', () => {
@@ -644,7 +651,7 @@ $('example')
 - increments a variable called `name` by `amount_to_add`. This variable can be used in operations.
 - similar to the `set()` method, when you run the `.inc()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 ```javascript
-$('example')
+example
   .inc('abc')
   .iter(abc, () => {
     this.sup(_.randsamp('808'), i / iters)
@@ -657,7 +664,7 @@ $('example')
 - decrements a variable called `name` by `amount_to_add`. This variable can be used in operations.
 - similar to the `set()` method, when you run the `.dec()` command for the first time after starting the system, if you're also running commands that reference that variable in the same block, for the first evaluation, the variable will have a value of 0 as it has not fully propagated into the variable storage system.
 ```javascript
-$('example')
+example
   .from(8)
   .set('abc')
   .sometimes(0.5, () => {
@@ -678,7 +685,7 @@ $('example')
 - in order to acesss a pattern saved with `setlocal()`, use `getlocal()`.
 - **NOTE**: the data is available only internally, to the command where it runs and cannot be accessed in other commands.
 ```javascript
-$('example')
+example
   .drunk(1000, 0.2)
   .setlocal('mylocalpattern')
   .reduce(0)
@@ -695,7 +702,7 @@ $('example')
 #### **getlocal** ( _name_ )
 - retrieves a FacetPattern's data that was stored locally via `setlocal()`.
 ```javascript
-$('example')
+example
   .drunk(1000, 0.2)
   .setlocal('mylocalpattern')
   .reduce(0)
@@ -716,7 +723,7 @@ $('example')
 - **NOTE**: It first checks if the `values` array contains an even number of elements. If not, it throws an error.
 - **NOTE**: It also checks if every integer from 0 to (mod-1) is one of the even-numbered keys of the values array. If not, it throws an error.
 ```javascript
-$('example')
+example
   .sine(barmod(4, [0, 100, 1, 150, 2, 200, 3, 300]))
   .play();
   // when bars % 4 == 0, plays a 100Hz sine.
@@ -728,7 +735,7 @@ $('example')
 #### **choose** ( _pattern_ )
 - returns a randomly selected value from a supplied array.
 ```javascript
-$('example')
+example
   .sine(choose([10, 200, 1000]))
   .play();
   // sine wave with either 10, 200, or 1000 cycles
@@ -738,13 +745,13 @@ $('example')
 - returns the element at position `index` in the circle of fifths, starting with C and ending with F.
 - the set of notes: `['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'F']`.
 ```javascript
-$('example')
+example
   .noise(16)
   .scale(36, 90)
   .key(cof(2))
   .note();
   // MIDI notes in D major
-$('example')
+example
   .noise(16)
   .scale(36, 90)
   .key(cof(ri(0, 11)))
@@ -755,7 +762,7 @@ $('example')
 #### **decide** ()
 - returns a 1 or 0 randomly.
 ```javascript
-$('example')
+example
   .sine(choose([10, 200, 1000]))
   .dup(decide())
   .play();
@@ -765,7 +772,7 @@ $('example')
 #### **ftom** ( _hzfrequency_ )
 - converts the supplied `hzfrequency` value to its corresponding MIDI note number.
 ```javascript
-$('example')
+example
   .from(440)
   .ftom()
   .note();
@@ -774,12 +781,12 @@ $('example')
 #### **ms** ( _milliseconds_ )
 - converts the supplied `milliseconds` value to that many samples, at whatever sample rate the user has configured.
 ```javascript
-$('example')
+example
   .noise(4096)
   .size(ms(5))
   .play();
   // 5ms noise
-$('example')
+example
   .noise(4096)
   .size(ms(50))
   .play();
@@ -789,7 +796,7 @@ $('example')
 #### **mtof** ( _midi_note_number_ )
 - converts the supplied `midi_note_number` value to its corresponding frequency in Hz.
 ```javascript
-$('example')
+example
   .sine(mtof(choose([36, 38, 40, 41, 43, 45, 47, 48])))
   .play();
   // random sine wave each loop in C major key
@@ -798,7 +805,7 @@ $('example')
 #### **mtos** ( _midi_note_number_ )
 - converts the supplied `midi_note_number` value to its corresponding number of samples.
 ```javascript
-$('example')
+example
   .noise(n4)
   .delay(mtos(choose([36, 38, 40, 41, 43, 45, 47, 48])))
   .delay(mtos(choose([36, 38, 40, 41, 43, 45, 47, 48])))
@@ -812,7 +819,7 @@ $('example')
 - you can also use these shorthands for a random float: `rf(min,max)` and a random integer: `ri(min,max)`.
 -  The `weight` argument allows you to specify an exponential weight for the probability of random values. For instance, `rf(0.125,8,3)` will generate half of its values between 0.125 and 1; and the other half will be between 1 and 8. By default, the weighting is linear, i.e. all values between `min` and `max` have equal probability.
 ```javascript
-$('example')
+example
   .sine(ri(20, 1000))
   .play();
   // a sine wave with 20 - 1000 cycles
@@ -821,7 +828,7 @@ $('example')
 #### **ts** ( )
 - returns the current timestamp Date.now() as a string.
 ```javascript
-$('example')
+example
   .sine(100, n1)
   .saveas('mytest' + ts())
   .once();
@@ -831,7 +838,7 @@ $('example')
 #### **just** ()
 - returns an array of frequency ratios for the just intonation tuning system.
 ```javascript
-$('example')
+example
   .sine(100, n16)
   .play(_.ramp(0, 1, 12), _.from(just()));
   // sine waves in ascending just intonation scale
@@ -840,7 +847,7 @@ $('example')
 #### **pythagorean** ()
 - returns an array of frequency ratios for the Pythagorean tuning system.
 ```javascript
-$('example')
+example
   .sine(100, n16)
   .play(_.ramp(0, 1, 12), _.from(pythagorean()));
   // sine waves in ascending pythagorean intonation scale
@@ -849,7 +856,7 @@ $('example')
 #### **equaltemp** ()
 - returns an array of frequency ratios for the 12-tone equal temperament tuning system.
 ```javascript
-$('example')
+example
   .sine(100, n16)
   .play(_.ramp(0, 1, 12), _.from(equaltemp()));
   // sine waves in ascending equal temperament intonation scale
@@ -858,7 +865,7 @@ $('example')
 #### **meantone** ()
 - returns an array of frequency ratios for the meantone temperament tuning system.
 ```javascript
-$('example')
+example
   .sine(100, n16)
   .play(_.ramp(0, 1, 12), _.from(meantone()));
   // sine waves in ascending meantone intonation scale
@@ -867,7 +874,7 @@ $('example')
 #### **edo19** ()
 - returns an array of frequency ratios for the 19-tone equal division of the octave (EDO) tuning system.
 ```javascript
-$('example')
+example
   .sine(100, n16)
   .play(_.ramp(0, 1, 12), _.from(edo19()));
   // sine waves in ascending edo19 intonation scale
@@ -876,7 +883,7 @@ $('example')
 #### **edo31** ()
 - returns an array of frequency ratios for the 31-tone equal division of the octave (EDO) tuning system.
 ```javascript
-$('example')
+example
   .sine(100, n16)
   .play(_.ramp(0, 1, 12), _.from(edo31()));
   // sine waves in ascending edo31 intonation scale
@@ -886,7 +893,7 @@ $('example')
 #### **randscale** ( )
 - returns a random scale for MIDI notes out. The set of possible scales is listed in the `key()` method.
 ```javascript
-$('example')
+example
   .noise(32)
   .scale(30, 80)
   .sort()
@@ -896,22 +903,22 @@ $('example')
 ```
 ---
 # FacetPattern generators that can take a FacetPattern, number, array, or object as an argument
-When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').sine(440).play();`, the output is a static 440Hz wave. But with the command `$('example').sine(_.sine(5).scale(20,2000))).play();`, the frequency of the sine wave is being modulated by a 5 Hz sine wave which is generating values between 20 and 2000. This produces a classic frequency modulation sound, but since you can supply any FacetPattern as an argument, there are lots of sound design possibilities.
+When a generator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `example.sine(440).play();`, the output is a static 440Hz wave. But with the command `example.sine(_.sine(5).scale(20,2000))).play();`, the frequency of the sine wave is being modulated by a 5 Hz sine wave which is generating values between 20 and 2000. This produces a classic frequency modulation sound, but since you can supply any FacetPattern as an argument, there are lots of sound design possibilities.
 
 #### **sine** ( _frequencyPattern_, _duration_ = sample_rate, _fade_in_and_out_ = false )
 - generates a sine wave at `frequencyPattern` Hertz, lasting for `duration` samples.
 - output range is from -1 - 1.
 - by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
-$('example')
+example
   .sine(440, n4).fadeout(0.01)
   .play();
   // 440 Hz sine wave for a quarter note
-$('example')
+example
   .sine(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
-$('example')
+example
   .sine(_.sine(5)
     .scale(20, 2000)).fadeout(0.01)
   .play();
@@ -923,15 +930,15 @@ $('example')
 - output range is from -1 - 1.
 - by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
-$('example')
+example
   .cosine(440, n4).fadeout(0.01)
   .play();
   // 440 Hz cosine wave for a quarter note
-$('example')
+example
   .cosine(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
-$('example')
+example
   .cosine(_.cosine(5)
     .scale(20, 2000)).fadeout(0.01)
   .play();
@@ -942,17 +949,17 @@ $('example')
 - generates a half-circle wave at `frequencyPattern` Hertz, lasting for `duration` samples.
 - output range is from 0 - 1.
 ```javascript
-$('example')
+example
   .circle(440, n4)
   .play();
   // 440 Hz circle wave for a quarter note
-$('example')
+example
   .noise(n1)
   .times(_.circle(4))
   .play()
   .once();
   // amplitude modulation of noise with a quarter note circular waveform
-$('example')
+example
   .noise(n1)
   .ffilter(_.circle(1)
     .invert()
@@ -970,7 +977,7 @@ $('example')
     - the method modifies `this.data` by transitioning each value to a new state based on the probabilities defined in the `states` array. The transition probabilities are normalized so that they add up to 1 for each state.
     - example: 
 ```javascript
-$('example')
+example
 .iter(choose([3,4,8]), () => {
 this.prepend(_.from(['k*', 'h*', 's*', 'h*', '_', '_','_', '_'])
   .markov([{
@@ -1016,15 +1023,15 @@ this.seq(this.data)
 - output range is from -1 - 1.
 - by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
-$('example')
+example
   .phasor(440, n4).fadeout(0.01)
   .play();
   // 440 Hz phasor wave for a quarter note
-$('example')
+example
   .phasor(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
-$('example')
+example
   .phasor(_.phasor(5)
     .scale(20, 2000)).fadeout(0.01)
   .play();
@@ -1036,15 +1043,15 @@ $('example')
 - output range is from -1 - 1.
 - by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
-$('example')
+example
   .rect(440, n4, rf()).fadeout(0.01)
   .play();
   // 440 Hz rectangle wave for a quarter note, different bandwidth each time
-$('example')
+example
   .rect(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
-$('example')
+example
   .rect(_.rect(5)
     .scale(20, 2000)).fadeout(0.01)
   .play();
@@ -1055,15 +1062,15 @@ $('example')
 - generates a square wave at `frequencyPattern` Hertz, lasting for `duration` samples.
 - output range is from -1 - 1.
 ```javascript
-$('example')
+example
   .square(440, n4).fadeout(0.01)
   .play();
   // 440 Hz square wave for a quarter note
-$('example')
+example
   .square(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
-$('example')
+example
   .square(_.square(5)
     .scale(20, 2000)).fadeout(0.01)
   .play();
@@ -1075,15 +1082,15 @@ $('example')
 - output range is from -1 - 1.
 - by default, the `fade_in_and_out` argument is set to false, which will generate the signal without applying any fade to its start or end values, which can produce audible clicks. Use a truthy value for `fade_in_and_out` to apply a 30-millisecond fade-in and fade-out, or add a `fadeout(0.01)` after the command.
 ```javascript
-$('example')
+example
   .tri(440, n4).fadeout(0.01)
   .play();
   // 440 Hz triangle wave for a quarter note
-$('example')
+example
   .tri(_.ramp(10, 2000, 300)).fadeout(0.01)
   .play();
   // ramp from 10Hz to 2000 Hz over 300 values
-$('example')
+example
   .tri(_.tri(5)
     .scale(20, 2000)).fadeout(0.01)
   .play();
@@ -1095,25 +1102,26 @@ $('example')
 - Computes the binary representation of `integer`. If `length` is not present, the output FacetPattern will be the actual length of the binary representation of `integer`.
 - output range is from 0 - 1.
 ```javascript
-$('example')
+example
   .binary(8);
   // 1000
-$('example')
+example
   .binary(490321, 13);
   // 1110111101101: truncated at 13 values
-$('example')
+example
   .binary(8, 12);
   // 000000001000: padded with 0s
 ```
 ---
-#### **dirsamp** ( _dir_ = `../samples/`, _dirPosPattern_, _channel_index_ = 0 )
+#### **dirsamp** ( _dir_ = `../samples/`, _dirPosPattern_, _command_ = function(), _channel_index_ = 0 )
 - loads a wav file from the `dir` directory into memory, based on its alphabetical position. The position is determined by the `dir_pos` argument, which can be a FacetPattern, array, or float between 0 and 1. A `dir_pos` value of 0 would load the first wav file in alphabetical order, a `dir_pos` value of 0.5 would load the middle file, and so on.
 - The patterns loaded by `dirPosPatern`  will be spread out across the duration of the loop. So if `dirPosPattern` has 16 values, those will be spread out into 16 evenly spaced positions.
 - The default directory is `../samples/`, but you can supply any directory as an argument.
+- `command` allows to run code on each sample as it is loaded.
 - By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 ```javascript
-$('example')
+example
   .iter(8, () => {
     this.sup(_.dirsamp('808', i / iters), i / iters)
   })
@@ -1125,7 +1133,7 @@ $('example')
 - generates a random walk of values between 0 and 1 for `length` values, starting at `starting_value` which is a random value between 0 and 1 by default. `intensity` controls how much to add.
 - output range is from 0 - 1.
 ```javascript
-$('example')
+example
   .drunk(16, 0.1);
   // slight random movement
 ```
@@ -1133,7 +1141,7 @@ $('example')
 #### **envelope** ( _values_ )
 - Generates an envelope using the supplied array `values`, which must have a total number of entries equal to a multiple of 3. The numbers inside the `values` array should be continually ordered in groups of three: `from`, `to`, `size`, just like the `ramp()` method.
 ```javascript
-$('example')
+example
   .noise(ms(500))
   .times(_.envelope([0, 1, ms(10), 1, 0.1, ms(200), 0.1, 0, ms(290)]))
   .play();
@@ -1144,7 +1152,7 @@ $('example')
 - generates a Euclidean sequence with `pulses` pulses over `steps` steps.
 - outputs the relative positions from 0 - 1 where the pulses occur.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .play(_.euclid(5,8)) // plays at positions [ 0, 0.125, 0.375, 0.5, 0.75 ]
 ```
@@ -1155,11 +1163,11 @@ $('example')
 - By default, it checks for a file in the `files` subdirectory. If no file exists there, it will try to load the file as an absolute path on your hard drive. 
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 ```javascript
-$('example')
+example
   .file('my_image.png')
   .play();
   // if my_image.png is in the files directory, this will play the file's raw data. NOTE: this could be very noisy!
-$('example')
+example
   .file('/Users/my_username/Desktop/myfile.zip')
   .play();
   // example with a supplied absolute file path
@@ -1169,10 +1177,10 @@ $('example')
 - allows the user to specify their own pattern as an array or number.
 - `size` is optional. if supplied, it will re-size the pattern to have a total length of `size` samples.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4]);
   // pattern has 4 values: [1,2,3,4]
-$('example')
+example
   .from(0.1234,1000);
   // pattern has 1000 identical values: all 0.1234
 ```
@@ -1188,16 +1196,16 @@ $('example')
 - output range is from -1 - 1.
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 ```javascript
-$('example')
+example
   .image('/path/to/file/goes/here.png', 1024)
   .play();
   // each column lasts 1024 samples
 ```
 ---
-#### **noise** ( _length_ )
-- generates a random series of values between -1 and 1 for `length`.
+#### **noise** ( _length_, _min_ = -1, _max_ = 1 )
+- generates a random series of values between `min` and `max` for `length`.
 ```javascript
-$('example')
+example
   .noise(1024)
   .play();
 ```
@@ -1206,7 +1214,7 @@ $('example')
 - generates a Karplus-Strong type string pluck emulation at `frequency` Hertz. `damping` and `feedback` values should be between 0 and 1.
 - output range is from -1 - 1.
 ```javascript
-$('example')
+example
   .pluck(440, rf(), rf())
   .play(); // different 440 Hz quarter note pluck each time
 ```
@@ -1217,7 +1225,7 @@ $('example')
 - `offset` specifies the first number to be included in the list of prime numbers. The default value is 2.
 - `skip` specifies the number of prime numbers to skip before including the next one in the list. The default value is 1.
 ```javascript
-$('example')
+example
   .noise(n4)
   .times(_.ramp(1, 0, n4))
   .iter(12, () => {
@@ -1233,7 +1241,7 @@ $('example')
 #### **ramp** ( _from_, _to_, _size_ = 128 )
 - moves from `from` to `to` over `size` values.
 ```javascript
-$('example')
+example
   .ramp(250, 100, 1000);
   // go from 250 to 100 over 1000 values
 ```
@@ -1243,7 +1251,7 @@ $('example')
 - output range is from -1 - 1.
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 ```javascript
-$('example')
+example
   .randfile()
   .play();
   // random new file converted to audio every time
@@ -1254,7 +1262,7 @@ $('example')
 - By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 ```javascript
-$('example')
+example
   .randsamp('808')
   .reverse()
   .play();
@@ -1265,11 +1273,11 @@ $('example')
 - loads a wav file from the `samples/` directory into memory. You can also specify any file with an absolute file path. The `.wav` can be omitted from _filename_; in this case `.wav` it will be automatically appended to _filename_. By default, it loads the first channel (`channel_index` = 0) but you can specify any channel to load.
 - __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 ```javascript
-$('example')
+example
   .sample('1234')
   .play();
   // if 1234.wav is in the samples directory, you're good to go
-$('example')
+example
   .sample('./myfolder/myfile.wav');
   // or point to the file with a relative path
 ```
@@ -1277,7 +1285,7 @@ $('example')
 #### **silence** ( _length_ )
 - generates silence (many 0s in a row) for `length` samples.
 ```javascript
-$('example')
+example
   .silence(n2)
   .append(_.noise(n2))
   .play();
@@ -1289,7 +1297,7 @@ $('example')
 - The `angle_phase_offset` argument changes where the sequence starts. At its default value of 0, the first value will be 0. You can supply any float between 0 and 1, and the sequence will begin at that value instead.
 - output range is from 0 - 1.
 ```javascript
-$('example')
+example
   .sine(1)
   .times(_.spiral(1000, ri(1, 360)))
   .play();
@@ -1300,7 +1308,7 @@ $('example')
 - converts semitone intervals to frequency ratios using the formula `2^(semitones/12)`.
 - example
 ```javascript
-$('example')
+example
   .randsamp('808')
   .pitch(_.steps([0, 12, -12, 7]))
   .play();
@@ -1310,7 +1318,7 @@ $('example')
 #### **turing** ( _length_ )
 - generates a pattern of length `length` with random 1s and 0s.
 ```javascript
-$('example')
+example
   .turing(64); // instant rhythmic triggers
 ```
 ---
@@ -1318,7 +1326,7 @@ $('example')
 #### **abs** ( )
 - returns the absolute value of all numbers in the FacetPattern.
 ```javascript
-$('example')
+example
   .sine(100)
   .add(-0.3)
   .abs()
@@ -1330,7 +1338,7 @@ $('example')
  - runs the FacetPattern through an allpass filter.
 - `frequency` changes the amount of phase shift introduced by the filter at different frequencies. It will change the phase response of the filter while leaving the magnitude response unchanged.
 ```javascript
- $('example')
+ example
   .randsamp('808')
   .iter(12, () => {
     this.allpass()
@@ -1343,11 +1351,11 @@ $('example')
 #### **at** ( _position_, _value_ )
 - replaces the value of a FacetPattern at the relative position `position` with `value`.
 ```javascript
-$('example')
+example
   .turing(16)
   .at(0, 1);
   // the 1st value of the 16-step Turing sequence (i.e. 0% position) is always 1
-$('example')
+example
   .turing(16)
   .at(0.5, 2);
   // the 9th value of the 16-step Turing sequence (i.e. 50% position) is always 2
@@ -1356,7 +1364,7 @@ $('example')
 #### **audio** ( )
 - removes any DC offset on the FacetPattern by running it through a high-pass biquadratic filter at 5Hz.
 ```javascript
-$('example')
+example
   .sine(440)
   .add(0.9)
   .audio()
@@ -1369,7 +1377,7 @@ $('example')
 - `shift` is an optional parameter that specifies the number of bits to rotate. It defaults to 16 if not provided. The value of shift is converted to a non-negative integer and taken modulo 32 before being used.
 - The method first scales the values in the data array to a range of 0 to 1000000 and rounds them to integers. It then performs a bitwise rotation on each element using a combination of the left shift (<<) and right shift (>>>) operators. Finally, it restores the original scale of the data.
 ```javascript
-$('example')
+example
   .sine(1000, n2)
   .bitshift(16)
   .play();
@@ -1382,7 +1390,7 @@ $('example')
 - `sizeChange` is the factor by which the size decreases with each bounce.
 - `amplitudeChange` is the factor by which the amplitude decreases with each bounce.
 ```javascript
-$('example')
+example
   .sine(440, 1000)
   .bounce(10, 0.9, 0.8)
   .play();
@@ -1392,7 +1400,7 @@ $('example')
 #### **changed** ( )
 - returns a 1 or 0 for each value in the FacetPattern. If the value is different than the previous value, returns a 1. Otherwise returns a 0. (The first value is compared against the last value in the FacetPattern.)
 ```javascript
-$('example')
+example
   .from([1, 1, 3, 4])
   .changed(); // 1 0 1 1
 ```
@@ -1400,7 +1408,7 @@ $('example')
 #### **clip** ( _min_, _max_ )
 - clips any numbers in the FacetPattern to a `min` and `max` range.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .clip(2, 3);
   // 2 2 3 3
@@ -1409,7 +1417,7 @@ $('example')
 #### **compress** ( _ratio_, _threshold_, _attackTime_, _releaseTime_ )
 - compresses the FacetPattern into a smaller dynamic range. `ratio` is a float between 0 and 1 corresponding to n:1 so 0.5 would be 2:1, 0.2 would be 5:1, etc. `threshold` is the sample amplitude at which compression kicks in. `attackTime` and `releaseTime` are expressed as relations to a second, so 0.1 would be 1/10th of a second.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .compress(0.1, 0.001, 0.01, 0.01)
   .play();
@@ -1418,7 +1426,7 @@ $('example')
 #### **crab** ( )
 - superposes a reversed copy of the FacetPattern on top of iself, so it plays backwards and forwards at the same time..
 ```javascript
-$('example')
+example
   .sine(_.ramp(20, 2000, 1000))
   .crab()
   .full()
@@ -1429,13 +1437,13 @@ $('example')
 #### **curve** ( _tension_ = 0.5, _segments_ = 25 )
 - returns a curved version of the FacetPattern. Tension and number of segments in the curve can be included but default to 0.5 and 25, respectively.
 ```javascript
-$('example')
+example
   .noise(16)
   .curve(); // not so noisy
-$('example')
+example
   .noise(16)
   .curve(0.5, 10); // fewer segments per curve
-$('example')
+example
   .noise(16)
   .curve(0.9); // different curve type
 ```
@@ -1443,7 +1451,7 @@ $('example')
 #### **distavg** ( )
 - computes the distance from the average of the FacetPattern, for each element in the FacetPattern.
 ```javascript
-$('example')
+example
   .from([0.1, 4, 3.14])
   .distavg();
   // -2.3133 1.5867 0.7267
@@ -1452,7 +1460,7 @@ $('example')
 #### **dup** ( _num_ )
 - duplicates the FacetPattern `num` times.
 ```javascript
-$('example')
+example
   .noise(n16)
   .dup(ri(2, 12))
   .play();
@@ -1462,11 +1470,11 @@ $('example')
 #### **echo** ( _num_, _feedback_ = 0.666 )
 - repeats the FacetPattern `num` times, with amplitude multiplied by `feedback` each repeat.
 ```javascript
-$('example')
+example
   .from([1])
   .echo(5);
   // 1 0.666 0.4435 0.29540 0.19674 0.13103
-$('example')
+example
   .phasor(50)
   .size(n8)
   .echo(7)
@@ -1477,7 +1485,7 @@ $('example')
 #### **expo** ( _exponent_ )
 - applies exponential scaling to the FacetPattern based on its minimum and maximum. `exponent` values larger than 1 will emphasize lower numbers more and more. Values less than 1 will emphasize higher numbers more and more.
 ```javascript
-$('example')
+example
   .sine(_.ramp(100, 2000, 512)
     .expo(6), n1)
   .play()
@@ -1488,7 +1496,7 @@ $('example')
 #### **fade** ( _fade_percent_ = 0.1 )
 - applies a crossfade window to the FacetPattern, where `fade_percent` of the beginning and end are faded in/out.
 ```javascript
-$('example')
+example
   .noise(1024)
   .fade()
   .play();
@@ -1497,7 +1505,7 @@ $('example')
 #### **fadein** ( _fade_percent_ = 0.5 )
 - applies a fade to the beginning of the FacetPattern, where `fade_percent` of the beginning is faded in.
 ```javascript
-$('example')
+example
   .noise(20000)
   .fadein()
   .play();
@@ -1506,7 +1514,7 @@ $('example')
 #### **fadeout** ( _fade_percent_ = 0.5 )
 - applies a fade to the ending 50% of the FacetPattern, where `fade_percent` of the beginning is faded out.
 ```javascript
-$('example')
+example
   .noise(20000)
   .fadeout()
   .play();
@@ -1517,7 +1525,7 @@ $('example')
 - `binThreshold` controls how close a bin frequency must be to a MIDI note frequency or its harmonic in order to be kept. For example, if `binThreshold` is set to 0.1, then a bin frequency must be within 10% of a MIDI note frequency or its harmonic in order to be kept.
 - `maxHarmonic` controls how many integer harmonics of MIDI notes in `MIDI_note_scale` to include in the output.
 ```javascript
-$('example')
+example
   .noise(n1)
   .times(_.ramp(1, 0, n1))
   .fkey(_.from([48, 50, 52, 53, 55, 57, 59, 60]), 0.005, 6)
@@ -1530,7 +1538,7 @@ $('example')
 - `delaySamples` is the base delay in samples. Controls the delay of the flanging effect.
 - `depth` is the maximum amount by which the delay is modulated. Controls the depth of the flanging effect.
 ```javascript
-$('example')
+example
   .sine(100, n1)
   .flange(220, 110)
   .play();
@@ -1540,7 +1548,7 @@ $('example')
 #### **flipabove** ( _maximum_ )
 - for all values above `maximum`, it returns `maximum` minus how far above the value was.
 ```javascript
-$('example')
+example
   .sine(100)
   .flipabove(0.2)
   .play();
@@ -1550,7 +1558,7 @@ $('example')
 #### **flipbelow** ( _min_ )
 - for all values below `minimum`, it returns `minimum` plus how far below the value was.
 ```javascript
-$('example')
+example
   .sine(100)
   .flipbelow(0.2)
   .play();
@@ -1562,7 +1570,7 @@ $('example')
 - `attackTime` is the attack time in samples. It controls the speed at which the envelope rises. Its default value is 100ms.
 - `releaseTime` is the release time in samples. It controls the speed at which the envelope falls. Its default value is 250ms.
 ```javascript
-$('example')
+example
   .noise(n1)
   .times(_.noise(32)
     .scale(0, 1)
@@ -1575,7 +1583,7 @@ $('example')
 #### **fracture** ( _pieces_ )
 - divides and scrambles the FacetPattern into `pieces` pieces.
 ```javascript
-$('example')
+example
   .sine(100)
   .fracture(10)
   .play();
@@ -1585,7 +1593,7 @@ $('example')
 #### **ftom** ( )
 - converts all values in the FacetPattern from frequency values (Hz) to MIDI note values.
 ```javascript
-$('example')
+example
   .ramp(1000, 250, 16)
   .ftom();
   // 83, 82, 82, 81, 80, 79, 77, 76, 75, 74, 72, 71, 69, 67, 65, 62
@@ -1594,7 +1602,7 @@ $('example')
 #### **full** ( )
 - rescales the FacetPattern to a full dynamic range between -1 and 1, without any dynamic range compression, in a more efficient way than `scale(-1,1)`.
 ```javascript
-$('example')
+example
   .noise(n2)
   .times(0.1)
   .loud()
@@ -1605,7 +1613,7 @@ $('example')
 #### **gate** (  _threshold_, _attackSamples_, _releaseSamples_ )
 - gates the incoming FacetPattern so that any values below `threshold`, after `attackSamples` have occurred, will be set to 0, until the values go back above `threshold` for `releaseSamples`. 
 ```javascript
-$('example')
+example
   .sine(50)
   .gate(0.1, 20, 20)
   .play();
@@ -1614,7 +1622,7 @@ $('example')
 #### **gt** ( _amt_ )
 - returns `1` for every value in the FacetPattern greater than `amt` and `0` for all other values.
 ```javascript
-$('example')
+example
   .from([0.1, 0.3, 0.5, 0.7])
   .gt(0.6);
   // 0 0 0 1
@@ -1623,7 +1631,7 @@ $('example')
 #### **gte** ( _amt_ )
 - returns `1` for every value in the FacetPattern greater than or equal to `amt` and `0` for all other values.
 ```javascript
-$('example')
+example
   .from([0.1, 0.3, 0.5, 0.7])
   .gte(0.5);
   // 0 0 1 1
@@ -1632,7 +1640,7 @@ $('example')
 #### **interp** ( _weight_ = 0.5, _name_ )
 - interpolates the FacetPattern with a FacetPattern. A weight of 0.5 gives equal weight to both patterns.
 ```javascript
-$('example')
+example
   .sine(100)
   .interp(0.5, _.randsamp('808'))
   .play();
@@ -1642,7 +1650,7 @@ $('example')
 #### **invert** ( )
 - computes the `minimum` and `maximum` values in the FacetPattern, then scales every number to the opposite position, relative to `minimum` and `maximum`.
 ```javascript
-$('example')
+example
   .from([0, 0.1, 0.5, 0.667, 1])
   .invert();
   // 1 0.9 0.5 0.333 0
@@ -1651,7 +1659,7 @@ $('example')
 #### **jam** ( _prob_, _amt_ )
 - changes values in the FacetPattern.  `prob` (float 0-1) sets the likelihood of each value changing. `amt` is how much bigger or smaller the changed values can be. If `amt` is set to 2, and `prob` is set to 0.5 half the values could have any number between 2 and -2 added to them.
 ```javascript
-$('example')
+example
   .drunk(128, 0.05)
   .jam(0.1, 0.7);
   // small 128 step random walk with larger deviations from the jam
@@ -1660,7 +1668,7 @@ $('example')
 #### **lt** ( _amt_ )
 - returns `1` for every value in the FacetPattern less than `amt` and `0` for all other values.
 ```javascript
-$('example')
+example
   .from([0.1, 0.3, 0.5, 0.7])
   .lt(0.6);
   // 1 1 0 0
@@ -1669,7 +1677,7 @@ $('example')
 #### **lte** ( _amt_ )
 - returns `1` for every value in the FacetPattern less than or equal to `amt` and `0` for all other values.
 ```javascript
-$('example')
+example
   .from([0.1, 0.3, 0.5, 0.7])
   .lte(0.5);
   // 1 1 1 0
@@ -1678,7 +1686,7 @@ $('example')
 #### **log** ( _intensity_ , _direction_ )
 - stretches a FacetPattern according to a logarithmic curve, where the values at the end can be stretched for a significant portion of the FacetPattern, and the values at the beginning can be squished together. The intensity of the curve is controlled by `intensity`, which accepts a float between 0 and 1. If `direction` is negative, it returns the FacetPattern in reverse.
 ```javascript
-$('example')
+example
   .noise(n8)
   .log(rf())
   .play();
@@ -1688,7 +1696,7 @@ $('example')
 #### **mtof** ( )
 - converts all values in the FacetPattern from MIDI note values to frequency values (Hz).
 ```javascript
-$('example')
+example
   .from([60, 55, 76, 100])
   .mtof();
   // 261.63, 220, 659.26, 2637.02
@@ -1697,7 +1705,7 @@ $('example')
 #### **mtos** ( )
 - converts all values in the FacetPattern from MIDI note values to samples.
 ```javascript
-$('example')
+example
   .noise(n4)
   .comb(_.noise(128)
     .scale(0, 127)
@@ -1711,7 +1719,7 @@ $('example')
 #### **modulo** ( _amt_ )
 - returns the modulo i.e. `% amt` calculation for each value in the FacetPattern.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .modulo(3);
   // 1 2 0 1
@@ -1721,7 +1729,7 @@ $('example')
 - slices the input FacetPattern into `chunks` chunks and mutes `prob` percent of them. __Note__: this is intended for use with FacetPatterns with a large enough amount of data to be played back at audio rate. For a similar effect on smaller FacetPatterns, use `prob()`.
 - The default behavior is for each chunk to be slightly faded in and out to prevent audible clicks, but if you want to run this on smaller chunks of information for control-signal purposes, you can supply a falsy `yes_fade` argument.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .mutechunks(16, 0.33)
   .play();
@@ -1731,7 +1739,7 @@ $('example')
 #### **nonzero** ( )
 - replaces all instances of 0 with the previous nonzero value. Useful after with probability controls, which by default will set some values to 0. Chaining a nonzero() after that would replace the 0s with the other values the pattern. Particularly in a MIDI context with .prob(), you probably don't want to send MIDI note values of 0, so this will effectively sample and hold each nonzero value, keeping the MIDI note values in the expected range.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .prob(0.5)
   .nonzero();
@@ -1742,7 +1750,7 @@ $('example')
 #### **norepeat** ( )
 - rearranges the values in the FacetPattern to minimize consecutive repeating values.
 ```javascript
-$('example')
+example
   .from([1, 1, 1, 2, 2, 3])
   .norepeat();
   // 1 2 1 2 1 3
@@ -1751,12 +1759,12 @@ $('example')
 #### **normalize** ( )
 - scales the FacetPattern to the 0 - 1 range.
 ```javascript
-$('example')
+example
   .sine(1)
   .times(4000)
   .normalize();
   // the *4000 gain is undone!
-$('example')
+example
   .sine(1)
   .scale(-10, 10)
   .normalize();
@@ -1766,7 +1774,7 @@ $('example')
 #### **palindrome** ( )
 - returns the original FacetPattern plus the reversed FacetPattern.
 ```javascript
-$('example')
+example
   .from([0, 1, 2, 3])
   .palindrome();
   // 0 1 2 3 3 2 1 0
@@ -1775,12 +1783,12 @@ $('example')
 #### **pow** ( _expo_, _direction_ = 1 )
 - stretches a FacetPattern according to an exponential power `expo`, where the values at the beginning can be stretched for a significant portion of the FacetPattern, and the values at the end can be squished together. If `direction` is negative, returns the FacetPattern in reverse.
 ```javascript
-$('example')
+example
   .sine(100)
   .pow(6.5)
   .play();
   // squished into the end
-$('example')
+example
   .sine(100)
   .pow(6.5, -1)
   .play();
@@ -1790,15 +1798,15 @@ $('example')
 #### **prob** ( _amtPattern_ )
 - sets some values in the FacetPattern to 0. `amtPattern` (clipped to range 0-1) sets the likelihood of each value changing.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .prob(0.5);
   // 1 0 3 0 first time it runs
-$('example')
+example
   .from([1, 2, 3, 4])
   .prob(0.5);
   // 0 0 3 4 second time it runs
-$('example')
+example
   .from([1, 2, 3, 4])
   .prob(0.5);
   // 0 2 3 4 third time it runs
@@ -1807,7 +1815,7 @@ $('example')
 #### **quantize** ( _resolution_ )
 - returns `0` for every step in the FacetPattern whose position is not a multiple of `resolution`.
 ```javascript
-$('example')
+example
   .drunk(16, 0.5)
   .quantize(4);
   // 0.5241 0 0 0 0.7420 0 0 0 1.0 0 0 0 0.4268 0 0 0
@@ -1816,7 +1824,7 @@ $('example')
 #### **range** ( _new_start_, _new_end_ )
 - returns the subset of the FacetPattern from the relative positions of `new_start` (float 0-1) and `new_end` (float 0-1).
 ```javascript
-$('example')
+example
   .from([0.1, 0.2, 0.3, 0.4])
   .range(0.5, 1);
   // 0.3 0.4
@@ -1825,13 +1833,13 @@ $('example')
 #### **rangesamps** ( _start_, _length_ )
 - returns a subset of the FacetPattern, using a relative `start` position (between 0 - 1) and a total length in samples.
 ```javascript
-$('example')
+example
   .sine(n1)
   .log(0.9)
   .rangesamps(rf(0, 0.875), n8)
   .play();
   // plays a different 8th note from the same de-pitched sine wave every time
-$('example')
+example
   .silence(n1)
   .iter(128, () => {
     this.sup(_.noise(n64)
@@ -1848,7 +1856,7 @@ $('example')
 - slices the input FacetPattern into `chunks` chunks and shuffles the chunks around. The `probability` argument controls the percentage of chunks to reorder, and it expects a float between 0 and 1.
 - The default behavior is for each chunk to be slightly faded in and out to prevent audible clicks, but if you want to run this on smaller chunks of information for control-signal purposes, you can supply a falsy `yes_fade` argument.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .rechunk(16)
   .play();
@@ -1858,7 +1866,7 @@ $('example')
 #### **reduce** ( _new_size_ )
 - reduces the FacetPattern length to `new_size`. If `new_size` is larger than the FacetPattern length, no change.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .reduce(2);
   // 1 3
@@ -1867,7 +1875,7 @@ $('example')
 #### **replace** ( _original_value_, _new_value_ )
 - replaces all instances of `original_value` with `new_value` in the FacetPattern.
 ```javascript
-$('example')
+example
   .from([42, 0, 0, 36])
   .replace(0, -1);
   // 42,-1,-1,36
@@ -1876,7 +1884,7 @@ $('example')
 #### **resonate** ( _baseFrequency_, _coefficients_, _q_ = 80, _wet_ = 1 )
 - resonates the FacetPattern running it through parallel bandpass filters. Each number in the `coefficients` FacetPattern is multiplied by the `baseFrequency` to determine the frequency for that bandpass filter.
 ```javascript
-$('example')
+example
   .noise(n16)
   .times(_.ramp(1, 0, n16))
   .resonate(mtof(36), _.ramp(1, 20, 20), 80)
@@ -1888,7 +1896,7 @@ $('example')
 - applies the Schroeder reverb algorithm to the FacetPattern. The `size` argument should be between 0 and 2 for most use cases but can go up to 10.
 - the `feedback` argument controls feedback in the reverb algorithm. It should be between 0 and 0.98.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .reverb(rf())
   .play();
@@ -1898,7 +1906,7 @@ $('example')
 #### **reverse** ( )
 - returns the reversed FacetPattern.
 ```javascript
-$('example')
+example
   .ramp(0, 1, 128)
   .reverse();
   // goes from 1 to 0 over 128 values
@@ -1907,7 +1915,7 @@ $('example')
 #### **round** (  )
 - rounds all values in the FacetPattern to an integer.
 ```javascript
-$('example')
+example
   .from([0.1, 0.5, 0.9, 1.1])
   .round();
   // 0 1 1 1
@@ -1916,7 +1924,7 @@ $('example')
 #### **saheach** ( _n_ )
 - samples and holds every `nth` value in the FacetPattern.
 ```javascript
-$('example')
+example
   .noise(6)
   .saheach(2);
   // 0.33173470944031735, 0.33173470944031735, 0.17466890792169742, 0.17466890792169742, 0.5601080880419886,  0.5601080880419886  
@@ -1925,7 +1933,7 @@ $('example')
 #### **size** ( _new_size_ )
 - upscales or downscales the FacetPattern prior to playback, so its length is `new_size` samples.
 ```javascript
-$('example')
+example
   .noise(1000)
   .size(n1)
   .play();
@@ -1937,7 +1945,7 @@ $('example')
 - `exponent` values larger than 1 will emphasize lower numbers more and more. Values less than 1 will emphasize higher numbers more and more.
 - **NOTE**: this method will return the average of `new_min` and `new_max` if the FacetPattern is only 1 value long. since you cannot interpolate where the value would fall in the new range, without a larger FacetPattern to provide initial context of the value's relative position. This operation works better with sequences larger than 3 or 4.
 ```javascript
-$('example')
+example
   .sine(10, 100)
   .scale(0, 1);
   // unipolar signal
@@ -1946,7 +1954,7 @@ $('example')
 #### **shift** ( _amt_ )
 - moves the FacetPattern to the left or the right. `amt` gets wrapped to values between -1 and 1, since you can't shift more than 100% left or 100% right.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .shift(-0.5);
   // 3 4 2 1
@@ -1956,11 +1964,11 @@ $('example')
 - randomizes the order of the elements in the FacetPattern.
 - The `prob` argument controls the percentage of data to shuffle. It should be a float between 0 and 1. A `prob` of 1 means 100% of the elements will shuffle; a `prob` of 0.5 means 50% of the elements will shuffle, etc.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .shuffle();
   // first time: 3 2 1 4
-$('example')
+example
   .from([1, 2, 3, 4])
   .shuffle();
   // second time: 1 3 4 2
@@ -1969,7 +1977,7 @@ $('example')
 #### **skip** ( _prob_ )
 - Sometimes, skip executing the command, as if it had never been attempted. Useful if you only want to update the FacetPattern some of the time, but otherwise want to preserve the previous data.
 ```javascript
-$('example')
+example
   .spiral(16, random(1, 360))
   .skip(0.95);
   // new pattern 5% of the time when this command runs
@@ -1978,7 +1986,7 @@ $('example')
 #### **slew** ( _depth_ = 25, _up_speed_ = 1, _down_speed_ = 1 )
 - adds upwards and/or downwards slew to the FacetPattern. `depth` controls how many slew values exist between each value. `up_speed` and `down_speed` control how long the slew lasts: at 0, the slew has no effect, whereas at 1, the slew occurs over the entire `depth` between each FacetPattern value.
 ```javascript
-$('example')
+example
   .from([0, 0.5, 0.9, 0.1])
   .slew(25, 0, 1)
   // the first three numbers will jump immediately because upwards slew is 0. then it will slew from 0.9 to 0.1 over the course of the entire depth range
@@ -1987,7 +1995,7 @@ $('example')
 #### **smooth** ( )
 - interpolates each value so it falls exactly between the values that precede and follow it.
 ```javascript
-$('example')
+example
   .noise(64)
   .smooth();
   // less noisy
@@ -1996,7 +2004,7 @@ $('example')
 #### **sort** ( )
 - returns the FacetPattern ordered lowest to highest.
 ```javascript
-$('example')
+example
   .noise(128)
   .sort();
   // ascending values originally from noise
@@ -2005,10 +2013,10 @@ $('example')
 #### **speed** ( _amt_ )
 - increases or decreases the playback speed of the FacetPattern, similar to transposing audio samples up or down. An `amt` value of 0.5 will play at half speed. An `amt` value of 2 will play at double speed.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .speed(0.2); // slow sample
-$('example')
+example
   .randsamp('808')
   .speed(1.5); // fast sample
 ```
@@ -2017,7 +2025,7 @@ $('example')
 - samples and holds values in the FacetPattern based on probability. `amt` (float 0-1) sets the likelihood of each value being sampled and held.
 - example
 ```javascript
-$('example')
+example
   .noise(n4)
   .sticky(0.98);
   // quarter note of "sticky" noise
@@ -2026,7 +2034,7 @@ $('example')
 #### **stretchto** ( _num_samples_ )
 - time-stretches the FacetPattern while preserving pitch so it now lasts `num_samples` samples.
 ```javascript
-$('example')
+example
   .sine(1000, n2)
   .stretchto(n1)
   .play();
@@ -2037,7 +2045,7 @@ $('example')
 - creates `_number_of_repeats_` identical chunks of data.
 - example
 ```javascript
-$('example')
+example
   .iter(8, () => {
     this.sup(_.randsamp('808')
       .stutter(8), i / iters)
@@ -2049,7 +2057,7 @@ $('example')
 #### **subset** ( _percentage_ )
 - returns a subset of the FacetPattern with `percentage`% values in it.
 ```javascript
-$('example')
+example
   .phasor(1)
   .size(50)
   .subset(0.3);
@@ -2059,11 +2067,11 @@ $('example')
 #### **truncate** ( _length_ )
 - truncates the FacetPattern so it's now `length` values long. If `length` is longer than the FacetPattern, return the whole FacetPattern.
 ```javascript
-$('example')
+example
   .from([0, 1, 2, 3])
   .truncate(2);
   // now 2 values long
-$('example')
+example
   .from([0, 1, 2, 3])
   .truncate(6);
   // still 4 values long
@@ -2074,7 +2082,7 @@ $('example')
 - `note` values: "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
 - `binThreshold` controls how close a bin frequency must be to the supplied note's harmonics in order to be kept. For example, if `binThreshold` is set to 0.1, then a bin frequency must be within 10% of a harmonic in the supplied `note` in order to be kept.
 ```javascript
-$('example')
+example
   .noise(n1)
   .tune('c', 0.0001)
   .play();
@@ -2084,7 +2092,7 @@ $('example')
 #### **unique** ( )
 - returns the set of unique values in the FacetPattern.
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 0, 0.4, 2])
   .unique();
   // 1 2 3 0 0.4
@@ -2093,7 +2101,7 @@ $('example')
 #### **walk** ( _prob_, _amt_ )
 - changes positions in the FacetPattern.  `prob` (float 0-1) sets the likelihood of each position changing. `amt` controls how many steps the values can move. If `amt` is set to 10, and `prob` is set to 0.5 half the values could move 10 positions to the left or the right.
 ```javascript
-$('example')
+example
   .from([0, 1, 2, 0, 1, 0.5, 2, 0])
   .walk(0.25, 3);
 ```
@@ -2102,7 +2110,7 @@ $('example')
 - folds FacetPattern values greater than `max` so their output continues at `min`.  If the values are twice greater than `max`, their output continues at `min` again. Similar for values less than `min`, such that they wrap around the min/max thresholds.
 - if no value is entered for `max`, then the first argument will be used to create the `min` and `max`, centered around 0. For instance, `wrap(0.3) == wrap(-0.3,0.3)`
 ```javascript
-$('example')
+example
   .sine(100)
   .add(-0.1)
   .wrap(0.2, 0.5)
@@ -2111,12 +2119,12 @@ $('example')
 ---
 
 # Pattern modulators that can take a FacetPattern, number, or array as an argument
-When a modulator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `$('example').noise(16).add(4)`, all 16 output values will be between 3 and 5, because 4 is added to every noise value, and noise values are between -1 and 1 by default. But with the command `$('example').noise(16).add(_.ramp(0,4,16))`, the output values will ramp from between [-1, 1] at the beginning to between [4, 5] at the end, since the FacetPattern that is being added is a ramp of values starting at 0 and ending at 4.
+When a modulator takes a FacetPattern or an array as an argument, it uses that pattern to dynamically change its behavior over time, affecting the output in a more complex way than if a single number were supplied. For example, with the command `example.noise(16).add(4)`, all 16 output values will be between 3 and 5, because 4 is added to every noise value, and noise values are between -1 and 1 by default. But with the command `example.noise(16).add(_.ramp(0,4,16))`, the output values will ramp from between [-1, 1] at the beginning to between [4, 5] at the end, since the FacetPattern that is being added is a ramp of values starting at 0 and ending at 4.
 
 #### **add** ( _FacetPattern_, _match_sizes_ = true )
 - adds the first FacetPattern and the second FacetPattern. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .add(_.randsamp('808'))
   .play();
@@ -2126,13 +2134,13 @@ $('example')
 #### **bpf** ( _cutoffPattern_ = 1000, _qPattern_ = 2.5 )
 - applies a bandpass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 ```javascript
-$('example')
+example
   .noise(n1)
   .bpf(1000, 6)
   .times(0.1)
   .play();
   // band-passed noise
-$('example')
+example
   .noise(n1)
   .bpf(_.sine(4)
     .scale(10, 1000))
@@ -2144,7 +2152,7 @@ $('example')
 - applies a comb filter to the input data. The `_delaySamplesPattern_` parameter is equal to 10ms by default and specifies the number of samples to delay the input signal. The `feedforward` parameter controls the amount of the input signal that is fed directly to the output. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
 - The `feedback` and `feedforward` values are clamped between 0 and 0.98.
 ```javascript
-$('example')
+example
   .noise(n4)
   .comb(ms(10), 0.5, 0.5)
   .play();
@@ -2155,17 +2163,17 @@ $('example')
 - `numberOfBitsPattern` controls the bit depth for the output pattern. To hear the effect, the values need to be integers between 1 and 8. Lower values produce more drastic results.
 - `downsamplingPattern` controls the fator by which to reduce the sample rate. Values need to be integers greater than 1. Higher values produce more drastic results.
 ```javascript
-$('example')
+example
   .sine(100)
   .crush(2)
   .play();
   // redux on the sine wave
-$('example')
+example
   .sine(100, n1)
   .crush(_.ramp(8, 1, 8))
   .play();
   // ramping bit depth on 100Hz sine wave from 8 bits to 1
-$('example')
+example
   .sine(100, n1)
   .crush(_.ramp(8, 1, 8), _.noise(16)
     .scale(1, 40))
@@ -2177,7 +2185,7 @@ $('example')
 - delays the input FacetPattern by `delaySamplesPattern` samples. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
 - the maximum `feedback` value is 0.975.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .delay(random(1700, 10000))
   .play();
@@ -2186,7 +2194,7 @@ $('example')
 #### **divide** ( _FacetPattern_, _match_sizes_ = true )
 - divides the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 ```javascript
-$('example')
+example
   .sine(1)
   .divide(_.from([0.5, 0.25, 0.1, 1]));
 ```
@@ -2195,7 +2203,7 @@ $('example')
 - applies a spectral filter to the FacetPattern, passing only the frequency bins between `minFreqPattern` and `maxFreqPattern`.
 - you can invert the filter mode so it cuts all the bins between `minFreqPattern` and `maxFreqPattern` by sending a truthy value for `invertMode.`
 ```javascript
-$('example')
+example
   .noise(n16)
   .ffilter(200, 2000)
   .play();
@@ -2206,7 +2214,7 @@ $('example')
 - applies a spectral gate to the FacetPattern, muting any frequency bins lower than `gateThresholdPattern`. The magnitudes of each FFT bin are normalized from 0 - 1. A `gateThresholdPattern` of 0 will pass every bin, and a `gateThresholdPattern` of 1 will mute every bin.
 - you can invert the gate mode so it keeps only bins with magnitudes lower than  `gateThresholdPattern`.
 ```javascript
-$('example')
+example
   .noise(n16)
   .fgate(0.7)
   .play();
@@ -2216,7 +2224,7 @@ $('example')
 #### **flookup** ( _lookupPattern_ )
 - applies a spectral bin rearrangement to the FacetPattern based on the `lookupPattern`. Similar to `ichunk()` but using FFT. The `lookupPattern` maps the current spectral bins to new positions. The length of the lookupPattern determines the number of frames in the resynthesized signal.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .flookup(_.ramp(1, 0, SAMPLE_RATE))
   .play()
@@ -2227,7 +2235,7 @@ $('example')
 #### **fshift** ( _shiftAmountPattern_ )
 - applies a spectral bin shift to the FacetPattern. `shiftAmountPattern` values lower than 0 will cause the bottom to wrap the top, and the rest of the spectrum moves downwards. `shiftAmountPattern` values higher than 0 will cause the top of the spectrum to wrap to the bottom, and the rest of the spectrum moves upwards.
 ```javascript
-$('example')
+example
   .sine(100)
   .fshift(0.04)
   .play();
@@ -2237,7 +2245,7 @@ $('example')
 #### **ftilt** ( _tiltAmountPattern_ )
     - applies spectral harmonic tilting to the FacetPattern. This method allows for the rotation of the harmonic bands of the signal, enabling each band to be repositioned independently in time. The `tiltAmountPattern` should be normalized to values between -1 and 1, where -1 represents a full counter-clockwise rotation and 1 represents a full clockwise rotation.
 ```javascript
-$('example')
+example
   .sample('808/808-Clap03')
   .ftilt(_.ramp(rf(), rf(), 100))
   .play();
@@ -2247,12 +2255,12 @@ $('example')
 #### **harmonics** ( _numHarmonicsPattern_ )
 - adds `numHarmonicsPattern` harmonics to the input signal.
 ```javascript
-$('example')
+example
   .sine(10)
   .harmonics(200)
   .play();
   // 10Hz sine wave with 200 harmonics added on top
-$('example')
+example
   .sine(10, n1)
   .harmonics(_.ramp(0, 200, 200))
   .play();
@@ -2262,13 +2270,13 @@ $('example')
 #### **hpf** ( _cutoffPattern_ = 100, _qPattern_ = 2.5 )
 - applies a high pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 ```javascript
-$('example')
+example
   .noise(n1)
   .hpf(2000, 6)
   .times(0.1)
   .play();
   // high-passed noise
-$('example')
+example
   .noise(n1)
   .hpf(_.sine(4)
     .scale(10000, 20000))
@@ -2279,13 +2287,13 @@ $('example')
 #### **lpf** ( _cutoffPattern_, _qPattern_ = 2.5 )
 - applies a low pass filter with configurable `cutoffPattern` and `q` to the FacetPattern.
 ```javascript
-$('example')
+example
   .noise(n1)
   .lpf(1000, 6)
   .times(0.1)
   .play();
   // low-passed noise
-$('example')
+example
   .noise(n1)
   .lpf(_.sine(4)
     .scale(10, 2000))
@@ -2296,13 +2304,13 @@ $('example')
 #### **onepole** ( _cutoffPattern_ )
 - applies a one-pole low pass filter with 6dB/octave rolloff to the FacetPattern.
 ```javascript
-$('example')
+example
   .noise(n1)
   .onepole(100)
   .full()
   .play();
   // gently low-passed noise with 6dB/octave rolloff
-$('example')
+example
   .noise(n1)
   .lpf1(_.sine(4)
     .scale(20, 1000))
@@ -2313,11 +2321,11 @@ $('example')
 #### **pitch** (  _pitchShiftPattern_ )
 - pitch-shifts the FacetPattern. `pitchShiftPattern` values between 0 and 1 will lower the pitch; e.g. a value of 0.5 will shift it down an octave. Values higher than 1 will increase the pitch; e.g. a value of 2 will be an octave higher.
 ```javascript
-$('example')
+example
   .sine(100)
   .shift(rf(0.5, 2));
   // sometimes lower pitch, sometimes higher pitch
-$('example')
+example
   .sine(100)
   .pitch(_.noise(16)
     .scale(0.5, 2))
@@ -2328,12 +2336,12 @@ $('example')
 #### **stretch** ( _shiftAmountPattern_, _chunksPerSecondPattern_ = 128 )
 - time-stretches the FacetPattern while preserving pitch. `shiftAmountPattern` values less than 1 will shorten its overall length; values greater than 1 will increase its length. `chunksPerSecondPattern` is the number of chunks that the timestretching algorithm will generate per second. Smaller values will produce more discrete repetitions; larger values will produce more of a bitcrushing, harmonic distortion effect. The largest `chunksPerSecondPattern` value is `SAMPLE_RATE / (SAMPLE_RATE * 0.002)`, which is 500 a sample rate of 44100.
 ```javascript
-$('example')
+example
   .sine(100, n4)
   .stretch(4)
   .play();
   // stretching a quarter note sine wave to last a whole note
-$('example')
+example
   .noise(n1)
   .stretch(_.ramp(0.125, 4, 16))
   .play()
@@ -2344,7 +2352,7 @@ $('example')
 #### **subtract** ( _FacetPattern_, _match_sizes_ = true )
 - subtracts the second FacetPattern from the first. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 ```javascript
-$('example')
+example
   .sine(100)
   .subtract(_.cosine(50))
   .play();
@@ -2353,12 +2361,12 @@ $('example')
 #### **tanh** ( _gainPattern_ = 20 )
 - outputs the hyperbolic tangent method for the input FacetPattern, always returning values between -1 and 1. Higher `gainPattern` values will create more intense distortion.
 ```javascript
-$('example')
+example
   .phasor(1, 20)
   .times(10)
   .tanh(6);
   // 0 0.995 0.9999 0.99999996 0.9999999999 0.999999999999 0.9999999999999996 1 1 1 1 1 1 1 1 1 1 1 1 1
-$('example')
+example
   .sine(100)
   .tanh(_.ramp(0, 100, 100))
   .play();
@@ -2368,7 +2376,7 @@ $('example')
 #### **times** ( _FacetPattern_, _match_sizes_ = true)
 - multiplies the first FacetPattern by the second. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 ```javascript
-$('example')
+example
   .sine(50)
   .times(_.sine(50))
   .play();
@@ -2378,7 +2386,7 @@ $('example')
 #### **and** ( _FacetPattern_, _match_sizes_ = true )
 - computes the logical AND of both FacetPattern, returning a 0 if one of the values is 0 and returning a 1 if both of the values are nonzero. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 ```javascript
-$('example')
+example
   .from([1, 0, 1, 0])
   .and(_.from([0, 1]));
   // 0 0 1 0
@@ -2387,7 +2395,7 @@ $('example')
 #### **append** ( _FacetPattern_ )
 - concatenates the second FacetPattern onto the first.
 ```javascript
-$('example')
+example
   .sine(1)
   .append(_.phasor(1))
   .append(_.from([1, 2, 3, 4]));
@@ -2397,7 +2405,7 @@ $('example')
 - each piece of data in the FacetPattern is paired with the corresponding value in the second FacetPattern. The resulting complex number x,y coordinate is run through a function: f(x) = x2 + c, over `iterations` iterations. The output is a value between 0 and 1, which corresponds to how stable or unstable that particular point is in the complex number plane.
 - By default, both cx and cy are set to 0 (Mandelbrot set). But you can set them to other values from -1 to 1, which can produce all sorts of Julia set variations.
 ```javascript
-$('example')
+example
   .sine(n1)
   .chaos(_.drunk(n1, 0.01))
   .play();
@@ -2405,7 +2413,7 @@ $('example')
 
 ```javascript
 // generate a 1000px * 1000px mandelbrot set between [-2,2]
-$('example')
+example
   .ramp(-2, 2, 1000)
   .setlocal('x')
   .ramp(-2, 2, 1000)
@@ -2424,7 +2432,7 @@ $('example')
 #### **convolve** ( _FacetPattern_ )
 - computes the convolution between the two FacetPatterns.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .convolve(_.randsamp('808'))
   .play();
@@ -2434,7 +2442,7 @@ $('example')
 #### **equals** ( _FacetPattern_, _match_sizes_ = true )
 - computes the logical EQUALS of both FacetPattern, returning a 0 if the values don't equal each other and returning a 1 if they do. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 ```javascript
-$('example')
+example
   .sine(1)
   .equals(_.sine(2));
 ```
@@ -2442,7 +2450,7 @@ $('example')
 #### **ichunk** ( _FacetPattern_ )
 - slices the input into `FacetPattern.length` windowed chunks (to avoid audible clicks). Loops through every value of `FacetPattern` as a lookup table, determining which ordered chunk of audio from the input sequence it corresponds to, and appends that window to the output buffer.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .ichunk(_.ramp(rf(), rf(), 256))
   .play();
@@ -2452,7 +2460,7 @@ $('example')
 #### **interlace** ( _FacetPattern_ )
 - interlaces two FacetPatterns. If one FacetPattern is smaller, it will be interspersed evenly throughout the other FacetPattern.
 ```javascript
-$('example')
+example
   .sine(1)
   .interlace(_.phasor(1, 20));
 ```
@@ -2460,11 +2468,11 @@ $('example')
 #### **map** ( _FacetPattern_ )
 - forces all values of the input FacetPattern to be mapped onto a new set of values from a second FacetPattern.**
 ```javascript
-$('example')
+example
   .from([1, 2, 3, 4])
   .map([11, 12, 13, 14]);
   // 11 11 11 11
-$('example')
+example
   .from([1, 2, 3, 4])
   .scale(30, 34)
   .map(_.from([31, 31.5, 32, 32.5]));
@@ -2474,7 +2482,7 @@ $('example')
 #### **or** ( _FacetPattern_, _match_sizes_ = false )
 - computes the logical OR of both FacetPattern, returning a 0 if both of the values are 0 and returning a 1 if either of the values are nonzero. If `match_sizes` is false, the output FacetPattern will be the longer pattern's length, and the "missing" values from the shorter pattern will be set to 0. If `match_sizes` is true, both FacetPatterns will be made the same size before the calculations occur.
 ```javascript
-$('example')
+example
   .from([1, 0, 1, 0])
   .or(_.from([0, 1]));
   // 1 0 1 1
@@ -2483,7 +2491,7 @@ $('example')
 #### **sieve** ( _FacetPattern_ )
 - uses the second FacetPattern as a lookup table, with each value's relative value determining which value from the input sequence to select.
 ```javascript
-$('example')
+example
   .noise(1024)
   .sieve(_.sine(10));
   // sieving noise with a sine wave into the audio rate :D
@@ -2492,7 +2500,7 @@ $('example')
 #### **splice** ( _FacetPattern_, _position_  )
 - inserts the second FacetPattern into the input FacetPattern at relative `position` between 0 and 1.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .splice(_.noise(n16), 0.5)
   .play();
@@ -2502,7 +2510,7 @@ $('example')
 #### **sup** ( _FacetPattern_, _startPositionPattern_, _maxFrameSize_ = whole_note_samples )
 - superposes a second FacetPattern onto the first. The `startPositionPattern` value can be any value between 0 and 1, or an array, or a FacetPattern. It controls the relative position(s) in the input FacetPattern to begin superposing `FacetPattern`. The `maxFrameSize` value specifies the farthest sample value from the first FacetPattern, which would be equal to a `startPosition` of 1.
 ```javascript
-$('example')
+example
   .silence(n1)
   .sup(_.randsamp('808'), 0, n1)
   .sup(_.randsamp('808'), 0.5, n1)
@@ -2515,7 +2523,7 @@ $('example')
 - for a "classic" vocoding effect, use a rhythmic sample as the input FacetPattern and a melodic pattern for `carrierPattern`.
 - the Q argument controls the Q factor of the bandpass filters in the `bands` pattern.
 ```javascript
-$('example')
+example
   .seq('808/* 808/* 808/* 808/* 808/* 808/* 808/* 808/*')
   .vocode(_.square([220, 440, 110, 110]))
   .play();
@@ -2529,7 +2537,7 @@ For more examples, refer to the `examples/this.md` file.
 - Mixes the input FacetPattern with a second FacetPattern generated by `command`.
 - The command that will be mixed must start with the reserved word: `this` (see example).
 ```javascript
-$('example')
+example
   .randsamp('808')
   .mix(0.5, () => {
     this.reverse()
@@ -2547,7 +2555,7 @@ $('example')
 - The variable `iters`, referring to the total number of iterations, is also available for use in commands.
 - The variable `this.original_data`, referring to the original data before any iterations are proessed, is also available for use in commands.
 ```javascript
-$('example')
+example
   .randsamp('808')
   .iter(8, () => {
     this.delay(ri(1, 2000))
@@ -2559,7 +2567,7 @@ $('example')
 #### **parallel** ( _commands_ = [function, function] )
 - applies multiple commands in parallel to the input FacetPattern. The `commands` parameter is an array where each entry is a function. Each `command` is applied to a copy of the original input data, and the results are combined back together afterwards. The final output is normalized to have the same maximum value as the original input data.
 ```javascript
-$('s')
+example
   .noise(n4)
   .scale(-1, 1)
   .allpass(347)
@@ -2583,7 +2591,7 @@ $('s')
 - equivalent to a `sometimes(1,()=>{})` method. See `sometimes()` below for more details.
 - allows you to run arbitrary JS code on the FacetPattern every loop.
 ```javascript
-$('example')
+example
   .noise(n1)
   .run(() => {
     if (bars % 2 == 0) {
@@ -2604,11 +2612,11 @@ $('example')
 - `maxFrameSize` controls the length across which the sequence is spread. Defaults to the whole note duration in samples.
 - example: 
 ```javascript
-$('example')
+example
   .seq('kicks/* hats/* snares/003 hats/003')
   .play();
   // random kick, random hat, snares/003, hats/003
-$('example')
+example
   .seq(_.from(['kicks/003', 'hats*', 'snares/003', 'hats/*'])
     .dup(choose([1, 3, 5, 7]))
     .palindrome()
@@ -2628,7 +2636,7 @@ $('example')
 - If the FacetPattern's data is >= 1024 samples, the last 1% of each slice will be faded out to prevent clicks in audio slices. If the FacetPattern's data is < 1024 samples, no fading is applied, and each slice is processed exactly as-is.
 - By default, the `slices()` method applies a very short fadeout on each slice to prevent any clicks that might occur from any code running on each slice. This behavior can be turned off by including a falsy `fade_mode` value.
 ```javascript
-$('example').noise(n1)
+example.noise(n1)
   .slices(32, () => {
     this.times(rf()).log(rf())
   })
@@ -2640,7 +2648,7 @@ $('example').noise(n1)
 - runs `command` only some of the time, at a probability set by `prob`.
 - `command` must start with the reserved word: `this` (see example).
 ```javascript
-$('example')
+example
   .tri(100)
   .times(_.ramp(1, 0, 1000)
     .expo(8))
@@ -2660,12 +2668,12 @@ $('example')
 - the variable `iters`, referring to the total number of iterations, is also available for use in commands.
 - the FacetPattern `skipIterationsPattern` specifies any iterations that should be skipped. By default, it is empty, e.g. no iterations skip. For example, a `skipIterationsPattern` of `_.from([0,4,7,10])` would skip the 0th, 4th, 7th, and 10th iterations.
 ```javascript
-$('example')
+example
   .spread(8, () => {
     this.randsamp('808')
   }).play();
   // 8 random 808 samples across the whole loop
-  $('example')
+  example
   .spread(8, () => {
     this.randsamp('808')
       .truncate(n32)
@@ -2688,7 +2696,7 @@ $('example')
 - `min` and `max` should be floats between 0 and 1. They are relative values, so a value of 0 means the beginning of the pattern, and a value of 1 means the end of the pattern.
 - `command` must start with the reserved word: `this` (see example).
 ```javascript
-$('example')
+example
   .tri(200)
   .subrange(0.33, 0.66, () => {
     this.times(_.from([1,0,0,0,0,0,0,1]).curve())
@@ -2705,7 +2713,7 @@ Because Facet generates and modifies a 1-dimensional array of data, it is also p
 - applies a 3x3 box blur filter to the 2D image data.
 - averages each pixel with its 8 surrounding neighbors to create a smoothing effect.
 ```javascript
-$('example')
+example
   .noise(1000000)
   .iter(7,()=>{this.blur2d()})
   .saveimg('blur2d')
@@ -2720,12 +2728,12 @@ $('example')
 - `value` is brightness value for the circle normalized between 0 - 1.
 - `fillMode` (0 or 1) controls whether the inside of the shape is filled in with `value` or ignored. Default is no fill.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .circle2d(100, 100, 100, 1)
   .saveimg('example_circle');
   // white circle in a 1000x1000 image
-$('example')
+example
   .silence(1000000)
   .circle2d(100, 100, 100, 1, 1250, 800)
   .saveimg('circle2d', [1, 1, 1], 1250, 800)
@@ -2741,7 +2749,7 @@ $('example')
 - the `command` is a function that is applied to each slice. The function is converted to a string and any reference to `this` is replaced with `current_slice` to ensure the function operates on the correct data.
 - the method divides the FacetPattern into a grid of slices, each slice being a square segment of the original pattern.
 ```javascript
-$('example')
+example
   .sine(0.3, 1000*1000)
   .scale(0, 1)
   .columns2d(1000,()=>{this.times(c/999)})
@@ -2754,7 +2762,7 @@ $('example')
 - `delayX` and `delayY` are the delay amounts in the x and y directions. Positive values move right/down; negative values move left/up.
 - `intensityDecay` is a value between 0 and 1 that controls how much the intensity of the data decays with each delay step. A value of 0.5 means the intensity is halved with each delay step.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .circle2d(500, 500, 250, 1)
   .delay2d(20, 20, 0.85)
@@ -2766,7 +2774,7 @@ $('example')
 #### **dim** (_imageWidth_, _imageHeight_)
 - sets image dimensions so that when an image is saved via `.saveimg()`, its size will be `imageWidth` pixels wide by `imageHeight` pixels.
 ```javascript
-$('example')
+example
   .noise(100 * 2000)
   .dim(100, 2000)
   .saveimg()
@@ -2779,7 +2787,7 @@ $('example')
 - the `coordinates` parameter is an array of x and y coordinates for the vertices of the polygon. The array length must be divisible by 2.
 - the `fillValue` parameter is the value used to fill the lines of the polygon.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .iter(32, () => {
     this.draw2d([ri(0, 999), ri(0, 999), ri(0, 999), ri(0, 999)], 1)
@@ -2797,13 +2805,13 @@ $('example')
 - `outerValue` is the brightness value(s) at the edge of the circle (can be number, array, or FacetPattern).
 - `mode` controls the gradient style: 0 = linear, 1 = radial (default), 2 = exponential (steeper falloff), 3 = logarithmic (gentler falloff).
 ```javascript
-$('example')
+example
   .silence(1000000)
   .gradient2d(500, 500, 200, 1, 0)
   .saveimg('gradient2d_basic')
   .once();
   // radial gradient from white at center to black at edge
-$('example')
+example
   .silence(1000000)
   .gradient2d(250, 250, 150, 0.8, 0.2, 2)
   .gradient2d(750, 750, 100, 0.6, 0, 3)
@@ -2819,7 +2827,7 @@ $('example')
 - the `threshold` parameter is a value that a pixel's value is compared to in order to determine whether it should spread. The default value is 0.
 - the `mode` parameter determines how the threshold is applied. If `mode` is 0 (the default), a pixel's value will spread if it is less than the threshold. If `mode` is 1, a pixel's value will spread if it is greater than the threshold.
 ```javascript
-$('example')
+example
   .noise(1000000)
   .grow2d(5, 0.5, 0.2, 1)
   .saveimg('grow2d')
@@ -2832,7 +2840,7 @@ $('example')
 - `brightness_data` is a FacetPattern that should be normalized between 0 and 1. It controls how bright the corresponding pixels will be.
 - `xCoords` and `yCoords` are FacetPatterns that allow the user to control the x,y position of the pixels in `brightness_data`.
 ```javascript
-$('example')
+example
   .sine(1)
   .size(10000)
   .scale(0, 1)
@@ -2849,7 +2857,7 @@ $('example')
 - the image is converted to grayscale and each row represents a frequency band, with pixels mapped to spectral magnitude values.
 - use with `.resynthesize()` to convert the spectral data back to audio.
 ```javascript
-$('example')
+example
   .loadimage('img/myspectrogram.png', 2048) // load a PNG file
   .resynthesize(1, ms(6000)) // make it 6 seconds long, linear frequency scale
   .play()
@@ -2860,7 +2868,7 @@ $('example')
 - slices the input FacetPattern into `chunks` chunks in 2D space and mutes `prob` percent of them.
 - `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
 ```javascript
-$('example')
+example
   .sine(0.3, 1000)
   .scale(0, 1)
   .mutechunks2d(36, 0.5)
@@ -2871,7 +2879,7 @@ $('example')
 #### **palindrome2d** ( )
 - generates a 2D palindrome of the input FacetPattern, mirrored in both x and y axes.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .iter(128, () => {
     this.rect2d(ri(0, 1000), ri(0, 1000), ri(10, 100), ri(10, 100), rf())
@@ -2890,7 +2898,7 @@ $('example')
 - `vanishX` and `vanishY` set the vanishing point coordinates where the perspective converges.
 - `intensityDecay` controls how much dimmer each successive layer becomes (0 = no decay, 1 = maximum decay).
 ```javascript
-$('example')
+example
   .silence(1000000)
   .rect2d(400, 400, 200, 200, 1)
   .perspective3d(8, 0.85, 500, 300, 0.3)
@@ -2903,7 +2911,7 @@ $('example')
 - slices the input FacetPattern into `chunks` chunks in 2D space and shuffles the chunks around.
 - `num_chunks` must have an integer square root, e.g. 9, 16, 25, 36.
 ```javascript
-$('example')
+example
   .sine(0.3, 1000)
   .scale(0, 1)
   .rechunk2d(36)
@@ -2919,7 +2927,7 @@ $('example')
 - `killRate` controls how fast the inhibitor kills the activator.
 - `cutoffFrequency` and `sampleRate` are used for post-processing smoothing with a biquad low-pass filter, so that this method can also be run on audio patterns.
 ```javascript
-$('example')
+example
   .silence(500*500)
   .circle2d(250, 250, 250, 1, 1)
   .react2d(100, 1.5, 0.8, 0.055, 0.062)
@@ -2936,13 +2944,13 @@ $('example')
 - each row of the image represents a frequency band, with brightness controlling amplitude.
 - use after loading an image with `.loadimage()` or after generating 2D patterns in Facet.
 ```javascript
-$('example')
+example
   .loadimage('img/spectrogram.png') // load image
   .resynthesize(1.5, n1) // resynthesisze to last a whole note, linear frequency scale
   .play()
   .once();
   
-  $('example')
+  example
   .silence(100 * 100)
   .circle2d(49, 49, 20, 1, 0) // generate a circle in a 100x100 space
   .delay2d(4, 20, 0.99) // create copies of it around the 2d space
@@ -2959,7 +2967,7 @@ $('example')
 - `value` is brightness value for the rectamgle normalized between 0 - 1.
 - `fillMode` (0 or 1) controls whether the inside of the shape is filled in with `value` or ignored. Default is no fill.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .rect2d(0, 0, 100, 100, 1)
   .saveimg('rect2d')
@@ -2971,7 +2979,7 @@ $('example')
 - rotates the FacetPattern `angle` degrees around a center point, as if it were suspended in 2D space.
 - the `width` and `height` arguments are optional. They default to the square root of the FacetPattern's length. Other values will rotate the data in a different way, around a different center point.
 ```javascript
-$('example')
+example
   .sine(1)
   .scale(0, 1)
   .size(512 * 512)
@@ -2981,11 +2989,13 @@ $('example')
   // rotates a sine wave background 35 degrees
 ```
 ---
-#### **saveimg** ( _filepath_ = Date.now(), _rgbData_ )
+#### **saveimg** ( _filepath_ = Date.now(), _rgbData_, _absolute_path_ = false )
 - saves the FacetPattern data as a PNG file in the `img/` directory or a sub-directory. If a sub-directory is specified in the `filepath` argument and it doesn't exist, it will be created.
+- to save a file to a location outside of the `img/` directory, supply a truthy `absolute_path` argument.
+- __Note__: this example uses MacOS / Linux file paths with forward slashes (e.g. `my/path/here`). For Windows, you will need to use back slashes (e.g `my\path\here`)
 - the `rgbData` argument is optional. Without it, the image will be greyscaled. If `rgbData` is included, it should be an array containing three FacetPatterns normalized to between 0 and 1, representing the R, G, and B amounts. The FacetPattern data will be multipled by the three `rgbData` patterns to create colored pixels in the image. Values between 0 and 1 will be mapped onto RGB values 0-255.
 ```javascript
-$('example')
+example
   // create black background
   .silence(512 * 512)
   // add the 512 brightest-possible pixels (1s) that will be used to create a circle
@@ -3014,7 +3024,7 @@ $('example')
 #### **savespectrogram** ( _filePath_, _windowSize_ = 2048 )
 - saves a PNG file in the `img/` directory named `fileName.png`, with the FacetPattern's spectrogram.
 ```javascript
-$('example')
+example
   .noise(n1)
   .ffilter(_.ramp(0, NYQUIST / 2), _.ramp(NYQUIST, NYQUIST / 2))
   .savespectrogram('mytri' + Date.now())
@@ -3024,7 +3034,7 @@ $('example')
 #### **shift2d** ( _xAmt_, _yAmt_ )
 - shifts the FacetPattern in 2D space, by `xAmt` pixels to the left/right, and by `yAmt` pixels up/down.
 ```javascript
-$('example')
+example
   .noise(100 * 100)
   .prob(0.001)
   .iter(4, () => {
@@ -3041,7 +3051,7 @@ $('example')
 - creates a smaller image of the FacetPattern in 2D Space, according to the relative amount `size`.
 - `size` must be between 0 and 1. The new pattern will be a smaller 2D image of the input, surrounded by padding of black pixels (0s).
 ```javascript
-$('example')
+example
   .noise(10000)
   .size2d(0.5)
   .saveimg('size2d')
@@ -3057,7 +3067,7 @@ $('example')
 - the `command` is a function that is applied to each slice. The function is converted to a string and any reference to `this` is replaced with `current_slice` to ensure the function operates on the correct data.
 - the method divides the FacetPattern into a grid of slices, each slice being a square segment of the original pattern. The number of slices is determined by the square of the nearest integer square root of `num_slices`. This ensures that the slices form a square grid.
 ```javascript
-$('example')
+example
   .noise(1000000)
   .slices2d(36, () => {
     this.times(rf())
@@ -3071,7 +3081,7 @@ $('example')
 - this allows you to generate, interpret, and resynthesize a frequency-domain representation into sound.
 - the `stretchFactor` parameter determines how much the pattern is stretched horizontally before the IFFT is applied. The default value is 1, which means no stretching. Each row of the pattern is then stretched by the `stretchFactor`. This is done by linearly interpolating between each pair of consecutive values in the row.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .iter(16, () => {
     this.circle2d(ri(0, 999), ri(0, 999), ri(0, 100), rf())
@@ -3089,7 +3099,7 @@ $('example')
 - `value` is brightness value for the triangle normalized between 0 - 1.
 - `fillMode` (0 or 1) controls whether the inside of the shape is filled in with `value` or ignored. Default is no fill.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .tri2d(ri(0, 1000), ri(0, 1000), ri(0, 1000), ri(0, 1000), ri(0, 1000), ri(0, 1000), 1)
   .saveimg('tri2d')
@@ -3103,7 +3113,7 @@ $('example')
 - `warpIntensity` should be a float between 0 and 1 and controls the intensity of the warp effect.
 - example
 ```javascript
-$('example')
+example
   .silence(1000000)
   .circle2d(100, 100, 100, 0.2)
   .delay2d(20, 20, 0.98)
@@ -3121,7 +3131,7 @@ $('example')
 - `x` and `y` control the maximum distance that a pixel can move. They should be non-negative integers (but random walks occur in both left/right AND up/down),
 - `mode` controls the behavior of pixels at the boundary. A value of 0 is "wrap" mode; values move to the other side. A value of 1 is "fold" mode; values get folded back by however many they exeeded the boundary. A value of 2 is "clip" mode; values get stuck at the boundary.
 ```javascript
-$('example')
+example
   .silence(1000000)
   .rect2d(950, 950, 50, 50, 1)
   .walk2d(0.5, 10, 10, 0)

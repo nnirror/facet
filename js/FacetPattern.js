@@ -48,8 +48,10 @@ class FacetPattern {
     this.pan_data = false;
     this.play_once = false;
     this.original_command = '';
+    this.fx_data = [];
     this.over_n = 1;
     this.osc_data = [];
+    this.solo_data = [];
     this.pitchbend_data = [];
     this.saveas_filename = false;
     this.sequence_data = [];
@@ -308,14 +310,14 @@ class FacetPattern {
     return this;
   }
 
-  noise(length) {
+  noise(length, min = -1, max = 1) {
     let noise_sequence = [];
     length = Math.abs(Math.round(Number(length)));
     if (length < 1) {
       length = 1;
     }
     for (var i = 0; i < length; i++) {
-      noise_sequence[i] = Math.random() * 2 - 1;
+      noise_sequence[i] = Math.random() * (max - min) + min;
     }
     this.data = noise_sequence;
     return this;
@@ -1112,16 +1114,25 @@ class FacetPattern {
     }
     command = command.toString();
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
+    command = command.replace(/(^|[{\s;])\$\(\)\./g, '$1current_slice.');
     command = command.replace(/current_slice./g, 'this.');
     wet = Math.abs(Number(wet));
-    let dry = Math.abs(wet - 1);
-    let dry_data = new FacetPattern().from(this.data).times(dry);
+    let dry_gain, wet_gain;
+    if (wet <= 0.5) {
+      dry_gain = 1.0;
+      wet_gain = Math.pow(wet * 2, 2);
+    } else {
+      wet_gain = 1.0;
+      dry_gain = Math.pow((1 - wet) * 2, 2);
+    }
+    
+    let dry_data = new FacetPattern().from(this.data).times(dry_gain);
     let i = this.current_iteration_number;
     let iters = this.current_total_iterations;
     let s = this.current_slice_number;
     let num_slices = this.current_total_slices;
     eval(global.env + global.vars + utils + command);
-    let wet_data = new FacetPattern().from(this.data).times(wet);
+    let wet_data = new FacetPattern().from(this.data).times(wet_gain);
     let mixed_data = dry_data.sup(wet_data, 0);
     this.data = mixed_data.data;
     return this;
@@ -2082,31 +2093,63 @@ bpfInner(data, cutoffs, q) {
   }
 
   wrap(min, max) {
-    min = Number(min);
+    if (typeof min == 'number' || Array.isArray(min) === true) {
+      min = new FacetPattern().from(min);
+    }
+    if (max !== undefined && (typeof max == 'number' || Array.isArray(max) === true)) {
+      max = new FacetPattern().from(max);
+    }
+    
+    // handle case where max is not provided
     if (!max) {
-      max = min;
-      min *= -1;
+      if (typeof min.data[0] !== 'undefined' && min.data[0] < 0) {
+        // if first min value is negative and no max supplied, multiply by -1 and sort
+        let maxData = min.data.map(val => val * -1);
+        max = new FacetPattern().from(maxData);
+        let range = [min.data[0], max.data[0]];
+        let sorted_range = range.sort(function (a, b) { return a - b; });
+        let minData = min.data.map(() => sorted_range[0]);
+        let maxDataSorted = max.data.map(() => sorted_range[1]);
+        min = new FacetPattern().from(minData);
+        max = new FacetPattern().from(maxDataSorted);
+      } else {
+        // positive min
+        let maxData = min.data.slice();
+        let minData = min.data.map(val => val * -1);
+        max = new FacetPattern().from(maxData);
+        min = new FacetPattern().from(minData);
+        let range = [min.data[0], max.data[0]];
+        let sorted_range = range.sort(function (a, b) { return a - b; });
+        let newMinData = min.data.map(() => sorted_range[0]);
+        let newMaxData = max.data.map(() => sorted_range[1]);
+        min = new FacetPattern().from(newMinData);
+        max = new FacetPattern().from(newMaxData);
+      }
     }
-    max = Number(max);
-    let range = [min, max];
-    let sorted_range = range.sort(function (a, b) { return a - b; });
-    min = sorted_range[0];
-    max = sorted_range[1];
-    if (min == max) {
-      throw `Cannot run wrap with equal min and max: ${min}`;
+    
+    // resize patterns to match this pattern's length
+    min.size(this.data.length);
+    max.size(this.data.length);
+    
+    if (min.data[0] == max.data[0]) {
+      throw `Cannot run wrap with equal min and max: ${min.data[0]}`;
     }
+    
     let pong_sequence = [];
     for (const [key, step] of Object.entries(this.data)) {
       let new_step = step;
-      let step_is_outside_range = ((step < min) || (step > max));
+      let current_min = min.data[key];
+      let current_max = max.data[key];
+      
+      let step_is_outside_range = ((step < current_min) || (step > current_max));
       while (step_is_outside_range) {
-        if (new_step < min) {
-          new_step = max - Math.abs(new_step - min);
+        if (new_step < current_min) {
+          new_step = current_max - Math.abs(new_step - current_min);
         }
-        else if (new_step > max) {
-          new_step = min + Math.abs(new_step - max);
+        else if (new_step > current_max) {
+          new_step = current_min + Math.abs(new_step - current_max);
         }
-        step_is_outside_range = ((new_step < min) || (new_step > max));
+        step_is_outside_range = ((new_step < current_min) || (new_step > current_max));
       }
       pong_sequence[key] = new_step;
     }
@@ -2983,7 +3026,6 @@ bpfInner(data, cutoffs, q) {
     }
 
     this.data = result;
-    console.log(this.data);
     return this;
   }
 
@@ -3388,6 +3430,8 @@ bpfInner(data, cutoffs, q) {
     for (let [key, command] of Object.entries(commands)) {
       this.data = initial_fp.data;
       command = command.toString();
+      // only replace $().at the start of statements, not inside function calls
+      command = command.replace(/(^|[{\s;])\$\(\)\./g, '$1current_slice.');
       command = command.replace(/current_slice./g, 'this.');
       command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
       eval(global.env + global.vars + utils + command);
@@ -3433,6 +3477,8 @@ bpfInner(data, cutoffs, q) {
     }
     this.current_total_iterations = iters;
     command = command.toString();
+    // only replace $().at the start of statements, not inside function calls
+    command = command.replace(/(^|[{\s;])\$\(\)\./g, '$1current_slice.');
     command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     let s = this.current_slice_number;
@@ -3545,7 +3591,32 @@ bpfInner(data, cutoffs, q) {
     return this;
 }
 
-  pan(pan_amt) {
+  solo(controlPattern) {
+    if (!controlPattern) {
+      throw `solo() requires a FacetPattern argument`;
+    }
+    if (!this.isFacetPattern(controlPattern)) {
+      throw `solo() argument must be a FacetPattern; type found: ${typeof controlPattern}`;
+    }
+    this.solo_data = {
+      data: controlPattern.data
+    };
+    return this;
+  }
+
+  fx(controlPattern) {
+    if (!controlPattern) {
+      throw `fx() requires a FacetPattern argument`;
+    }
+    if (!this.isFacetPattern(controlPattern)) {
+      throw `fx() argument must be a FacetPattern; type found: ${typeof controlPattern}`;
+    }
+    controlPattern.clip(0,1)
+    this.fx_data = controlPattern.data;
+    return this;
+  }
+
+  pan(pan_amt = 0.5) {
     if (typeof pan_amt == 'number' || Array.isArray(pan_amt) === true) {
       pan_amt = new FacetPattern().from(pan_amt);
     }
@@ -3595,8 +3666,9 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
-  saveas(filename) {
+  saveas(filename, absolute_path = false) {
     this.saveas_filename = filename;
+    this.saveas_absolute_path = absolute_path;
     return this;
   }
 
@@ -3716,6 +3788,8 @@ bpfInner(data, cutoffs, q) {
     }
     this.current_total_slices = num_slices;
     command = command.toString();
+    // only replace $().at the start of statements, not inside function calls  
+    command = command.replace(/(^|[{\s;])\$\(\)\./g, '$1current_slice.');
     command = command.replace(/this./g, 'current_slice.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     let calc_slice_size = Math.round(this.data.length / num_slices);
@@ -3768,6 +3842,8 @@ bpfInner(data, cutoffs, q) {
     let i = this.current_iteration_number;
     let iters = this.current_total_iterations;
     command = command.toString();
+    // only replace $().at the start of statements, not inside function calls
+    command = command.replace(/(^|[{\s;])\$\(\)\./g, '$1current_slice.');
     command = command.replace(/this./g, 'current_slice.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
 
@@ -3824,6 +3900,8 @@ bpfInner(data, cutoffs, q) {
     let i = this.current_iteration_number;
     let iters = this.current_total_iterations;
     command = command.toString();
+    // only replace $().at the start of statements, not inside function calls
+    command = command.replace(/(^|[{\s;])\$\(\)\./g, '$1current_slice.');
     command = command.replace(/this./g, 'current_slice.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
 
@@ -3984,6 +4062,8 @@ bpfInner(data, cutoffs, q) {
       throw `2nd argument must be a function, type found: ${typeof command}`;
     }
     command = command.toString();
+    // only replace $().at the start of statements, not inside function calls
+    command = command.replace(/(^|[{\s;])\$\(\)\./g, '$1current_slice.');
     command = command.replace(/current_slice./g, 'this.');
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
     prob = Math.abs(Number(prob));
@@ -5211,7 +5291,6 @@ bpfInner(data, cutoffs, q) {
       
       // ensure IFFT returned valid data
       if (!timeDomainSignal || timeDomainSignal.length === 0) {
-        console.warn(`IFFT returned invalid data for window ${i}`);
         continue;
       }
       
@@ -5377,7 +5456,7 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
-  savemidi2d(midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127) {
+  savemidi2d(midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, tick_mode = false, minNote = 0, maxNote = 127, absolute_path = false) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
 
@@ -5421,12 +5500,31 @@ bpfInner(data, cutoffs, q) {
     }
 
     const write = new MidiWriter.Writer([track]);
-    fs.writeFileSync(`midi/${midifilename}.mid`, write.buildFile(), 'binary');
+    
+    let finalPath;
+    if (absolute_path) {
+      finalPath = midifilename;
+    } else {
+      finalPath = `midi/${midifilename}`;
+    }
+    
+    if (!finalPath.endsWith('.mid')) {
+      finalPath += '.mid';
+    }
+    
+    if (absolute_path) {
+      const dir = path.dirname(finalPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    }
+    
+    fs.writeFileSync(finalPath, write.buildFile(), 'binary');
     this.reverse();
     return this;
   }
 
-  savemidi(midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, wraps = 1, tick_mode = false) {
+  savemidi(midifilename = Date.now(), velocityPattern = 64, durationPattern = 16, wraps = 1, tick_mode = false, absolute_path = false) {
     if (typeof velocityPattern == 'number' || Array.isArray(velocityPattern) === true) {
       velocityPattern = new FacetPattern().from(velocityPattern);
     }
@@ -5488,11 +5586,30 @@ bpfInner(data, cutoffs, q) {
     }
 
     const write = new MidiWriter.Writer([track]);
-    fs.writeFileSync(`midi/${midifilename}.mid`, write.buildFile(), 'binary');
+    
+    let finalPath;
+    if (absolute_path) {
+      finalPath = midifilename;
+    } else {
+      finalPath = `midi/${midifilename}`;
+    }
+    
+    if (!finalPath.endsWith('.mid')) {
+      finalPath += '.mid';
+    }
+    
+    if (absolute_path) {
+      const dir = path.dirname(finalPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    }
+    
+    fs.writeFileSync(finalPath, write.buildFile(), 'binary');
     return this;
   }
 
-  saveimg(filename = Date.now(), rgbData) {
+  saveimg(filename = Date.now(), rgbData, absolute_path = false) {
     this.is_image = true;
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
@@ -5508,18 +5625,34 @@ bpfInner(data, cutoffs, q) {
       filterType: -1
     });
 
-    let folder = 'img';
-    if (filename.includes(cross_platform_slash)) {
-      folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
-      filename = filename.split(cross_platform_slash)[1];
+    let finalPath;
+    
+    if (absolute_path) {
+      finalPath = filename;
+    } else {
+      // relative path - use img directory
+      let folder = 'img';
+      if (filename.includes(cross_platform_slash)) {
+        folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
+        filename = filename.split(cross_platform_slash)[1];
+      }
+      if (!fs.existsSync(folder)) {
+        fs.mkdir(folder, { recursive: true }, (err) => {
+          if (err) throw err;
+        });
+      }
+      finalPath = `${folder}${cross_platform_slash}${filename}`;
     }
-    if (!fs.existsSync(folder)) {
-      fs.mkdir(folder, { recursive: true }, (err) => {
-        if (err) throw err;
-      });
+    
+    if (!finalPath.includes('.png')) {
+      finalPath = `${finalPath}.png`;
     }
-    if (!filename.includes('.png')) {
-      filename = `${filename}.png`;
+    
+    if (absolute_path) {
+      const dir = path.dirname(finalPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
     }
 
     if (!rgbData) {
@@ -5546,7 +5679,7 @@ bpfInner(data, cutoffs, q) {
     rgbData[0].size(this.data.length);
     rgbData[1].size(this.data.length);
     rgbData[2].size(this.data.length);
-    // Set the pixel data from the float array
+    // set the pixel data from the float array
     for (let y = 0; y < png.height; y++) {
       for (let x = 0; x < png.width; x++) {
         const idx = (png.width * y + x) << 2;
@@ -5556,8 +5689,8 @@ bpfInner(data, cutoffs, q) {
         png.data[idx + 3] = 255;
       }
     }
-    // Save the PNG to disk
-    png.pack().pipe(fs.createWriteStream(`${folder}${cross_platform_slash}${filename}`));
+    // save the PNG to disk
+    png.pack().pipe(fs.createWriteStream(finalPath));
     return this;
   }
 

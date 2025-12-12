@@ -129,18 +129,27 @@ body {
   border-top: 1px solid #afafaf;
 }
 
-#voiceControls {
+#voiceControlsCanvas {
   position: absolute;
   right: 0;
   top: 0;
   width: 200px;
   z-index: 1000;
-  font-family: monospace;
   background: #222;
-  padding-left: 10px;
-  padding-right: 5px;
-  overflow-y: scroll;
-  max-height: calc(100% - 50px);
+  cursor: pointer;
+}
+
+#soloControlsCanvas {
+  position: absolute;
+  right: 0;
+  bottom: 50px;
+  width: 200px;
+  height: 200px;
+  z-index: 1000;
+  background: #333;
+  border-top: 1px solid #555;
+  display: block;
+  cursor: pointer;
 }
 
 .voice-wrapper {
@@ -164,7 +173,7 @@ body {
   color: white;
   font-weight: bold;
   user-select: none;
-  width: calc(100% - 70px);
+  width: calc(100% - 155px);
   overflow: hidden;
 }
 
@@ -177,6 +186,40 @@ body {
   background-color: #aa2424;
   color: white;
   border: none;
+  min-width: 35px;
+}
+
+.voice-solo-button {
+  margin: 5px;
+  padding: 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: bold;
+  background-color: #666;
+  color: white;
+  border: none;
+  min-width: 35px;
+}
+
+.voice-solo-button.active {
+  background-color: #ff9800;
+}
+
+.voice-lock-button {
+  margin: 5px;
+  padding: 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: bold;
+  background-color: #666;
+  color: white;
+  border: none;
+  min-width: 35px;
+  font-size: 12px;
+}
+
+.voice-lock-button.active {
+  background-color: #f44336;
 }
 
 .voice-control.unmuted {
@@ -187,8 +230,12 @@ body {
   background-color: #303030;
 }
 
+.voice-control.auto-muted {
+  background-color: #505050;
+}
+
 .gain-slider {
-  width: calc(100% - 10px);
+  width: calc(100% - 10px) !important;
   margin: 0 5px;
   -webkit-appearance: none;
   appearance: none;

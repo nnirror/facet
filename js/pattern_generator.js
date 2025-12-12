@@ -31,11 +31,11 @@ let workerMap = new Map();
 let percent_cpu = 0;
 let globalStopFlag = false;
 let mousex, mousey;
-let cross_platform_copy_command = process.platform == 'win32' ? 'copy \/y' : 'cp';
+let cross_platform_copy_command = process.platform == 'win32' ? 'copy \\/y' : 'cp';
 let vars = [];
 let env = { bpm: -1, bars_elapsed: -1, mousex: -1, mousey: -1 };
 let env_string = '';
-let cross_platform_slash = process.platform == 'win32' ? '\\' : '/';
+let cross_platform_slash = process.platform == 'win32' ? '\\\\' : '/';
 
 // request queue management
 const BASE_MAX_WORKERS = 4; // base limit for concurrent pattern generation
@@ -265,11 +265,9 @@ function executePattern(code, is_rerun, mode) {
     activeWorkers++;
     
     user_input = strip(code);
-    user_input = parser.delimitEndsOfCommands(user_input);
-    let commands = parser.splitCommandsOnDelimiter(user_input);
+    let commands = parser.splitCommands(user_input);
     Object.values(commands).forEach(command => {
-      let code = parser.replaceDelimiterWithSemicolon(command);
-      code = parser.formatCode(code);
+      let code = parser.formatCode(command);
       const match = code.match(fp_name_regex);
       if (!match || !match[2]) {
         // skip commands that don't have a valid pattern name format
@@ -344,9 +342,15 @@ function executePattern(code, is_rerun, mode) {
           if (reruns[fp.name] && fp.is_stopped !== true && !globalStopFlag) {
             reruns[fp.name].available_for_next_request = true;
           }
+          
+          // save original name before timestamp is added
+          const originalName = fp.name;
           fp.name = fp.name + `---${Date.now()}`;
+          
           if (fp.bpm_pattern !== false && !globalStopFlag) {
-            postMetaDataToTransport(fp.bpm_pattern, 'bpm');
+            // create a copy with original name for UI display
+            const bpmPatternForUI = { ...fp, name: originalName };
+            postMetaDataToTransport(bpmPatternForUI, 'bpm');
           }
           if (fp.time_signature_denominator && !globalStopFlag) {
             postMetaDataToTransport(fp, 'time_signature_denominator');
@@ -356,20 +360,31 @@ function executePattern(code, is_rerun, mode) {
           }
           if (typeof fp == 'object' && fp.skipped !== true && !globalStopFlag) {
             if (fp.sequence_data.length > 0) {
-              // create wav file at SAMPLE_RATE, 32-bit floating point
-              let a_wav = new WaveFile();
-              a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
-              // store wav file in /tmp/
-              fs.writeFile(`tmp/${fp.name}.wav`, a_wav.toBuffer(), (err) => {
-                if (!globalStopFlag) {  // double-check before posting
-                  postToTransport(fp);
-                  checkToSave(fp);
-                }
-              });
+              // post to transport first to get proper voice allocation
+              postToTransportWithoutData(fp)
+                .then(response => {
+                  if (response && response.data && response.data.voice_number && !globalStopFlag) {
+                    // send audio data directly to editor via websocket with voice number from transport
+                    sendAudioToEditor(fp, response.data.voice_number);
+                  }
+                })
+                .catch(error => {
+                  console.log(`error getting voice number from transport: ${error}`);
+                });
+              // create wav file for saving if needed
+              if (fp.saveas_filename !== false) {
+                let a_wav = new WaveFile();
+                a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
+                saveWavFile(fp, a_wav.toBuffer(), fp.saveas_absolute_path || false);
+              }
             }
             else {
               postToTransport(fp);
-              checkToSave(fp);
+              if (fp.saveas_filename !== false) {
+                let a_wav = new WaveFile();
+                a_wav.fromScratch(1, SAMPLE_RATE, '32f', fp.data);
+                saveWavFile(fp, a_wav.toBuffer(), fp.saveas_absolute_path || false);
+              }
             }
           }
         });
@@ -402,6 +417,30 @@ function getCpuUsage() {
   os_utils.cpuUsage((cpu) => {
     percent_cpu = cpu;
   });
+}
+
+function sendAudioToEditor(fp, voiceNumber) {
+  for (let socket of io.sockets.sockets.values()) {
+    socket.emit('audioData', {
+      name: fp.name,
+      data: fp.data,
+      bpm_at_generation_time: fp.bpm_at_generation_time || bpm,
+      voice_number: voiceNumber
+    });
+  }
+}
+
+function postToTransportWithoutData(fp) {
+  let fpCopy = { ...fp };
+  delete fpCopy.data;
+  return axios.post(`http://${HOST}:3211/update`,
+    {
+      pattern: JSON.stringify(fpCopy)
+    }
+  )
+    .catch(function (error) {
+      console.log(`error posting to transport server: ${error}`);
+    });
 }
 
 function postToTransport(fp) {
@@ -437,25 +476,43 @@ function postMetaDataToTransport(fp, data_type) {
     });
 }
 
-function checkToSave(fp) {
+function saveWavFile(fp, wavBuffer, absolute_path = false) {
   if (fp.saveas_filename !== false) {
     if (typeof fp.saveas_filename !== 'string') {
       fp.saveas_filename = fp.saveas_filename.toString();
     }
-    let filenameParts = fp.saveas_filename.split(cross_platform_slash);
-    let filename = filenameParts.pop();
-    let folder = 'samples';
+    
+    let finalPath;
+    
+    if (absolute_path) {
+      finalPath = fp.saveas_filename;
+    } else {
+      // relative path - prepend samples directory
+      let filenameParts = fp.saveas_filename.split(cross_platform_slash);
+      let filename = filenameParts.pop();
+      let folder = 'samples';
 
-    filenameParts.forEach(part => {
-      folder += `${cross_platform_slash}${part}`;
-      if (!fs.existsSync(folder)) {
-        fs.mkdirSync(folder, { recursive: true });
-      }
-    });
-    exec(`${cross_platform_copy_command} tmp${cross_platform_slash}${fp.name}.wav ${folder}${cross_platform_slash}${filename}.wav`, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`exec error: ${error}`);
-        return;
+      filenameParts.forEach(part => {
+        folder += `${cross_platform_slash}${part}`;
+      });
+      finalPath = `${folder}${cross_platform_slash}${filename}`;
+    }
+    
+    // ensure .wav extension
+    if (!finalPath.endsWith('.wav')) {
+      finalPath += '.wav';
+    }
+    
+    // create directory structure if it doesn't exist
+    const dir = path.dirname(finalPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    // write file directly to final destination
+    fs.writeFile(finalPath, wavBuffer, (err) => {
+      if (err) {
+        console.error(`Error saving WAV file to ${finalPath}: ${err}`);
       }
     });
   }
