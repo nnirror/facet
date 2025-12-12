@@ -4,15 +4,15 @@ You can change the BPM of the Facet transport by including the `.bpm()` method o
 
 To set the BPM to 120:
 
-`$('example').bpm(120);`
+`example.bpm(120);`
 
 To set the BPM to a sine wave, moving between 60 BPM to 180 BPM:
 
-`$('example').bpm(_.sine(1).scale(60,180));`
+`example.bpm(_.sine(1).scale(60,180));`
 
 To shuffle around a bunch of related tempos (e.g. half speed, double speed):
 
-`$('example').bpm(_.from([40,80,80,60,160,160,160]).shuffle());` 
+`example.bpm(_.from([40,80,80,60,160,160,160]).shuffle());` 
 
 Higher BPMs are included more frequently in the above command so that they last the same relative amount of time as the lower BPM.
 

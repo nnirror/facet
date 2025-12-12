@@ -33,7 +33,7 @@ Either way, as in both above examples, connect the OSC output to a "route" objec
 Be sure to size your commands appropriately, via `.size()` so the OSC server isn't overwhelmed. It's intended to be used for control data.
 
 1. send a LFO, scaled between 100 and 10000, to the `/filter_cutoff` address:
-`$('my_filter_cutoff').sine(1).size(128).scale(100,1000).osc('/filter_cutoff');`
+`my_filter_cutoff.sine(1).size(128).scale(100,1000).osc('/filter_cutoff');`
 
 2. send 128 smoothed random values to the `/filter_q` address:
-`$('my_filter_q').noise(16).curve().size(128).scale(30,80).osc('/filter_q');`
+`my_filter_q.noise(16).curve().size(128).scale(30,80).osc('/filter_q');`
