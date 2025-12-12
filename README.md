@@ -62,16 +62,21 @@ At the bottom of the page, there are several UI elements which control the serve
 - ↻ = restart system (in case it becomes unresponsive)
 - 🔉 = toggle browser sound on / off
 
-## Top-right controls
+## Right sidebar controls
 
-In the top-right corner, a UI element lists all commands that are currently producing audio, MIDI, or OSC. Each command will be listed by its FacetPattern name, so if your command looked like this:
+In the top-right corner, a UI element lists every command that is currently producing audio, MIDI, or OSC. Each command will be listed by its FacetPattern name, so if your command looked like this:
 
 ```javascript
 example.sine(440).play();
 ```
 
-The corresponding button would be listed with the name "example". This button toggles back and forth to mute/unmute playback while the pattern continues regenerating. Clicking the "stop" button will stop playback and prevent new patterns from generating. This provides a global level of control on the commands that are running and allows the user to manage and/or improvise with them without needing to fiddle around with the keyboard or cursor.
+The corresponding button would be listed with the name "example". Each voice control includes several buttons:
 
+- **Pattern name button**: mutes/unmutes this pattern.
+- **Solo button**: soloes this pattern (mutes all others). Multiple patterns can be soloed simultaneously.
+- **Lock button**: locks this pattern so that its solo or mute status is not affected when other patterns are soloed. Prevents the `.solo()` method from targeting this pattern.
+- **Stop button**: stops regeneration and playback of the pattern and removes it from the controls.
+- **Gain slider**: adjusts the volume of the pattern (audio only).
 ---
 
 # Key-combination shortcuts
@@ -538,7 +543,7 @@ example
   // 10 randomly sized circles in 2d space, all at velocity 64, 64th note durations
 ```
 ---
-# Methods for controlling time
+# Methods for controlling time and user interface
 #### **bpm** ( _bpm_pattern_ )
 - stores the data of `bpm_pattern` in the transport as BPM values to be cycled through over each loop.
 - the minimum BPM value is 1, and the maximum BPM value is 10000.
@@ -550,6 +555,17 @@ example
 example
   .bpm(_.ramp(20, 200, 64)
     .over(4)); // ramps from 20BPM to 200BPM over 4 loops
+```
+---
+#### **solo** ( _target_pattern_ = 0 )
+- automatically targets other patterns for soloing based on `target_pattern`.
+- when `target_pattern` is provided, those values should be normalized between 0-1 and will be mapped onto the available unlocked voices in the right sidebar.
+- locked patterns (using the lock button in the UI) are excluded from automatic solo targeting.
+- multiple `.solo()` patterns can run at once, creating potential for meta-modulation in the system output.
+```javascript
+example
+  .solo(_.ramp(0,1,16).echo(3)); // solos different voices based on the ramp values
+  // note that other audio/MIDI/OSC patterns will need to be playing for this to take effect
 ```
 ---
 #### **time** ( _time_signature_numerator_pattern_ = 4, _time_signature_denominator_pattern_ = 4 )
