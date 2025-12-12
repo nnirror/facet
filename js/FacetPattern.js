@@ -48,7 +48,6 @@ class FacetPattern {
     this.pan_data = false;
     this.play_once = false;
     this.original_command = '';
-    this.fx_data = [];
     this.over_n = 1;
     this.osc_data = [];
     this.solo_data = [];
@@ -3601,18 +3600,6 @@ bpfInner(data, cutoffs, q) {
     this.solo_data = {
       data: controlPattern.data
     };
-    return this;
-  }
-
-  fx(controlPattern) {
-    if (!controlPattern) {
-      throw `fx() requires a FacetPattern argument`;
-    }
-    if (!this.isFacetPattern(controlPattern)) {
-      throw `fx() argument must be a FacetPattern; type found: ${typeof controlPattern}`;
-    }
-    controlPattern.clip(0,1)
-    this.fx_data = controlPattern.data;
     return this;
   }
 
