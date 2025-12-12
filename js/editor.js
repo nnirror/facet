@@ -127,7 +127,7 @@ $(document).keydown(function (e) {
     // reset global stop mode after a delay to allow server to process stop
     setTimeout(() => {
       globalStopMode = false;
-    }, 3000); // 3 second delay
+    }, 1000);
   }
   else if (e.ctrlKey && (e.keyCode == 222)) {
     // stop command(s)
@@ -337,7 +337,7 @@ $('body').on('click', '#stop', function () {
   // reset global stop mode after a delay to allow server to process stop
   setTimeout(() => {
     globalStopMode = false;
-  }, 3000); // 3 second delay
+  }, 1000);
 });
 
 $('body').on('click', '#clear', function () {
@@ -974,7 +974,7 @@ class VoiceControlRenderer {
   updateCanvasSize() {
     const contentHeight = this.containerType === 'solo' 
       ? Math.max(35, this.voices.size * 35 + 10)  // keep solo elements more compact
-      : Math.max(200, this.voices.size * 65 + 30); // reduce spacing between main voices
+      : Math.max(200, this.voices.size * 60 + 30);
     
     const maxHeight = this.containerType === 'voice' ? window.innerHeight - 50 : 100;
     const actualHeight = this.containerType === 'solo' ? Math.min(contentHeight + 10, maxHeight) : Math.min(contentHeight, maxHeight); // Minimal padding for solo
@@ -998,14 +998,14 @@ class VoiceControlRenderer {
   }
   
   addVoice(fpName, patternType = 'audio') {  
-    const gridSpacing = this.containerType === 'solo' ? 35 : 65;
+    const gridSpacing = this.containerType === 'solo' ? 35 : 60;
     const topPadding = this.containerType === 'solo' ? 8 : 10;
     const voiceData = {
       fpName,
       patternType,
       isSoloControl: this.containerType === 'solo',
       y: topPadding + (this.voices.size * gridSpacing),
-      height: this.containerType === 'solo' ? 30 : 60,
+      height: this.containerType === 'solo' ? 30 : 55,
       buttons: this.getButtonLayout(patternType, this.containerType === 'solo')
     };
     
@@ -1031,7 +1031,7 @@ class VoiceControlRenderer {
   
   repositionVoices() {
     // make voices always snap to consistent grid positioning
-    const gridSpacing = this.containerType === 'solo' ? 35 : 65;
+    const gridSpacing = this.containerType === 'solo' ? 35 : 60;
     const topPadding = this.containerType === 'solo' ? 8 : 10;
     let gridIndex = 0;
     for (const [fpName, voiceData] of this.voices) {
@@ -1041,7 +1041,7 @@ class VoiceControlRenderer {
   }
   
   updateScrollLimits() {
-    const gridSpacing = this.containerType === 'solo' ? 35 : 65;
+    const gridSpacing = this.containerType === 'solo' ? 35 : 60;
     const totalHeight = (this.voices.size * gridSpacing) + 20;
     const canvasHeight = parseInt(this.canvas.style.height);
     this.maxScrollY = Math.max(0, totalHeight - canvasHeight);
@@ -1050,53 +1050,100 @@ class VoiceControlRenderer {
   getButtonLayout(patternType, isSoloControl) {
     const buttons = [];
     
-    // main voice control button (mute/unmute)
-    buttons.push({
-      type: 'mute',
-      x: 10,
-      y: 10,
-      width: isSoloControl ? 140 : 100,
-      height: 25
-    });
-    
-    if (!isSoloControl) {
-      // solo button
+    if (isSoloControl) {
+      // solo controls
       buttons.push({
-        type: 'solo',
-        x: 115,
+        type: 'mute',
+        x: 10,
         y: 10,
-        width: 35,
+        width: 140,
         height: 25
       });
       
-      // lock button
       buttons.push({
-        type: 'lock',
+        type: 'stop',
         x: 155,
         y: 10,
         width: 35,
         height: 25
       });
-    }
-    
-    // stop button
-    buttons.push({
-      type: 'stop',
-      x: isSoloControl ? 155 : 155,
-      y: isSoloControl ? 10 : 40,
-      width: 35,
-      height: 25
-    });
-    
-    // gain slider (only for audio patterns)
-    if (!isSoloControl && patternType === 'audio') {
-      buttons.push({
-        type: 'gain',
-        x: 10,
-        y: 40,
-        width: 140,
-        height: 20
-      });
+    } else {
+      // main voice controls
+      if (patternType === 'audio') {
+        // audio patterns
+        buttons.push({
+          type: 'mute',
+          x: 10,
+          y: 10,
+          width: 95,
+          height: 25
+        });
+        
+        buttons.push({
+          type: 'gain',
+          x: 10,
+          y: 40,
+          width: 180,
+          height: 15
+        });
+        
+        buttons.push({
+          type: 'solo',
+          x: 110,
+          y: 10,
+          width: 25,
+          height: 25
+        });
+        
+        buttons.push({
+          type: 'lock',
+          x: 138,
+          y: 10,
+          width: 25,
+          height: 25
+        });
+        
+        buttons.push({
+          type: 'stop',
+          x: 166,
+          y: 10,
+          width: 25,
+          height: 25
+        });
+      } else {
+        // non-audio patterns: no slider
+        buttons.push({
+          type: 'mute',
+          x: 10,
+          y: 10,
+          width: 95,
+          height: 25
+        });
+        
+        buttons.push({
+          type: 'solo',
+          x: 110,
+          y: 10,
+          width: 25,
+          height: 25
+        });
+        
+        buttons.push({
+          type: 'lock',
+          x: 138,
+          y: 10,
+          width: 25,
+          height: 25
+        });
+        
+        buttons.push({
+          type: 'stop',
+          x: 166,
+          y: 10,
+          width: 25,
+          height: 25
+        });
+      }
     }
     
     return buttons;
@@ -1178,17 +1225,17 @@ class VoiceControlRenderer {
         
       case 'solo':
         bgColor = state.isSoloed ? '#ff9800' : '#666';
-        text = 'solo';
+        text = 'S';
         break;
         
       case 'lock':
         bgColor = state.isLocked ? '#f44336' : '#666';
-        text = '🔒';
+        text = 'L';
         break;
         
       case 'stop':
         bgColor = '#aa2424';
-        text = 'stop';
+        text = 'X';
         break;
         
       case 'gain':
@@ -1208,20 +1255,49 @@ class VoiceControlRenderer {
     
     // draw button text
     ctx.fillStyle = textColor;
-    ctx.fillText(text, x + width/2, y + height/2);
+    ctx.font = type === 'solo' || type === 'lock' || type === 'stop' ? '10px monospace' : '12px monospace';
+    
+    // left-align text for mute buttons, center for others
+    if (type === 'mute') {
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      
+      // create clipping region for text overflow
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + 5, y, width - 10, height);
+      ctx.clip();
+      
+      ctx.fillText(text, x + 5, y + height/2);
+      
+      ctx.restore();
+      
+      // reset alignment for other elements
+      ctx.textAlign = 'center';
+    } else {
+      ctx.textAlign = 'center';
+      ctx.fillText(text, x + width/2, y + height/2);
+    }
+    
+    // reset font for other elements
+    ctx.font = '12px monospace';
   }
   
   renderGainSlider(ctx, x, y, width, height, fpName) {
-    const gain = manualGainValues[fpName];
+    const gain = manualGainValues[fpName] !== undefined ? manualGainValues[fpName] : 0.7;
     
     // slider track
-    ctx.fillStyle = '#555';
-    ctx.fillRect(x, y + height/3, width, height/3);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x, y + 2, width, height - 4);
     
-    // slider thumb
-    const thumbX = x + (gain * (width - 10));
+    // slider fill
     ctx.fillStyle = '#4caf50';
-    ctx.fillRect(thumbX, y, 10, height);
+    ctx.fillRect(x, y + 2, gain * width, height - 4);
+    
+    // slider border
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y + 2, width, height - 4);
   }
   
   handleButtonClick(buttonType, fpName, e) {
@@ -1249,7 +1325,6 @@ class VoiceControlRenderer {
         
       case 'stop':
         recentlyStoppedVoices.set(fpName, Date.now());
-        permanentlyStoppedVoices.add(fpName);
         this.removeVoice(fpName);
         delete mutedVoices[fpName];
         delete soloedVoices[fpName];
@@ -1461,21 +1536,21 @@ socket.on('uniqueFpNames', (data) => {
             !recentlyStoppedVoices.has(fpName) && 
             !permanentlyStoppedVoices.has(fpName)) {
           
-          // Initialize state
+          // initialize state
           mutedVoices[fpName] = false;
           soloedVoices[fpName] = false;
           lockedVoices[fpName] = false;
           
-          // Initialize manual gain value
+          // initialize manual gain value
           if (!(fpName in manualGainValues)) {
             manualGainValues[fpName] = 0.7;
           }
           
-          // Add to canvas renderer
+          // add to canvas renderer
           voiceRenderer.addVoice(fpName, patternTypes[fpName]);
           
-          // Apply initial gain
-          setTimeout(() => updateVoiceGain(fpName), 50);
+          // apply initial gain immediately
+          updateVoiceGain(fpName);
         }
       });
     }
@@ -1489,16 +1564,16 @@ socket.on('uniqueFpNames', (data) => {
             !recentlyStoppedVoices.has(fpName) && 
             !permanentlyStoppedVoices.has(fpName)) {
           
-          // Initialize state
+          // initialize state
           mutedVoices[fpName] = false;
           soloedVoices[fpName] = false;
           lockedVoices[fpName] = false;
           
-          // Add to canvas renderer
+          // add to canvas renderer
           soloRenderer.addVoice(fpName, patternTypes[fpName]);
           
-          // Apply initial gain
-          setTimeout(() => updateVoiceGain(fpName), 50);
+          // apply initial gain immediately
+          updateVoiceGain(fpName);
         }
       });
     } else if (soloRenderer) {
@@ -1559,11 +1634,11 @@ socket.on('uniqueFpNames', (data) => {
 setInterval(() => {
   const now = Date.now();
   for (const [fpName, timestamp] of recentlyStoppedVoices.entries()) {
-    if (now - timestamp > 2000) { // remove entries older than 2 seconds
+    if (now - timestamp > 500) { // remove entries older than 500ms
       recentlyStoppedVoices.delete(fpName);
     }
   }
-}, 5000); // run cleanup every 5 seconds
+}, 1000);
 
 // periodically ensure permanently stopped voices are removed from UI
 // this catches cases where server sends new uniqueFpNames events that try to re-add stopped patterns
@@ -1874,7 +1949,7 @@ socket.on('removeOncePattern', (data) => {
 // throttle solo events to prevent performance issues
 let lastSoloTimes = new Map(); // per-pattern throttling
 let pendingSoloUpdates = new Map(); // per-pattern pending updates
-const SOLO_THROTTLE_MS = 50; // limit to 20 times per second per pattern
+const SOLO_THROTTLE_MS = 20; // limited to 50 times per second per pattern
 
 // handle solo automation events
 socket.on('solo', (data) => {
