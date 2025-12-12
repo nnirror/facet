@@ -40,7 +40,7 @@ body {
   display: inline-block;
   position: relative;
   top: 8px;
-  background: url('../spkr.png') no-repeat;
+  background: url('../asset/spkr.png') no-repeat;
   background-size: 100% 200%;
   cursor: pointer;
   margin-left: 2px;

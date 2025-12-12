@@ -375,17 +375,17 @@ $(document).ready(function () {
 function setBrowserSound(true_or_false_local_storage_string) {
   if (true_or_false_local_storage_string === 'true') {
     browser_sound_output = true;
-    $('#sound').css('background', "url('../spkr.png') no-repeat");
+    $('#sound').css('background', "url('../asset/spkr.png') no-repeat");
     $('#sound').css('background-size', "100% 200%");
   }
   else if (true_or_false_local_storage_string === 'false') {
     browser_sound_output = false;
-    $('#sound').css('background', "url('../spkr-off.png') no-repeat");
+    $('#sound').css('background', "url('../asset/spkr-off.png') no-repeat");
     $('#sound').css('background-size', "100% 200%");
   }
   else {
     browser_sound_output = true;
-    $('#sound').css('background', "url('../spkr.png') no-repeat");
+    $('#sound').css('background', "url('../asset/spkr.png') no-repeat");
     $('#sound').css('background-size', "100% 200%");
   }
   $.post(`http://${configSettings.HOST}:3211/browser_sound`, { browser_sound_output: browser_sound_output }).done(function (data, status) { });
