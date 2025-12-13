@@ -599,13 +599,13 @@ patternSocket.on('statusResponse', (data) => {
   });
   let cpu_percent = Math.round(parseFloat(data.cpu).toFixed(2) * 100);
   cpu_percent = cpu_percent.toString().substring(0, 4);
-  $('#cpu').html(`${cpu_percent}%&nbsp;cpu`);
+  $('#cpu-value').text(cpu_percent + '%');
   setStatus(`connected`);
 });
 
 patternSocket.on('disconnect', () => {
   setStatus(`disconnected`);
-  $('#cpu').html(`[offline]`);
+  $('#cpu-value').text('[offline]');
 });
 
 // handle direct audio data from pattern generator
@@ -884,7 +884,7 @@ class VoiceControlRenderer {
     if (!this.canvas || !this.ctx) return;
     // set canvas size and DPI scaling
     const dpr = window.devicePixelRatio || 1;
-    const canvasWidth = 200;
+    const canvasWidth = 140;
     const maxHeight = this.containerType === 'voice' ? window.innerHeight - 50 : 100;
     
     this.canvas.width = canvasWidth * dpr;
@@ -974,13 +974,13 @@ class VoiceControlRenderer {
   updateCanvasSize() {
     const contentHeight = this.containerType === 'solo' 
       ? Math.max(35, this.voices.size * 35 + 10)  // keep solo elements more compact
-      : Math.max(200, this.voices.size * 60 + 30);
+      : Math.max(140, this.voices.size * 60 + 30);
     
     const maxHeight = this.containerType === 'voice' ? window.innerHeight - 50 : 100;
     const actualHeight = this.containerType === 'solo' ? Math.min(contentHeight + 10, maxHeight) : Math.min(contentHeight, maxHeight); // Minimal padding for solo
     
     const dpr = window.devicePixelRatio || 1;
-    const canvasWidth = 200; // fixed width
+    const canvasWidth = 140; // fixed width
     
     // update canvas dimensions to fixed size for scrolling
     this.canvas.width = canvasWidth * dpr;
@@ -1054,17 +1054,17 @@ class VoiceControlRenderer {
       // solo controls
       buttons.push({
         type: 'mute',
-        x: 10,
+        x: 5,
         y: 10,
-        width: 140,
+        width: 96,
         height: 25
       });
       
       buttons.push({
         type: 'stop',
-        x: 155,
+        x: 103,
         y: 10,
-        width: 35,
+        width: 32,
         height: 25
       });
     } else {
@@ -1073,74 +1073,74 @@ class VoiceControlRenderer {
         // audio patterns
         buttons.push({
           type: 'mute',
-          x: 10,
+          x: 5,
           y: 10,
-          width: 95,
+          width: 62,
           height: 25
         });
         
         buttons.push({
           type: 'gain',
-          x: 10,
+          x: 5,
           y: 40,
-          width: 180,
+          width: 130,
           height: 15
         });
         
         buttons.push({
           type: 'solo',
-          x: 110,
+          x: 69,
           y: 10,
-          width: 25,
+          width: 21,
           height: 25
         });
         
         buttons.push({
           type: 'lock',
-          x: 138,
+          x: 92,
           y: 10,
-          width: 25,
+          width: 21,
           height: 25
         });
         
         buttons.push({
           type: 'stop',
-          x: 166,
+          x: 115,
           y: 10,
-          width: 25,
+          width: 20,
           height: 25
         });
       } else {
         // non-audio patterns: no slider
         buttons.push({
           type: 'mute',
-          x: 10,
+          x: 5,
           y: 10,
-          width: 95,
+          width: 62,
           height: 25
         });
         
         buttons.push({
           type: 'solo',
-          x: 110,
+          x: 69,
           y: 10,
-          width: 25,
+          width: 21,
           height: 25
         });
         
         buttons.push({
           type: 'lock',
-          x: 138,
+          x: 92,
           y: 10,
-          width: 25,
+          width: 21,
           height: 25
         });
         
         buttons.push({
           type: 'stop',
-          x: 166,
+          x: 115,
           y: 10,
-          width: 25,
+          width: 20,
           height: 25
         });
       }
@@ -1152,7 +1152,7 @@ class VoiceControlRenderer {
   render() {
     const ctx = this.ctx;
     if (!this.canvas || !ctx) return;
-    const canvasWidth = 200;
+    const canvasWidth = 140;
     const canvasHeight = parseInt(this.canvas.style.height) || 100;
     
     // clear canvas

@@ -10,7 +10,7 @@ body {
 
 .CodeMirror {
   height: calc(100% - 50px);
-  width: calc(100% - 200px);
+  width: calc(100% - 140px);
   font-size: 1em;
 }
 
@@ -133,7 +133,7 @@ body {
   position: absolute;
   right: 0;
   top: 0;
-  width: 200px;
+  width: 140px;
   z-index: 1000;
   background: #222;
   cursor: pointer;
@@ -143,10 +143,10 @@ body {
   position: absolute;
   right: 0;
   bottom: 50px;
-  width: 200px;
+  width: 140px;
   height: 200px;
   z-index: 1000;
-  background: #333;
+  background: #222;
   border-top: 1px solid #555;
   display: block;
   cursor: pointer;
@@ -155,50 +155,53 @@ body {
 .voice-wrapper {
   display: flex;
   flex-direction: column;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .voice-controls-row {
   display: flex;
   align-items: center;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .voice-control {
   cursor: pointer;
-  padding: 5px;
-  margin: 5px;
-  border-radius: 5px;
+  padding: 3px;
+  margin: 3px;
+  border-radius: 3px;
   text-align: center;
   color: white;
   font-weight: bold;
   user-select: none;
-  width: calc(100% - 155px);
+  width: calc(100% - 105px);
   overflow: hidden;
+  font-size: 11px;
 }
 
 .voice-stop-button {
-  margin: 5px;
-  padding: 5px;
-  border-radius: 3px;
+  margin: 3px;
+  padding: 3px;
+  border-radius: 2px;
   cursor: pointer;
   font-weight: bold;
   background-color: #aa2424;
   color: white;
   border: none;
-  min-width: 35px;
+  min-width: 25px;
+  font-size: 11px;
 }
 
 .voice-solo-button {
-  margin: 5px;
-  padding: 5px;
-  border-radius: 3px;
+  margin: 3px;
+  padding: 3px;
+  border-radius: 2px;
   cursor: pointer;
   font-weight: bold;
   background-color: #666;
   color: white;
   border: none;
-  min-width: 35px;
+  min-width: 25px;
+  font-size: 11px;
 }
 
 .voice-solo-button.active {
@@ -206,16 +209,16 @@ body {
 }
 
 .voice-lock-button {
-  margin: 5px;
-  padding: 5px;
-  border-radius: 3px;
+  margin: 3px;
+  padding: 3px;
+  border-radius: 2px;
   cursor: pointer;
   font-weight: bold;
   background-color: #666;
   color: white;
   border: none;
-  min-width: 35px;
-  font-size: 12px;
+  min-width: 25px;
+  font-size: 10px;
 }
 
 .voice-lock-button.active {
@@ -248,8 +251,8 @@ body {
 .gain-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 15px;
   background: #4caf50;
   cursor: pointer;
   border-radius: 50%;
@@ -257,8 +260,8 @@ body {
 }
 
 .gain-slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 15px;
   background: #4caf50;
   cursor: pointer;
   border-radius: 50%;
@@ -310,5 +313,102 @@ body {
   }
   #bpm {
     width: 50px;
+  }
+}
+
+@media only screen and (max-width: 500px) {
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+  
+  #cpu-label {
+    display: none;
+  }
+  
+  #navbar {
+    padding: 2px 4px;
+    min-height: 40px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+  
+  .left,
+  .right {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  
+  .left div,
+  .right div {
+    margin: 0 1px;
+    flex-shrink: 1;
+  }
+  
+  #bpm {
+    width: 35px;
+    font-size: 12px;
+  }
+  
+  #time_signature_numerator,
+  #time_signature_denominator {
+    width: 25px;
+    font-size: 12px;
+  }
+  
+  #cpu {
+    width: auto;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  
+  #midi_outs {
+    width: 80px;
+    font-size: 12px;
+  }
+  
+  #midi_refresh {
+    min-width: 12px;
+    width: 16px;
+    font-size: 10px;
+    padding: 0;
+    text-align: center;
+    line-height: 1.2em;
+  }
+  
+  #midi {
+    min-width: 100px;
+    flex-shrink: 1;
+  }
+  
+  #stop,
+  #clear,
+  #restart {
+    font-size: 18px;
+    margin-left: 1px;
+  }
+  
+  #sound {
+    width: 1.2em;
+    top: 2px;
+    font-size: 12px;
+  }
+  
+  #status {
+    font-size: 12px;
+  }
+  
+  #bpm_control {
+    flex-shrink: 1;
+    overflow: visible;
+  }
+  
+  #transport {
+    flex-shrink: 1;
   }
 }
