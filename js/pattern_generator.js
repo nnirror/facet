@@ -19,7 +19,6 @@ const FacetConfig = require('./config.js');
 const SAMPLE_RATE = FacetConfig.settings.SAMPLE_RATE;
 const HOST = FacetConfig.settings.HOST;
 const utils = fs.readFileSync('js/utils.js', 'utf8', (err, data) => { return data });
-const fp_name_regex = /\$\((['"])(.+?)\1\)/;
 let bpm = 90;
 let bars_elapsed = 0;
 let time_signature_numerator = 4;
@@ -268,13 +267,20 @@ function executePattern(code, is_rerun, mode) {
     let commands = parser.splitCommands(user_input);
     Object.values(commands).forEach(command => {
       let code = parser.formatCode(command);
-      const match = code.match(fp_name_regex);
-      if (!match || !match[2]) {
-        // skip commands that don't have a valid pattern name format
+      
+      // skip invalid commands
+      if (!code) {
         activeWorkers--;
         return;
       }
-      fp_name = match[2];
+      
+      // extract pattern name
+      const nameMatch = code.match(/\$\(['"]([^'"]+)['"]\)/);
+      if (!nameMatch) {
+        activeWorkers--;
+        return;
+      }
+      fp_name = nameMatch[1];
       if (is_rerun === false) {
         // when manually run, find and stop any existing worker with the supplied fp name
         for (const [worker, name] of workerMap.entries()) {

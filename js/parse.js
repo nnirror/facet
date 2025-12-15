@@ -59,37 +59,53 @@ module.exports = {
   },
 
   formatCode: (user_input) => {
+    // allow numbers, letters, and underscores at the start of pattern names
+    const validPatternRegex = /^(\$\(['"]([^'"]+)['"]\)|([a-zA-Z0-9_][a-zA-Z0-9_]*))\.(\w+)/;
+    if (!user_input.trim().match(validPatternRegex)) {
+      return null; // Invalid format
+    }
+    
     user_input = user_input.replace(/\s\s+/g, '');
     user_input = user_input.replace(/\'/g, '"');
     user_input = user_input.replace(/;/g, ';\n');
+    
+    // convert variable_name.method() to $('variable_name').method() format
+    const match = user_input.match(validPatternRegex);
+    if (match && match[3]) {
+      // variable name format - convert to $('name')
+      const variableName = match[3];
+      const restOfCommand = user_input.substring(variableName.length);
+      user_input = `$('${variableName}')${restOfCommand}`;
+    }
+    
     // auto-wrap FacetPattern method calls in function syntax for specific methods
     user_input = module.exports.wrapFacetPatternArguments(user_input);
     // anyonymous FacetPattern instantiation via "_." shorthand
     // but only match underscores that are NOT inside quoted strings
     user_input = user_input.replace(/_\./g, (match, offset, string) => {
-      // Check if this underscore is inside a quoted string
+      // check if this underscore is inside a quoted string
       const beforeMatch = string.substring(0, offset);
       const quotesBefore = (beforeMatch.match(/"/g) || []).length;
-      // If odd number of quotes before, we're inside a string
+      // if odd number of quotes before, we're inside a string
       if (quotesBefore % 2 === 1) {
-        return match; // Don't replace if inside quotes
+        return match; // don't replace if inside quotes
       }
       return '$().';
     });
     // named FacetPattern instantiation via "_name" shorthand (allows names starting with numbers)
-    // but only match underscores that are NOT inside quoted strings
-    user_input = user_input.replace(/_([a-zA-Z0-9][a-zA-Z0-9_]*)\./g, (match, name, offset, string) => {
-      // Check if this underscore is inside a quoted string
+    // but only match underscores that are NOT inside quoted strings AND are at word boundaries
+    user_input = user_input.replace(/\b_([a-zA-Z0-9][a-zA-Z0-9_]*)\./g, (match, name, offset, string) => {
+      // check if this underscore is inside a quoted string
       const beforeMatch = string.substring(0, offset);
       const quotesBefore = (beforeMatch.match(/"/g) || []).length;
-      // If odd number of quotes before, we're inside a string
+      // if odd number of quotes before, we're inside a string
       if (quotesBefore % 2 === 1) {
-        return match; // Don't replace if inside quotes
+        return match; // don't replace if inside quotes
       }
       return `$("${name}").`;
     });
     // named FacetPattern instantiation via bare "name" (no underscore prefix)
-    // Use proper parsing to only replace at true statement boundaries
+    // use proper parsing to only replace at true statement boundaries
     user_input = module.exports.replaceBarePatternNames(user_input);
     if (process.platform == 'win32') {
       // escape any single-slash \ characters in the command on windows only
@@ -141,6 +157,14 @@ module.exports = {
         if (nameMatch) {
           const fullMatch = nameMatch[0];
           const name = nameMatch[1];
+          
+          // don't convert names that contain underscores, as those are likely 
+          // regular variable names, not FacetPattern instances
+          if (name.includes('_')) {
+            result += char;
+            i++;
+            continue;
+          }
           
           // check if we're at statement level (not inside any nesting)
           const beforePos = i;
