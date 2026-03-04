@@ -1166,16 +1166,20 @@ class FacetPattern {
     return this;
   }
 
-  delay(delayAmount, feedback = 0.5) {
+  delay(delayAmount, feedback = 0.5, bypassSafety = false) {
     feedback = Math.min(Math.max(feedback, 0), 0.999);
     if (typeof delayAmount == 'number' || Array.isArray(delayAmount) === true) {
       delayAmount = new FacetPattern().from(delayAmount);
     }
     let maxDelayAmount = Math.round(Math.max(...delayAmount.data));
-    feedback *= (1 - (maxDelayAmount / this.getWholeNoteNumSamples())) * 0.975;
-    delayAmount.size(this.data.length).round();
-    if (maxDelayAmount > (SAMPLE_RATE / 2)) {
-      feedback *= 0.75;
+    if (!bypassSafety) {
+      feedback *= (1 - (maxDelayAmount / this.getWholeNoteNumSamples())) * 0.975;
+      delayAmount.size(this.data.length).round();
+      if (maxDelayAmount > (SAMPLE_RATE / 2)) {
+        feedback *= 0.75;
+      }
+    } else {
+      delayAmount.size(this.data.length).round();
     }
     let maxFeedbackIterations = Math.ceil(Math.log(0.001) / Math.log(feedback));
     let delayedArray = new Array(Math.max(0, this.data.length + maxDelayAmount * maxFeedbackIterations)).fill(0);
@@ -1307,6 +1311,12 @@ class FacetPattern {
     return this;
   }
 
+  avg() {
+    let average = this.data.reduce((a, b) => a + b) / this.data.length;
+    this.from(average, this.data.length);
+    return this;
+  }
+
   distavg() {
     let dist_sequence = [];
     let average = this.data.reduce((a, b) => a + b) / this.data.length;
@@ -1376,12 +1386,21 @@ class FacetPattern {
     if (num === 0) {
       return this;
     }
-    let next_copy = new FacetPattern().from(this.data);
-    for (var x = 0; x < num; x++) {
-      next_copy.times(feedback)
-      this.flatten().append(next_copy);
-    }
+    
     this.flatten();
+    
+    let originalData = [...this.data];
+    let currentMultiplier = feedback;
+    let allEchoData = [];
+    
+    for (var x = 0; x < num; x++) {
+      for (let i = 0; i < originalData.length; i++) {
+        allEchoData.push(originalData[i] * currentMultiplier);
+      }
+      currentMultiplier *= feedback;
+    }
+    
+    this.data = this.data.concat(allEchoData);
     return this;
   }
 
@@ -3654,8 +3673,48 @@ bpfInner(data, cutoffs, q) {
   }
 
   saveas(filename, absolute_path = false) {
-    this.saveas_filename = filename;
-    this.saveas_absolute_path = absolute_path;
+    if (typeof filename !== 'string') {
+      filename = filename.toString();
+    }
+    
+    let finalPath;
+    
+    if (absolute_path) {
+      finalPath = filename;
+    } else {
+      // relative path - use samples directory
+      let folder = 'samples';
+      if (filename.includes(cross_platform_slash)) {
+        folder += `${cross_platform_slash}${filename.split(cross_platform_slash)[0]}`;
+        filename = filename.split(cross_platform_slash)[1];
+      }
+      if (!fs.existsSync(folder)) {
+        fs.mkdirSync(folder, { recursive: true });
+      }
+      finalPath = `${folder}${cross_platform_slash}${filename}`;
+    }
+    
+    if (absolute_path) {
+      const dir = path.dirname(finalPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    }
+    
+    // ensure .wav extension
+    if (!finalPath.endsWith('.wav')) {
+      finalPath += '.wav';
+    }
+    
+    // create WAV file from pattern data
+    const wavFile = new WaveFile();
+    const sampleData = new Float32Array(this.data);
+    wavFile.fromScratch(1, SAMPLE_RATE, '32f', sampleData);
+    const wavBuffer = wavFile.toBuffer();
+    
+    // write file synchronously
+    fs.writeFileSync(finalPath, wavBuffer);
+    
     return this;
   }
 
@@ -3684,6 +3743,21 @@ bpfInner(data, cutoffs, q) {
     return this;
   }
 
+  localvars(vars_object) {
+    const original_data = this.data;
+    if (typeof vars_object !== 'object' || vars_object === null || Array.isArray(vars_object)) {
+      throw (`input to localvars must be a JSON object; type found: ${typeof vars_object}`);
+    }
+    
+    for (const [key, value] of Object.entries(vars_object)) {
+      // set all key-value pairs as local patterns
+      this.from(value);
+      this.setlocal(key);
+    }
+    this.data = original_data;
+    return this;
+  }
+
   getlocal(pattern_name) {
     if (pattern_name === undefined) {
       throw (`cannot get local pattern because the pattern name is undefined.`);
@@ -3706,12 +3780,18 @@ bpfInner(data, cutoffs, q) {
   }
 
   getSavedPattern(varName, str) {
-    let regex = new RegExp(`var ${varName} = (.*?);`, 'g');
+    let regex = new RegExp(`\\bvar\\s+${varName}\\s*=\\s*(.*?);`, 'g');
     let match = regex.exec(str);
     if (match) {
-      let valueStr = match[1];
+      let valueStr = match[1].trim();
       if (valueStr.startsWith('[') && valueStr.endsWith(']')) {
-        return JSON.parse(valueStr);
+        try {
+          return JSON.parse(valueStr);
+        } catch (e) {
+          console.error(`Error parsing JSON for variable ${varName}: ${valueStr}`);
+          console.error('Parse error:', e.message);
+          return null;
+        }
       } else {
         return parseFloat(valueStr);
       }
@@ -3818,12 +3898,26 @@ bpfInner(data, cutoffs, q) {
   slices2d(num_slices, command) {
     let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
     let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
-    let root = Math.round(Math.sqrt(num_slices));
-    num_slices = root * root;
-    let segmentWidth = Math.ceil(width / Math.sqrt(num_slices));
-    let segmentHeight = Math.ceil(height / Math.sqrt(num_slices));
+    
+    // calculate grid dimensions that work better for rectangular images
+    let cols, rows;
+    if (width >= height) {
+      // for landscape or square images
+      cols = Math.ceil(Math.sqrt(num_slices * width / height));
+      rows = Math.ceil(num_slices / cols);
+    } else {
+      // for portrait images
+      rows = Math.ceil(Math.sqrt(num_slices * height / width));
+      cols = Math.ceil(num_slices / rows);
+    }
+    
+    // adjust num_slices to actual grid size
+    num_slices = cols * rows;
+    
+    let segmentWidth = Math.ceil(width / cols);
+    let segmentHeight = Math.ceil(height / rows);
     let segments = [];
-    let out_fp = Array(width).fill().map(() => Array(height).fill(new FacetPattern()));
+    let out_fp = Array(height).fill().map(() => Array(width).fill(0));
 
     this.current_total_slices = num_slices;
     let i = this.current_iteration_number;
@@ -3835,8 +3929,11 @@ bpfInner(data, cutoffs, q) {
     command = command.slice(command.indexOf("{") + 1, command.lastIndexOf("}"));
 
     for (let segment = 0; segment < num_slices; segment++) {
-      let startRow = (segment % root) * segmentHeight;
-      let startCol = Math.floor(segment / root) * segmentWidth;
+      let segmentRow = Math.floor(segment / cols);
+      let segmentCol = segment % cols;
+      
+      let startRow = segmentRow * segmentHeight;
+      let startCol = segmentCol * segmentWidth;
       let endRow = Math.min(height, startRow + segmentHeight);
       let endCol = Math.min(width, startCol + segmentWidth);
       let segmentData = [];
@@ -3846,9 +3943,16 @@ bpfInner(data, cutoffs, q) {
           segmentData.push(this.data[row * width + col]);
         }
       }
-      segments.push({ data: segmentData, width: endCol - startCol, height: endRow - startRow });
+      segments.push({ 
+        data: segmentData, 
+        width: endCol - startCol, 
+        height: endRow - startRow,
+        startRow: startRow,
+        startCol: startCol
+      });
     }
 
+    // process segments and reconstruct
     for (var s = 0; s < num_slices; s++) {
       let current_slice = new FacetPattern().from(segments[s].data);
       current_slice = eval(global.env + global.vars + utils + command);
@@ -3856,22 +3960,27 @@ bpfInner(data, cutoffs, q) {
         this.notes.push(n);
       });
 
-      let startRow = (s % root) * segmentHeight;
-      let startCol = Math.floor(s / root) * segmentWidth;
+      // use the stored start positions for accurate reconstruction
+      let startRow = segments[s].startRow;
+      let startCol = segments[s].startCol;
 
       for (let row = 0; row < segments[s].height; row++) {
-        if (startRow + row >= out_fp.length) {
+        if (startRow + row >= height) {
           continue;
         }
         for (let col = 0; col < segments[s].width; col++) {
+          if (startCol + col >= width) {
+            continue;
+          }
           let value = current_slice.data[row * segments[s].width + col];
           if (isNaN(value)) {
-            value = 0; // or some other default value
+            value = 0;
           }
           out_fp[startRow + row][startCol + col] = value;
         }
       }
     }
+    
     this.data = out_fp.flat();
     return this;
   }
@@ -3925,6 +4034,55 @@ bpfInner(data, cutoffs, q) {
       }
     }
     this.data = out_fp.flat();
+    return this;
+  }
+
+  lookup2d(lookupPattern) {
+    if (typeof lookupPattern == 'number' || Array.isArray(lookupPattern) === true) {
+      lookupPattern = new FacetPattern().from(lookupPattern);
+    }
+    if (!this.isFacetPattern(lookupPattern)) {
+      throw `lookup2d requires a FacetPattern as argument; type found: ${typeof lookupPattern}`;
+    }
+
+    lookupPattern.clip(0, 1);
+
+    // calculate 2D dimensions
+    let width = this.image_width ? this.image_width : Math.round(Math.sqrt(this.data.length));
+    let height = this.image_height ? this.image_height : Math.round(Math.sqrt(this.data.length));
+    
+    // for spectral data, automatically resize lookup pattern to optimal length if needed
+    if (this.is_image && this.image_width && lookupPattern.data.length !== this.image_width) {
+      lookupPattern.size(this.image_width);
+    }
+
+    // create output 2D array
+    let newWidth = lookupPattern.data.length;
+    let outputData = new Array(height * newWidth);
+    
+    // for each lookup value, get the corresponding column and place it in the correct position
+    for (let lookupIndex = 0; lookupIndex < lookupPattern.data.length; lookupIndex++) {
+      let lookupValue = lookupPattern.data[lookupIndex];
+      
+      // map lookup value (0-1) to column index (0 to width-1)
+      let sourceColumnIndex = Math.floor(lookupValue * (width - 1));
+      
+      // copy the source column to the destination column
+      for (let row = 0; row < height; row++) {
+        let sourceIndex = row * width + sourceColumnIndex;
+        let destIndex = row * newWidth + lookupIndex;
+        outputData[destIndex] = this.data[sourceIndex];
+      }
+    }
+    
+    this.data = outputData;
+    
+    // update dimensions if this was image data
+    if (this.is_image) {
+      this.image_width = newWidth;
+      this.image_height = height;
+    }
+    
     return this;
   }
 
@@ -4060,6 +4218,9 @@ bpfInner(data, cutoffs, q) {
     let num_slices = this.current_total_slices;
     let image_width = this.image_width;
     let image_height = this.image_height;
+    if ( !this.image_width && !this.image_height ) {
+      this.dim(Math.sqrt(this.data.length), Math.sqrt(this.data.length));
+    }
     if (Math.random() < prob) {
       eval(global.env + global.vars + utils + command);
     }
@@ -5676,8 +5837,8 @@ bpfInner(data, cutoffs, q) {
         png.data[idx + 3] = 255;
       }
     }
-    // save the PNG to disk
-    png.pack().pipe(fs.createWriteStream(finalPath));
+    const buffer = PNG.sync.write(png);
+    fs.writeFileSync(finalPath, buffer);
     return this;
   }
 
@@ -6686,6 +6847,5 @@ computeLaplacian(field, width, height) {
     this.dim(width * size, height * size);
     return this;
   }
-
 }
 module.exports = FacetPattern;

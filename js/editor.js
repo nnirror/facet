@@ -157,24 +157,34 @@ $(document).keydown(function (e) {
     
     // immediately remove voice controls for the stopped patterns
     const container = document.getElementById('voiceControls');
-    if (container && patternNamesToStop.length > 0) {
-      Array.from(container.children).forEach(child => {
-        const voiceControlElement = child.querySelector('.voice-control');
-        if (voiceControlElement) {
-          const fpName = voiceControlElement.dataset.fpName;
-          if (patternNamesToStop.includes(fpName)) {
-            container.removeChild(child);
-            delete mutedVoices[fpName];
-            delete manualGainValues[fpName];
-            recentlyStoppedVoices.set(fpName, Date.now());
-            permanentlyStoppedVoices.add(fpName);
-          }
+    if (patternNamesToStop.length > 0) {
+      patternNamesToStop.forEach(fpName => {
+        // clean up voice renderer
+        if (voiceRenderer) voiceRenderer.removeVoice(fpName);
+        // clean up solo renderer
+        if (soloRenderer) soloRenderer.removeVoice(fpName);
+        // clean up all state
+        delete mutedVoices[fpName];
+        delete soloedVoices[fpName];
+        delete lockedVoices[fpName];
+        delete manualGainValues[fpName];
+        // clear solo requests keyed by and targeting this pattern
+        soloRequests.delete(fpName);
+        for (const [soloPatternName, targetVoice] of soloRequests) {
+          if (targetVoice === fpName) soloRequests.delete(soloPatternName);
         }
+        lastSoloTimes.delete(fpName);
+        const pt = pendingSoloUpdates.get(fpName);
+        if (pt) { clearTimeout(pt); pendingSoloUpdates.delete(fpName); }
+        recentlyStoppedVoices.set(fpName, Date.now());
+        permanentlyStoppedVoices.add(fpName);
       });
-      
-      // adjust padding-top based on remaining children
-      container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
-      container.style.paddingBottom = container.children.length === 0 ? '0px' : '2px';
+      rebuildSoloState();
+      if (container) {
+        // adjust padding-top based on remaining children
+        container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
+        container.style.paddingBottom = container.children.length === 0 ? '0px' : '2px';
+      }
     }
   }
   else if (e.ctrlKey && (e.keyCode == 186 || e.keyCode == 59)) {
@@ -1255,7 +1265,7 @@ class VoiceControlRenderer {
     
     // draw button text
     ctx.fillStyle = textColor;
-    ctx.font = type === 'solo' || type === 'lock' || type === 'stop' ? '10px monospace' : '12px monospace';
+    ctx.font = type === 'solo' || type === 'lock' || type === 'stop' ? '9px monospace' : '9px monospace';
     
     // left-align text for mute buttons, center for others
     if (type === 'mute') {
@@ -1332,6 +1342,12 @@ class VoiceControlRenderer {
         delete manualGainValues[fpName];
         // remove solo requests for this pattern
         soloRequests.delete(fpName);
+        // also clear any solo requests from other patterns that were targeting this voice
+        for (const [soloPatternName, targetVoice] of soloRequests) {
+          if (targetVoice === fpName) {
+            soloRequests.delete(soloPatternName);
+          }
+        }
         // remove per-pattern throttling data
         lastSoloTimes.delete(fpName);
         const pendingTimeout = pendingSoloUpdates.get(fpName);
@@ -1599,6 +1615,12 @@ socket.on('uniqueFpNames', (data) => {
         delete lockedVoices[fpName];
         // remove solo requests for stopped patterns
         soloRequests.delete(fpName);
+        // also clear any solo requests from other patterns that were targeting this voice
+        for (const [soloPatternName, targetVoice] of soloRequests) {
+          if (targetVoice === fpName) {
+            soloRequests.delete(soloPatternName);
+          }
+        }
         // remove per-pattern throttling data
         lastSoloTimes.delete(fpName);
         const pendingTimeout = pendingSoloUpdates.get(fpName);
@@ -1927,6 +1949,19 @@ socket.on('currentMuteStates', (backendMuteStates) => {
   syncMuteStates(Object.keys(mutedVoices), backendMuteStates);
 });
 
+// handle server-side notification that a solo pattern was stopped - clear all solo state
+socket.on('clearSoloState', () => {
+  soloRequests.clear();
+  // clear all pending throttled solo updates
+  for (const [, timeout] of pendingSoloUpdates) {
+    clearTimeout(timeout);
+  }
+  pendingSoloUpdates.clear();
+  lastSoloTimes.clear();
+  cachedEligibleVoices = null;
+  rebuildSoloState();
+});
+
 // handle removal of once-played patterns from UI
 socket.on('removeOncePattern', (data) => {
   const { fp_name } = data;
@@ -1944,6 +1979,20 @@ socket.on('removeOncePattern', (data) => {
   delete soloedVoices[fp_name];
   delete lockedVoices[fp_name];
   delete manualGainValues[fp_name];
+  // remove solo requests keyed by this pattern and any targeting this pattern
+  soloRequests.delete(fp_name);
+  for (const [soloPatternName, targetVoice] of soloRequests) {
+    if (targetVoice === fp_name) {
+      soloRequests.delete(soloPatternName);
+    }
+  }
+  lastSoloTimes.delete(fp_name);
+  const pendingOnce = pendingSoloUpdates.get(fp_name);
+  if (pendingOnce) {
+    clearTimeout(pendingOnce);
+    pendingSoloUpdates.delete(fp_name);
+  }
+  rebuildSoloState();
 });
 
 // throttle solo events to prevent performance issues
@@ -2016,7 +2065,11 @@ function rebuildSoloState() {
   });
   
   // update all voice gains for audio patterns
-  Object.keys(soloedVoices).forEach(voiceName => {
+  const allGainVoices = new Set([
+    ...Object.keys(soloedVoices),
+    ...(voiceRenderer ? voiceRenderer.voices.keys() : [])
+  ]);
+  allGainVoices.forEach(voiceName => {
     updateVoiceGain(voiceName);
   });
   

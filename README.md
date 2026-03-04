@@ -389,7 +389,7 @@ example2.drunk(64,0.1).cc(71);
 - `keyScalePattern` values can either be a string (see list below), or a FacetPattern containing 1-12 binary numbers (see examples), or an array of strings/FacetPatterns, in which case the values change dynamically over the course of the loop.
 - possible scales:
 ```javascript
-["major pentatonic", "major", "minor", "major blues", "minor blues", "melodic minor", "harmonic minor", "bebop", "diminished", "dorian", "lydian", "mixolydian", "phrygian", "locrian", "ionian pentatonic", "mixolydian pentatonic", "ritusen", "egyptian", "neopolitan major pentatonic", "vietnamese 1", "pelog", "kumoijoshi", "hirajoshi", "iwato", "in-sen", "lydian pentatonic", "malkos raga", "locrian pentatonic", "minor pentatonic", "minor six pentatonic", "flat three pentatonic", "flat six pentatonic", "scriabin", "whole tone pentatonic", "lydian #5P pentatonic", "lydian dominant pentatonic", "minor #7M pentatonic", "super locrian pentatonic", "minor hexatonic", "augmented", "piongio", "prometheus neopolitan", "prometheus", "mystery #1", "six tone symmetric", "whole tone", "messiaen's mode #5", "locrian major", "double harmonic lydian", "altered", "locrian #2", "mixolydian b6", "lydian dominant", "lydian augmented", "dorian b2", "ultralocrian", "locrian 6", "augmented heptatonic", "dorian #4", "lydian diminished", "leading whole tone", "lydian minor", "phrygian dominant", "balinese", "neopolitan major", "harmonic major", "double harmonic major", "hungarian minor", "hungarian major", "oriental", "flamenco", "todi raga", "persian", "enigmatic", "major augmented", "lydian #9", "messiaen's mode #4", "purvi raga", "spanish heptatonic", "bebop minor", "bebop major", "bebop locrian", "minor bebop", "ichikosucho", "minor six diminished", "half-whole diminished", "kafi raga", "messiaen's mode #6", "composite blues", "messiaen's mode #3", "messiaen's mode #7", "chromatic"]
+["major pentatonic", "major", "minor", "major blues", "minor blues", "melodic minor", "harmonic minor", "bebop", "diminished", "dorian", "c", "mixolydian", "phrygian", "locrian", "ionian pentatonic", "mixolydian pentatonic", "ritusen", "egyptian", "neopolitan major pentatonic", "vietnamese 1", "pelog", "kumoijoshi", "hirajoshi", "iwato", "in-sen", "lydian pentatonic", "malkos raga", "locrian pentatonic", "minor pentatonic", "minor six pentatonic", "flat three pentatonic", "flat six pentatonic", "scriabin", "whole tone pentatonic", "lydian #5P pentatonic", "lydian dominant pentatonic", "minor #7M pentatonic", "super locrian pentatonic", "minor hexatonic", "augmented", "piongio", "prometheus neopolitan", "prometheus", "mystery #1", "six tone symmetric", "whole tone", "messiaen's mode #5", "locrian major", "double harmonic lydian", "altered", "locrian #2", "mixolydian b6", "lydian dominant", "lydian augmented", "dorian b2", "ultralocrian", "locrian 6", "augmented heptatonic", "dorian #4", "lydian diminished", "leading whole tone", "lydian minor", "phrygian dominant", "balinese", "neopolitan major", "harmonic major", "double harmonic major", "hungarian minor", "hungarian major", "oriental", "flamenco", "todi raga", "persian", "enigmatic", "major augmented", "lydian #9", "messiaen's mode #4", "purvi raga", "spanish heptatonic", "bebop minor", "bebop major", "bebop locrian", "minor bebop", "ichikosucho", "minor six diminished", "half-whole diminished", "kafi raga", "messiaen's mode #6", "composite blues", "messiaen's mode #3", "messiaen's mode #7", "chromatic"]
 ```
 ```javascript
 example
@@ -1388,6 +1388,15 @@ example
   // .audio() removes the DC offset that is added by the .add() command
 ```
 ---
+#### **avg** ( )
+- computes the average of the pattern.
+```javascript
+example
+  .noise(4)
+  .avg()
+  // [0.2349882227034955, 0.2349882227034955, 0.2349882227034955, 0.2349882227034955]
+```
+---
 #### **bitshift** ( _shift_ = 16 )
 - performs a bitwise rotation on the elements of the FacetPattern object’s data array by shift bits.
 - `shift` is an optional parameter that specifies the number of bits to rotate. It defaults to 16 if not provided. The value of shift is converted to a non-negative integer and taken modulo 32 before being used.
@@ -2197,9 +2206,9 @@ example
   // ramping bit depth on 100Hz sine wave from 8 bits to 1, and dynamically changing the downsampling amount between 1 and 40 samples
 ```
 ---
-#### **delay** ( _delaySamplesPattern_, _feedback_ = 0.5 )
+#### **delay** ( _delaySamplesPattern_, _feedback_ = 0.5, _byPassSafety_ = false )
 - delays the input FacetPattern by `delaySamplesPattern` samples. The `feedback` parameter controls the amount of feedback applied to the delay, allowing the delayed signal to be mixed back into the input.
-- the maximum `feedback` value is 0.975.
+- the maximum `feedback` value is 0.975, unless `byPassSafety` is set to a truthy value.
 ```javascript
 example
   .randsamp('808')
@@ -2864,6 +2873,22 @@ example
   .saveimg('layer2d')
   .once();
   // layers a ramp from 0,0 to 100,100 over a sine wave background
+```
+---
+#### **lookup2d** ( _lookupPattern_ )
+- remaps the columns of a 2D FacetPattern using a lookup pattern, reordering or repeating columns based on normalized position values.
+- `lookupPattern` is a FacetPattern whose values should be normalized between 0 and 1. Each value maps to a column in the source data: 0 selects the leftmost column, 1 selects the rightmost column.
+- the output width equals the length of `lookupPattern`; the height is preserved from the source data.
+- when used on spectral image data (e.g. after `.loadimage()`), `lookupPattern` is automatically resized to match the image width.
+```javascript
+example
+  .silence(1000000)
+  .iter(16, () => {
+    this.rect2d(ri(0, 900), ri(0, 900), ri(10, 100), ri(10, 100), rf())
+  })
+  .lookup2d(_.ramp(0, 1, 1000).shuffle())
+  .saveimg('lookup2d')
+  .once();
 ```
 ---
 #### **loadimage** ( _imagePath_, _targetHeight_ = 4096 )

@@ -61,6 +61,14 @@ module.exports = {
   formatCode: (user_input) => {
     // allow numbers, letters, and underscores at the start of pattern names
     const validPatternRegex = /^(\$\(['"]([^'"]+)['"]\)|([a-zA-Z0-9_][a-zA-Z0-9_]*))\.(\w+)/;
+    
+    // strip newlines and collapse whitespace before validation so that patterns
+    // written with a newline between the name and the first method call are valid
+    user_input = user_input.replace(/(\r\n|\n|\r)/gm, "");
+    // remove whitespace between a word character and a dot (e.g. "example  .method" -> "example.method")
+    user_input = user_input.replace(/(\w)\s+\./g, '$1.');
+    user_input = user_input.replace(/\.\s+(\w)/g, '.$1');
+    
     if (!user_input.trim().match(validPatternRegex)) {
       return null; // Invalid format
     }
@@ -111,7 +119,7 @@ module.exports = {
       // escape any single-slash \ characters in the command on windows only
       user_input = user_input.replace(/\\(?!\\)/g, '\\\\');
     }
-    return user_input.replace(/(\r\n|\n|\r)/gm, "").replace(/ +(?= )/g, '');
+    return user_input;
   },
 
   replaceBarePatternNames: (code) => {
@@ -248,11 +256,14 @@ module.exports = {
 
   wrapFacetPatternArguments: (user_input) => {
     // methods that expect function arguments (except parallel(), which expects an array)
-    const methods = ['spread', 'iter', 'sometimes', 'mix', 'drift', 'slices', 'subrange', 'dirsamp', 'slices2d', 'columns2d', 'seq'];
+    const methods = ['run', 'spread', 'iter', 'sometimes', 'mix', 'drift', 'slices', 'subrange', 'dirsamp', 'slices2d', 'columns2d', 'seq'];
     
     for (const method of methods) {
       let targetArgIndex;
       switch (method) {
+        case 'run':
+          targetArgIndex = 0;
+          break;
         case 'spread':
           targetArgIndex = 1;
           break;

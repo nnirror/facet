@@ -300,6 +300,10 @@ app.post('/stop', (req, res) => {
   patterns_for_next_loop = {};
   transport_on = false;
   voice_allocator = initializeVoiceAllocator();
+  // clear all solo and mute state so nothing persists after a full stop
+  soloedPatterns = {};
+  mutedPatterns = {};
+  patterns_that_have_been_stopped = [];
   if (typeof midioutput !== 'undefined') {
     midioutput.sendAllNotesOff();
   }
@@ -342,6 +346,10 @@ function tick() {
       }
       delete patterns_for_next_loop[fp_name];
       delete event_register[fp_name];
+      // notify browser to remove UI element for once-played pattern at end of loop
+      sockets.forEach(socket => {
+        socket.emit('removeOncePattern', { fp_name: fp_name });
+      });
     });
     if (Object.keys(patterns_to_delete_at_end_of_loop).length > 0) {
       // emit updated unique FP names if any patterns were deleted
@@ -450,20 +458,10 @@ function tick() {
           }
 
           // remove any events from the event register that are intended to play only once
-          if (event.play_once === true && event.type === "audio") {
-            delete event_register[fp_name];
-            // notify browser to remove UI element for once-played audio pattern
-            sockets.forEach(socket => {
-              socket.emit('removeOncePattern', { fp_name: fp_name });
-            });
-          }
-
-          if (event.play_once === true && event.type !== "audio") {
+          if (event.play_once === true) {
+            // defer deletion and UI removal to end of loop so the voice control
+            // stays visible for the entire loop duration
             patterns_to_delete_at_end_of_loop[fp_name] = true;
-            // notify browser to remove UI element for once-played non-audio pattern
-            sockets.forEach(socket => {
-              socket.emit('removeOncePattern', { fp_name: fp_name });
-            });
           }
 
         }
@@ -837,8 +835,25 @@ function stopVoice(name) {
   // run it every 500ms for 3 seconds because it's possible that another command that's currently being 
   // generated will overwrite the first stopVoice call.
   try {
+    // check if this is a solo pattern before deleting its event register entry
+    const isSoloPattern = event_register[name] && event_register[name].length > 0 &&
+      event_register[name][0].type === 'solo';
+
     delete event_register[name];
     patterns_that_have_been_stopped[name] = true;
+    // clear solo and mute state so it doesn't persist when the pattern is re-run later
+    delete soloedPatterns[name];
+    delete mutedPatterns[name];
+
+    // if this was a solo pattern, clear all active solo states on target voices
+    // and notify the frontend so it can rebuild its solo state
+    if (isSoloPattern) {
+      Object.keys(soloedPatterns).forEach(k => { soloedPatterns[k] = false; });
+      for (let socket of sockets) {
+        socket.emit('clearSoloState');
+      }
+    }
+
     // emit updated unique FP names to reflect the removal
     emitUniqueFpNames();
   }
