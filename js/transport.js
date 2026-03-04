@@ -625,9 +625,7 @@ function applyNextPatterns() {
       let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
       let endEventIndex = startEventIndex + eventsPerLoop;
 
-      if (!event_register[facet_pattern_name]) {
-        event_register[facet_pattern_name] = [];
-      }
+      event_register[facet_pattern_name] = [];
       for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.solo_data.data.length; i++) {
         let solo_object = {
           data: posted_pattern.solo_data.data[i]
