@@ -557,11 +557,23 @@ example
     .over(4)); // ramps from 20BPM to 200BPM over 4 loops
 ```
 ---
+#### **randsolo** ( _control_pattern_ )
+- triggers a random re-solo of all unlocked voices whenever a value in `control_pattern` exceeds 0.5.
+- the subset of voices soloed and the number of voices in the subset are both chosen randomly each time it fires.
+- locked patterns (using the lock button in the UI) are excluded from random solo targeting.
+- appears in the bottom solo panel in the right sidebar alongside `.solo()` patterns.
+```javascript
+example
+.randsolo(_.noise(16,0,1))); // randomly re-solos voices on each step where noise > 0.5
+  // note that other audio/MIDI/OSC patterns will need to be playing for this to take effect
+```
+---
 #### **solo** ( _target_pattern_ = 0 )
 - automatically targets other patterns for soloing based on `target_pattern`.
 - when `target_pattern` is provided, those values should be normalized between 0-1 and will be mapped onto the available unlocked voices in the right sidebar.
 - locked patterns (using the lock button in the UI) are excluded from automatic solo targeting.
 - multiple `.solo()` patterns can run at once, creating potential for meta-modulation in the system output.
+- appears in the bottom solo panel in the right sidebar alongside `.randsolo()` patterns.
 ```javascript
 example
   .solo(_.ramp(0,1,16).echo(3)); // solos different voices based on the ramp values

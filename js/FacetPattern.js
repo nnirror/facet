@@ -51,6 +51,7 @@ class FacetPattern {
     this.over_n = 1;
     this.osc_data = [];
     this.solo_data = [];
+    this.randsolo_data = [];
     this.pitchbend_data = [];
     this.saveas_filename = false;
     this.sequence_data = [];
@@ -3611,12 +3612,19 @@ bpfInner(data, cutoffs, q) {
 
   solo(controlPattern) {
     if (!controlPattern) {
-      throw `solo() requires a FacetPattern argument`;
-    }
-    if (!this.isFacetPattern(controlPattern)) {
-      throw `solo() argument must be a FacetPattern; type found: ${typeof controlPattern}`;
+      controlPattern = new FacetPattern().from(controlPattern);
     }
     this.solo_data = {
+      data: controlPattern.data
+    };
+    return this;
+  }
+
+  randsolo(controlPattern) {
+    if (!controlPattern) {
+      controlPattern = new FacetPattern().from(controlPattern);
+    }
+    this.randsolo_data = {
       data: controlPattern.data
     };
     return this;

@@ -457,6 +457,19 @@ function tick() {
             }
           }
 
+          if (event.type === "randsolo" && !event.muted) {
+            // send randsolo trigger to browser via websocket
+            try {
+              sockets.forEach(socket => {
+                socket.emit('randsolo', {
+                  fp_name: fp_name,
+                  value: event.data.data
+                });
+              });
+            } catch (e) {
+            }
+          }
+
           // remove any events from the event register that are intended to play only once
           if (event.play_once === true) {
             // defer deletion and UI removal to end of loop so the voice control
@@ -646,6 +659,32 @@ function applyNextPatterns() {
       }
     }
 
+    if (typeof posted_pattern.randsolo_data.data !== 'undefined') {
+      let eventsPerLoop = Math.ceil(posted_pattern.randsolo_data.data.length / over_n);
+      let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
+      let endEventIndex = startEventIndex + eventsPerLoop;
+
+      event_register[facet_pattern_name] = [];
+      for (var i = startEventIndex; i < endEventIndex && i < posted_pattern.randsolo_data.data.length; i++) {
+        let randsolo_object = {
+          data: posted_pattern.randsolo_data.data[i]
+        };
+        let indexWithinLoop = i - startEventIndex;
+        let newPosition = indexWithinLoop / eventsPerLoop;
+
+        event_register[facet_pattern_name].push(
+          {
+            position: newPosition,
+            type: "randsolo",
+            data: randsolo_object,
+            play_once: posted_pattern.play_once,
+            fired: false,
+            muted: mutedPatterns[facet_pattern_name] || false
+          }
+        )
+      }
+    }
+
     if (typeof posted_pattern.pitchbend_data.data !== 'undefined') {
       let eventsPerLoop = Math.ceil(posted_pattern.pitchbend_data.data.length / over_n);
       let startEventIndex = bars_elapsed % over_n * eventsPerLoop;
@@ -746,6 +785,7 @@ function applyNextPatterns() {
 
   }
   stopped_patterns = [];
+  emitUniqueFpNames();
 }
 
 function requestNewPatterns() {
@@ -835,7 +875,7 @@ function stopVoice(name) {
   try {
     // check if this is a solo pattern before deleting its event register entry
     const isSoloPattern = event_register[name] && event_register[name].length > 0 &&
-      event_register[name][0].type === 'solo';
+      (event_register[name][0].type === 'solo' || event_register[name][0].type === 'randsolo');
 
     delete event_register[name];
     patterns_that_have_been_stopped[name] = true;

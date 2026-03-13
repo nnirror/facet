@@ -179,7 +179,7 @@ $(document).keydown(function (e) {
         recentlyStoppedVoices.set(fpName, Date.now());
         permanentlyStoppedVoices.add(fpName);
       });
-      rebuildSoloState();
+      refreshAfterVoiceRemoval();
       if (container) {
         // adjust padding-top based on remaining children
         container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
@@ -196,6 +196,32 @@ $(document).keydown(function (e) {
     // command(s) run once
     runFacet('once');
     $.growl.notice({ message: 'command(s) generated to play once' });
+  }
+  else if (e.ctrlKey && !e.shiftKey && e.keyCode == 83) {
+    // [ctrl + s] randomly solo a subset of playing voices (locked voices are untouched)
+    e.preventDefault();
+    randomSolo();
+  }
+  else if (e.ctrlKey && e.shiftKey && e.keyCode == 83) {
+    // [ctrl + shift + s] unsolo all voices, including locked ones
+    e.preventDefault();
+    soloRequests.clear();
+    for (const [, timeout] of pendingSoloUpdates) {
+      clearTimeout(timeout);
+    }
+    pendingSoloUpdates.clear();
+    lastSoloTimes.clear();
+    cachedEligibleVoices = null;
+    // clear all solo state first, then update gains so every voice sees anyVoicesSoloed=false
+    Object.keys(soloedVoices).forEach(voiceName => {
+      soloedVoices[voiceName] = false;
+      socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: false });
+    });
+    Object.keys(soloedVoices).forEach(voiceName => {
+      updateVoiceGain(voiceName);
+    });
+    if (voiceRenderer) voiceRenderer.render();
+    if (soloRenderer) soloRenderer.render();
   }
 
   // set bpm & unfocus the #bpm input when user hits enter while focused on it
@@ -339,6 +365,7 @@ $('body').on('click', '#stop', function () {
   permanentlyStoppedVoices.clear();
   soloRequests.clear(); // clear solo requests from all patterns
   lastSoloTimes.clear(); // clear per-pattern solo throttling
+  lastRandsoloTimes.clear(); // clear per-pattern randsolo throttling
   pendingSoloUpdates.clear(); // clear pending solo updates
   lastSoloTimes.clear(); // clear per-pattern solo throttling
   pendingSoloUpdates.clear(); // clear pending solo updates
@@ -1355,8 +1382,8 @@ class VoiceControlRenderer {
           clearTimeout(pendingTimeout);
           pendingSoloUpdates.delete(fpName);
         }
-        // rebuild solo state after removing this pattern
-        rebuildSoloState();
+        // refresh solo state after removing this pattern (preserves manual solos on remaining voices)
+        refreshAfterVoiceRemoval();
         patternSocket.emit('runCode', { code: `$('${fpName}').stop()`, mode: 'stop' });
         break;
     }
@@ -1522,7 +1549,7 @@ socket.on('uniqueFpNames', (data) => {
   
   if (fpNames && fpNames.length > 0) {
     fpNames.forEach(fpName => {
-      if (patternTypes[fpName] === 'solo') {
+      if (patternTypes[fpName] === 'solo' || patternTypes[fpName] === 'randsolo') {
         soloPatterns.push(fpName);
       } else {
         regularPatterns.push(fpName);
@@ -1905,6 +1932,7 @@ socket.on('transport_cleanup', () => {
   patternVoiceHistory.clear(); // clear pattern voice history for fallback
   soloRequests.clear(); // clear solo requests from all patterns
   lastSoloTimes.clear(); // clear per-pattern solo throttling
+  lastRandsoloTimes.clear(); // clear per-pattern randsolo throttling
   pendingSoloUpdates.clear(); // clear pending solo updates
   
   // clear canvas voice controls
@@ -1958,6 +1986,7 @@ socket.on('clearSoloState', () => {
   }
   pendingSoloUpdates.clear();
   lastSoloTimes.clear();
+  lastRandsoloTimes.clear();
   cachedEligibleVoices = null;
   rebuildSoloState();
 });
@@ -1992,13 +2021,15 @@ socket.on('removeOncePattern', (data) => {
     clearTimeout(pendingOnce);
     pendingSoloUpdates.delete(fp_name);
   }
-  rebuildSoloState();
+  refreshAfterVoiceRemoval();
 });
 
 // throttle solo events to prevent performance issues
 let lastSoloTimes = new Map(); // per-pattern throttling
 let pendingSoloUpdates = new Map(); // per-pattern pending updates
 const SOLO_THROTTLE_MS = 20; // limited to 50 times per second per pattern
+let lastRandsoloTimes = new Map(); // per-pattern throttling for randsolo
+const RANDSOLO_THROTTLE_MS = 20;
 
 // handle solo automation events
 socket.on('solo', (data) => {
@@ -2030,6 +2061,21 @@ socket.on('solo', (data) => {
   lastSoloTimes.set(fp_name, now);
 });
 
+// handle randsolo automation events - triggers a random re-solo when value > 0.5
+socket.on('randsolo', (data) => {
+  const { fp_name, value } = data;
+
+  // only fire when value crosses above 0.5
+  if (value <= 0.5) return;
+
+  // throttle to prevent rapid retriggering
+  const now = Date.now();
+  const lastTime = lastRandsoloTimes.get(fp_name) || 0;
+  if (now - lastTime < RANDSOLO_THROTTLE_MS) return;
+  lastRandsoloTimes.set(fp_name, now);
+  randomSolo();
+});
+
 // cached voice names to avoid expensive DOM queries on every solo event
 let cachedEligibleVoices = null;
 let voicesCacheTime = 0;
@@ -2037,6 +2083,44 @@ const VOICE_CACHE_DURATION = 100; // cache for 100ms
 
 // track solo requests from each pattern separately to support multiple concurrent solo patterns
 let soloRequests = new Map();
+
+// lightweight refresh used when a single voice is removed manually
+// preserves manual solo state on remaining voices instead of resetting everything
+function refreshAfterVoiceRemoval() {
+  if (soloRequests.size > 0) {
+    // automation is driving solo state - let rebuildSoloState handle it fully
+    rebuildSoloState();
+    return;
+  }
+
+  // no automation, just update gains for all remaining voices and re-render
+  const allGainVoices = new Set([
+    ...Object.keys(soloedVoices),
+    ...(voiceRenderer ? voiceRenderer.voices.keys() : [])
+  ]);
+  allGainVoices.forEach(voiceName => {
+    socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: !!soloedVoices[voiceName] });
+    updateVoiceGain(voiceName);
+  });
+  if (voiceRenderer) voiceRenderer.render();
+  if (soloRenderer) soloRenderer.render();
+}
+
+function randomSolo() {
+  const allVoices = getEligibleVoiceNames();
+  if (allVoices.length === 0) return;
+  const subsetSize = Math.max(1, Math.floor(Math.random() * allVoices.length));
+  const shuffled = allVoices.slice().sort(() => Math.random() - 0.5);
+  const soloSubset = new Set(shuffled.slice(0, subsetSize));
+  // set all states first so gains are computed with the complete new state
+  allVoices.forEach(voiceName => { soloedVoices[voiceName] = soloSubset.has(voiceName); });
+  allVoices.forEach(voiceName => {
+    socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: soloedVoices[voiceName] });
+    updateVoiceGain(voiceName);
+  });
+  if (voiceRenderer) voiceRenderer.render();
+  if (soloRenderer) soloRenderer.render();
+}
 
 function rebuildSoloState() {
   // get current eligible voices
@@ -2100,8 +2184,8 @@ function getEligibleVoiceNames() {
         continue;
       }
       
-      // include all patterns except solo patterns themselves
-      if (voiceData.patternType !== 'solo') {
+      // include all patterns except solo/randsolo patterns themselves
+      if (voiceData.patternType !== 'solo' && voiceData.patternType !== 'randsolo') {
         cachedEligibleVoices.push(voiceName);
       }
     }
