@@ -179,7 +179,12 @@ $(document).keydown(function (e) {
         recentlyStoppedVoices.set(fpName, Date.now());
         permanentlyStoppedVoices.add(fpName);
       });
-      refreshAfterVoiceRemoval();
+      // if no solo automation remains, immediately unsolo all so voices play without waiting for next loop
+      if (soloRequests.size === 0) {
+        unsoloAll();
+      } else {
+        refreshAfterVoiceRemoval();
+      }
       if (container) {
         // adjust padding-top based on remaining children
         container.style.paddingTop = container.children.length === 0 ? '0px' : '10px';
@@ -212,14 +217,7 @@ $(document).keydown(function (e) {
     pendingSoloUpdates.clear();
     lastSoloTimes.clear();
     cachedEligibleVoices = null;
-    // clear all solo state first, then update gains so every voice sees anyVoicesSoloed=false
-    Object.keys(soloedVoices).forEach(voiceName => {
-      soloedVoices[voiceName] = false;
-      socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: false });
-    });
-    Object.keys(soloedVoices).forEach(voiceName => {
-      updateVoiceGain(voiceName);
-    });
+    unsoloAll();
     if (voiceRenderer) voiceRenderer.render();
     if (soloRenderer) soloRenderer.render();
   }
@@ -1666,9 +1664,14 @@ socket.on('uniqueFpNames', (data) => {
     // remove voices from canvas
     voicesToRemove.forEach(fpName => renderer.removeVoice(fpName));
     
-    // rebuild solo state after removing patterns
+    // rebuild solo state after removing patterns, but only if automation is still active;
+    // if no solo patterns remain, just refresh gains without re-applying the locked-voice pre-solo logic
     if (voicesToRemove.length > 0) {
-      rebuildSoloState();
+      if (soloRequests.size > 0) {
+        rebuildSoloState();
+      } else {
+        refreshAfterVoiceRemoval();
+      }
     }
   }
 
@@ -1978,6 +1981,26 @@ socket.on('currentMuteStates', (backendMuteStates) => {
 });
 
 // handle server-side notification that a solo pattern was stopped - clear all solo state
+// immediately unsolo all voices and update gains — used by unsolo key combo, clearSoloState, and manual solo-pattern stop
+function unsoloAll() {
+  // cancel any pending throttled solo callbacks so they can't re-fire after this
+  for (const [, timeout] of pendingSoloUpdates) {
+    clearTimeout(timeout);
+  }
+  pendingSoloUpdates.clear();
+  lastSoloTimes.clear();
+  lastRandsoloTimes.clear();
+  Object.keys(soloedVoices).forEach(voiceName => {
+    soloedVoices[voiceName] = false;
+    socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: false });
+  });
+  Object.keys(soloedVoices).forEach(voiceName => {
+    updateVoiceGain(voiceName);
+  });
+  if (voiceRenderer) voiceRenderer.render();
+  if (soloRenderer) soloRenderer.render();
+}
+
 socket.on('clearSoloState', () => {
   soloRequests.clear();
   // clear all pending throttled solo updates
@@ -1988,7 +2011,7 @@ socket.on('clearSoloState', () => {
   lastSoloTimes.clear();
   lastRandsoloTimes.clear();
   cachedEligibleVoices = null;
-  rebuildSoloState();
+  unsoloAll();
 });
 
 // handle removal of once-played patterns from UI
@@ -2034,8 +2057,9 @@ const RANDSOLO_THROTTLE_MS = 20;
 // handle solo automation events
 socket.on('solo', (data) => {
   const { fp_name, value } = data;
-  
-  // throttle solo updates per pattern to prevent lag from rapid events
+
+  // ignore events for patterns that have been stopped client-side
+  if (permanentlyStoppedVoices.has(fp_name)) return;
   const now = Date.now();
   const lastTime = lastSoloTimes.get(fp_name) || 0;
   
@@ -2047,7 +2071,9 @@ socket.on('solo', (data) => {
     }
     
     const newTimeout = setTimeout(() => {
-      processSoloUpdate(fp_name, value);
+      if (!permanentlyStoppedVoices.has(fp_name) && soloRequests.has(fp_name)) {
+        processSoloUpdate(fp_name, value);
+      }
       lastSoloTimes.set(fp_name, Date.now());
       pendingSoloUpdates.delete(fp_name);
     }, SOLO_THROTTLE_MS - (now - lastTime));
@@ -2064,6 +2090,9 @@ socket.on('solo', (data) => {
 // handle randsolo automation events - triggers a random re-solo when value > 0.5
 socket.on('randsolo', (data) => {
   const { fp_name, value } = data;
+
+  // ignore events for patterns that have been stopped client-side
+  if (permanentlyStoppedVoices.has(fp_name)) return;
 
   // only fire when value crosses above 0.5
   if (value <= 0.5) return;
@@ -2109,13 +2138,26 @@ function refreshAfterVoiceRemoval() {
 function randomSolo() {
   const allVoices = getEligibleVoiceNames();
   if (allVoices.length === 0) return;
+
+  // always pre-solo locked voices so they persist through the random selection
+  Object.keys(lockedVoices).forEach(voiceName => {
+    if (lockedVoices[voiceName]) {
+      soloedVoices[voiceName] = true;
+    }
+  });
+
   const subsetSize = Math.max(1, Math.floor(Math.random() * allVoices.length));
   const shuffled = allVoices.slice().sort(() => Math.random() - 0.5);
   const soloSubset = new Set(shuffled.slice(0, subsetSize));
-  // set all states first so gains are computed with the complete new state
+  // set all eligible (unlocked) voices first so gains are computed with the complete new state
   allVoices.forEach(voiceName => { soloedVoices[voiceName] = soloSubset.has(voiceName); });
-  allVoices.forEach(voiceName => {
-    socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: soloedVoices[voiceName] });
+  // update gains and emit for all voices (including locked ones that were pre-soloed)
+  const allGainVoices = new Set([
+    ...Object.keys(soloedVoices),
+    ...(voiceRenderer ? voiceRenderer.voices.keys() : [])
+  ]);
+  allGainVoices.forEach(voiceName => {
+    socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: !!soloedVoices[voiceName] });
     updateVoiceGain(voiceName);
   });
   if (voiceRenderer) voiceRenderer.render();
@@ -2125,45 +2167,47 @@ function randomSolo() {
 function rebuildSoloState() {
   // get current eligible voices
   const allVoiceNames = getEligibleVoiceNames();
-  
-  // reset all unlocked voices (preserve locked voices' solo state)
+
+  // snapshot previous state so we only emit/update voices that actually changed
+  const prevState = {};
+  Object.keys(soloedVoices).forEach(v => { prevState[v] = soloedVoices[v]; });
+
+  // reset all unlocked voices to false
   Object.keys(soloedVoices).forEach(voiceName => {
     if (!lockedVoices[voiceName]) {
       soloedVoices[voiceName] = false;
     }
   });
   
+  // pre-solo locked voices while automation is running (only if not already true)
+  Object.keys(lockedVoices).forEach(voiceName => {
+    if (lockedVoices[voiceName] && !soloedVoices[voiceName]) {
+      soloedVoices[voiceName] = true;
+    }
+  });
+
   // apply solo requests from all remaining active solo patterns
-  const soloedVoiceNames = new Set();
   for (const [patternName, requestedVoice] of soloRequests) {
     if (requestedVoice && allVoiceNames.includes(requestedVoice)) {
       soloedVoices[requestedVoice] = true;
-      soloedVoiceNames.add(requestedVoice);
     }
   }
   
-  // send solo state to server for MIDI/OSC patterns
-  allVoiceNames.forEach(voiceName => {
-    const shouldBeSoloed = soloedVoices[voiceName] && !lockedVoices[voiceName];
-    socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: shouldBeSoloed });
-  });
-  
-  // update all voice gains for audio patterns
+  // only emit and update gain for voices whose state actually changed
   const allGainVoices = new Set([
     ...Object.keys(soloedVoices),
     ...(voiceRenderer ? voiceRenderer.voices.keys() : [])
   ]);
   allGainVoices.forEach(voiceName => {
-    updateVoiceGain(voiceName);
+    if (soloedVoices[voiceName] !== prevState[voiceName]) {
+      socket.emit('midiSoloToggle', { fp_name: voiceName, soloed: !!soloedVoices[voiceName] });
+      updateVoiceGain(voiceName);
+    }
   });
-  
+
   // update canvas displays
-  if (voiceRenderer) {
-    voiceRenderer.render();
-  }
-  if (soloRenderer) {
-    soloRenderer.render();
-  }
+  if (voiceRenderer) voiceRenderer.render();
+  if (soloRenderer) soloRenderer.render();
 }
 
 function getEligibleVoiceNames() {
@@ -2197,6 +2241,8 @@ function getEligibleVoiceNames() {
 }
 
 function processSoloUpdate(fp_name, value) {
+  // bail if this pattern has been stopped client-side
+  if (permanentlyStoppedVoices.has(fp_name)) return;
   // normalize value to 0-1 range if needed
   let normalizedValue = Math.max(0, Math.min(1, value));
   
