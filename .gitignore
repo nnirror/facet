@@ -1,8 +1,0 @@
-node_modules
-.DS_Store
-tmp/
-samples/
-img/
-files/
-package-lock.json
-js/wax/facetForWax.js
